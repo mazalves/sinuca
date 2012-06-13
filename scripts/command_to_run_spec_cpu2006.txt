@@ -1,0 +1,33 @@
+#------------SPEC2006 (12+17=29)
+#-----INTEGER
+astar;CINT;astar.CINT.PP;TraceTime=37m20s;Simulation1CPU=899s
+bzip2;CINT;bzip2.CINT.PP;TraceTime=36m44s;Simulation1CPU=959s
+gcc;CINT;gcc.CINT.PP;TraceTime=14m26s;Simulation1CPU=1667s
+gobmk;CINT;gobmk.CINT.PP;TraceTime=44m15s;Simulation1CPU=963s
+h264ref;CINT;h264ref.CINT.PP;TraceTime=43m8s;Simulation1CPU=995s
+hmmer;CINT;hmmer.CINT.PP;TraceTime=103m11s;Simulation1CPU=1062s
+libquantum;CINT;libquantum.CINT.PP;TraceTime=222m2s;Simulation1CPU=1766s
+mcf;CINT;mcf.CINT.PP;TraceTime=50m8s;Simulation1CPU=
+omnetpp;CINT;omnetpp.CINT.PP;TraceTime=98m43s;Simulation1CPU=2007s
+perlbench;CINT;perlbench.CINT.PP;TraceTime=27m49s;Simulation1CPU=1734s
+sjeng;CINT;sjeng.CINT.PP;TraceTime=215m41s;Simulation1CPU=794s
+xalancbmk;CINT;xalancbmk.CINT.PP;TraceTime=185m47s;Simulation1CPU=1066s
+#-----FLOAT_POINT
+bwaves;CFP;bwaves.CFP.PP;TraceTime=370m43s;Simulation1CPU=1221s
+cactusADM;CFP;cactusADM.CFP.PP;TraceTime=419m8s;Simulation1CPU=1294s
+calculix;CFP;calculix.CFP.PP;TraceTime=268m44s;Simulation1CPU=768s
+dealII;CFP;dealII.CFP.PP;TraceTime=183m29s;Simulation1CPU=860s
+gamess;CFP;gamess.CFP.PP;TraceTime=141m26s;Simulation1CPU=839s
+GemsFDTD;CFP;GemsFDTD.CFP.PP;TraceTime=248m43s;Simulation1CPU=1034s
+gromacs;CFP;gromacs.CFP.PP;TraceTime=175m15s;Simulation1CPU=1043s
+lbm;CFP;lbm.CFP.PP;TraceTime=76m4s;Simulation1CPU=1489s
+leslie3d;CFP;leslie3d.CFP.PP;TraceTime=368m23s;Simulation1CPU=1081s
+milc;CFP;milc.CFP.PP;TraceTime=86m27s;Simulation1CPU=2085s
+namd;CFP;namd.CFP.PP;TraceTime=132m40s;Simulation1CPU=846s
+povray;CFP;povray.CFP.PP;TraceTime=100m32s;Simulation1CPU=1124s
+soplex;CFP;soplex.CFP.PP;TraceTime=36m27s;Simulation1CPU=1705s
+sphinx3;CFP;sphinx3.CFP.PP;TraceTime=217m7s;Simulation1CPU=1032s
+tonto;CFP;tonto.CFP.PP;TraceTime=215m4s;Simulation1CPU=885s
+wrf;CFP;wrf.CFP.PP;TraceTime=182m32s;Simulation1CPU=1156s
+zeusmp;CFP;zeusmp.CFP.PP;TraceTime=139m3s;Simulation1CPU=927s
+#-----END OF FILE

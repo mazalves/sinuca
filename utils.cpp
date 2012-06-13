@@ -1,0 +1,322 @@
+//==============================================================================
+//
+// Copyright (C) 2010, 2011
+// Marco Antonio Zanata Alves
+//
+// GPPD - Parallel and Distributed Processing Group
+// Universidade Federal do Rio Grande do Sul
+//
+// This program is free software; you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation; either version 2 of the License, or (at your
+// option) any later version.
+//
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+//
+//==============================================================================
+#include "./sinuca.hpp"
+#include <string>
+
+//==============================================================================
+uint64_t utils_t::get_power_of_two(uint64_t n) {
+    uint8_t i;
+    for (i = 0 ; i < 64 ; i++) {
+        if (n & (1 << i))
+            break;
+    }
+    return i;
+};
+
+//==============================================================================
+uint8_t utils_t::check_if_power_of_two(uint64_t n) {
+    uint8_t i, count = 0;
+    uint64_t pow;
+    for (i = 0; i < 64 && n != 0 ; i++) {
+        pow = n & (1 << i);
+        count += (pow != 0);
+        n -= pow;
+    }
+
+    if (count == 1) {
+        return OK;
+    }
+    else {
+        return FAIL;
+    }
+};
+//==============================================================================
+uint64_t utils_t::hash_function(hash_function_t type, uint64_t input1, uint64_t input2, uint64_t bit_size) {
+    uint32_t i;
+    uint64_t bit_size_mask = 0;
+    uint64_t output = 0;
+
+    for (i = 0; i < bit_size; i++) {
+        bit_size_mask |= 1 << i;
+    }
+
+    switch (type) {
+        case HASH_FUNCTION_XOR_SIMPLE:
+            output = input1 ^ input2;
+            output &= bit_size_mask;
+        break;
+
+        case HASH_FUNCTION_INPUT1_ONLY:
+            output = input1 & bit_size_mask;
+        break;
+
+        case HASH_FUNCTION_INPUT2_ONLY:
+            output = input2 & bit_size_mask;
+        break;
+
+    }
+    return output;
+}
+
+//==============================================================================
+uint64_t utils_t::fill_bit(uint32_t start, uint32_t end) {
+    uint32_t i;
+    uint64_t r = 0;
+    for (i = start ; i <= end ; i++)
+        r |= 1 << i;
+    return r;
+};
+
+
+//==============================================================================
+std::string utils_t::address_to_binary(uint64_t address) {
+    std::string answer = "";
+    uint64_t z;
+    uint32_t count = 0;
+
+    for (z = (uint64_t)INT64_MAX+1; z > 0; z >>= 1) {
+        if ((address & z) == z) {
+            answer = answer + "1";
+        }
+        else {
+            answer = answer + "0";
+        }
+        count++;
+        if (count%4 == 0) {
+            answer = answer + " ";
+        }
+    }
+    return answer;
+};
+
+//==============================================================================
+const char* utils_t::print_mask_of_bits(uint32_t line_size, uint32_t line_number, uint32_t assoc) {
+    uint32_t i, offset = 0, index = 0;
+    static char a[65];
+    a[0] = '\0';
+
+    offset = get_power_of_two(line_size);
+    index = get_power_of_two(line_number/assoc) + offset;
+    for (i = 0 ; i < 64 ; i++) {
+        if (i < 32) {
+            sprintf(a , "%s.", a);
+        }
+        else if (i < 64-index) {
+            sprintf(a , "%sT", a);
+        }
+        else if (i < 64-offset) {
+            sprintf(a , "%sI", a);
+        }
+        else {
+            sprintf(a , "%sO", a);
+        }
+    }
+
+    return a;
+};
+
+//==============================================================================
+std::string utils_t::progress_pretty(uint64_t actual, uint64_t total) {
+    std::string answer = "";
+
+    for (uint32_t i = 1 ; i <= 20; i++) {
+        if (i <= (uint64_t)20 * ((double)actual / (double)total)) {
+            answer += "#";
+        }
+        else {
+            answer += " ";
+        }
+    }
+    answer = "[" + answer + "]";
+    return answer;
+};
+
+
+//==============================================================================
+std::string utils_t::connections_pretty(cache_memory_t *cache_memory, uint32_t level) {
+    std::string answer = "";
+    for (uint32_t j = 0; j < level; j++) {
+        answer += "|  ";
+    }
+    answer += "|--- ";
+    answer += cache_memory->get_label();
+    answer += " (L";
+    answer += uint32_to_string(cache_memory->get_hierarchy_level());
+    answer += ")\n";
+
+    /// Find Next Cache Level
+    container_ptr_cache_memory_t *higher_level_cache = cache_memory->get_higher_level_cache();
+    for (uint32_t i = 0; i < higher_level_cache->size(); i++) {
+        cache_memory_t *higher_cache = higher_level_cache[0][i];
+        answer += connections_pretty(higher_cache, level + 1);
+    }
+
+    /// Find Processor
+    if (higher_level_cache->size() == 0) {
+        for (uint32_t i = 0; i < sinuca_engine.get_processor_array_size(); i++) {
+            processor_t *processor = sinuca_engine.processor_array[i];
+            if (processor->get_data_cache() == cache_memory || processor->get_inst_cache() == cache_memory) {
+                for (uint32_t j = 0; j < level + 1; j++) {
+                    answer += "|  ";
+                }
+                answer += "|--- ";
+                answer += processor->get_label();
+                answer += "\n";
+            }
+        }
+    }
+
+    return answer;
+};
+
+//==============================================================================
+const char* utils_t::uint32_to_char(uint32_t input_int) {
+    static char a[65];
+    a[0] = '\0';
+
+    sprintf(a , "%2u", input_int);
+    return a;
+}
+
+//==============================================================================
+const char* utils_t::int32_to_char(int32_t input_int) {
+    static char a[65];
+    a[0] = '\0';
+
+    sprintf(a , "%2d", input_int);
+    return a;
+};
+
+//==============================================================================
+const char* utils_t::uint64_to_char(uint64_t input_int) {
+    static char a[65];
+    a[0] = '\0';
+
+    if (input_int > 1000000000) {
+        sprintf(a , "%16"PRIu64"", input_int);
+    }
+    else {
+        sprintf(a , "%5"PRIu64"", input_int);
+    }
+    return a;
+};
+
+//==============================================================================
+const char* utils_t::int64_to_char(int64_t input_int) {
+    static char a[65];
+    a[0] = '\0';
+
+    if (input_int > 1000000000) {
+        sprintf(a , "%16"PRId64"", input_int);
+    }
+    else {
+        sprintf(a , "%5"PRId64"", input_int);
+    }
+    return a;
+};
+
+//==============================================================================
+std::string utils_t::uint32_to_string(uint32_t input_int) {
+    static char a[65];
+    a[0] = '\0';
+    std::string r = "";
+
+    sprintf(a , "%2u", input_int);
+    r = a;
+    return r;
+};
+
+//==============================================================================
+std::string utils_t::uint64_to_string(uint64_t input_int) {
+    static char a[65];
+    a[0] = '\0';
+    std::string answer = "";
+
+    if (input_int > 1000000000) {
+        sprintf(a , "%16"PRIu64"", input_int);
+        answer = a;
+    }
+    else {
+        sprintf(a , "%5"PRIu64"", input_int);
+        answer = a;
+    }
+    return answer;
+};
+
+//==============================================================================
+std::string utils_t::int64_to_string(int64_t input_int) {
+    static char a[65];
+    a[0] = '\0';
+    std::string answer = "";
+
+    if (input_int > 1000000000) {
+        sprintf(a , "%16"PRId64"", input_int);
+        answer = a;
+    }
+    else {
+        sprintf(a , "%5"PRId64"", input_int);
+        answer = a;
+    }
+    return answer;
+};
+
+
+//==============================================================================
+/*! process_mem_usage(double &, double &) - takes two doubles by reference,
+ * attempts to read the system-dependent data for a process' virtual memory
+ * size and resident set size, and return the results in MB.
+ * On failure, returns 0.0, 0.0
+ */
+void utils_t::process_mem_usage(double& vm_usage, double& resident_set) {
+   using std::ios_base;
+   using std::ifstream;
+   using std::string;
+
+   vm_usage     = 0.0;
+   resident_set = 0.0;
+
+   /// 'file' stat seems to give the most reliable results
+   ifstream stat_stream("/proc/self/stat",ios_base::in);
+
+   /// dummy vars for leading entries in stat that we don't care about
+   string pid, comm, state, ppid, pgrp, session, tty_nr;
+   string tpgid, flags, minflt, cminflt, majflt, cmajflt;
+   string utime, stime, cutime, cstime, priority, nice;
+   string O, itrealvalue, starttime;
+
+   /// the two fields we want
+   unsigned long vsize;
+   long rss;
+
+   stat_stream >> pid >> comm >> state >> ppid >> pgrp >> session >> tty_nr
+               >> tpgid >> flags >> minflt >> cminflt >> majflt >> cmajflt
+               >> utime >> stime >> cutime >> cstime >> priority >> nice
+               >> O >> itrealvalue >> starttime >> vsize >> rss; /// don't care about the rest
+
+   stat_stream.close();
+
+   double page_size_mb = sysconf(_SC_PAGE_SIZE) / 1024.0 / 1024.0; /// in case x86-64 is configured to use 2MB pages
+   vm_usage     = vsize / 1024.0 / 1024.0;
+   resident_set = rss * page_size_mb;
+};

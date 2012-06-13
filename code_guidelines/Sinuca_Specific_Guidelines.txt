@@ -1,0 +1,14 @@
+## Google Code Guidelines
+python code_guidelines/cpplint.py *.cpp *.h ./*/*.cpp ./*/*/*.cpp 2> ./code_guidelines/err03jan2012.txt
+grep Total ./code_guidelines/err03jan2012.txt
+less ./code_guidelines/err10apr2012.txt | grep -v line_length | grep -v newline | grep -v braces | grep -v header_guard | grep -v include_order | less
+### Never use malloc / free:
+
+One of the most common questions that get asked during interviews for C++ programmers is to explain the differences between using malloc and using new. It's also a fairly common question in some of newsgroups and C++ forums. This article will try and explain as simply as possible how malloc and new are two entities that are essentially non-interchangeable, and there is nothing is this article that you wouldn't find in most decent C++ programming books; but the article tries to put all the information together in a single place using simple code snippets and is targeted at newbies who might be unfamiliar as to the differences.
+Constructors and Destructors
+
+When you new an object, space for the object is not only allocated but the object's constructor is called. And similarly when you delete an object, the object's destructor is called before the memory is released. If you use malloc and free, the destructor and constructor do not get called respectively and obviously, this simply won't do in C++ except in certain very rare situations where you have classes without any specific destructor/constructors.
+
+
+### More Information
+http://www.doc.ic.ac.uk/lab/cplus/c++.rules/

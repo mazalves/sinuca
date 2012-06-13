@@ -1,0 +1,33 @@
+## NAS S
+#bt;S;$BENCHMARK_SRC/bt.S.x
+#cg;S;$BENCHMARK_SRC/cg.S.x
+#ep;S;$BENCHMARK_SRC/ep.S.x
+#ft;S;$BENCHMARK_SRC/ft.S.x
+#is;S;$BENCHMARK_SRC/is.S.x
+#lu;S;$BENCHMARK_SRC/lu.S.x
+#mg;S;$BENCHMARK_SRC/mg.S.x
+#sp;S;$BENCHMARK_SRC/sp.S.x
+#ua;S;$BENCHMARK_SRC/ua.S.x
+#dc;S;$BENCHMARK_SRC/dc.S.x
+## NAS W
+#bt;W;$BENCHMARK_SRC/bt.W.x
+#cg;W;$BENCHMARK_SRC/cg.W.x
+#ep;W;$BENCHMARK_SRC/ep.W.x
+#ft;W;$BENCHMARK_SRC/ft.W.x
+#is;W;$BENCHMARK_SRC/is.W.x
+#lu;W;$BENCHMARK_SRC/lu.W.x
+#mg;W;$BENCHMARK_SRC/mg.W.x
+#sp;W;$BENCHMARK_SRC/sp.W.x
+#ua;W;$BENCHMARK_SRC/ua.W.x
+#dc;W;$BENCHMARK_SRC/dc.W.x
+## NAS A
+bt;A;$BENCHMARK_SRC/bt.A.x
+cg;A;$BENCHMARK_SRC/cg.A.x
+ep;A;$BENCHMARK_SRC/ep.A.x
+ft;A;$BENCHMARK_SRC/ft.A.x
+is;A;$BENCHMARK_SRC/is.A.x
+lu;A;$BENCHMARK_SRC/lu.A.x
+mg;A;$BENCHMARK_SRC/mg.A.x
+sp;A;$BENCHMARK_SRC/sp.A.x
+ua;A;$BENCHMARK_SRC/ua.A.x
+#dc;A;$BENCHMARK_SRC/dc.A.x

@@ -1,0 +1,63 @@
+STATIC_ATTR(UINT32  ,id                          , op_static_id[0]                 )
+STATIC_ATTR(UINT32  ,ip                          , INS_Address(ins)                )
+STATIC_ATTR(UINT32  ,Category                    , INS_Category (ins)              )
+STATIC_ATTR(UINT32  ,NumSrcRegs                  , INS_MaxNumRRegs(ins)            )
+STATIC_ATTR(UINT32  ,NumDestRegs                 , INS_MaxNumWRegs(ins)            )
+STATIC_ATTR(BOOL    ,IsMemoryRead                , INS_IsMemoryRead (ins)          )
+STATIC_ATTR(BOOL    ,IsMemoryWrite               , INS_IsMemoryWrite (ins)         )
+STATIC_ATTR(BOOL    ,HasMemoryRead2              , INS_HasMemoryRead2 (ins)        )
+STATIC_ATTR(BOOL    ,HasFallThrough              , INS_HasFallThrough (ins)        )
+STATIC_ATTR(BOOL    ,IsSyscall                   , INS_IsSyscall (ins)             )
+STATIC_ATTR(BOOL    ,IsBranchOrCall              , INS_IsBranchOrCall (ins)        )
+STATIC_ATTR(BOOL    ,IsPcMaterialization         , INS_IsPcMaterialization (ins)   )
+STATIC_ATTR(BOOL    ,IsCall                      , INS_IsCall (ins)                )
+STATIC_ATTR(BOOL    ,IsFarCall                   , INS_IsFarCall (ins)             )
+STATIC_ATTR(BOOL    ,IsProcedureCall             , INS_IsProcedureCall (ins)       )
+STATIC_ATTR(BOOL    ,IsRet                       , INS_IsRet (ins)                 )
+STATIC_ATTR(BOOL    ,IsPrefetch                  , INS_IsPrefetch (ins)            )
+STATIC_ATTR(BOOL    ,IsAtomicUpdate              , INS_IsAtomicUpdate (ins)        )
+STATIC_ATTR(BOOL    ,IsIndirectBranchOrCall      , INS_IsIndirectBranchOrCall (ins))
+STATIC_ATTR(BOOL    ,IsDirectBranchOrCall        , INS_IsDirectBranchOrCall (ins)  ) 
+STATIC_ATTR(OPCODE  ,Opcode                      , INS_Opcode      (ins)           )
+STATIC_ATTR(BOOL    ,IsStackRead                 , INS_IsStackRead (ins)           )
+STATIC_ATTR(BOOL    ,IsStackWrite                , INS_IsStackWrite(ins)           )
+STATIC_ATTR(BOOL    ,IsIpRelRead                 , INS_IsIpRelRead (ins)           )
+STATIC_ATTR(BOOL    ,IsIpRelWrite                , INS_IsIpRelWrite(ins)           )
+STATIC_ATTR(PREDICATE,GetPredicate               , INS_GetPredicate(ins)           )
+STATIC_ATTR(BOOL    ,IsPredicated                , INS_IsPredicated(ins)           )
+STATIC_ATTR(BOOL    ,IsHalt                      , INS_IsHalt           (ins)      )
+STATIC_ATTR(BOOL    ,IsSub                       , INS_IsSub            (ins)      )
+STATIC_ATTR(BOOL    ,IsMov                       , INS_IsMov            (ins)      )
+STATIC_ATTR(BOOL    ,IsRDTSC                     , INS_IsRDTSC          (ins)      )
+STATIC_ATTR(REG     ,SegmentRegPrefix            , INS_SegmentRegPrefix (ins)      )
+STATIC_ATTR(BOOL    ,IsBranch                    , INS_IsBranchOrCall (ins) 
+                                                       &&(! INS_IsCall (ins))       )
+
+#if TRACE_FOR_SCARAB
+STATIC_ATTR(UINT32  ,BranchTarget     , INS_IsDirectBranchOrCall(ins) ? INS_DirectBranchOrCallTargetAddress(ins) : 0)
+STATIC_ATTR(UINT8   ,Size             , INS_Size(ins))
+STATIC_ATTR(BOOL    ,IsInterrupt      , INS_IsInterrupt (ins)  ) 
+STATIC_ATTR(BOOL    ,WriteEflags      , INS_RegWContain (ins, REG_EFLAGS)  ) 
+STATIC_ATTR(BOOL    ,IsRep            , INS_RepPrefix (ins) || INS_RepnePrefix (ins) ) 
+STATIC_ATTR(UINT32  ,ScarabOpcode     , scarab_opcode(ins))
+STATIC_ATTR(UINT32  ,ScarabCfType     , scarab_control_flow_type(ins))
+#endif // TRACE_FOR_SCARAB
+
+STATIC_ATTR(UINT32  ,AsimClass                   , 0                               )
+
+DYNAMIC_ATTR(UINT32 , MemRdAddr  ,IARG_MEMORYREAD_EA      , IsMemoryRead  )
+DYNAMIC_ATTR(UINT32 , MemWAddr   ,IARG_MEMORYWRITE_EA     , IsMemoryWrite )
+DYNAMIC_ATTR(BOOL   , taken      ,IARG_BRANCH_TAKEN       , IsBranch      )
+
+#if TRACE_FOR_SCARAB
+DYNAMIC_ATTR(UINT32 , MemRdAddr2 ,IARG_MEMORYREAD2_EA     , HasMemoryRead2  )
+DYNAMIC_ATTR(UINT32 , MemRdSize  ,IARG_MEMORYREAD_SIZE    , IsMemoryRead  )
+DYNAMIC_ATTR(UINT32 , MemWSize   ,IARG_MEMORYWRITE_SIZE   , IsMemoryWrite )
+DYNAMIC_ATTR(UINT32 , TargAddr   ,IARG_BRANCH_TARGET_ADDR , IsBranchOrCall)
+
+#ifdef DYNAMIC_ATTR_EXTRA_ARG
+DYNAMIC_ATTR_EXTRA_ARG( IARG_REG_VALUE )
+#endif
+
+DYNAMIC_ATTR(UINT32 , RepDir     ,(IARG_TYPE)REG_EFLAGS /* Dir flag extracted by the caller */, ip /* always non-zero */)
+#endif // TRACE_FOR_SCARAB
