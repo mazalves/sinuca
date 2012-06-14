@@ -29,6 +29,31 @@
     #define CACHE_DEBUG_PRINTF(...)
 #endif
 
+
+// =============================================================================
+// DSBP
+// =============================================================================
+void cache_line_t::DSBP_tag_allocate(uint32_t sub_block_number) {
+    this->DSBP_tag = new DSBP_metadata;
+
+    this->DSBP_tag->valid_sub_blocks = utils_t::template_allocate_initialize_array<bool>(sub_block_number, false);
+    this->DSBP_tag->usage_counter = utils_t::template_allocate_initialize_array<uint32_t>(sub_block_number, 0);
+    this->DSBP_tag->overflow = utils_t::template_allocate_initialize_array<bool>(sub_block_number, false);
+};
+
+// =============================================================================
+void cache_memory_t::DSBP_PHT_allocate(uint32_t sub_block_number) {
+    this->DSBP_PHT->pc = 0;
+    this->DSBP_PHT->offset = 0;
+    this->DSBP_PHT->pointer = false;
+
+    this->DSBP_PHT->usage_counter = utils_t::template_allocate_initialize_array<uint32_t>(sub_block_number, 0);
+    this->DSBP_PHT->overflow = utils_t::template_allocate_initialize_array<bool>(sub_block_number, false);
+};
+// =============================================================================
+// =============================================================================
+
+
 // =============================================================================
 cache_memory_t::cache_memory_t() {
     this->set_type_component(COMPONENT_CACHE_MEMORY);
@@ -72,6 +97,7 @@ void cache_memory_t::allocate() {
     this->mshr_buffer = utils_t::template_allocate_array<memory_package_t>(this->get_mshr_buffer_size());
 
     /// Check the MSHR sizes (Sum_Higher_MSHR <= This_MSHR)
+    /*
     uint32_t MSHR_size_total = 0;
     for (uint32_t i = 0; i < this->higher_level_cache->size(); i++) {
         MSHR_size_total += this->higher_level_cache[0][i]->get_mshr_buffer_request_reserved_size();
@@ -80,10 +106,9 @@ void cache_memory_t::allocate() {
     }
     ERROR_ASSERT_PRINTF(MSHR_size_total <= this->get_mshr_buffer_request_reserved_size(),
                         "%s, should have %u MSHR entries to avoid dead_locks.\n", this->get_label(), MSHR_size_total);
-
+    */
 
     this->set_masks();
-
 
     ERROR_ASSERT_PRINTF(this->get_total_banks() == 1 || this->prefetcher.get_prefetcher_type() == PREFETCHER_DISABLE, "Cannot use a multibanked cache with prefetch. (Some requests may be generated in the wrong bank)\n");
 

@@ -125,12 +125,12 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define TRACE_READER_DEBUG
     // ~ #define TRACE_GENERATOR_DEBUG
     #define PROCESSOR_DEBUG
-    #define SYNC_DEBUG
+    // ~ #define SYNC_DEBUG
     // ~ #define BRANCH_PREDICTOR_DEBUG
     #define CACHE_DEBUG
     #define PREFETCHER_DEBUG
     #define MAIN_MEMORY_DEBUG
-    #define ROUTER_DEBUG
+    // ~ #define ROUTER_DEBUG
     // ~ #define INTERCONNECTION_CTRL_DEBUG
     #define DIRECTORY_CTRL_DEBUG
     // ~ #define SHOW_FREE_PACKAGE
@@ -1747,6 +1747,26 @@ class prefetch_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, stream_wait_between_requests)
 };
 
+/// ============================================================================
+/// Dead Sub-Block Predictor
+/// ============================================================================
+class DSBP_PHT_line {
+    public:
+        uint64_t pc;
+        uint64_t offset;
+        bool pointer;
+        uint32_t *usage_counter;
+        bool *overflow;
+};
+
+class DSBP_metadata {
+    public:
+        bool *valid_sub_blocks;
+        uint32_t *usage_counter;
+        bool *overflow;
+        bool train;
+        DSBP_PHT_line *PHT_pointer;
+};
 
 /// ============================================================================
 /// Cache Memories
@@ -1758,6 +1778,12 @@ class cache_line_t {
         uint64_t last_access;
         uint64_t usage_counter;
         bool dirty;
+
+        //======================================================================
+        // DSBP
+        DSBP_metadata *DSBP_tag;
+        void DSBP_tag_allocate(uint32_t sub_block_number);
+        //======================================================================
 
         /// ====================================================================
         /// Methods
@@ -1792,6 +1818,11 @@ class cache_set_t {
 class cache_memory_t : public interconnection_interface_t {
     public:
         prefetch_t prefetcher;            /// Prefetcher
+
+        //======================================================================
+        // DSBP
+        DSBP_PHT_line *DSBP_PHT;
+        void DSBP_PHT_allocate(uint32_t sub_block_number);
 
     private:
         /// ====================================================================
