@@ -622,10 +622,30 @@ void cache_memory_t::print_configuration() {
     this->line_usage_predictor.print_configuration();
 };
 
+
+// =============================================================================//
+// Input: memory_address
+// Output: cache_line_t*, &index, &way
+cache_line_t* cache_memory_t::find_line(uint64_t memory_address, uint64_t& index, uint32_t& way) {
+    cache_line_t *line;
+
+    index = get_index(memory_address);
+    line = this->sets[index].ways;
+
+    for (way = 0; way < this->get_associativity(); way++) {
+        if (cmp_tag_index_bank(line->tag, memory_address)) {
+            return line;
+        }
+        line++;
+    }
+
+    return NULL;
+}
+
 // =============================================================================
-cache_line_t* cache_memory_t::evict_address(uint64_t memory_address) {
-    uint32_t selected;
-    uint64_t index;
+// Input: memory_address
+// Output: cache_line_t*, &index, &way
+cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint64_t& index, uint32_t& way) {
     cache_line_t *choosen_line = NULL;
 
     index = get_index(memory_address);
@@ -633,21 +653,21 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address) {
     switch (this->replacement_policy) {
         case REPLACEMENT_LRU: {
             uint64_t last_access = sinuca_engine.get_global_cycle() + 1;
-            for (selected = 0; selected < this->get_associativity(); selected++) {
-                if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[selected].tag) == FAIL) {
+            for (way = 0; way < this->get_associativity(); way++) {
+                if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[way].tag) == FAIL) {
                     /// If there is free space && the line is not locked by directory
-                    if (this->sets[index].ways[selected].status == PROTOCOL_STATUS_I) {
-                        choosen_line = &this->sets[index].ways[selected];
+                    if (this->sets[index].ways[way].status == PROTOCOL_STATUS_I) {
+                        choosen_line = &this->sets[index].ways[way];
                         break;
                     }
                     /// If the line is LRU && the line is not locked by directory
-                    else if (this->sets[index].ways[selected].last_access <= last_access) {
-                        choosen_line = &this->sets[index].ways[selected];
-                        last_access = this->sets[index].ways[selected].last_access;
+                    else if (this->sets[index].ways[way].last_access <= last_access) {
+                        choosen_line = &this->sets[index].ways[way];
+                        last_access = this->sets[index].ways[way].last_access;
                     }
                 }
                 else {
-                    ERROR_ASSERT_PRINTF(cmp_tag_index_bank(memory_address, this->sets[index].ways[selected].tag) == FAIL, "Trying to find one line to evict, but tag == address\n")
+                    ERROR_ASSERT_PRINTF(cmp_tag_index_bank(memory_address, this->sets[index].ways[way].tag) == FAIL, "Trying to find one line to evict, but tag == address\n")
                 }
             }
         }
@@ -657,10 +677,10 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address) {
             /// Initialize random seed
             unsigned int seed = time(NULL);
             /// Generate random number
-            selected = (rand_r(&seed) % this->get_associativity());
+            way = (rand_r(&seed) % this->get_associativity());
             /// Check if the line is not locked by directory
-            if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[selected].tag) == FAIL) {
-                choosen_line = &this->sets[index].ways[selected];
+            if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[way].tag) == FAIL) {
+                choosen_line = &this->sets[index].ways[way];
             }
         }
         break;
@@ -699,23 +719,3 @@ void cache_memory_t::update_last_access(cache_line_t *line) {
     line->usage_counter++;
     return;
 };
-
-// =============================================================================//
-cache_line_t* cache_memory_t::find_line(uint64_t memory_address) {
-    uint32_t i;
-    uint64_t index;
-    cache_line_t *line;
-
-    index = get_index(memory_address);
-    line = this->sets[index].ways;
-
-    for (i = 0; i < this->get_associativity(); i++) {
-        if (cmp_tag_index_bank(line->tag, memory_address)) {
-            return line;
-        }
-        line++;
-    }
-
-    return NULL;
-}
-

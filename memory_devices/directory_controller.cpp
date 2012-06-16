@@ -273,7 +273,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     /// Takes care about the CACHE HIT/MISS
     /// ========================================================================
     /// Get CACHE_LINE
-    cache_line_t *cache_line = cache->find_line(package->memory_address);
+    uint64_t index;
+    uint32_t way;
+    cache_line_t *cache_line = cache->find_line(package->memory_address, index, way);
 
     switch (package->memory_operation) {
         ///=====================================================================
@@ -322,7 +324,8 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             else {
                 /// Do not have a reserved line
                 if (cache_line == NULL) {
-                    cache_line = cache->evict_address(package->memory_address);
+
+                    cache_line = cache->evict_address(package->memory_address, index, way);
                     /// Could not evict any line
                     if (cache_line == NULL) {
                         /// Cannot continue right now
@@ -418,7 +421,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             /// COPYBACK from HIGHER cache => THIS level
             /// Do not have a reserved line
             if (cache_line == NULL) {
-                cache_line = cache->evict_address(package->memory_address);
+                cache_line = cache->evict_address(package->memory_address, index, way);
                 /// Could not evict any line
                 if (cache_line == NULL) {
                     /// Cannot continue right now
@@ -521,7 +524,9 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
     /// Takes care about the Coherence Update and Answer
     /// ========================================================================
     /// Get CACHE_LINE
-    cache_line_t *cache_line = cache->find_line(package->memory_address);
+    uint64_t index;
+    uint32_t way;
+    cache_line_t *cache_line = cache->find_line(package->memory_address, index, way);
 
     switch (package->memory_operation) {
         ///=====================================================================
@@ -761,7 +766,9 @@ protocol_status_t directory_controller_t::look_higher_levels(cache_memory_t *cac
     else {
         /// ========================================================================
         /// Check this level
-        cache_line_t *this_cache_line = cache_memory->find_line(memory_address);
+        uint64_t index;
+        uint32_t way;
+        cache_line_t *this_cache_line = cache_memory->find_line(memory_address, index, way);
         if (this_cache_line != NULL) {
             switch (this->get_coherence_protocol_type()) {
                 case COHERENCE_PROTOCOL_MOESI:
@@ -936,7 +943,9 @@ void directory_controller_t::coherence_invalidate_all(cache_memory_t *cache_memo
     for (uint32_t i = 0; i < sinuca_engine.get_cache_memory_array_size(); i++) {
         /// Cache different to THIS
         if (i != cache_memory->get_cache_id()) {
-            cache_line_t *cache_line = sinuca_engine.cache_memory_array[i]->find_line(memory_address);
+            uint64_t index;
+            uint32_t way;
+            cache_line_t *cache_line = sinuca_engine.cache_memory_array[i]->find_line(memory_address, index, way);
             if (cache_line != NULL) {
                 cache_line->status = PROTOCOL_STATUS_I;
                 cache_line->tag = 0;

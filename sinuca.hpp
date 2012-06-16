@@ -2104,11 +2104,11 @@ class cache_memory_t : public interconnection_interface_t {
         }
         INSTANTIATE_GET_SET(container_ptr_cache_memory_t*, lower_level_cache)
 
-        cache_line_t* evict_address(uint64_t memory_address);
+        cache_line_t* find_line(uint64_t memory_address, uint64_t& index, uint32_t& way);
+        cache_line_t* evict_address(uint64_t memory_address, uint64_t& index, uint32_t& way);
         void change_address(cache_line_t *line, uint64_t new_memory_address);
         void change_status(cache_line_t *line, protocol_status_t status);
         void update_last_access(cache_line_t *line);
-        cache_line_t* find_line(uint64_t memory_address);
 
         /// Methods called by the directory to add statistics and others
         void cache_hit(memory_package_t *package);
