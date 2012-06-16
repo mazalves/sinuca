@@ -29,31 +29,6 @@
     #define CACHE_DEBUG_PRINTF(...)
 #endif
 
-
-// =============================================================================
-// DSBP
-// =============================================================================
-void cache_line_t::DSBP_tag_allocate(uint32_t sub_block_number) {
-    this->DSBP_tag = new DSBP_metadata;
-
-    this->DSBP_tag->valid_sub_blocks = utils_t::template_allocate_initialize_array<bool>(sub_block_number, false);
-    this->DSBP_tag->usage_counter = utils_t::template_allocate_initialize_array<uint32_t>(sub_block_number, 0);
-    this->DSBP_tag->overflow = utils_t::template_allocate_initialize_array<bool>(sub_block_number, false);
-};
-
-// =============================================================================
-void cache_memory_t::DSBP_PHT_allocate(uint32_t sub_block_number) {
-    this->DSBP_PHT->pc = 0;
-    this->DSBP_PHT->offset = 0;
-    this->DSBP_PHT->pointer = false;
-
-    this->DSBP_PHT->usage_counter = utils_t::template_allocate_initialize_array<uint32_t>(sub_block_number, 0);
-    this->DSBP_PHT->overflow = utils_t::template_allocate_initialize_array<bool>(sub_block_number, false);
-};
-// =============================================================================
-// =============================================================================
-
-
 // =============================================================================
 cache_memory_t::cache_memory_t() {
     this->set_type_component(COMPONENT_CACHE_MEMORY);
@@ -96,8 +71,9 @@ void cache_memory_t::allocate() {
                                 this->mshr_buffer_prefetch_reserved_size;
     this->mshr_buffer = utils_t::template_allocate_array<memory_package_t>(this->get_mshr_buffer_size());
 
-    /// Check the MSHR sizes (Sum_Higher_MSHR <= This_MSHR)
+
     /*
+    /// Check the MSHR sizes (Sum_Higher_MSHR <= This_MSHR)
     uint32_t MSHR_size_total = 0;
     for (uint32_t i = 0; i < this->higher_level_cache->size(); i++) {
         MSHR_size_total += this->higher_level_cache[0][i]->get_mshr_buffer_request_reserved_size();
@@ -112,10 +88,21 @@ void cache_memory_t::allocate() {
 
     ERROR_ASSERT_PRINTF(this->get_total_banks() == 1 || this->prefetcher.get_prefetcher_type() == PREFETCHER_DISABLE, "Cannot use a multibanked cache with prefetch. (Some requests may be generated in the wrong bank)\n");
 
+    /// ========================================================================
+    /// PREFETCH
+    /// ========================================================================
     char label[50] = "";
     sprintf(label, "Prefetch_%s", this->get_label());
     this->prefetcher.set_label(label);
     this->prefetcher.allocate();
+
+    /// ========================================================================
+    /// LINE_USAGE_PREDICTOR
+    /// ========================================================================
+    sprintf(label, "Line_Usage_Predictor_%s", this->get_label());
+    this->line_usage_predictor.set_label(label);
+    this->line_usage_predictor.allocate();
+
 
     #ifdef CACHE_DEBUG
         this->print_configuration();
@@ -474,6 +461,7 @@ void cache_memory_t::print_structures() {
 void cache_memory_t::panic() {
     this->print_structures();
     this->prefetcher.panic();
+    this->line_usage_predictor.panic();
 };
 
 //==============================================================================
@@ -484,6 +472,7 @@ void cache_memory_t::periodic_check(){
     #endif
     ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->mshr_buffer, this->mshr_buffer_size) == OK, "Check_age failed.\n");
     this->prefetcher.periodic_check();
+    this->line_usage_predictor.periodic_check();
 };
 
 
@@ -530,11 +519,12 @@ void cache_memory_t::reset_statistics() {
     this->stat_acumulated_copyback_wait_time = 0;
 
     this->prefetcher.reset_statistics();
+    this->line_usage_predictor.reset_statistics();
 };
 
 // =============================================================================
 void cache_memory_t::print_statistics() {
-    char title[50] = "";
+    char title[100] = "";
     sprintf(title, "Statistics of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);
@@ -589,12 +579,13 @@ void cache_memory_t::print_statistics() {
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_copyback_wait_time_ratio",stat_acumulated_copyback_wait_time, stat_copyback_miss);
 
     this->prefetcher.print_statistics();
+    this->line_usage_predictor.print_statistics();
 };
 
 // =============================================================================
 // =============================================================================
 void cache_memory_t::print_configuration() {
-    char title[50] = "";
+    char title[100] = "";
     sprintf(title, "Configuration of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);
@@ -628,6 +619,7 @@ void cache_memory_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "offset_bits_mask", utils_t::address_to_binary(this->offset_bits_mask).c_str());
 
     this->prefetcher.print_configuration();
+    this->line_usage_predictor.print_configuration();
 };
 
 // =============================================================================

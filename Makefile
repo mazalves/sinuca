@@ -51,6 +51,7 @@ SRC_INTERCONNECTION =  	interconnection/interconnection_router.cpp \
 						interconnection/interconnection_interface.cpp
 
 SRC_CACHE_MEMORY =	memory_devices/prefetcher.cpp \
+					memory_devices/line_usage_predictor.cpp\
 					memory_devices/cache_memory.cpp
 
 SRC_DIRECTORY =		memory_devices/directory_controller.cpp

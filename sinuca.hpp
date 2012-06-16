@@ -82,6 +82,7 @@ class directory_controller_line_t;
 class directory_controller_t;
 /// Cache and Main Memory
 class prefetch_t;
+class line_usage_predictor_t;
 class cache_line_t;
 class cache_set_t;
 class cache_memory_t;
@@ -129,6 +130,7 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define BRANCH_PREDICTOR_DEBUG
     #define CACHE_DEBUG
     #define PREFETCHER_DEBUG
+    #define LINE_USAGE_PREDICTOR_DEBUG
     #define MAIN_MEMORY_DEBUG
     // ~ #define ROUTER_DEBUG
     // ~ #define INTERCONNECTION_CTRL_DEBUG
@@ -172,14 +174,14 @@ extern sinuca_engine_t sinuca_engine;
                                             SINUCA_PRINTF("ERROR_ASSERT: %s\n", #v);\
                                             SINUCA_PRINTF("ERROR: ");\
                                             SINUCA_PRINTF(__VA_ARGS__);\
-                                            exit(1);\
+                                            exit(EXIT_FAILURE);\
                                         }
 
     #define ERROR_PRINTF(...)           {\
                                             ERROR_INFORMATION();\
                                             SINUCA_PRINTF("ERROR: ");\
                                             SINUCA_PRINTF(__VA_ARGS__);\
-                                            exit(1);\
+                                            exit(EXIT_FAILURE);\
                                         }
 #else
     #define ERROR_INFORMATION(...)
@@ -390,11 +392,22 @@ class sinuca_engine_t {
         INSTANTIATE_GET_SET(uint32_t, main_memory_array_size);
         INSTANTIATE_GET_SET(uint32_t, interconnection_router_array_size);
 
-        INSTANTIATE_GET_SET(uint64_t, global_cycle);
-        INSTANTIATE_GET_SET(uint32_t, global_line_size);
         INSTANTIATE_GET_SET(bool, is_simulation_allocated);
         INSTANTIATE_GET_SET(bool, is_runtime_debug);
         INSTANTIATE_GET_SET(bool, is_simulation_eof);
+
+        INSTANTIATE_GET_SET(uint64_t, global_cycle);
+
+        inline void set_global_line_size(uint32_t new_size) {
+            if (this->global_line_size == 0) {
+                this->global_line_size = new_size;
+            }
+            ERROR_ASSERT_PRINTF(this->get_global_line_size() == new_size, "All the line_size must be equal.\n")
+        };
+        inline uint32_t get_global_line_size() {
+            return (this->global_line_size);
+        };
+
 
         /// ====================================================================
         /// Statistics related
@@ -593,6 +606,8 @@ class memory_package_t {
         memory_operation_t memory_operation;    /// memory operation
         bool is_answer;                         /// is answer or request
 
+        bool *sub_blocks;
+
         /// Router Control
         uint32_t id_src;                        /// id src component
         uint32_t id_dst;                        /// id dst component
@@ -604,9 +619,13 @@ class memory_package_t {
         /// Methods
         /// ====================================================================
         memory_package_t() {
+            ERROR_ASSERT_PRINTF(sinuca_engine.get_global_line_size() > 0, "Allocating 0 positions.\n")
+            this->sub_blocks = new bool[sinuca_engine.get_global_line_size()];
+
             this->package_clean();
         };
         ~memory_package_t() {
+            if (this->sub_blocks) delete [] sub_blocks;
         };
 
 
@@ -1750,23 +1769,139 @@ class prefetch_t : public interconnection_interface_t {
 /// ============================================================================
 /// Dead Sub-Block Predictor
 /// ============================================================================
-class DSBP_PHT_line {
+class DSBP_PHT_line_t {
     public:
         uint64_t pc;
         uint64_t offset;
         bool pointer;
         uint32_t *usage_counter;
         bool *overflow;
+
+        DSBP_PHT_line_t() {
+            this->pc = 0;
+            this->offset = 0;
+            this->pointer = 0;
+            this->usage_counter = NULL;
+            this->overflow = NULL;
+        };
+        ~DSBP_PHT_line_t() {
+        };
 };
 
-class DSBP_metadata {
+class DSBP_PHT_sets_t {
+    public:
+        DSBP_PHT_line_t *ways;
+};
+
+
+class DSBP_metadata_line_t {
     public:
         bool *valid_sub_blocks;
         uint32_t *usage_counter;
         bool *overflow;
         bool train;
-        DSBP_PHT_line *PHT_pointer;
+        DSBP_PHT_line_t *PHT_pointer;
+
+        DSBP_metadata_line_t() {
+            this->valid_sub_blocks = NULL;
+            this->usage_counter = NULL;
+            this->overflow = NULL;
+            this->train = 0;
+            this->PHT_pointer = NULL;
+        };
+        ~DSBP_metadata_line_t() {
+        };
 };
+
+class DSBP_metadata_sets_t {
+    public:
+        DSBP_metadata_line_t *ways;
+};
+
+/// ============================================================================
+/// Line Usage Predictor
+/// ============================================================================
+/// Class for Line Usage Predictor. (SPP, DSBP, ...)
+class line_usage_predictor_t : public interconnection_interface_t {
+    private:
+        /// ====================================================================
+        /// Set by sinuca_configurator
+        /// ====================================================================
+        line_usage_predictor_policy_t line_usage_predictor_type;
+
+            /// ====================================================================
+            /// DSBP
+            /// ====================================================================
+            uint32_t DSBP_line_number;          /// Cache Metadata
+            uint32_t DSBP_associativity;        /// Cache Metadata
+
+            uint32_t DSBP_sub_block_size;
+            uint32_t DSBP_usage_counter_bits;
+
+            /// PHT
+            uint32_t DSBP_PHT_line_number;
+            uint32_t DSBP_PHT_associativity;
+            /// ====================================================================
+
+        /// ====================================================================
+        /// Set by this->allocate()
+        /// ====================================================================
+
+            /// ====================================================================
+            /// DSBP
+            /// ====================================================================
+            DSBP_metadata_sets_t *DSBP_sets;
+            uint32_t DSBP_total_sets;
+            uint32_t DSBP_sub_block_total;
+
+            DSBP_PHT_sets_t *DSBP_PHT_sets;
+            uint32_t DSBP_PHT_total_sets;
+            /// ====================================================================
+
+    public:
+        /// ====================================================================
+        /// Methods
+        /// ====================================================================
+        line_usage_predictor_t();
+        ~line_usage_predictor_t();
+        inline const char* get_type_component_label() {
+            return "LINE_USAGE_PREDICTOR";
+        };
+
+        /// ====================================================================
+        /// Inheritance
+        /// ====================================================================
+        /// interconnection_interface_t
+        void allocate();
+        void clock(uint32_t sub_cycle);
+        int32_t send_package(memory_package_t *package);
+        bool receive_package(memory_package_t *package, uint32_t input_port);
+        void print_structures();
+        void panic();
+        void periodic_check();
+
+        /// ====================================================================
+        /// statistics_t
+        void reset_statistics();
+        void print_statistics();
+        void print_configuration();
+        /// ====================================================================
+
+        INSTANTIATE_GET_SET(line_usage_predictor_policy_t, line_usage_predictor_type);
+        INSTANTIATE_GET_SET(uint32_t, DSBP_line_number);
+        INSTANTIATE_GET_SET(uint32_t, DSBP_associativity);
+        INSTANTIATE_GET_SET(uint32_t, DSBP_total_sets);
+
+            /// PHT
+        INSTANTIATE_GET_SET(uint32_t, DSBP_sub_block_size);
+        INSTANTIATE_GET_SET(uint32_t, DSBP_sub_block_total);
+        INSTANTIATE_GET_SET(uint32_t, DSBP_usage_counter_bits);
+        INSTANTIATE_GET_SET(uint32_t, DSBP_PHT_line_number);
+        INSTANTIATE_GET_SET(uint32_t, DSBP_PHT_associativity);
+        INSTANTIATE_GET_SET(uint32_t, DSBP_PHT_total_sets);
+};
+
+
 
 /// ============================================================================
 /// Cache Memories
@@ -1778,12 +1913,6 @@ class cache_line_t {
         uint64_t last_access;
         uint64_t usage_counter;
         bool dirty;
-
-        //======================================================================
-        // DSBP
-        DSBP_metadata *DSBP_tag;
-        void DSBP_tag_allocate(uint32_t sub_block_number);
-        //======================================================================
 
         /// ====================================================================
         /// Methods
@@ -1817,12 +1946,8 @@ class cache_set_t {
 /// Cache Memory.
 class cache_memory_t : public interconnection_interface_t {
     public:
-        prefetch_t prefetcher;            /// Prefetcher
-
-        //======================================================================
-        // DSBP
-        DSBP_PHT_line *DSBP_PHT;
-        void DSBP_PHT_allocate(uint32_t sub_block_number);
+        prefetch_t prefetcher;                          /// Prefetcher
+        line_usage_predictor_t line_usage_predictor;    /// Line_Usage_Predictor
 
     private:
         /// ====================================================================

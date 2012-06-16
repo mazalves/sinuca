@@ -139,10 +139,6 @@ void prefetch_t::clock(uint32_t subcycle) {
 
         case PREFETCHER_DISABLE:
         break;
-
-        default:
-            ERROR_PRINTF("Invalid prefetch strategy %u.\n", this->get_prefetcher_type());
-        break;
     }
 };
 
@@ -251,7 +247,7 @@ void prefetch_t::reset_statistics() {
 
 // =============================================================================
 void prefetch_t::print_statistics() {
-     char title[50] = "";
+     char title[100] = "";
     sprintf(title, "Statistics of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);
@@ -260,7 +256,7 @@ void prefetch_t::print_statistics() {
 
 // =============================================================================
 void prefetch_t::print_configuration() {
-    char title[50] = "";
+    char title[100] = "";
     sprintf(title, "Configuration of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);

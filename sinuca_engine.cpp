@@ -48,6 +48,7 @@ sinuca_engine_t::sinuca_engine_t() {
 
     this->global_cycle = 0;
     this->global_line_size = 0;
+
     this->is_simulation_allocated = false;
     this->is_simulation_eof = false;
     this->is_runtime_debug = true;
@@ -55,6 +56,7 @@ sinuca_engine_t::sinuca_engine_t() {
     this->trace_reader = new trace_reader_t;
     utils_t::process_mem_usage(stat_vm_start, stat_rss_start);
 };
+
 
 //==============================================================================
 sinuca_engine_t::~sinuca_engine_t() {

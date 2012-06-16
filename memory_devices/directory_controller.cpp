@@ -178,13 +178,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
     /// Get CACHE pointer
     cache_memory_t *cache = sinuca_engine.cache_memory_array[cache_id];
-    /// Get CACHE_LINE
-    cache_line_t *cache_line = cache->find_line(package->memory_address);
 
     /// Inspect IS_READ
     bool is_read = this->coherence_is_read(package->memory_operation);
-    /// Inspect IS_HIT
-    bool is_hit = this->coherence_is_hit(cache_line, package);
 
     /// ========================================================================
     /// Takes care about the LOCK
@@ -276,6 +272,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     /// ========================================================================
     /// Takes care about the CACHE HIT/MISS
     /// ========================================================================
+    /// Get CACHE_LINE
+    cache_line_t *cache_line = cache->find_line(package->memory_address);
+
     switch (package->memory_operation) {
         ///=====================================================================
         /// READ and WRITE
@@ -283,6 +282,10 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
         case MEMORY_OPERATION_INST:
         case MEMORY_OPERATION_PREFETCH:
         case MEMORY_OPERATION_WRITE:
+        {
+            /// Inspect IS_HIT
+            bool is_hit = this->coherence_is_hit(cache_line, package);
+
             /// Cache Hit
             if (is_hit) {
                 /// THIS cache level started the request (PREFETCH)
@@ -401,12 +404,14 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                     return PACKAGE_STATE_TRANSMIT;
                 }
             }
+        }
         break;
 
 
         ///=====================================================================
         /// COPY-BACK
         case MEMORY_OPERATION_COPYBACK:
+        {
             /// COPYBACK from THIS cache => LOWER level
             ERROR_ASSERT_PRINTF(cache->get_id() != package->id_owner, "Copyback should be created using create_cache_copyback.\n")
 
@@ -459,9 +464,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             package->id_src = cache->get_id();
             DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT (Hit)\n")
             return PACKAGE_STATE_TRANSMIT;
+        }
         break;
     }
-
 
     ERROR_PRINTF("Could not treat the cache request\n")
     return PACKAGE_STATE_FREE;
@@ -475,12 +480,6 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
 
     /// Get CACHE pointer
     cache_memory_t *cache = sinuca_engine.cache_memory_array[cache_id];
-    /// Get CACHE_LINE
-    cache_line_t *cache_line = cache->find_line(package->memory_address);
-    /// Get CACHE_MSHR
-    memory_package_t *cache_mshr_buffer = cache->get_mshr_buffer();
-    /// Get CACHE_MSHR_SIZE
-    uint32_t cache_mshr_buffer_size = cache->get_mshr_buffer_size();
 
     directory_controller_line_t *directory_line = NULL;
     int32_t directory_line_number = POSITION_FAIL;
@@ -501,6 +500,10 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
     /// ========================================================================
     /// Takes care about Parallel Requests at the same Cache Level
     /// ========================================================================
+    /// Get CACHE_MSHR
+    memory_package_t *cache_mshr_buffer = cache->get_mshr_buffer();
+    /// Get CACHE_MSHR_SIZE
+    uint32_t cache_mshr_buffer_size = cache->get_mshr_buffer_size();
 
     /// Wake up all requests waiting in the cache_mshr
     for (uint32_t i = 0; i < cache_mshr_buffer_size; i++) {
@@ -517,6 +520,9 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
     /// ========================================================================
     /// Takes care about the Coherence Update and Answer
     /// ========================================================================
+    /// Get CACHE_LINE
+    cache_line_t *cache_line = cache->find_line(package->memory_address);
+
     switch (package->memory_operation) {
         ///=====================================================================
         /// READ AND WRITE
@@ -1033,8 +1039,6 @@ void directory_controller_t::coherence_new_operation(cache_memory_t *cache, cach
 
 };
 
-
-
 //==============================================================================
 void directory_controller_t::print_structures() {
     SINUCA_PRINTF("DIRECTORY_LINE:\n")
@@ -1097,7 +1101,7 @@ void directory_controller_t::reset_statistics() {
 };
 
 void directory_controller_t::print_statistics() {
-    char title[50] = "";
+    char title[100] = "";
     sprintf(title, "Statistics of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);
@@ -1147,7 +1151,7 @@ void directory_controller_t::print_statistics() {
 };
 
 void directory_controller_t::print_configuration() {
-    char title[50] = "";
+    char title[100] = "";
     sprintf(title, "Configuration of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);

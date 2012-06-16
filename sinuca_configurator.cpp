@@ -356,7 +356,7 @@ void sinuca_engine_t::initialize_processor() {
                         break;
                     }
                 }
-                ERROR_ASSERT_PRINTF(is_required, "PROCESSOR %d has PARAMETER not required: \"%s\"\n", i, cfg_processor[j].getName());
+                ERROR_ASSERT_PRINTF(is_required, "PROCESSOR %d %s has PARAMETER not required: \"%s\"\n", i, this->processor_array[i]->get_label(), cfg_processor[j].getName());
             }
 
             /// Check if any BRANCH PREDICTOR non-required parameters exist
@@ -368,14 +368,14 @@ void sinuca_engine_t::initialize_processor() {
                         break;
                     }
                 }
-                ERROR_ASSERT_PRINTF(is_required, "PROCESSOR %d BRANCH PREDICTOR has PARAMETER not required: \"%s\"\n", i, cfg_processor[j].getName());
+                ERROR_ASSERT_PRINTF(is_required, "PROCESSOR %d %s BRANCH PREDICTOR has PARAMETER not required: \"%s\"\n", i, this->processor_array[i]->get_label(), cfg_processor[j].getName());
             }
         }
         catch(libconfig::SettingNotFoundException &nfex) {
-            ERROR_PRINTF(" PROCESSOR %d has required PARAMETER missing: \"%s\" \"%s\"\n", i, processor_parameters.back(), branch_predictor_parameters.size() != 0 ? branch_predictor_parameters.back() : "");
+            ERROR_PRINTF(" PROCESSOR %d %s has required PARAMETER missing: \"%s\" \"%s\"\n", i, this->processor_array[i]->get_label(), processor_parameters.back(), branch_predictor_parameters.size() != 0 ? branch_predictor_parameters.back() : "");
         }
         catch(libconfig::SettingTypeException &tex) {
-            ERROR_PRINTF(" PROCESSOR %d has PARAMETER wrong type: \"%s\" \"%s\"\n", i, processor_parameters.back(), branch_predictor_parameters.size() != 0 ? branch_predictor_parameters.back() : "");
+            ERROR_PRINTF(" PROCESSOR %d %s has PARAMETER wrong type: \"%s\" \"%s\"\n", i, this->processor_array[i]->get_label(), processor_parameters.back(), branch_predictor_parameters.size() != 0 ? branch_predictor_parameters.back() : "");
         }
     }
 };
@@ -401,6 +401,7 @@ void sinuca_engine_t::initialize_cache_memory() {
 
         std::deque<const char*> cache_memory_parameters;
         std::deque<const char*> prefetcher_parameters;
+        std::deque<const char*> line_usage_predictor_parameters;
 
         libconfig::Setting &cfg_cache_memory = cfg_cache_memory_list[i];
 
@@ -530,6 +531,53 @@ void sinuca_engine_t::initialize_cache_memory() {
             prefetcher_parameters.push_back("STREAM_WAIT_BETWEEN_REQUESTS");
             this->cache_memory_array[i]->prefetcher.set_stream_wait_between_requests( cfg_prefetcher[ prefetcher_parameters.back() ] );
 
+
+            /// ================================================================
+            /// Required LINE_USAGE_PREDICTOR Parameters
+            /// ================================================================
+            cache_memory_parameters.push_back("LINE_USAGE_PREDICTOR");
+            libconfig::Setting &cfg_line_usage_predictor = cfg_cache_memory_list[i][cache_memory_parameters.back()];
+
+            line_usage_predictor_parameters.push_back("TYPE");
+            if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "DSBP") ==  0) {
+                this->cache_memory_array[i]->line_usage_predictor.set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_DSBP);
+            }
+            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "SPP") ==  0) {
+                this->cache_memory_array[i]->line_usage_predictor.set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_SPP);
+            }
+            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "DISABLE") ==  0) {
+                this->cache_memory_array[i]->line_usage_predictor.set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_DISABLE);
+            }
+            else {
+                ERROR_PRINTF("CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
+            }
+
+
+            /// DSBP Metadata
+            line_usage_predictor_parameters.push_back("DSBP_LINE_NUMBER");
+            this->cache_memory_array[i]->line_usage_predictor.set_DSBP_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+            ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_line_number() == this->cache_memory_array[i]->line_usage_predictor.get_DSBP_line_number(),
+                                "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
+
+            line_usage_predictor_parameters.push_back("DSBP_ASSOCIATIVITY");
+            this->cache_memory_array[i]->line_usage_predictor.set_DSBP_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+            ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_associativity() == this->cache_memory_array[i]->line_usage_predictor.get_DSBP_associativity(),
+                                "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
+
+            line_usage_predictor_parameters.push_back("DSBP_SUB_BLOCK_SIZE");
+            this->cache_memory_array[i]->line_usage_predictor.set_DSBP_sub_block_size( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+            line_usage_predictor_parameters.push_back("DSBP_USAGE_COUNTER_BITS");
+            this->cache_memory_array[i]->line_usage_predictor.set_DSBP_usage_counter_bits( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+            /// PHT
+            line_usage_predictor_parameters.push_back("DSBP_PHT_LINE_NUMBER");
+            this->cache_memory_array[i]->line_usage_predictor.set_DSBP_PHT_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+            line_usage_predictor_parameters.push_back("DSBP_PHT_ASSOCIATIVITY");
+            this->cache_memory_array[i]->line_usage_predictor.set_DSBP_PHT_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+
             /// ================================================================
             /// Check if any CACHE_MEMORY non-required parameters exist
             for (int32_t j = 0 ; j < cfg_cache_memory.getLength(); j++) {
@@ -540,7 +588,7 @@ void sinuca_engine_t::initialize_cache_memory() {
                         break;
                     }
                 }
-                ERROR_ASSERT_PRINTF(is_required, "CACHE_MEMORY %d has PARAMETER not required: \"%s\"\n", i, cfg_cache_memory[j].getName());
+                ERROR_ASSERT_PRINTF(is_required, "CACHE_MEMORY %d %s has PARAMETER not required: \"%s\"\n", i, this->cache_memory_array[i]->get_label(), cfg_cache_memory[j].getName());
             }
 
             /// Check if any PREFETCHER non-required parameters exist
@@ -552,14 +600,49 @@ void sinuca_engine_t::initialize_cache_memory() {
                         break;
                     }
                 }
-                ERROR_ASSERT_PRINTF(is_required, "CACHE_MEMORY %d PREFETCHER has PARAMETER not required: \"%s\"\n", i, cfg_cache_memory[j].getName());
+                ERROR_ASSERT_PRINTF(is_required, "CACHE_MEMORY %d %s PREFETCHER has PARAMETER not required: \"%s\"\n", i, this->cache_memory_array[i]->get_label(), cfg_cache_memory[j].getName());
             }
+
+            /// Check if any LINE_USAGE_PREDICTOR non-required parameters exist
+            for (int32_t j = 0 ; j < cfg_line_usage_predictor.getLength(); j++) {
+                bool is_required = false;
+                for (uint32_t k = 0 ; k < line_usage_predictor_parameters.size(); k++) {
+                    if (strcmp(cfg_line_usage_predictor[j].getName(), line_usage_predictor_parameters[k]) == 0) {
+                        is_required = true;
+                        break;
+                    }
+                }
+                ERROR_ASSERT_PRINTF(is_required, "CACHE_MEMORY %d %s LINE_USAGE_PREDICTOR has PARAMETER not required: \"%s\"\n", i, this->cache_memory_array[i]->get_label(), cfg_cache_memory[j].getName());
+            }
+
         }
         catch(libconfig::SettingNotFoundException &nfex) {
-            ERROR_PRINTF(" CACHE_MEMORY %d has required PARAMETER missing: \"%s\" \"%s\"\n", i, cache_memory_parameters.back(), prefetcher_parameters.size() != 0 ? prefetcher_parameters.back() : "");
+            /// Cache Memory Parameter
+            if (prefetcher_parameters.size() == 0 && line_usage_predictor_parameters.size() == 0) {
+                ERROR_PRINTF(" CACHE_MEMORY %d %s has required PARAMETER missing: \"%s\"\n", i, this->cache_memory_array[i]->get_label(), cache_memory_parameters.back());
+            }
+            /// Prefetcher Parameter
+            else if (prefetcher_parameters.size() != 0 && line_usage_predictor_parameters.size() == 0) {
+                ERROR_PRINTF(" CACHE_MEMORY %d %s has required PARAMETER missing: \"%s\" \"%s\" \n", i, this->cache_memory_array[i]->get_label(), cache_memory_parameters.back(), prefetcher_parameters.back());
+            }
+            /// Line_Usage_Predictor Parameter
+            else {
+                ERROR_PRINTF(" CACHE_MEMORY %d %s has required PARAMETER missing: \"%s\" \"%s\" \n", i, this->cache_memory_array[i]->get_label(), cache_memory_parameters.back(), line_usage_predictor_parameters.back());
+            }
         }
         catch(libconfig::SettingTypeException &tex) {
-            ERROR_PRINTF(" CACHE_MEMORY %d has PARAMETER wrong type: \"%s\" \"%s\"\n", i, cache_memory_parameters.back(), prefetcher_parameters.size() != 0 ? prefetcher_parameters.back() : "");
+            /// Cache Memory Parameter
+            if (prefetcher_parameters.size() == 0 && line_usage_predictor_parameters.size() == 0) {
+                ERROR_PRINTF(" CACHE_MEMORY %d %s has required PARAMETER wrong type: \"%s\"\n", i, this->cache_memory_array[i]->get_label(), cache_memory_parameters.back());
+            }
+            /// Prefetcher Parameter
+            else if (prefetcher_parameters.size() != 0 && line_usage_predictor_parameters.size() == 0) {
+                ERROR_PRINTF(" CACHE_MEMORY %d %s has required PARAMETER wrong type: \"%s\" \"%s\" \n", i, this->cache_memory_array[i]->get_label(), cache_memory_parameters.back(), prefetcher_parameters.back());
+            }
+            /// Line_Usage_Predictor Parameter
+            else {
+                ERROR_PRINTF(" CACHE_MEMORY %d %s has required PARAMETER wrong type: \"%s\" \"%s\" \n", i, this->cache_memory_array[i]->get_label(), cache_memory_parameters.back(), line_usage_predictor_parameters.back());
+            }
         }
     }
 };

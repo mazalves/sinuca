@@ -344,7 +344,7 @@ void interconnection_controller_t::reset_statistics() {
 
 /// ============================================================================
 void interconnection_controller_t::print_statistics() {
-    char title[50] = "";
+    char title[100] = "";
     sprintf(title, "Statistics of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);
@@ -353,7 +353,7 @@ void interconnection_controller_t::print_statistics() {
 
 /// ============================================================================
 void interconnection_controller_t::print_configuration() {
-    char title[50] = "";
+    char title[100] = "";
     sprintf(title, "Configuration of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);

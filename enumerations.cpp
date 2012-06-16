@@ -244,6 +244,19 @@ const char *get_enum_prefetch_policy_char(prefetch_policy_t type) {
     return "FAIL";
 };
 
+
+/// ============================================================================
+/// Prefetcher type
+const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_policy_t type) {
+    switch (type) {
+        case LINE_USAGE_PREDICTOR_POLICY_DSBP:      return "DSBP"; break;
+        case LINE_USAGE_PREDICTOR_POLICY_SPP:       return "SPP"; break;
+        case LINE_USAGE_PREDICTOR_POLICY_DISABLE:   return "DISABLE"; break;
+    };
+    ERROR_PRINTF("Wrong LINE_USAGE_PREDICTOR_POLICY\n");
+    return "FAIL";
+};
+
 /// ============================================================================
 /// Prefetcher full buffer type
 const char *get_enum_full_buffer_char(full_buffer_t type) {

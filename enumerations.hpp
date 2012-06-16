@@ -203,6 +203,15 @@ const char *get_enum_prefetch_policy_char(prefetch_policy_t type);
 
 /// ============================================================================
 /// Prefetcher type
+enum line_usage_predictor_policy_t {
+    LINE_USAGE_PREDICTOR_POLICY_DSBP,
+    LINE_USAGE_PREDICTOR_POLICY_SPP,
+    LINE_USAGE_PREDICTOR_POLICY_DISABLE
+};
+const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_policy_t type);
+
+/// ============================================================================
+/// Prefetcher type
 enum full_buffer_t {
     FULL_BUFFER_OVERRIDE,
     FULL_BUFFER_STOP
