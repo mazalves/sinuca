@@ -1861,9 +1861,13 @@ class line_usage_predictor_t : public interconnection_interface_t {
             uint32_t DSBP_sub_block_total;
             uint32_t DSBP_usage_counter_max;
 
+            uint64_t **DBPP_stat_prediction;
+
             DSBP_PHT_sets_t *DSBP_PHT_sets;
             uint32_t DSBP_PHT_total_sets;
             uint64_t DSBP_PHT_index_bits_mask;
+
+
             /// ====================================================================
 
     public:

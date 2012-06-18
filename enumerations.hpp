@@ -216,7 +216,8 @@ enum line_sub_block_t {
     LINE_SUB_BLOCK_DISABLE,
     LINE_SUB_BLOCK_NORMAL,
     LINE_SUB_BLOCK_LEARN,
-    LINE_SUB_BLOCK_WRONG_FIRST
+    LINE_SUB_BLOCK_WRONG_FIRST,
+    LINE_SUB_BLOCK_NUMBER
 };
 
 /// ============================================================================

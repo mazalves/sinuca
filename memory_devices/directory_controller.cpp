@@ -345,11 +345,18 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 if (!coherence_need_copyback(cache_line)) {
                     /// Add statistics to the cache
                     cache->cache_evict(package->memory_address, false);
+                    // =============================================================
+                    // Line Usage Prediction
+                    cache->line_usage_predictor.line_eviction(index, way);
                 }
                 else {
                     if (this->create_cache_copyback(cache, cache_line, index, way)) {
                         /// Add statistics to the cache
                         cache->cache_evict(package->memory_address, true);
+                        // =============================================================
+                        // Line Usage Prediction
+                        cache->line_usage_predictor.line_eviction(index, way);
+
                     }
                     else {
                         /// Cannot continue right now
@@ -445,11 +452,17 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             if (!coherence_need_copyback(cache_line)) {
                 /// Add statistics to the cache
                 cache->cache_evict(package->memory_address, false);
+                // =============================================================
+                // Line Usage Prediction
+                cache->line_usage_predictor.line_eviction(index, way);
             }
             else {
                 if (this->create_cache_copyback(cache, cache_line, index, way)) {
                     /// Add statistics to the cache
                     cache->cache_evict(package->memory_address, true);
+                    // =============================================================
+                    // Line Usage Prediction
+                    cache->line_usage_predictor.line_eviction(index, way);
                 }
                 else {
                     /// Cannot continue right now
@@ -682,6 +695,7 @@ bool directory_controller_t::create_cache_copyback(cache_memory_t *cache, cache_
     directory_line->cache_request_order[cache->get_cache_id()] = ++directory_line->cache_requested;
     DIRECTORY_CTRL_DEBUG_PRINTF("\t Update Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
 
+    // =============================================================
     // Line Usage Prediction
     // ~ cache->line_usage_predictor.line_copy_back(package, index, way);
 
