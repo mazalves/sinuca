@@ -287,10 +287,16 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
         case MEMORY_OPERATION_WRITE:
         {
             /// Inspect IS_HIT
-            bool is_hit = this->coherence_is_hit(cache_line, package);
-
-            /// Cache Hit
-            if (is_hit) {
+            bool is_line_hit = this->coherence_is_hit(cache_line, package);
+            bool is_sub_block_hit = false;
+            // =============================================================
+            // Line Usage Prediction
+            if (is_line_hit) {
+                is_sub_block_hit = cache->line_usage_predictor.check_sub_block_is_hit(package, index, way);
+            }
+            ///=================================================================
+            /// Cache Line Hit
+            if (is_line_hit && is_sub_block_hit) {
                 // =============================================================
                 // Line Usage Prediction
                 cache->line_usage_predictor.line_hit(package, index, way);
@@ -325,7 +331,63 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                     return PACKAGE_STATE_TRANSMIT;
                 }
             }
-            /// Cache Miss
+            ///=================================================================
+            /// Cache Line Sub_Block Miss
+            else if (is_line_hit) {
+                /// Found Line to Evict
+                /// No Need for CopyBack or CopyBack allocated
+                // =============================================================
+                // Line Usage Prediction
+                cache->line_usage_predictor.line_miss(package, index, way);
+
+                /// The request can be treated now !
+                /// New Directory_Line + LOCK
+                if (directory_line == NULL) {
+                    this->directory_lines->push_back(new directory_controller_line_t());
+                    directory_line = this->directory_lines->back();
+
+                    directory_line->packager(package->id_owner, package->opcode_number, package->opcode_address, package->uop_number,
+                                                is_read ? LOCK_READ : LOCK_WRITE,
+                                                package->memory_operation, package->memory_address, package->memory_size);
+                    DIRECTORY_CTRL_DEBUG_PRINTF("\t New Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
+                }
+
+                /// Update the Directory_Line
+                directory_line->cache_request_order[cache_id] = ++directory_line->cache_requested;
+                DIRECTORY_CTRL_DEBUG_PRINTF("\t Update Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
+
+                /// Send Request to fill the cache line
+                if (package->memory_operation == MEMORY_OPERATION_WRITE) {
+                    package->memory_operation = MEMORY_OPERATION_READ;
+                }
+
+                /// Check if some HIGHER LEVEL has the cache line Modified
+                cache->change_status(cache_line, this->look_higher_levels(cache, package, true));
+
+
+                /// Higher Level Hit
+                if (cache_line->status != PROTOCOL_STATUS_I) {
+                    /// LATENCY = COPY_BACK + WRITE
+                    // TODO(mazalves): Add the copyback latency here !!!
+                    package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_write();
+                    package->is_answer = true;
+                    DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED ANSWER (Found Higher Level)\n")
+                    return PACKAGE_STATE_UNTREATED;
+                }
+                /// Higher Level Miss
+                else {
+                    /// LATENCY = READ
+                    package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read();
+
+                    package->memory_size = sinuca_engine.get_global_line_size();
+                    package->id_src = cache->get_id();
+                    package->id_dst = this->find_next_obj_id(cache, package->memory_address);
+                    DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT RQST (Miss)\n")
+                    return PACKAGE_STATE_TRANSMIT;
+                }
+            }
+            ///=================================================================
+            /// Cache Line Miss
             else {
 
                 /// Do not have a reserved line
@@ -367,10 +429,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
                 /// Found Line to Evict
                 /// No Need for CopyBack or CopyBack allocated
-
                 // =============================================================
                 // Line Usage Prediction
-                // ~ cache->line_usage_predictor.line_miss(package, index, way);
+                cache->line_usage_predictor.line_miss(package, index, way);
 
                 /// Reserve the evicted line for the new address
                 cache->change_address(cache_line, package->memory_address);
@@ -400,7 +461,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 }
 
                 /// Check if some HIGHER LEVEL has the cache line Modified
-                cache->change_status(cache_line, this->look_higher_levels(cache, package->memory_address, true));
+                cache->change_status(cache_line, this->look_higher_levels(cache, package, true));
 
 
                 /// Higher Level Hit
@@ -697,7 +758,7 @@ bool directory_controller_t::create_cache_copyback(cache_memory_t *cache, cache_
 
     // =============================================================
     // Line Usage Prediction
-    // ~ cache->line_usage_predictor.line_copy_back(package, index, way);
+    cache->line_usage_predictor.line_copy_back(package, index, way);
 
     /// Higher Level Copy Back
     package->memory_size = sinuca_engine.get_global_line_size();
@@ -747,7 +808,7 @@ bool directory_controller_t::is_locked(uint64_t memory_address) {
 
 
 //==============================================================================
-protocol_status_t directory_controller_t::look_higher_levels(cache_memory_t *cache_memory, uint64_t memory_address, bool check_llc) {
+protocol_status_t directory_controller_t::look_higher_levels(cache_memory_t *cache_memory, memory_package_t *package, bool check_llc) {
     ERROR_ASSERT_PRINTF(cache_memory != NULL, "Received a NULL cache_memory\n");
 
     /// ========================================================================
@@ -759,12 +820,12 @@ protocol_status_t directory_controller_t::look_higher_levels(cache_memory_t *cac
             cache_memory_t *llc = this->llc_caches[0][i];
 
             /// If bank invalid for the address
-            if (llc->get_bank(memory_address) != llc->get_bank_number()) {
+            if (llc->get_bank(package->memory_address) != llc->get_bank_number()) {
                 continue;
             }
 
             /// Propagate Higher
-            protocol_status_t return_type = this->look_higher_levels(llc, memory_address, false);
+            protocol_status_t return_type = this->look_higher_levels(llc, package, false);
 
             switch (this->get_coherence_protocol_type()) {
                 case COHERENCE_PROTOCOL_MOESI:
@@ -793,28 +854,34 @@ protocol_status_t directory_controller_t::look_higher_levels(cache_memory_t *cac
         /// ========================================================================
         /// Check this level
         uint32_t index, way;
-        cache_line_t *this_cache_line = cache_memory->find_line(memory_address, index, way);
+        cache_line_t *this_cache_line = cache_memory->find_line(package->memory_address, index, way);
         if (this_cache_line != NULL) {
-            switch (this->get_coherence_protocol_type()) {
-                case COHERENCE_PROTOCOL_MOESI:
-                    switch (this_cache_line->status) {
-                        case PROTOCOL_STATUS_M:
-                        case PROTOCOL_STATUS_O:
-                            /// This Level stays with a normal copy
-                            cache_memory->change_status(this_cache_line, PROTOCOL_STATUS_S);
-                            /// Lower level becomes the owner
-                            return PROTOCOL_STATUS_O;
-                        break;
+            // =============================================================
+            // Line Usage Prediction
+            bool is_sub_block_hit = cache_memory->line_usage_predictor.check_sub_block_is_hit(package, index, way);
+            if (is_sub_block_hit) {
 
-                        case PROTOCOL_STATUS_E:
-                        case PROTOCOL_STATUS_S:
-                            return PROTOCOL_STATUS_S;
-                        break;
+                switch (this->get_coherence_protocol_type()) {
+                    case COHERENCE_PROTOCOL_MOESI:
+                        switch (this_cache_line->status) {
+                            case PROTOCOL_STATUS_M:
+                            case PROTOCOL_STATUS_O:
+                                /// This Level stays with a normal copy
+                                cache_memory->change_status(this_cache_line, PROTOCOL_STATUS_S);
+                                /// Lower level becomes the owner
+                                return PROTOCOL_STATUS_O;
+                            break;
 
-                        case PROTOCOL_STATUS_I:
-                        break;
-                    }
-                break;
+                            case PROTOCOL_STATUS_E:
+                            case PROTOCOL_STATUS_S:
+                                return PROTOCOL_STATUS_S;
+                            break;
+
+                            case PROTOCOL_STATUS_I:
+                            break;
+                        }
+                    break;
+                }
             }
         }
 
@@ -823,7 +890,7 @@ protocol_status_t directory_controller_t::look_higher_levels(cache_memory_t *cac
         container_ptr_cache_memory_t *higher_level_cache = cache_memory->get_higher_level_cache();
         for (uint32_t i = 0; i < higher_level_cache->size(); i++) {
             cache_memory_t *higher_cache = higher_level_cache[0][i];
-            protocol_status_t return_type = this->look_higher_levels(higher_cache, memory_address, check_llc);
+            protocol_status_t return_type = this->look_higher_levels(higher_cache, package, check_llc);
 
             switch (this->get_coherence_protocol_type()) {
                 case COHERENCE_PROTOCOL_MOESI:
