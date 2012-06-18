@@ -626,26 +626,22 @@ void cache_memory_t::print_configuration() {
 // =============================================================================//
 // Input: memory_address
 // Output: cache_line_t*, &index, &way
-cache_line_t* cache_memory_t::find_line(uint64_t memory_address, uint64_t& index, uint32_t& way) {
-    cache_line_t *line;
-
+cache_line_t* cache_memory_t::find_line(uint64_t memory_address, uint32_t& index, uint32_t& choosen_way) {
     index = get_index(memory_address);
-    line = this->sets[index].ways;
 
-    for (way = 0; way < this->get_associativity(); way++) {
-        if (cmp_tag_index_bank(line->tag, memory_address)) {
-            return line;
+    for (uint32_t way = 0; way < this->get_associativity(); way++) {
+        if (cmp_tag_index_bank(this->sets[index].ways[way].tag, memory_address)) {
+            choosen_way = way;
+            return &this->sets[index].ways[way];
         }
-        line++;
     }
-
     return NULL;
 }
 
 // =============================================================================
 // Input: memory_address
 // Output: cache_line_t*, &index, &way
-cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint64_t& index, uint32_t& way) {
+cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& index, uint32_t& choosen_way) {
     cache_line_t *choosen_line = NULL;
 
     index = get_index(memory_address);
@@ -653,17 +649,19 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint64_t& i
     switch (this->replacement_policy) {
         case REPLACEMENT_LRU: {
             uint64_t last_access = sinuca_engine.get_global_cycle() + 1;
-            for (way = 0; way < this->get_associativity(); way++) {
+            for (uint32_t way = 0; way < this->get_associativity(); way++) {
                 if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[way].tag) == FAIL) {
                     /// If there is free space && the line is not locked by directory
                     if (this->sets[index].ways[way].status == PROTOCOL_STATUS_I) {
                         choosen_line = &this->sets[index].ways[way];
+                        choosen_way = way;
                         break;
                     }
                     /// If the line is LRU && the line is not locked by directory
                     else if (this->sets[index].ways[way].last_access <= last_access) {
                         choosen_line = &this->sets[index].ways[way];
                         last_access = this->sets[index].ways[way].last_access;
+                        choosen_way = way;
                     }
                 }
                 else {
@@ -677,10 +675,11 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint64_t& i
             /// Initialize random seed
             unsigned int seed = time(NULL);
             /// Generate random number
-            way = (rand_r(&seed) % this->get_associativity());
+            uint32_t way = (rand_r(&seed) % this->get_associativity());
             /// Check if the line is not locked by directory
             if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[way].tag) == FAIL) {
                 choosen_line = &this->sets[index].ways[way];
+                choosen_way = way;
             }
         }
         break;

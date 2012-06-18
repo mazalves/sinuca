@@ -311,6 +311,7 @@ class sinuca_engine_t {
         uint64_t global_cycle;
         /// Control the line size for all components
         uint32_t global_line_size;
+        uint64_t global_offset_bits_mask;
         /// Control if all the allocation is ready
         bool is_simulation_allocated;
         /// Control for Run Time Debug
@@ -398,15 +399,10 @@ class sinuca_engine_t {
 
         INSTANTIATE_GET_SET(uint64_t, global_cycle);
 
-        inline void set_global_line_size(uint32_t new_size) {
-            if (this->global_line_size == 0) {
-                this->global_line_size = new_size;
-            }
-            ERROR_ASSERT_PRINTF(this->get_global_line_size() == new_size, "All the line_size must be equal.\n")
-        };
-        inline uint32_t get_global_line_size() {
-            return (this->global_line_size);
-        };
+        void set_global_line_size(uint32_t new_size);   /// Define one global_line_size and global_offset_bits_mask
+        uint32_t get_global_line_size();
+
+        INSTANTIATE_GET_SET(uint64_t, global_offset_bits_mask);
 
 
         /// ====================================================================
@@ -1570,7 +1566,7 @@ class directory_controller_t : public interconnection_interface_t {
 
         package_state_t treat_cache_request(uint32_t obj_id, memory_package_t *package);
         package_state_t treat_cache_answer(uint32_t obj_id, memory_package_t *package);
-        bool create_cache_copyback(cache_memory_t *cache, cache_line_t *cache_line);
+        bool create_cache_copyback(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
 
         uint32_t find_next_obj_id(cache_memory_t *cache_memory, uint64_t memory_address);
         bool is_locked(uint64_t memory_address);
@@ -1773,6 +1769,7 @@ class DSBP_PHT_line_t {
     public:
         uint64_t pc;
         uint64_t offset;
+        uint64_t last_access;
         bool pointer;
         uint32_t *usage_counter;
         bool *overflow;
@@ -1780,11 +1777,14 @@ class DSBP_PHT_line_t {
         DSBP_PHT_line_t() {
             this->pc = 0;
             this->offset = 0;
+            this->last_access = 0;
             this->pointer = 0;
             this->usage_counter = NULL;
             this->overflow = NULL;
         };
         ~DSBP_PHT_line_t() {
+            if (this->usage_counter) delete [] usage_counter;
+            if (this->overflow) delete [] overflow;
         };
 };
 
@@ -1796,20 +1796,25 @@ class DSBP_PHT_sets_t {
 
 class DSBP_metadata_line_t {
     public:
-        bool *valid_sub_blocks;
+        line_sub_block_t *valid_sub_blocks;
+        uint32_t *real_usage_counter;
         uint32_t *usage_counter;
         bool *overflow;
-        bool train;
+        bool learn_mode;
         DSBP_PHT_line_t *PHT_pointer;
 
         DSBP_metadata_line_t() {
             this->valid_sub_blocks = NULL;
             this->usage_counter = NULL;
             this->overflow = NULL;
-            this->train = 0;
+            this->learn_mode = 0;
             this->PHT_pointer = NULL;
         };
         ~DSBP_metadata_line_t() {
+            if (this->valid_sub_blocks) delete [] valid_sub_blocks;
+            if (this->real_usage_counter) delete [] real_usage_counter;
+            if (this->usage_counter) delete [] usage_counter;
+            if (this->overflow) delete [] overflow;
         };
 };
 
@@ -1841,6 +1846,7 @@ class line_usage_predictor_t : public interconnection_interface_t {
             /// PHT
             uint32_t DSBP_PHT_line_number;
             uint32_t DSBP_PHT_associativity;
+            replacement_t DSBP_PHT_replacement_policy;
             /// ====================================================================
 
         /// ====================================================================
@@ -1853,9 +1859,11 @@ class line_usage_predictor_t : public interconnection_interface_t {
             DSBP_metadata_sets_t *DSBP_sets;
             uint32_t DSBP_total_sets;
             uint32_t DSBP_sub_block_total;
+            uint32_t DSBP_usage_counter_max;
 
             DSBP_PHT_sets_t *DSBP_PHT_sets;
             uint32_t DSBP_PHT_total_sets;
+            uint64_t DSBP_PHT_index_bits_mask;
             /// ====================================================================
 
     public:
@@ -1887,18 +1895,38 @@ class line_usage_predictor_t : public interconnection_interface_t {
         void print_configuration();
         /// ====================================================================
 
+        void get_start_end_sub_blocks(uint64_t base_address, uint32_t size, uint32_t& sub_block_ini, uint32_t& sub_block_end);
+        void fill_package_sub_blocks(memory_package_t *package);
+        bool check_sub_block_is_hit(memory_package_t *package, uint64_t index, uint32_t way);
+
+        /// Cache Operations
+        void line_hit(memory_package_t *package, uint32_t index, uint32_t way);
+        void line_miss(memory_package_t *package, uint32_t index, uint32_t way);
+        void sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way);
+        void line_copy_back(memory_package_t *package, uint32_t index, uint32_t way);
+        void line_eviction(uint32_t index, uint32_t way);
+
         INSTANTIATE_GET_SET(line_usage_predictor_policy_t, line_usage_predictor_type);
-        INSTANTIATE_GET_SET(uint32_t, DSBP_line_number);
-        INSTANTIATE_GET_SET(uint32_t, DSBP_associativity);
-        INSTANTIATE_GET_SET(uint32_t, DSBP_total_sets);
+
+            /// ====================================================================
+            /// DSBP
+            /// ====================================================================
+
+            INSTANTIATE_GET_SET(uint32_t, DSBP_line_number);
+            INSTANTIATE_GET_SET(uint32_t, DSBP_associativity);
+            INSTANTIATE_GET_SET(uint32_t, DSBP_total_sets);
 
             /// PHT
-        INSTANTIATE_GET_SET(uint32_t, DSBP_sub_block_size);
-        INSTANTIATE_GET_SET(uint32_t, DSBP_sub_block_total);
-        INSTANTIATE_GET_SET(uint32_t, DSBP_usage_counter_bits);
-        INSTANTIATE_GET_SET(uint32_t, DSBP_PHT_line_number);
-        INSTANTIATE_GET_SET(uint32_t, DSBP_PHT_associativity);
-        INSTANTIATE_GET_SET(uint32_t, DSBP_PHT_total_sets);
+            DSBP_PHT_line_t* DSBP_PHT_find_line(uint64_t pc, uint64_t memory_address);
+            DSBP_PHT_line_t* DSBP_PHT_evict_address(uint64_t pc, uint64_t memory_address);
+
+            INSTANTIATE_GET_SET(uint32_t, DSBP_sub_block_size);
+            INSTANTIATE_GET_SET(uint32_t, DSBP_sub_block_total);
+            INSTANTIATE_GET_SET(uint32_t, DSBP_usage_counter_bits);
+            INSTANTIATE_GET_SET(uint32_t, DSBP_PHT_line_number);
+            INSTANTIATE_GET_SET(uint32_t, DSBP_PHT_associativity);
+            INSTANTIATE_GET_SET(replacement_t, DSBP_PHT_replacement_policy);
+            INSTANTIATE_GET_SET(uint32_t, DSBP_PHT_total_sets);
 };
 
 
@@ -1911,6 +1939,7 @@ class cache_line_t {
         uint64_t tag;
         protocol_status_t status;
         uint64_t last_access;
+        // fix-me(mazalves): Create a line_clean to erase all the parameters after a line eviction
         uint64_t usage_counter;
         bool dirty;
 
@@ -1921,6 +1950,7 @@ class cache_line_t {
             this->tag = 0;
             this->status = PROTOCOL_STATUS_I;
             this->last_access = 0;
+            this->usage_counter = 0;
             this->dirty = true;
         };
         ~cache_line_t() {
@@ -2104,8 +2134,8 @@ class cache_memory_t : public interconnection_interface_t {
         }
         INSTANTIATE_GET_SET(container_ptr_cache_memory_t*, lower_level_cache)
 
-        cache_line_t* find_line(uint64_t memory_address, uint64_t& index, uint32_t& way);
-        cache_line_t* evict_address(uint64_t memory_address, uint64_t& index, uint32_t& way);
+        cache_line_t* find_line(uint64_t memory_address, uint32_t& index, uint32_t& way);
+        cache_line_t* evict_address(uint64_t memory_address, uint32_t& index, uint32_t& way);
         void change_address(cache_line_t *line, uint64_t new_memory_address);
         void change_status(cache_line_t *line, protocol_status_t status);
         void update_last_access(cache_line_t *line);

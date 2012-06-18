@@ -57,7 +57,6 @@ sinuca_engine_t::sinuca_engine_t() {
     utils_t::process_mem_usage(stat_vm_start, stat_rss_start);
 };
 
-
 //==============================================================================
 sinuca_engine_t::~sinuca_engine_t() {
     // Do not free these argment pointers
@@ -102,6 +101,24 @@ sinuca_engine_t::~sinuca_engine_t() {
     utils_t::template_delete_variable<directory_controller_t>(directory_controller);
     utils_t::template_delete_variable<interconnection_controller_t>(interconnection_controller);
 };
+
+//==============================================================================
+void sinuca_engine_t::set_global_line_size(uint32_t new_size) {
+    if (this->global_line_size == 0) {
+        this->global_line_size = new_size;
+        /// OFFSET MASK
+        for (uint32_t i = 0; i < utils_t::get_power_of_two(this->global_line_size); i++) {
+            this->global_offset_bits_mask |= 1 << i;
+        }
+    }
+    ERROR_ASSERT_PRINTF(this->get_global_line_size() == new_size, "All the line_size must be equal.\n")
+};
+
+//==============================================================================
+uint32_t sinuca_engine_t::get_global_line_size() {
+    return (this->global_line_size);
+};
+
 
 //==============================================================================
 void sinuca_engine_t::premature_termination() {

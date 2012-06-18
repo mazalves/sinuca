@@ -202,13 +202,22 @@ enum prefetch_policy_t {
 const char *get_enum_prefetch_policy_char(prefetch_policy_t type);
 
 /// ============================================================================
-/// Prefetcher type
+/// Line Usage Predictor type
 enum line_usage_predictor_policy_t {
     LINE_USAGE_PREDICTOR_POLICY_DSBP,
     LINE_USAGE_PREDICTOR_POLICY_SPP,
     LINE_USAGE_PREDICTOR_POLICY_DISABLE
 };
 const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_policy_t type);
+
+/// ============================================================================
+/// Valid Sub-Block Type
+enum line_sub_block_t {
+    LINE_SUB_BLOCK_DISABLE,
+    LINE_SUB_BLOCK_NORMAL,
+    LINE_SUB_BLOCK_LEARN,
+    LINE_SUB_BLOCK_WRONG_FIRST
+};
 
 /// ============================================================================
 /// Prefetcher type

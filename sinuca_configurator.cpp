@@ -577,6 +577,23 @@ void sinuca_engine_t::initialize_cache_memory() {
             line_usage_predictor_parameters.push_back("DSBP_PHT_ASSOCIATIVITY");
             this->cache_memory_array[i]->line_usage_predictor.set_DSBP_PHT_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
 
+            line_usage_predictor_parameters.push_back("DSBP_PHT_REPLACEMENT_POLICY");
+            if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "FIFO") ==  0) {
+                this->cache_memory_array[i]->line_usage_predictor.set_DSBP_PHT_replacement_policy(REPLACEMENT_FIFO);
+            }
+            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "LRF") ==  0) {
+                this->cache_memory_array[i]->line_usage_predictor.set_DSBP_PHT_replacement_policy(REPLACEMENT_LRF);
+            }
+            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "LRU") ==  0) {
+                this->cache_memory_array[i]->line_usage_predictor.set_DSBP_PHT_replacement_policy(REPLACEMENT_LRU);
+            }
+            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "RANDOM") ==  0) {
+                this->cache_memory_array[i]->line_usage_predictor.set_DSBP_PHT_replacement_policy(REPLACEMENT_RANDOM);
+            }
+            else {
+                ERROR_PRINTF("CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
+            }
+
 
             /// ================================================================
             /// Check if any CACHE_MEMORY non-required parameters exist
