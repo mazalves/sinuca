@@ -1687,10 +1687,10 @@ class prefetch_t : public interconnection_interface_t {
 
         /// Set in case Stream Prefetch were used.
         uint32_t stream_table_size;             /// Prefetch Stream Detector Table Size
-        uint32_t stream_address_range;          /// Prefetch Range to Detect Stream
+        uint32_t stream_address_distance;          /// Prefetch Range to Detect Stream
         uint32_t stream_window;                 /// Detect the Stream as Dead
         uint32_t stream_threshold_activate;     /// Minimum relevance to start prefetch
-        uint32_t stream_distance;               /// Maximum number of prefetchs ahead
+        uint32_t stream_prefetch_degree;               /// Maximum number of prefetchs ahead
         uint32_t stream_wait_between_requests;  /// Wait time between prefetch generation
 
         /// ====================================================================
@@ -1755,10 +1755,10 @@ class prefetch_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, request_buffer_position_used)
 
         INSTANTIATE_GET_SET(uint32_t, stream_table_size)
-        INSTANTIATE_GET_SET(uint32_t, stream_address_range)
+        INSTANTIATE_GET_SET(uint32_t, stream_address_distance)
         INSTANTIATE_GET_SET(uint32_t, stream_window)
         INSTANTIATE_GET_SET(uint32_t, stream_threshold_activate)
-        INSTANTIATE_GET_SET(uint32_t, stream_distance)
+        INSTANTIATE_GET_SET(uint32_t, stream_prefetch_degree)
         INSTANTIATE_GET_SET(uint32_t, stream_wait_between_requests)
 };
 

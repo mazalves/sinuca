@@ -516,8 +516,8 @@ void sinuca_engine_t::initialize_cache_memory() {
             prefetcher_parameters.push_back("STREAM_TABLE_SIZE");
             this->cache_memory_array[i]->prefetcher.set_stream_table_size( cfg_prefetcher[ prefetcher_parameters.back() ] );
 
-            prefetcher_parameters.push_back("STREAM_ADDRESS_RANGE");
-            this->cache_memory_array[i]->prefetcher.set_stream_address_range( cfg_prefetcher[ prefetcher_parameters.back() ] );
+            prefetcher_parameters.push_back("STREAM_ADDRESS_DISTANCE");
+            this->cache_memory_array[i]->prefetcher.set_stream_address_distance( cfg_prefetcher[ prefetcher_parameters.back() ] );
 
             prefetcher_parameters.push_back("STREAM_WINDOW");
             this->cache_memory_array[i]->prefetcher.set_stream_window( cfg_prefetcher[ prefetcher_parameters.back() ] );
@@ -525,8 +525,8 @@ void sinuca_engine_t::initialize_cache_memory() {
             prefetcher_parameters.push_back("STREAM_THRESHOLD_ACTIVATE");
             this->cache_memory_array[i]->prefetcher.set_stream_threshold_activate( cfg_prefetcher[ prefetcher_parameters.back() ] );
 
-            prefetcher_parameters.push_back("STREAM_DISTANCE");
-            this->cache_memory_array[i]->prefetcher.set_stream_distance( cfg_prefetcher[ prefetcher_parameters.back() ] );
+            prefetcher_parameters.push_back("STREAM_PREFETCH_DEGREE");
+            this->cache_memory_array[i]->prefetcher.set_stream_prefetch_degree( cfg_prefetcher[ prefetcher_parameters.back() ] );
 
             prefetcher_parameters.push_back("STREAM_WAIT_BETWEEN_REQUESTS");
             this->cache_memory_array[i]->prefetcher.set_stream_wait_between_requests( cfg_prefetcher[ prefetcher_parameters.back() ] );

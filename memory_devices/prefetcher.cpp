@@ -34,10 +34,10 @@
 prefetch_t::prefetch_t() {
     this->prefetcher_type = PREFETCHER_DISABLE;
     this->stream_table_size = 0;
-    this->stream_address_range = 0;  /// double of line size
+    this->stream_address_distance = 0;  /// double of line size
     this->stream_window = 0;
     this->stream_threshold_activate = 0;
-    this->stream_distance = 0;
+    this->stream_prefetch_degree = 0;
     this->stream_wait_between_requests = 0;
 
     this->request_buffer = NULL;
@@ -96,7 +96,7 @@ void prefetch_t::clock(uint32_t subcycle) {
                     this->stream_table[slot].prefetch_ahead == 0 )||
                     /// Already requested stream
                     (this->stream_table[slot].relevance_count > this->stream_threshold_activate &&
-                    this->stream_table[slot].prefetch_ahead < this->stream_distance &&
+                    this->stream_table[slot].prefetch_ahead < this->stream_prefetch_degree &&
                     this->stream_table[slot].cycle_last_request <= sinuca_engine.get_global_cycle() - this->stream_wait_between_requests)) {
 
                         PREFETCHER_DEBUG_PRINTF("New Prefetch found STREAM_BUFFER[%u] %s\n", slot, this->stream_table_line_to_string(slot).c_str());
@@ -170,7 +170,7 @@ void prefetch_t::treat_prefetch(memory_package_t *s) {
                     int64_t address_difference = s->memory_address - this->stream_table[slot].last_memory_address;
 
                     if ((this->stream_table[slot].memory_address_difference == address_difference || this->stream_table[slot].memory_address_difference == 0) &&
-                    abs(address_difference) < stream_address_range) {
+                    abs(address_difference) < stream_address_distance) {
                         PREFETCHER_DEBUG_PRINTF("Prefetcher: Found one Stream ... %s\n", address_difference > 0 ? "Increasing" : "Decreasing");
                         this->stream_table[slot].memory_address_difference = address_difference;
                         this->stream_table[slot].last_memory_address = s->memory_address;
@@ -268,10 +268,10 @@ void prefetch_t::print_configuration() {
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stream_table_size", stream_table_size);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stream_address_range", stream_address_range);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stream_address_distance", stream_address_distance);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stream_window", stream_window);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stream_threshold_activate", stream_threshold_activate);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stream_distance", stream_distance);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stream_prefetch_degree", stream_prefetch_degree);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stream_wait_between_requests", stream_wait_between_requests);
 };
 
