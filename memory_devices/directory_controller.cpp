@@ -293,7 +293,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             if (is_hit) {
                 // =============================================================
                 // Line Usage Prediction
-                // ~ cache->line_usage_predictor.line_hit(package, index, way);
+                cache->line_usage_predictor.line_hit(package, index, way);
 
                 /// THIS cache level started the request (PREFETCH)
                 if (package->id_owner == cache->get_id()) {
@@ -683,7 +683,7 @@ bool directory_controller_t::create_cache_copyback(cache_memory_t *cache, cache_
     DIRECTORY_CTRL_DEBUG_PRINTF("\t Update Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
 
     // Line Usage Prediction
-    cache->line_usage_predictor.line_copy_back(package, index, way);
+    // ~ cache->line_usage_predictor.line_copy_back(package, index, way);
 
     /// Higher Level Copy Back
     package->memory_size = sinuca_engine.get_global_line_size();
