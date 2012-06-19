@@ -696,6 +696,7 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& i
     return choosen_line;
 };
 
+
 // =============================================================================//
 void cache_memory_t::change_address(cache_line_t *line, uint64_t new_memory_address) {
     ERROR_ASSERT_PRINTF(line != NULL, "Can not change the tag address of a NULL line.\n")

@@ -338,7 +338,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 /// No Need for CopyBack or CopyBack allocated
                 // =============================================================
                 // Line Usage Prediction
-                cache->line_usage_predictor.line_miss(package, index, way);
+                cache->line_usage_predictor.sub_block_miss(package, index, way);
 
                 /// The request can be treated now !
                 /// New Directory_Line + LOCK
@@ -856,32 +856,38 @@ protocol_status_t directory_controller_t::look_higher_levels(cache_memory_t *cac
         uint32_t index, way;
         cache_line_t *this_cache_line = cache_memory->find_line(package->memory_address, index, way);
         if (this_cache_line != NULL) {
-            // =============================================================
-            // Line Usage Prediction
-            bool is_sub_block_hit = cache_memory->line_usage_predictor.check_sub_block_is_hit(package, index, way);
-            if (is_sub_block_hit) {
-
-                switch (this->get_coherence_protocol_type()) {
-                    case COHERENCE_PROTOCOL_MOESI:
-                        switch (this_cache_line->status) {
-                            case PROTOCOL_STATUS_M:
-                            case PROTOCOL_STATUS_O:
+            switch (this->get_coherence_protocol_type()) {
+                case COHERENCE_PROTOCOL_MOESI:
+                    switch (this_cache_line->status) {
+                        case PROTOCOL_STATUS_M:
+                        case PROTOCOL_STATUS_O: {
+                            // =============================================================
+                            // Line Usage Prediction
+                            bool is_sub_block_hit = cache_memory->line_usage_predictor.check_sub_block_is_hit(package, index, way);
+                            if (is_sub_block_hit) {
                                 /// This Level stays with a normal copy
                                 cache_memory->change_status(this_cache_line, PROTOCOL_STATUS_S);
                                 /// Lower level becomes the owner
                                 return PROTOCOL_STATUS_O;
-                            break;
-
-                            case PROTOCOL_STATUS_E:
-                            case PROTOCOL_STATUS_S:
-                                return PROTOCOL_STATUS_S;
-                            break;
-
-                            case PROTOCOL_STATUS_I:
-                            break;
+                            }
                         }
-                    break;
-                }
+                        break;
+
+                        case PROTOCOL_STATUS_E:
+                        case PROTOCOL_STATUS_S: {
+                            // =============================================================
+                            // Line Usage Prediction
+                            bool is_sub_block_hit = cache_memory->line_usage_predictor.check_sub_block_is_hit(package, index, way);
+                            if (is_sub_block_hit) {
+                                return PROTOCOL_STATUS_S;
+                            }
+                        }
+                        break;
+
+                        case PROTOCOL_STATUS_I:
+                        break;
+                    }
+                break;
             }
         }
 

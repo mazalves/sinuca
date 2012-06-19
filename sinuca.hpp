@@ -125,7 +125,7 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define CONFIGURATOR_DEBUG
     // ~ #define TRACE_READER_DEBUG
     // ~ #define TRACE_GENERATOR_DEBUG
-    #define PROCESSOR_DEBUG
+    // ~ #define PROCESSOR_DEBUG
     // ~ #define SYNC_DEBUG
     // ~ #define BRANCH_PREDICTOR_DEBUG
     #define CACHE_DEBUG
@@ -1861,8 +1861,11 @@ class line_usage_predictor_t : public interconnection_interface_t {
             uint32_t DSBP_sub_block_total;
             uint32_t DSBP_usage_counter_max;
 
-            uint64_t DBPP_stat_line_sub_block_disable;
-            uint64_t DBPP_stat_line_sub_block_normal;
+
+            uint64_t DBPP_stat_line_sub_block_disable_always;
+            uint64_t DBPP_stat_line_sub_block_disable_turnoff;
+            uint64_t DBPP_stat_line_sub_block_normal_correct;
+            uint64_t DBPP_stat_line_sub_block_normal_over;
             uint64_t DBPP_stat_line_sub_block_learn;
             uint64_t DBPP_stat_line_sub_block_wrong_first;
 
@@ -2033,7 +2036,7 @@ class cache_memory_t : public interconnection_interface_t {
         uint64_t read_ready;            /// Ready to receive new READ
         uint64_t write_ready;           /// Ready to receive new WRITE
 
-        container_ptr_cache_memory_t *higher_level_cache;     /// Higher Level Caches
+        container_ptr_cache_memory_t *higher_level_cache;    /// Higher Level Caches
         container_ptr_cache_memory_t *lower_level_cache;     /// Lower Level Caches
 
         /// ====================================================================
