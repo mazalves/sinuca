@@ -1042,6 +1042,9 @@ void directory_controller_t::coherence_invalidate_all(cache_memory_t *cache_memo
                 cache_line->tag = 0;
                 /// Cache Statistics
                 sinuca_engine.cache_memory_array[i]->cache_invalidate(memory_address, false);
+                // =============================================================
+                // Line Usage Prediction
+                sinuca_engine.cache_memory_array[i]->line_usage_predictor.line_eviction(index, way);
             }
         }
     }

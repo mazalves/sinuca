@@ -1305,7 +1305,7 @@ class processor_t : public interconnection_interface_t {
         void stage_commit();
 
         inline uint32_t cmp_index_tag(uint64_t memory_addressA, uint64_t memory_addressB) {
-            return (memory_addressA & mask_addr) == (memory_addressB & mask_addr);
+            return (memory_addressA & this->mask_addr) == (memory_addressB & this->mask_addr);
         }
 
         inline bool is_busy() {
@@ -1861,7 +1861,10 @@ class line_usage_predictor_t : public interconnection_interface_t {
             uint32_t DSBP_sub_block_total;
             uint32_t DSBP_usage_counter_max;
 
-            uint64_t **DBPP_stat_prediction;
+            uint64_t DBPP_stat_line_sub_block_disable;
+            uint64_t DBPP_stat_line_sub_block_normal;
+            uint64_t DBPP_stat_line_sub_block_learn;
+            uint64_t DBPP_stat_line_sub_block_wrong_first;
 
             DSBP_PHT_sets_t *DSBP_PHT_sets;
             uint32_t DSBP_PHT_total_sets;
