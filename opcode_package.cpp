@@ -499,7 +499,7 @@ void opcode_package_t::trace_string_to_opcode(std::string input_string) {
                 break;
 
                 case 4:
-                    this->opcode_size = instruction_operation_t(atoi(sub_string.c_str()));
+                    this->opcode_size = atoi(sub_string.c_str());
                     field = 5;  /// Next Field
                 break;
 
