@@ -508,8 +508,9 @@ int32_t processor_t::send_instruction_package(opcode_package_t *inst_package) {
         inst_package->opcode_address,       /// opcode Address
         0,                                  /// uop Number
 
-        inst_package->opcode_address,       /// Mem. Address
-        inst_package->opcode_size,          /// Instruction Size
+        /// Request the whole line
+        inst_package->opcode_address & this->mask_addr,     /// Mem. Address
+        sinuca_engine.get_global_line_size(),               /// Instruction Size
 
         PACKAGE_STATE_TRANSMIT,             /// Pack. State
         0,                                  /// Ready Cycle Latency
