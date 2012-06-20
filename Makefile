@@ -28,7 +28,7 @@ RM = rm
 # ~ LDFLAGS = -ggdb
 
 # ~ ## EXECUTION
-FLAGS =   -O3 -ggdb #-Wall -Wextra -Werror
+FLAGS =   -O3 -ggdb -Wall -Wextra -Werror
 LDFLAGS = -ggdb
 
 

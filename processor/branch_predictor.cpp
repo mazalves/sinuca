@@ -153,6 +153,11 @@ uint32_t branch_predictor_t::btb_evict_address(uint64_t opcode_address) {
         case REPLACEMENT_LRF:
             ERROR_PRINTF("Replacement Policy: REPLACEMENT_POLICY_LRF not implemented.\n");
         break;
+
+        case REPLACEMENT_LRU_DSBP:
+            ERROR_PRINTF("Replacement Policy: REPLACEMENT_POLICY_LRU_DSBP should not use for branch_prediction.\n");
+        break;
+
     }
 
     return selected;

@@ -14,13 +14,14 @@ def PRINT( str ):
 BENCHMARK_LIST = ["spec_cpu2000", "spec_cpu2006", "spec_omp2001", "npb_omp"]
 
 if sys.argv[2] not in BENCHMARK_LIST:
-    PRINT("Usage: python Run.py confi_file "+str(BENCHMARK_LIST)+ " app_start app_end")
+    PRINT("Usage: python Run.py config_file "+str(BENCHMARK_LIST)+ " result_base_name app_start app_end")
     sys.exit()
 else :
     arg_configure = sys.argv[1]
     arg_benchmark = sys.argv[2]
-    arg_app_start = int(sys.argv[3])
-    arg_app_end = int(sys.argv[4])
+    arg_result = sys.argv[3]
+    arg_app_start = int(sys.argv[4])
+    arg_app_end = int(sys.argv[5])
 
 PRINT("APP_START = " + str(arg_app_start))
 PRINT("APP_END = " + str(arg_app_end))
@@ -104,7 +105,7 @@ for app_line in APP_FILE:
             PRINT("INPUT = " + INPUT)
 
             TRACE_FILE=split_app_line[2]
-            COMMAND = "date; time " + SINUCA_HOME + "sinuca -conf " + arg_configure + " -trace " + TRACE_SRC + TRACE_FILE + " -result " + RESUTS_DST + TRACE_FILE + ".result -warmup 10000000 > " + RESUTS_DST + TRACE_FILE + ".log"
+            COMMAND = "date; time " + SINUCA_HOME + "sinuca -conf " + arg_configure + " -trace " + TRACE_SRC + TRACE_FILE + " -result "+ arg_result + RESUTS_DST + TRACE_FILE + ".result -warmup 10000000 > "+ arg_result + RESUTS_DST + TRACE_FILE + ".log"
             PRINT("COMMAND = " + COMMAND)
             os.system(COMMAND)
 PRINT("===================================================================")

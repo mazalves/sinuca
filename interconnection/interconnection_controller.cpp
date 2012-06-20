@@ -295,25 +295,43 @@ void interconnection_controller_t::find_package_route(memory_package_t *package)
 
 /// ============================================================================
 uint32_t interconnection_controller_t::find_package_route_latency(memory_package_t *package) {
+    uint32_t max_latency = 0;
+    uint32_t min_width = 0;
+
+    max_latency = sinuca_engine.interconnection_interface_array[package->id_src]->get_interconnection_latency();
+    if (sinuca_engine.interconnection_interface_array[package->id_dst]->get_interconnection_latency() > max_latency) {
+        max_latency = sinuca_engine.interconnection_interface_array[package->id_dst]->get_interconnection_latency();
+    }
+
+    min_width = sinuca_engine.interconnection_interface_array[package->id_src]->get_interconnection_width();
+    if (sinuca_engine.interconnection_interface_array[package->id_dst]->get_interconnection_width() > min_width) {
+        min_width = sinuca_engine.interconnection_interface_array[package->id_dst]->get_interconnection_width();
+    }
+
+
     switch (package->memory_operation) {
         case MEMORY_OPERATION_INST:
         case MEMORY_OPERATION_READ:
         case MEMORY_OPERATION_PREFETCH:
-            if (package->is_answer) {   /// BIG
-                return (package->memory_size / 8);
+            /// BIG
+            if (package->is_answer) {
+                return max_latency * ((package->memory_size / min_width) + 1 * ((package->memory_size % min_width) != 0));
             }
-            else {  /// SMALL
-                return 1;
+            /// SMALL
+            else {
+                return max_latency;
             }
         break;
 
         case MEMORY_OPERATION_WRITE:
         case MEMORY_OPERATION_COPYBACK:
-            if (package->is_answer) {   /// SMALL
-                return 1;
+            /// SMALL
+            if (package->is_answer) {
+                return max_latency;
             }
-            else {  /// BIG
-                return (package->memory_size / 8);
+            /// BIG
+            else {
+                return max_latency * ((package->memory_size / min_width) + 1 * ((package->memory_size % min_width) != 0));
             }
         break;
     }

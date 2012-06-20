@@ -52,7 +52,7 @@ static void process_argv(int argc, char **argv) {
     sinuca_engine.arg_configuration_file_name = NULL;
     sinuca_engine.arg_trace_file_name = NULL;
     sinuca_engine.arg_result_file_name = NULL;
-    sinuca_engine.arg_warmup_cycles = 0;
+    sinuca_engine.arg_warmup_instructions = 0;
     sinuca_engine.arg_is_compressed = true;
 
     while (argc > 0) {
@@ -80,7 +80,7 @@ static void process_argv(int argc, char **argv) {
         else if (strcmp(*argv, "-warmup") == 0) {
             argc--;
             argv++;
-            sinuca_engine.arg_warmup_cycles = atoi(*argv);
+            sinuca_engine.arg_warmup_instructions = atoi(*argv);
             args_processed++;
         }
 
@@ -114,7 +114,7 @@ static void process_argv(int argc, char **argv) {
     SINUCA_PRINTF("CONFIGURATION FILE:      \t %s\n", sinuca_engine.arg_configuration_file_name    != NULL ? sinuca_engine.arg_configuration_file_name : "MISSING");
     SINUCA_PRINTF("TRACE FILE:              \t %s\n", sinuca_engine.arg_trace_file_name            != NULL ? sinuca_engine.arg_trace_file_name         : "MISSING");
     SINUCA_PRINTF("RESULT FILE:             \t %s\n", sinuca_engine.arg_result_file_name           != NULL ? sinuca_engine.arg_result_file_name        : "MISSING");
-    SINUCA_PRINTF("WARM-UP INSTRUCTIONS:    \t %u\n", sinuca_engine.arg_warmup_cycles);
+    SINUCA_PRINTF("WARM-UP INSTRUCTIONS:    \t %u\n", sinuca_engine.arg_warmup_instructions);
     SINUCA_PRINTF("COMPRESSED TRACE:        \t %s\n", sinuca_engine.arg_is_compressed ? "TRUE" : "FALSE");
 
     if (args_processed < 2) {
@@ -155,10 +155,12 @@ int main(int argc, char **argv) {
 
     /// Start CLOCK
     while (sinuca_engine.get_is_simulation_allocated() && sinuca_engine.alive()) {
+
         /// Spawn Warmup
-        if (sinuca_engine.get_global_cycle() == sinuca_engine.arg_warmup_cycles) {
+        if (sinuca_engine.is_warm_up == true) {
             SINUCA_PRINTF("WARM-UP END - CYCLE: %"PRIu64"\n", sinuca_engine.get_global_cycle() );
             sinuca_engine.global_reset_statistics();
+            sinuca_engine.is_warm_up = false;
         }
 
         /// Progress Information
@@ -167,7 +169,7 @@ int main(int argc, char **argv) {
             char processor_report[1000];
             for (uint32_t cpu = 0 ; cpu < sinuca_engine.get_processor_array_size() ; cpu++) {
                 uint64_t ActualLength = sinuca_engine.trace_reader->get_trace_opcode_counter(cpu);
-                uint64_t FullLength = sinuca_engine.trace_reader->get_trace_opcode_total(cpu);
+                uint64_t FullLength = sinuca_engine.trace_reader->get_trace_opcode_max(cpu);
                 sprintf(processor_report, "\t -- CPU %d", cpu);
                 sprintf(processor_report, "%s - Opcode[%10"PRIu64"/%10"PRIu64"]", processor_report, ActualLength, FullLength);
                 sprintf(processor_report, "%s - (%7.3lf%%)", processor_report, 100.0 * ((double)ActualLength / (double)FullLength));

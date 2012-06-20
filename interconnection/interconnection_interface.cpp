@@ -34,6 +34,8 @@ interconnection_interface_t::interconnection_interface_t(){
     strcpy(label, "NO_NAME_COMPONENT");
     this->max_ports = 0;
     this->used_ports = 0;
+    this->interconnection_width = 0;
+    this->interconnection_latency = 0;
     this->ports_output_components = NULL;
     this->interface_output_components = NULL;
 };
@@ -48,7 +50,8 @@ interconnection_interface_t::~interconnection_interface_t(){
 //==============================================================================
 void interconnection_interface_t::allocate_base() {
     INTERCONNECTION_DEBUG_PRINTF("Allocate interconnection_interface_t with %u ports.\n", this->get_max_ports())
-
+    ERROR_ASSERT_PRINTF(this->interconnection_width != 0, "Wrong bandwith for component %s.\n", get_label())
+    ERROR_ASSERT_PRINTF(this->interconnection_latency != 0, "Wrong latency for component %s.\n", get_label())
     if (this->get_max_ports() > 0) {
         this->ports_output_components = utils_t::template_allocate_initialize_array<uint32_t>(this->get_max_ports(), 0);
         this->interface_output_components = utils_t::template_allocate_initialize_array<interconnection_interface_t*>(this->get_max_ports(), NULL);

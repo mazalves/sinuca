@@ -169,6 +169,12 @@ void sinuca_engine_t::initialize_processor() {
             processor_parameters.push_back("LABEL");
             this->processor_array[i]->set_label( cfg_processor[ processor_parameters.back() ] );
 
+            processor_parameters.push_back("INTERCONNECTION_LATENCY");
+            this->processor_array[i]->set_interconnection_latency( cfg_processor[ processor_parameters.back() ] );
+
+            processor_parameters.push_back("INTERCONNECTION_WIDTH");
+            this->processor_array[i]->set_interconnection_width( cfg_processor[ processor_parameters.back() ] );
+
             /// ================================================================
             /// Pipeline Latency
             /// ================================================================
@@ -414,6 +420,12 @@ void sinuca_engine_t::initialize_cache_memory() {
             cache_memory_parameters.push_back("LABEL");
             this->cache_memory_array[i]->set_label( cfg_cache_memory[ cache_memory_parameters.back() ] );
 
+            cache_memory_parameters.push_back("INTERCONNECTION_LATENCY");
+            this->cache_memory_array[i]->set_interconnection_latency( cfg_cache_memory[ cache_memory_parameters.back() ] );
+
+            cache_memory_parameters.push_back("INTERCONNECTION_WIDTH");
+            this->cache_memory_array[i]->set_interconnection_width( cfg_cache_memory[ cache_memory_parameters.back() ] );
+
             cache_memory_parameters.push_back("HIERARCHY_LEVEL");
             this->cache_memory_array[i]->set_hierarchy_level( cfg_cache_memory[ cache_memory_parameters.back() ] );
 
@@ -451,6 +463,9 @@ void sinuca_engine_t::initialize_cache_memory() {
             }
             else if (strcasecmp(cfg_cache_memory[ cache_memory_parameters.back() ], "LRU") ==  0) {
                 this->cache_memory_array[i]->set_replacement_policy(REPLACEMENT_LRU);
+            }
+            else if (strcasecmp(cfg_cache_memory[ cache_memory_parameters.back() ], "LRU_DSBP") ==  0) {
+                this->cache_memory_array[i]->set_replacement_policy(REPLACEMENT_LRU_DSBP);
             }
             else if (strcasecmp(cfg_cache_memory[ cache_memory_parameters.back() ], "RANDOM") ==  0) {
                 this->cache_memory_array[i]->set_replacement_policy(REPLACEMENT_RANDOM);
@@ -693,6 +708,12 @@ void sinuca_engine_t::initialize_main_memory() {
             main_memory_parameters.push_back("LABEL");
             this->main_memory_array[i]->set_label( cfg_main_memory[ main_memory_parameters.back() ] );
 
+            main_memory_parameters.push_back("INTERCONNECTION_LATENCY");
+            this->main_memory_array[i]->set_interconnection_latency( cfg_main_memory[ main_memory_parameters.back() ] );
+
+            main_memory_parameters.push_back("INTERCONNECTION_WIDTH");
+            this->main_memory_array[i]->set_interconnection_width( cfg_main_memory[ main_memory_parameters.back() ] );
+
             main_memory_parameters.push_back("LINE_SIZE");
             this->main_memory_array[i]->set_line_size( cfg_main_memory[ main_memory_parameters.back() ] );
             this->set_global_line_size(this->main_memory_array[i]->get_line_size());
@@ -810,6 +831,12 @@ void sinuca_engine_t::initialize_interconnection_router() {
             interconnection_router_parameters.push_back("LABEL");
             this->interconnection_router_array[i]->set_label( cfg_interconnection_router[ interconnection_router_parameters.back() ] );
 
+            interconnection_router_parameters.push_back("INTERCONNECTION_LATENCY");
+            this->interconnection_router_array[i]->set_interconnection_latency( cfg_interconnection_router[ interconnection_router_parameters.back() ] );
+
+            interconnection_router_parameters.push_back("INTERCONNECTION_WIDTH");
+            this->interconnection_router_array[i]->set_interconnection_width( cfg_interconnection_router[ interconnection_router_parameters.back() ] );
+
             interconnection_router_parameters.push_back("SELECTION_POLICY");
             if (strcasecmp(cfg_interconnection_router[ interconnection_router_parameters.back() ], "RANDOM") ==  0) {
                 this->interconnection_router_array[i]->set_selection_policy(SELECTION_RANDOM);
@@ -820,12 +847,6 @@ void sinuca_engine_t::initialize_interconnection_router() {
             else {
                 ERROR_PRINTF("INTERCONNECTION_ROUTER %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_interconnection_router[ interconnection_router_parameters.back() ].c_str(), interconnection_router_parameters.back());
             }
-
-            interconnection_router_parameters.push_back("LATENCY");
-            this->interconnection_router_array[i]->set_latency( cfg_interconnection_router[ interconnection_router_parameters.back() ] );
-
-            interconnection_router_parameters.push_back("WIDTH");
-            this->interconnection_router_array[i]->set_width( cfg_interconnection_router[ interconnection_router_parameters.back() ] );
 
             interconnection_router_parameters.push_back("INPUT_BUFFER_SIZE");
             this->interconnection_router_array[i]->set_input_buffer_size( cfg_interconnection_router[ interconnection_router_parameters.back() ] );

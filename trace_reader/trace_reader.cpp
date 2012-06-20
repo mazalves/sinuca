@@ -37,6 +37,8 @@ trace_reader_t::trace_reader_t() {
     this->gzStaticTraceFile = NULL;
     this->gzDynamicTraceFile = NULL;
     this->gzMemoryTraceFile = NULL;
+
+    this->trace_opcode_total = 0;
 };
 
 // =============================================================================
@@ -50,7 +52,7 @@ trace_reader_t::~trace_reader_t() {
 
     utils_t::template_delete_array<bool>(insideBBL);
     utils_t::template_delete_array<uint64_t>(trace_opcode_counter);
-    utils_t::template_delete_array<uint64_t>(trace_opcode_total);
+    utils_t::template_delete_array<uint64_t>(trace_opcode_max);
 
     utils_t::template_delete_array<uint32_t>(actual_bbl);
     utils_t::template_delete_array<uint32_t>(actual_bbl_opcode);
@@ -164,9 +166,9 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t ncpus) {
     this->actual_bbl = utils_t::template_allocate_initialize_array<uint32_t>(ncpus, 0);
     this->actual_bbl_opcode = utils_t::template_allocate_initialize_array<uint32_t>(ncpus, 0);
     this->trace_opcode_counter = utils_t::template_allocate_initialize_array<uint64_t>(ncpus, 1);
-    this->trace_opcode_total = utils_t::template_allocate_array<uint64_t>(ncpus);
+    this->trace_opcode_max = utils_t::template_allocate_array<uint64_t>(ncpus);
     for (i = 0; i < ncpus; i++) {
-        this->trace_opcode_total[i] = this->trace_size(i);
+        this->trace_opcode_max[i] = this->trace_size(i);
     }
 };
 
@@ -363,7 +365,14 @@ bool trace_reader_t::trace_fetch(uint32_t cpuid, opcode_package_t *m) {
     m->ready_cycle = sinuca_engine.get_global_cycle();
     m->opcode_number = trace_opcode_counter[cpuid];
     m->sync_type = sync_found;
-    trace_opcode_counter[cpuid]++;
+    this->trace_opcode_counter[cpuid]++;
+
+    /// Spawn Warmup
+    if (trace_opcode_total == sinuca_engine.arg_warmup_instructions) {
+        /// Next cycle all the statistics will be reset
+        sinuca_engine.set_is_warm_up(true);
+    }
+    this->trace_opcode_total++;
 
     //==========================================================================
     /// If it is LOAD/STORE -> Fetch new MEMORY inside the memory file

@@ -188,7 +188,14 @@ void processor_t::allocate() {
     this->write_buffer = utils_t::template_allocate_array<memory_package_t>(this->write_buffer_size);
 
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(sinuca_engine.get_global_line_size()), "Wrong line_size.\n")
-    this->mask_addr = ~utils_t::fill_bit(0, utils_t::get_power_of_two(sinuca_engine.get_global_line_size()) - 1);
+
+    /// OFFSET MASK
+    this->offset_bits_mask = 0;
+    this->not_offset_bits_mask = 0;
+    for (uint32_t i = 0; i < utils_t::get_power_of_two(sinuca_engine.get_global_line_size()); i++) {
+        this->offset_bits_mask |= 1 << i;
+    }
+    this->not_offset_bits_mask = ~offset_bits_mask;
 
     char label[50] = "";
     sprintf(label, "Branch_Predictor_%s", this->get_label());
@@ -509,7 +516,7 @@ int32_t processor_t::send_instruction_package(opcode_package_t *inst_package) {
         0,                                  /// uop Number
 
         /// Request the whole line
-        inst_package->opcode_address & this->mask_addr,     /// Mem. Address
+        inst_package->opcode_address & this->not_offset_bits_mask,     /// Mem. Address
         sinuca_engine.get_global_line_size(),               /// Instruction Size
 
         PACKAGE_STATE_TRANSMIT,             /// Pack. State
@@ -533,9 +540,8 @@ int32_t processor_t::send_instruction_package(opcode_package_t *inst_package) {
     bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port));
     if (sent) {
         PROCESSOR_DEBUG_PRINTF("\tSEND DATA OK\n");
-        uint32_t latency = sinuca_engine.interconnection_controller->find_package_route_latency(package);
         delete package;
-        return latency;
+        return OK;
     }
     else {
         PROCESSOR_DEBUG_PRINTF("\tSEND DATA FAIL\n");
@@ -981,6 +987,12 @@ void processor_t::stage_execution() {
                 case INSTRUCTION_OPERATION_MEM_LOAD:
                     position_mem = memory_package_t::find_free(this->read_buffer, this->read_buffer_size);
                     if (position_mem != POSITION_FAIL) {
+                        /// Fix the request size to fit inside the cache line
+                        uint64_t offset = reorder_buffer_line->uop.memory_address & this->offset_bits_mask;
+                        if (offset + reorder_buffer_line->uop.memory_size >= sinuca_engine.get_global_line_size()) {
+                            reorder_buffer_line->uop.memory_size = sinuca_engine.get_global_line_size() - offset;
+                        }
+
                         this->read_buffer[position_mem].packager(
                                 this->get_id(),                                         /// Request Owner
                                 reorder_buffer_line->uop.opcode_number,      /// Opcode. Number
@@ -1014,6 +1026,12 @@ void processor_t::stage_execution() {
                 case INSTRUCTION_OPERATION_MEM_STORE:
                     position_mem = memory_package_t::find_free(this->write_buffer, this->write_buffer_size);
                     if (position_mem != POSITION_FAIL) {
+                        /// Fix the request size to fit inside the cache line
+                        uint64_t offset = reorder_buffer_line->uop.memory_address & this->offset_bits_mask;
+                        if (offset + reorder_buffer_line->uop.memory_size >= sinuca_engine.get_global_line_size()) {
+                            reorder_buffer_line->uop.memory_size = sinuca_engine.get_global_line_size() - offset;
+                        }
+
                         this->write_buffer[position_mem].packager(
                                 this->get_id(),                                         /// Request Owner
                                 reorder_buffer_line->uop.opcode_number,     /// Opcode. Number
@@ -1074,8 +1092,7 @@ int32_t processor_t::send_data_package(memory_package_t *package) {
     bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port));
     if (sent) {
         PROCESSOR_DEBUG_PRINTF("\tSEND DATA OK\n");
-        uint32_t latency = sinuca_engine.interconnection_controller->find_package_route_latency(package);
-        return latency;
+        return OK;
     }
     else {
         PROCESSOR_DEBUG_PRINTF("\tSEND DATA FAIL\n");
@@ -1253,7 +1270,6 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
     ERROR_ASSERT_PRINTF(package->is_answer == true, "Only answers are expected.\n");
 
     int32_t slot = POSITION_FAIL;
-    uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(package);
 
     switch (package->memory_operation) {
         case MEMORY_OPERATION_INST:
@@ -1273,7 +1289,7 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
                 /// Wake up ALL instructions waiting
                 if (this->fetch_buffer[i].state == PACKAGE_STATE_WAIT && this->cmp_index_tag(this->fetch_buffer[i].opcode_address, package->memory_address)) {
                     PROCESSOR_DEBUG_PRINTF("\t WANTED INSTRUCTION\n");
-                    this->fetch_buffer[i].package_ready(transmission_latency);
+                    this->fetch_buffer[i].package_ready(1);
                     slot = i;
                 }
             }
@@ -1289,7 +1305,7 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
 
             PROCESSOR_DEBUG_PRINTF("\t WANTED READ.\n");
             this->read_buffer[slot].is_answer = true;
-            this->read_buffer[slot].package_ready(transmission_latency);
+            this->read_buffer[slot].package_ready(1);
             return OK;
         break;
 
@@ -1301,7 +1317,7 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
 
             PROCESSOR_DEBUG_PRINTF("\t WANTED WRITE.\n");
             this->write_buffer[slot].is_answer = true;
-            this->write_buffer[slot].package_ready(transmission_latency);
+            this->write_buffer[slot].package_ready(1);
             return OK;
         break;
 
@@ -1544,7 +1560,8 @@ void processor_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "write_buffer_size", write_buffer_size);
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mask_addr", utils_t::address_to_binary(this->mask_addr).c_str());
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "offset_bits_mask", utils_t::address_to_binary(this->offset_bits_mask).c_str());
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "not_offset_bits_mask", utils_t::address_to_binary(this->not_offset_bits_mask).c_str());
 
     this->branch_predictor.print_configuration();
 };

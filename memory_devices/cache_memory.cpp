@@ -49,6 +49,7 @@ cache_memory_t::~cache_memory_t() {
 void cache_memory_t::allocate() {
     uint32_t i;
 
+    ERROR_ASSERT_PRINTF(this->get_replacement_policy() != REPLACEMENT_LRU_DSBP || this->line_usage_predictor.get_line_usage_predictor_type() == LINE_USAGE_PREDICTOR_POLICY_DSBP, "Should only use LRU_DSBP if using the DSBP line_usage_predictor.\n" )
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_line_number() / this->get_associativity()), "Wrong line number(%u) or associativity(%u).\n", this->get_line_number(), this->get_associativity());
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_line_size()), "Wrong line size.\n");
 
@@ -650,9 +651,37 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& i
         case REPLACEMENT_LRU: {
             uint64_t last_access = sinuca_engine.get_global_cycle() + 1;
             for (uint32_t way = 0; way < this->get_associativity(); way++) {
+                /// The line is not locked by directory
                 if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[way].tag) == FAIL) {
-                    /// If there is free space && the line is not locked by directory
+                    /// If there is free space
                     if (this->sets[index].ways[way].status == PROTOCOL_STATUS_I) {
+                        choosen_line = &this->sets[index].ways[way];
+                        choosen_way = way;
+                        break;
+                    }
+                    /// If the line is LRU && the line is not locked by directory
+                    else if (this->sets[index].ways[way].last_access <= last_access) {
+                        choosen_line = &this->sets[index].ways[way];
+                        last_access = this->sets[index].ways[way].last_access;
+                        choosen_way = way;
+                    }
+                }
+                else {
+                    ERROR_ASSERT_PRINTF(cmp_tag_index_bank(memory_address, this->sets[index].ways[way].tag) == FAIL, "Trying to find one line to evict, but tag == address\n")
+                }
+            }
+        }
+        break;
+
+        case REPLACEMENT_LRU_DSBP: {
+            uint64_t last_access = sinuca_engine.get_global_cycle() + 1;
+            DSBP_metadata_sets_t *DSBP_metada = this->line_usage_predictor.get_DSBP_sets();
+            for (uint32_t way = 0; way < this->get_associativity(); way++) {
+                /// The line is not locked by directory
+                if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[way].tag) == FAIL) {
+                    /// If there is free space || is_dead
+                    if (this->sets[index].ways[way].status == PROTOCOL_STATUS_I ||
+                    DSBP_metada[index].ways[way].is_dead == true) {
                         choosen_line = &this->sets[index].ways[way];
                         choosen_way = way;
                         break;

@@ -39,11 +39,13 @@ line_usage_predictor_t::line_usage_predictor_t() {
     this->DSBP_sets = NULL;
     this->DSBP_line_number = 0;
     this->DSBP_associativity = 0;
+    this->DSBP_total_sets = 0;
 
     this->DSBP_sub_block_size = 0;
     this->DSBP_sub_block_total = 0;
-    this->DSBP_usage_counter_bits = 0;
 
+    this->DSBP_usage_counter_bits = 0;
+    this->DSBP_usage_counter_max = 0;
 
     /// PHT
     this->DSBP_PHT_sets = NULL;
@@ -82,6 +84,7 @@ void line_usage_predictor_t::allocate() {
                     this->DSBP_sets[i].ways[j].real_usage_counter = utils_t::template_allocate_initialize_array<uint32_t>(sinuca_engine.get_global_line_size(), 0);
                     this->DSBP_sets[i].ways[j].usage_counter = utils_t::template_allocate_initialize_array<uint32_t>(sinuca_engine.get_global_line_size(), 0);
                     this->DSBP_sets[i].ways[j].overflow = utils_t::template_allocate_initialize_array<bool>(sinuca_engine.get_global_line_size(), false);
+                    this->DSBP_sets[i].ways[j].is_dead = true;
                 }
             }
 
@@ -171,12 +174,12 @@ void line_usage_predictor_t::periodic_check(){
 // STATISTICS
 // =============================================================================
 void line_usage_predictor_t::reset_statistics() {
-    this->DBPP_stat_line_sub_block_disable_always = 0;
-    this->DBPP_stat_line_sub_block_disable_turnoff = 0;
-    this->DBPP_stat_line_sub_block_normal_correct = 0;
-    this->DBPP_stat_line_sub_block_normal_over = 0;
-    this->DBPP_stat_line_sub_block_learn = 0;
-    this->DBPP_stat_line_sub_block_wrong_first = 0;
+    this->DSBP_stat_line_sub_block_disable_always = 0;
+    this->DSBP_stat_line_sub_block_disable_turnoff = 0;
+    this->DSBP_stat_line_sub_block_normal_correct = 0;
+    this->DSBP_stat_line_sub_block_normal_over = 0;
+    this->DSBP_stat_line_sub_block_learn = 0;
+    this->DSBP_stat_line_sub_block_wrong_first = 0;
 };
 
 // =============================================================================
@@ -187,12 +190,12 @@ void line_usage_predictor_t::print_statistics() {
     sinuca_engine.write_statistics_comments(title);
     sinuca_engine.write_statistics_big_separator();
 
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DBPP_stat_line_sub_block_disable_always", DBPP_stat_line_sub_block_disable_always);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DBPP_stat_line_sub_block_disable_turnoff", DBPP_stat_line_sub_block_disable_turnoff);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DBPP_stat_line_sub_block_normal_correct", DBPP_stat_line_sub_block_normal_correct);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DBPP_stat_line_sub_block_normal_over", DBPP_stat_line_sub_block_normal_over);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DBPP_stat_line_sub_block_learn", DBPP_stat_line_sub_block_learn);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DBPP_stat_line_sub_block_wrong_first", DBPP_stat_line_sub_block_wrong_first);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_stat_line_sub_block_disable_always", DSBP_stat_line_sub_block_disable_always);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_stat_line_sub_block_disable_turnoff", DSBP_stat_line_sub_block_disable_turnoff);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_stat_line_sub_block_normal_correct", DSBP_stat_line_sub_block_normal_correct);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_stat_line_sub_block_normal_over", DSBP_stat_line_sub_block_normal_over);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_stat_line_sub_block_learn", DSBP_stat_line_sub_block_learn);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_stat_line_sub_block_wrong_first", DSBP_stat_line_sub_block_wrong_first);
 
 };
 
@@ -210,14 +213,18 @@ void line_usage_predictor_t::print_configuration() {
     /// DSBP
     /// ====================================================================
     sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_usage_counter_bits", DSBP_usage_counter_bits);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_usage_counter_max", DSBP_usage_counter_max);
+
+    sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_sub_block_size", DSBP_sub_block_size);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_sub_block_total", DSBP_sub_block_total);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_usage_counter_bits", DSBP_usage_counter_bits);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_line_number", DSBP_line_number);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_associativity", DSBP_associativity);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_total_sets", DSBP_total_sets);
+
 
     /// PHT
     sinuca_engine.write_statistics_small_separator();
@@ -258,14 +265,15 @@ void line_usage_predictor_t::fill_package_sub_blocks(memory_package_t *package) 
             LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t 0x%"PRIu64"(%"PRIu64"/%u) sub_blocks[", package->memory_address, package->memory_address & sinuca_engine.get_global_offset_bits_mask(), package->memory_size)
             for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
                 #ifdef LINE_USAGE_PREDICTOR_DEBUG
-                    if (i % this->DSBP_sub_block_size == 0) SINUCA_PRINTF("|")
-                    SINUCA_PRINTF("%u ", ( i >= sub_block_ini && i < sub_block_end ))
-
+                    if (i % this->DSBP_sub_block_size == 0) {
+                        SINUCA_PRINTF("|");
+                    }
+                    SINUCA_PRINTF("%u ", ( i >= sub_block_ini && i < sub_block_end ));
                 #endif
                 package->sub_blocks[i] = ( i >= sub_block_ini && i < sub_block_end );
             }
             #ifdef LINE_USAGE_PREDICTOR_DEBUG
-                SINUCA_PRINTF("]\n")
+                SINUCA_PRINTF("]\n");
             #endif
 
         }
@@ -290,7 +298,9 @@ bool line_usage_predictor_t::check_sub_block_is_hit(memory_package_t *package, u
             LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t valid_sub_blocks[")
             for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
                 #ifdef LINE_USAGE_PREDICTOR_DEBUG
-                    if (i % this->DSBP_sub_block_size == 0) SINUCA_PRINTF("|")
+                    if (i % this->DSBP_sub_block_size == 0) {
+                        SINUCA_PRINTF("|");
+                    }
                     SINUCA_PRINTF("%u ", this->DSBP_sets[index].ways[way].valid_sub_blocks[i])
                 #endif
 
@@ -356,6 +366,7 @@ void line_usage_predictor_t::line_hit(memory_package_t *package, uint32_t index,
             }
             // METADATA Not Learn Mode
             else {
+                bool line_is_dead = true;
                 for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
                     // METADATA Not Overflow + METADATA Used Predicted Number of Times
                     if (this->DSBP_sets[index].ways[way].overflow[i] == false &&
@@ -363,6 +374,16 @@ void line_usage_predictor_t::line_hit(memory_package_t *package, uint32_t index,
                         // METADATA Turn off the sub_blocks
                         this->DSBP_sets[index].ways[way].valid_sub_blocks[i] = LINE_SUB_BLOCK_DISABLE;
                     }
+                    // Check if the line is dead (ALL off)
+                    else if (this->DSBP_sets[index].ways[way].valid_sub_blocks[i] != LINE_SUB_BLOCK_DISABLE){
+                        line_is_dead = false;
+                    }
+                }
+                if (line_is_dead) {
+                    this->DSBP_sets[index].ways[way].is_dead = true;
+                }
+                else {
+                    this->DSBP_sets[index].ways[way].is_dead = false;
                 }
             }
         }
@@ -397,6 +418,9 @@ void line_usage_predictor_t::line_miss(memory_package_t *package, uint32_t index
                     PHT_line->pointer = true;
                     this->DSBP_sets[index].ways[way].PHT_pointer = PHT_line;
                 }
+                else {
+                    this->DSBP_sets[index].ways[way].PHT_pointer = NULL;
+                }
                 // Copy the PHT usage prediction
                 package->memory_size = 0;
                 for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
@@ -413,6 +437,9 @@ void line_usage_predictor_t::line_miss(memory_package_t *package, uint32_t index
                         package->memory_size++;
                         this->DSBP_sets[index].ways[way].valid_sub_blocks[i] = LINE_SUB_BLOCK_NORMAL;
                     }
+                    else {
+                        this->DSBP_sets[index].ways[way].valid_sub_blocks[i] = LINE_SUB_BLOCK_DISABLE;
+                    }
                 }
             }
             // PHT MISS
@@ -424,6 +451,7 @@ void line_usage_predictor_t::line_miss(memory_package_t *package, uint32_t index
                 PHT_line->offset = package->memory_address & sinuca_engine.get_global_offset_bits_mask();
                 PHT_line->last_access = sinuca_engine.get_global_cycle();
                 PHT_line->pointer = true;
+                this->DSBP_sets[index].ways[way].PHT_pointer = PHT_line;
                 for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
                     PHT_line->usage_counter[i] = 0;
                     PHT_line->overflow[i] = false;
@@ -431,7 +459,7 @@ void line_usage_predictor_t::line_miss(memory_package_t *package, uint32_t index
 
                 // Enable Learn_mode
                 this->DSBP_sets[index].ways[way].learn_mode = true;
-                this->DSBP_sets[index].ways[way].PHT_pointer = PHT_line;
+
                 // Clean the metadata entry
                 package->memory_size = 0;
                 for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
@@ -472,10 +500,9 @@ void line_usage_predictor_t::sub_block_miss(memory_package_t *package, uint32_t 
 
             DSBP_PHT_line_t *PHT_line = this->DSBP_sets[index].ways[way].PHT_pointer;
             // PHT HIT
-            if (PHT_line != NULL) {
+            if (PHT_line != NULL && PHT_line->pointer == true) {
                 // Enable Learn_mode
                 this->DSBP_sets[index].ways[way].learn_mode = true;
-                PHT_line->pointer = true;
 
                 package->memory_size = 0;
                 for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
@@ -587,8 +614,6 @@ void line_usage_predictor_t::line_eviction(uint32_t index, uint32_t way) {
             DSBP_PHT_line_t *PHT_line = this->DSBP_sets[index].ways[way].PHT_pointer;
             // PHT HIT
             if (PHT_line != NULL) {
-                PHT_line->pointer = true;
-
                 for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
                     // Update the PHT entry
                     if (this->DSBP_sets[index].ways[way].real_usage_counter[i] < this->DSBP_usage_counter_max) {
@@ -600,6 +625,8 @@ void line_usage_predictor_t::line_eviction(uint32_t index, uint32_t way) {
                         PHT_line->overflow[i] = true;
                     }
                 }
+                PHT_line->pointer = false;
+                this->DSBP_sets[index].ways[way].PHT_pointer = NULL;
             }
 
             // Statistics
@@ -607,28 +634,28 @@ void line_usage_predictor_t::line_eviction(uint32_t index, uint32_t way) {
                 switch (this->DSBP_sets[index].ways[way].valid_sub_blocks[i]) {
                     case LINE_SUB_BLOCK_DISABLE:
                         if (this->DSBP_sets[index].ways[way].usage_counter[i] == 0) {
-                            this->DBPP_stat_line_sub_block_disable_always++;
+                            this->DSBP_stat_line_sub_block_disable_always++;
                         }
                         else {
-                            this->DBPP_stat_line_sub_block_disable_turnoff++;
+                            this->DSBP_stat_line_sub_block_disable_turnoff++;
                         }
                     break;
 
                     case LINE_SUB_BLOCK_NORMAL:
                         if (this->DSBP_sets[index].ways[way].overflow[i] == 1) {
-                            this->DBPP_stat_line_sub_block_normal_correct++;
+                            this->DSBP_stat_line_sub_block_normal_correct++;
                         }
                         else {
-                            this->DBPP_stat_line_sub_block_normal_over++;
+                            this->DSBP_stat_line_sub_block_normal_over++;
                         }
                     break;
 
                     case LINE_SUB_BLOCK_LEARN:
-                        this->DBPP_stat_line_sub_block_learn++;
+                        this->DSBP_stat_line_sub_block_learn++;
                     break;
 
                     case LINE_SUB_BLOCK_WRONG_FIRST:
-                        this->DBPP_stat_line_sub_block_wrong_first++;
+                        this->DSBP_stat_line_sub_block_wrong_first++;
                     break;
                 }
             }
@@ -701,6 +728,10 @@ DSBP_PHT_line_t* line_usage_predictor_t::DSBP_PHT_evict_address(uint64_t pc, uin
 
         case REPLACEMENT_LRF:
             ERROR_PRINTF("Replacement Policy: REPLACEMENT_POLICY_LRF not implemented.\n");
+        break;
+
+        case REPLACEMENT_LRU_DSBP:
+            ERROR_PRINTF("Replacement Policy: REPLACEMENT_POLICY_LRU_DSBP should not use for line_usage_predictor.\n");
         break;
     }
 

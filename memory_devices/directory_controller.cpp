@@ -124,7 +124,7 @@ bool directory_controller_line_t::check_age(container_ptr_directory_controller_l
 //==============================================================================
 directory_controller_t::directory_controller_t() {
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(sinuca_engine.get_global_line_size()), "Wrong line_size.\n");
-    this->mask_addr = ~utils_t::fill_bit(0, utils_t::get_power_of_two(sinuca_engine.get_global_line_size()) - 1);
+    this->not_offset_bits_mask = ~utils_t::fill_bit(0, utils_t::get_power_of_two(sinuca_engine.get_global_line_size()) - 1);
     this->directory_lines = new container_ptr_directory_controller_line_t;
 };
 
@@ -407,18 +407,11 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 if (!coherence_need_copyback(cache_line)) {
                     /// Add statistics to the cache
                     cache->cache_evict(package->memory_address, false);
-                    // =============================================================
-                    // Line Usage Prediction
-                    cache->line_usage_predictor.line_eviction(index, way);
                 }
                 else {
                     if (this->create_cache_copyback(cache, cache_line, index, way)) {
                         /// Add statistics to the cache
                         cache->cache_evict(package->memory_address, true);
-                        // =============================================================
-                        // Line Usage Prediction
-                        cache->line_usage_predictor.line_eviction(index, way);
-
                     }
                     else {
                         /// Cannot continue right now
@@ -428,6 +421,10 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 }
 
                 /// Found Line to Evict
+                // =============================================================
+                // Line Usage Prediction
+                cache->line_usage_predictor.line_eviction(index, way);
+
                 /// No Need for CopyBack or CopyBack allocated
                 // =============================================================
                 // Line Usage Prediction
@@ -513,17 +510,11 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             if (!coherence_need_copyback(cache_line)) {
                 /// Add statistics to the cache
                 cache->cache_evict(package->memory_address, false);
-                // =============================================================
-                // Line Usage Prediction
-                cache->line_usage_predictor.line_eviction(index, way);
             }
             else {
                 if (this->create_cache_copyback(cache, cache_line, index, way)) {
                     /// Add statistics to the cache
                     cache->cache_evict(package->memory_address, true);
-                    // =============================================================
-                    // Line Usage Prediction
-                    cache->line_usage_predictor.line_eviction(index, way);
                 }
                 else {
                     /// Cannot continue right now
@@ -533,6 +524,10 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             }
 
             /// Found Line to Evict
+            // =============================================================
+            // Line Usage Prediction
+            cache->line_usage_predictor.line_eviction(index, way);
+
             /// No Need for CopyBack or CopyBack allocated
 
             /// Reserve the evicted line for the new address
@@ -1050,7 +1045,7 @@ void directory_controller_t::coherence_invalidate_all(cache_memory_t *cache_memo
                 sinuca_engine.cache_memory_array[i]->cache_invalidate(memory_address, false);
                 // =============================================================
                 // Line Usage Prediction
-                sinuca_engine.cache_memory_array[i]->line_usage_predictor.line_eviction(index, way);
+                // ~ sinuca_engine.cache_memory_array[i]->line_usage_predictor.line_eviction(index, way);
             }
         }
     }
@@ -1268,5 +1263,5 @@ void directory_controller_t::print_configuration() {
 
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "coherence_protocol_type", get_enum_coherence_protocol_char(coherence_protocol_type));
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "inclusiveness_type", get_enum_inclusiveness_char(inclusiveness_type));
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mask_addr", utils_t::address_to_binary(this->mask_addr).c_str());
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "not_offset_bits_mask", utils_t::address_to_binary(this->not_offset_bits_mask).c_str());
 };

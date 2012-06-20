@@ -24,11 +24,8 @@ DIRECTORY -- Write don't send answer
 DIRECTORY -- Deadlock if Associativity < Directory Line from the same set.
 
 ################ Short Term
-SINUCA -- Start using Git to maintain the version control
-
 DIRECTORY -- Check the cache memory latency
 DIRECTORY -- Time to copyback from the higher level (Directory average)
-DIRECTORY -- Check the memory request/answer sizes
 
 STATISTICS -- Functional Unit statistics
 STATISTICS -- Average Instruction Size and Number of cache lines
@@ -46,7 +43,5 @@ STATISTICS -- Average Decoded Opcodes / Uops
     ok-- parallel requests
 
 ################################################################
-TRACE_GENERATOR -- Remove code after last barrier from the threads (active wait)
-PROCESSOR -- Ask only the size which belongs to the cache line requested
 PREDICTION BUSINESS -- Check if READ/WRITE change the prediction
 

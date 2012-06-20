@@ -251,8 +251,10 @@ void interconnection_router_t::print_configuration() {
     sinuca_engine.write_statistics_comments(title);
     sinuca_engine.write_statistics_big_separator();
 
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "interconnection_latency", this->get_interconnection_latency());
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "interconnection_width", this->get_interconnection_width());
+
+
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "input_buffer_size", input_buffer_size);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "selection_policy", get_enum_selection_char(selection_policy));
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "latency", latency);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "width", width);
 };

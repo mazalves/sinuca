@@ -244,7 +244,8 @@ class trace_reader_t {
 
         bool *insideBBL;
         uint64_t *trace_opcode_counter;
-        uint64_t *trace_opcode_total;
+        uint64_t *trace_opcode_max;
+        uint64_t trace_opcode_total;
 
         container_static_dictionary_t static_dictionary;
         uint32_t *actual_bbl;
@@ -276,7 +277,8 @@ class trace_reader_t {
 
         /// Progress
         uint64_t get_trace_opcode_counter(uint32_t cpuid) { return this->trace_opcode_counter[cpuid]; }
-        uint64_t get_trace_opcode_total(uint32_t cpuid) { return this->trace_opcode_total[cpuid]; }
+        uint64_t get_trace_opcode_max(uint32_t cpuid) { return this->trace_opcode_max[cpuid]; }
+        INSTANTIATE_GET_SET_ADD(uint64_t, trace_opcode_total);
 };
 
 
@@ -289,7 +291,7 @@ class sinuca_engine_t {
         char *arg_configuration_file_name;
         char *arg_trace_file_name;
         char *arg_result_file_name;
-        uint32_t arg_warmup_cycles;
+        uint32_t arg_warmup_instructions;
         bool arg_is_compressed;
 
         std::ofstream result_file;
@@ -320,6 +322,7 @@ class sinuca_engine_t {
         /// Control the Trace Reading
         bool *is_processor_trace_eof;
         bool is_simulation_eof;
+        bool is_warm_up;
 
         trace_reader_t *trace_reader;
         directory_controller_t *directory_controller;
@@ -396,6 +399,7 @@ class sinuca_engine_t {
         INSTANTIATE_GET_SET(bool, is_simulation_allocated);
         INSTANTIATE_GET_SET(bool, is_runtime_debug);
         INSTANTIATE_GET_SET(bool, is_simulation_eof);
+        INSTANTIATE_GET_SET(bool, is_warm_up);
 
         INSTANTIATE_GET_SET(uint64_t, global_cycle);
 
@@ -686,6 +690,8 @@ class interconnection_interface_t : public statistics_t {
         char label[100];                /// Comprehensive object's name.
         uint32_t max_ports;
         uint32_t used_ports;
+        uint32_t interconnection_width;
+        uint32_t interconnection_latency;
 
         /// ====================================================================
         /// Set by this->set_higher_lower_level_component()
@@ -729,6 +735,8 @@ class interconnection_interface_t : public statistics_t {
         INSTANTIATE_GET_SET(component_t, type_component)
         INSTANTIATE_GET_SET(uint32_t, max_ports)
         INSTANTIATE_GET_SET_ADD(uint32_t, used_ports)
+        INSTANTIATE_GET_SET(uint32_t, interconnection_width)
+        INSTANTIATE_GET_SET(uint32_t, interconnection_latency)
 
 
         /// ====================================================================
@@ -851,8 +859,6 @@ class interconnection_router_t : public interconnection_interface_t {
         /// ====================================================================
         uint32_t input_buffer_size;  /// Input buffer depth.
         selection_t selection_policy;
-        uint32_t latency;  /// Latency to delivery the width size.
-        uint32_t width;  /// Width in bytes.
 
         /// ====================================================================
         /// Set by this->allocate()
@@ -909,8 +915,6 @@ class interconnection_router_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(selection_t, selection_policy)
         INSTANTIATE_GET_SET(uint32_t, ready_cycle)
         INSTANTIATE_GET_SET(uint32_t, input_buffer_size)
-        INSTANTIATE_GET_SET(uint32_t, latency)
-        INSTANTIATE_GET_SET(uint32_t, width)
 
         /// ====================================================================
         /// Statistics related
@@ -1165,7 +1169,9 @@ class processor_t : public interconnection_interface_t {
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
-        uint64_t mask_addr;
+        uint64_t offset_bits_mask;      /// Offset mask
+        uint64_t not_offset_bits_mask;  /// Offset mask
+
 
         /// Synchronization Control Variables
         sync_t sync_status;                    /// Used to sync or request sync
@@ -1305,7 +1311,7 @@ class processor_t : public interconnection_interface_t {
         void stage_commit();
 
         inline uint32_t cmp_index_tag(uint64_t memory_addressA, uint64_t memory_addressB) {
-            return (memory_addressA & this->mask_addr) == (memory_addressB & this->mask_addr);
+            return (memory_addressA & this->not_offset_bits_mask) == (memory_addressB & this->not_offset_bits_mask);
         }
 
         inline bool is_busy() {
@@ -1334,7 +1340,8 @@ class processor_t : public interconnection_interface_t {
         /// ====================================================================
 
         INSTANTIATE_GET_SET(uint32_t, core_id)
-        INSTANTIATE_GET_SET(uint64_t, mask_addr)
+        INSTANTIATE_GET_SET(uint64_t, offset_bits_mask)
+        INSTANTIATE_GET_SET(uint64_t, not_offset_bits_mask)
 
         INSTANTIATE_GET_SET(uint32_t, fetch_buffer_size)
         INSTANTIATE_GET_SET(uint32_t, decode_buffer_size)
@@ -1491,7 +1498,7 @@ class directory_controller_t : public interconnection_interface_t {
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
-        uint64_t mask_addr;
+        uint64_t not_offset_bits_mask;
         container_ptr_cache_memory_t *llc_caches;
         container_ptr_directory_controller_line_t *directory_lines;
 
@@ -1579,7 +1586,7 @@ class directory_controller_t : public interconnection_interface_t {
         void coherence_new_operation(cache_memory_t *cache_memory, cache_line_t *cache_line,  memory_package_t *package, bool is_hit);
 
         inline uint32_t cmp_index_tag(uint64_t memory_addressA, uint64_t memory_addressB) {
-            return (memory_addressA & mask_addr) == (memory_addressB & mask_addr);
+            return (memory_addressA & not_offset_bits_mask) == (memory_addressB & not_offset_bits_mask);
         };
 
         inline uint32_t get_directory_lines_size() {
@@ -1587,7 +1594,7 @@ class directory_controller_t : public interconnection_interface_t {
         };
 
         INSTANTIATE_GET_SET(container_ptr_directory_controller_line_t*, directory_lines)
-        INSTANTIATE_GET_SET(uint64_t, mask_addr)
+        INSTANTIATE_GET_SET(uint64_t, not_offset_bits_mask)
         INSTANTIATE_GET_SET(coherence_protocol_t, coherence_protocol_type)
         INSTANTIATE_GET_SET(inclusiveness_t, inclusiveness_type)
 
@@ -1802,6 +1809,7 @@ class DSBP_metadata_line_t {
         bool *overflow;
         bool learn_mode;
         DSBP_PHT_line_t *PHT_pointer;
+        bool is_dead;
 
         DSBP_metadata_line_t() {
             this->valid_sub_blocks = NULL;
@@ -1809,6 +1817,7 @@ class DSBP_metadata_line_t {
             this->overflow = NULL;
             this->learn_mode = 0;
             this->PHT_pointer = NULL;
+            this->is_dead = true;
         };
         ~DSBP_metadata_line_t() {
             if (this->valid_sub_blocks) delete [] valid_sub_blocks;
@@ -1861,19 +1870,17 @@ class line_usage_predictor_t : public interconnection_interface_t {
             uint32_t DSBP_sub_block_total;
             uint32_t DSBP_usage_counter_max;
 
-
-            uint64_t DBPP_stat_line_sub_block_disable_always;
-            uint64_t DBPP_stat_line_sub_block_disable_turnoff;
-            uint64_t DBPP_stat_line_sub_block_normal_correct;
-            uint64_t DBPP_stat_line_sub_block_normal_over;
-            uint64_t DBPP_stat_line_sub_block_learn;
-            uint64_t DBPP_stat_line_sub_block_wrong_first;
+            /// Statistics
+            uint64_t DSBP_stat_line_sub_block_disable_always;
+            uint64_t DSBP_stat_line_sub_block_disable_turnoff;
+            uint64_t DSBP_stat_line_sub_block_normal_correct;
+            uint64_t DSBP_stat_line_sub_block_normal_over;
+            uint64_t DSBP_stat_line_sub_block_learn;
+            uint64_t DSBP_stat_line_sub_block_wrong_first;
 
             DSBP_PHT_sets_t *DSBP_PHT_sets;
             uint32_t DSBP_PHT_total_sets;
             uint64_t DSBP_PHT_index_bits_mask;
-
-
             /// ====================================================================
 
     public:
@@ -1921,7 +1928,7 @@ class line_usage_predictor_t : public interconnection_interface_t {
             /// ====================================================================
             /// DSBP
             /// ====================================================================
-
+            INSTANTIATE_GET_SET(DSBP_metadata_sets_t*, DSBP_sets);
             INSTANTIATE_GET_SET(uint32_t, DSBP_line_number);
             INSTANTIATE_GET_SET(uint32_t, DSBP_associativity);
             INSTANTIATE_GET_SET(uint32_t, DSBP_total_sets);

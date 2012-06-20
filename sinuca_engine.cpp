@@ -52,6 +52,7 @@ sinuca_engine_t::sinuca_engine_t() {
     this->is_simulation_allocated = false;
     this->is_simulation_eof = false;
     this->is_runtime_debug = true;
+    this->is_warm_up = false;
 
     this->trace_reader = new trace_reader_t;
     utils_t::process_mem_usage(stat_vm_start, stat_rss_start);
@@ -431,7 +432,7 @@ void sinuca_engine_t::global_print_configuration() {
     this->write_statistics_value(get_type_component_label(), get_label(), "arg_configuration_file_name", arg_configuration_file_name);
     this->write_statistics_value(get_type_component_label(), get_label(), "arg_trace_file_name", arg_trace_file_name);
     this->write_statistics_value(get_type_component_label(), get_label(), "arg_result_file_name", arg_result_file_name);
-    this->write_statistics_value(get_type_component_label(), get_label(), "arg_warmup_cycles", arg_warmup_cycles);
+    this->write_statistics_value(get_type_component_label(), get_label(), "arg_warmup_instructions", arg_warmup_instructions);
     this->write_statistics_value(get_type_component_label(), get_label(), "arg_is_compressed", arg_is_compressed ? "TRUE": "FALSE");
 
     this->write_statistics_small_separator();
