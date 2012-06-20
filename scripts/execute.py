@@ -105,7 +105,7 @@ for app_line in APP_FILE:
             PRINT("INPUT = " + INPUT)
 
             TRACE_FILE=split_app_line[2]
-            COMMAND = "date; time " + SINUCA_HOME + "sinuca -conf " + arg_configure + " -trace " + TRACE_SRC + TRACE_FILE + " -result "+ arg_result + RESUTS_DST + TRACE_FILE + ".result -warmup 10000000 > "+ arg_result + RESUTS_DST + TRACE_FILE + ".log"
+            COMMAND = "date; time " + SINUCA_HOME + "sinuca -conf " + arg_configure + " -trace " + TRACE_SRC + TRACE_FILE + " -result "+ RESUTS_DST + TRACE_FILE + "." + arg_result + ".result -warmup 10000000 > "+ RESUTS_DST + TRACE_FILE + "." + arg_result +".log"
             PRINT("COMMAND = " + COMMAND)
             os.system(COMMAND)
 PRINT("===================================================================")

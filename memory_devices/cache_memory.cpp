@@ -592,6 +592,10 @@ void cache_memory_t::print_configuration() {
     sinuca_engine.write_statistics_comments(title);
     sinuca_engine.write_statistics_big_separator();
 
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "interconnection_latency", this->get_interconnection_latency());
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "interconnection_width", this->get_interconnection_width());
+
+    sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cache_id", cache_id);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "bank_number", bank_number);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "total_banks", total_banks);

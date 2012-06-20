@@ -540,8 +540,9 @@ int32_t processor_t::send_instruction_package(opcode_package_t *inst_package) {
     bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port));
     if (sent) {
         PROCESSOR_DEBUG_PRINTF("\tSEND DATA OK\n");
+		uint32_t latency = sinuca_engine.interconnection_controller->find_package_route_latency(package);
         delete package;
-        return OK;
+        return latency;
     }
     else {
         PROCESSOR_DEBUG_PRINTF("\tSEND DATA FAIL\n");
@@ -1092,7 +1093,8 @@ int32_t processor_t::send_data_package(memory_package_t *package) {
     bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port));
     if (sent) {
         PROCESSOR_DEBUG_PRINTF("\tSEND DATA OK\n");
-        return OK;
+        uint32_t latency = sinuca_engine.interconnection_controller->find_package_route_latency(package);
+        return latency;
     }
     else {
         PROCESSOR_DEBUG_PRINTF("\tSEND DATA FAIL\n");
@@ -1270,6 +1272,7 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
     ERROR_ASSERT_PRINTF(package->is_answer == true, "Only answers are expected.\n");
 
     int32_t slot = POSITION_FAIL;
+    uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(package);
 
     switch (package->memory_operation) {
         case MEMORY_OPERATION_INST:
@@ -1289,7 +1292,7 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
                 /// Wake up ALL instructions waiting
                 if (this->fetch_buffer[i].state == PACKAGE_STATE_WAIT && this->cmp_index_tag(this->fetch_buffer[i].opcode_address, package->memory_address)) {
                     PROCESSOR_DEBUG_PRINTF("\t WANTED INSTRUCTION\n");
-                    this->fetch_buffer[i].package_ready(1);
+                    this->fetch_buffer[i].package_ready(transmission_latency);
                     slot = i;
                 }
             }
@@ -1305,7 +1308,7 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
 
             PROCESSOR_DEBUG_PRINTF("\t WANTED READ.\n");
             this->read_buffer[slot].is_answer = true;
-            this->read_buffer[slot].package_ready(1);
+            this->read_buffer[slot].package_ready(transmission_latency);
             return OK;
         break;
 
@@ -1317,7 +1320,7 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
 
             PROCESSOR_DEBUG_PRINTF("\t WANTED WRITE.\n");
             this->write_buffer[slot].is_answer = true;
-            this->write_buffer[slot].package_ready(1);
+            this->write_buffer[slot].package_ready(transmission_latency);
             return OK;
         break;
 
@@ -1499,7 +1502,10 @@ void processor_t::print_configuration() {
     sinuca_engine.write_statistics_big_separator();
 
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "core_id", core_id);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "interconnection_latency", this->get_interconnection_latency());
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "interconnection_width", this->get_interconnection_width());
 
+    sinuca_engine.write_statistics_small_separator();
     /// Buffers' Size
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "fetch_buffer_size", fetch_buffer_size);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "reorder_buffer_size", reorder_buffer_size);

@@ -591,6 +591,10 @@ void main_memory_t::print_configuration() {
     sinuca_engine.write_statistics_comments(title);
     sinuca_engine.write_statistics_big_separator();
 
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "interconnection_latency", this->get_interconnection_latency());
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "interconnection_width", this->get_interconnection_width());
+
+    sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "channel_number", channel_number);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "total_channels", total_channels);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "banks_per_channel", banks_per_channel);
