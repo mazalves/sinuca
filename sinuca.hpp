@@ -1708,6 +1708,9 @@ class prefetch_t : public interconnection_interface_t {
         uint32_t request_buffer_position_end;
         uint32_t request_buffer_position_used;
 
+        uint64_t offset_bits_mask;
+        uint64_t not_offset_bits_mask;
+
         cache_prefetch_stream_table_t *stream_table;
     public:
         /// ====================================================================
@@ -1754,6 +1757,9 @@ class prefetch_t : public interconnection_interface_t {
 
         INSTANTIATE_GET_SET(prefetch_policy_t, prefetcher_type)
         INSTANTIATE_GET_SET(full_buffer_t, full_buffer_type)
+
+        INSTANTIATE_GET_SET(uint64_t, offset_bits_mask)
+        INSTANTIATE_GET_SET(uint64_t, not_offset_bits_mask)
 
         INSTANTIATE_GET_SET(memory_package_t*, request_buffer)
         INSTANTIATE_GET_SET(uint32_t, request_buffer_size)

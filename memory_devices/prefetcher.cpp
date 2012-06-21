@@ -56,7 +56,17 @@ prefetch_t::~prefetch_t() {
 
 //==============================================================================
 void prefetch_t::allocate() {
+    /// Global Request Buffer
     this->request_buffer = utils_t::template_allocate_array<memory_package_t>(this->get_request_buffer_size());
+
+    /// OFFSET MASK
+    this->offset_bits_mask = 0;
+    this->not_offset_bits_mask = 0;
+    for (uint32_t i = 0; i < utils_t::get_power_of_two(sinuca_engine.get_global_line_size()); i++) {
+        this->offset_bits_mask |= 1 << i;
+    }
+    this->not_offset_bits_mask = ~offset_bits_mask;
+
     switch (this->get_prefetcher_type()) {
         case PREFETCHER_STREAM:
             this->stream_table = utils_t::template_allocate_array<cache_prefetch_stream_table_t>(this->get_stream_table_size());
@@ -107,6 +117,7 @@ void prefetch_t::clock(uint32_t subcycle) {
 
                             uint64_t memory_address = this->stream_table[slot].last_memory_address +
                                                     ( this->stream_table[slot].prefetch_ahead * this->stream_table[slot].memory_address_difference);
+                            memory_address &= this->not_offset_bits_mask;
                             this->request_buffer[position].packager(
                                                                 0,                                          /// Request Owner
                                                                 0,                                          /// Opcode. Number
