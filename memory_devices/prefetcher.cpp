@@ -39,12 +39,15 @@ prefetch_t::prefetch_t() {
     this->stream_threshold_activate = 0;
     this->stream_prefetch_degree = 0;
     this->stream_wait_between_requests = 0;
+    this->stream_table = NULL;
 
     this->request_buffer = NULL;
     this->request_buffer_position_start = 0;
     this->request_buffer_position_end = 0;
     this->request_buffer_position_used = 0;
-    this->stream_table = NULL;
+
+    this->offset_bits_mask = 0;
+    this->not_offset_bits_mask = 0;
 };
 
 //==============================================================================

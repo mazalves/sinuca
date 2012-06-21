@@ -1876,7 +1876,13 @@ class line_usage_predictor_t : public interconnection_interface_t {
             uint32_t DSBP_sub_block_total;
             uint32_t DSBP_usage_counter_max;
 
-            /// Statistics
+            DSBP_PHT_sets_t *DSBP_PHT_sets;
+            uint32_t DSBP_PHT_total_sets;
+            uint64_t DSBP_PHT_index_bits_mask;
+
+        /// ====================================================================
+        /// Statistics related
+        /// ====================================================================
             uint64_t DSBP_stat_line_sub_block_disable_always;
             uint64_t DSBP_stat_line_sub_block_disable_turnoff;
             uint64_t DSBP_stat_line_sub_block_normal_correct;
@@ -1884,10 +1890,13 @@ class line_usage_predictor_t : public interconnection_interface_t {
             uint64_t DSBP_stat_line_sub_block_learn;
             uint64_t DSBP_stat_line_sub_block_wrong_first;
 
-            DSBP_PHT_sets_t *DSBP_PHT_sets;
-            uint32_t DSBP_PHT_total_sets;
-            uint64_t DSBP_PHT_index_bits_mask;
-            /// ====================================================================
+            uint64_t DSBP_stat_sub_block_touch_0;
+            uint64_t DSBP_stat_sub_block_touch_1;
+            uint64_t DSBP_stat_sub_block_touch_2_3;
+            uint64_t DSBP_stat_sub_block_touch_4_7;
+            uint64_t DSBP_stat_sub_block_touch_8_15;
+            uint64_t DSBP_stat_sub_block_touch_16_127;
+            uint64_t DSBP_stat_sub_block_touch_128_bigger;
 
     public:
         /// ====================================================================
@@ -1950,6 +1959,24 @@ class line_usage_predictor_t : public interconnection_interface_t {
             INSTANTIATE_GET_SET(uint32_t, DSBP_PHT_associativity);
             INSTANTIATE_GET_SET(replacement_t, DSBP_PHT_replacement_policy);
             INSTANTIATE_GET_SET(uint32_t, DSBP_PHT_total_sets);
+
+        /// ====================================================================
+        /// Statistics related
+        /// ====================================================================
+            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_line_sub_block_disable_always);
+            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_line_sub_block_disable_turnoff);
+            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_line_sub_block_normal_correct);
+            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_line_sub_block_normal_over);
+            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_line_sub_block_learn);
+            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_line_sub_block_wrong_first);
+
+            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_sub_block_touch_0);
+            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_sub_block_touch_1);
+            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_sub_block_touch_2_3);
+            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_sub_block_touch_4_7);
+            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_sub_block_touch_8_15);
+            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_sub_block_touch_16_127);
+            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_sub_block_touch_128_bigger);
 };
 
 

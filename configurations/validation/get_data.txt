@@ -1,6 +1,0 @@
-grep opcode_per_cycle_ratio_wa *.result
-grep fetch_opcode_counter_warm *.result
-grep stat_branch_predictor_miss_ratio *.result
-grep L1_DATA_CACHE0.stat_read_miss: *.result
-grep L1_DATA_CACHE0.stat_write_miss: *.result
-grep L2_DATA_CACHE0.stat_read_miss: *.result

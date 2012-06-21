@@ -180,6 +180,14 @@ void line_usage_predictor_t::reset_statistics() {
     this->DSBP_stat_line_sub_block_normal_over = 0;
     this->DSBP_stat_line_sub_block_learn = 0;
     this->DSBP_stat_line_sub_block_wrong_first = 0;
+
+    this->DSBP_stat_sub_block_touch_0 = 0;
+    this->DSBP_stat_sub_block_touch_1 = 0;
+    this->DSBP_stat_sub_block_touch_2_3 = 0;
+    this->DSBP_stat_sub_block_touch_4_7 = 0;
+    this->DSBP_stat_sub_block_touch_8_15 = 0;
+    this->DSBP_stat_sub_block_touch_16_127 = 0;
+    this->DSBP_stat_sub_block_touch_128_bigger = 0;
 };
 
 // =============================================================================
@@ -196,6 +204,14 @@ void line_usage_predictor_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_stat_line_sub_block_normal_over", DSBP_stat_line_sub_block_normal_over);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_stat_line_sub_block_learn", DSBP_stat_line_sub_block_learn);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_stat_line_sub_block_wrong_first", DSBP_stat_line_sub_block_wrong_first);
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_stat_sub_block_touch_0", DSBP_stat_sub_block_touch_0);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_stat_sub_block_touch_1", DSBP_stat_sub_block_touch_1);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_stat_sub_block_touch_2_3", DSBP_stat_sub_block_touch_2_3);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_stat_sub_block_touch_4_7", DSBP_stat_sub_block_touch_4_7);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_stat_sub_block_touch_8_15", DSBP_stat_sub_block_touch_8_15);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_stat_sub_block_touch_16_127", DSBP_stat_sub_block_touch_16_127);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "DSBP_stat_sub_block_touch_128_bigger", DSBP_stat_sub_block_touch_128_bigger);
 
 };
 
@@ -631,6 +647,7 @@ void line_usage_predictor_t::line_eviction(uint32_t index, uint32_t way) {
 
             // Statistics
             for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
+                // Prediction Accuracy
                 switch (this->DSBP_sets[index].ways[way].valid_sub_blocks[i]) {
                     case LINE_SUB_BLOCK_DISABLE:
                         if (this->DSBP_sets[index].ways[way].usage_counter[i] == 0) {
@@ -658,7 +675,31 @@ void line_usage_predictor_t::line_eviction(uint32_t index, uint32_t way) {
                         this->DSBP_stat_line_sub_block_wrong_first++;
                     break;
                 }
+
+                // Touches before eviction
+                if (this->DSBP_sets[index].ways[way].real_usage_counter[i] == 0) {
+                    this->add_DSBP_stat_sub_block_touch_0();
+                }
+                else if (this->DSBP_sets[index].ways[way].real_usage_counter[i] == 1) {
+                    this->add_DSBP_stat_sub_block_touch_1();
+                }
+                else if (this->DSBP_sets[index].ways[way].real_usage_counter[i] >= 2 && this->DSBP_sets[index].ways[way].real_usage_counter[i] <= 3) {
+                    this->add_DSBP_stat_sub_block_touch_2_3();
+                }
+                else if (this->DSBP_sets[index].ways[way].real_usage_counter[i] >= 4 && this->DSBP_sets[index].ways[way].real_usage_counter[i] <= 7) {
+                    this->add_DSBP_stat_sub_block_touch_4_7();
+                }
+                else if (this->DSBP_sets[index].ways[way].real_usage_counter[i] >= 8 && this->DSBP_sets[index].ways[way].real_usage_counter[i] <= 15) {
+                    this->add_DSBP_stat_sub_block_touch_8_15();
+                }
+                else if (this->DSBP_sets[index].ways[way].real_usage_counter[i] >= 16 && this->DSBP_sets[index].ways[way].real_usage_counter[i] <= 127) {
+                    this->add_DSBP_stat_sub_block_touch_16_127();
+                }
+                else if (this->DSBP_sets[index].ways[way].real_usage_counter[i] >=128) {
+                    this->add_DSBP_stat_sub_block_touch_128_bigger();
+                }
             }
+
         }
         break;
 
