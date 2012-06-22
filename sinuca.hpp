@@ -128,10 +128,10 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define PROCESSOR_DEBUG
     // ~ #define SYNC_DEBUG
     // ~ #define BRANCH_PREDICTOR_DEBUG
-    #define CACHE_DEBUG
-    #define PREFETCHER_DEBUG
+    // ~ #define CACHE_DEBUG
+    // ~ #define PREFETCHER_DEBUG
     #define LINE_USAGE_PREDICTOR_DEBUG
-    #define MAIN_MEMORY_DEBUG
+    // ~ #define MAIN_MEMORY_DEBUG
     // ~ #define ROUTER_DEBUG
     // ~ #define INTERCONNECTION_CTRL_DEBUG
     #define DIRECTORY_CTRL_DEBUG
@@ -1948,14 +1948,18 @@ class line_usage_predictor_t : public interconnection_interface_t {
             /// ====================================================================
             /// DSBP
             /// ====================================================================
+            std::string DSBP_metadata_line_to_string(DSBP_metadata_line_t *DSBP_metadata_line);
+
             INSTANTIATE_GET_SET(DSBP_metadata_sets_t*, DSBP_sets);
             INSTANTIATE_GET_SET(uint32_t, DSBP_line_number);
             INSTANTIATE_GET_SET(uint32_t, DSBP_associativity);
             INSTANTIATE_GET_SET(uint32_t, DSBP_total_sets);
 
+
             /// PHT
             DSBP_PHT_line_t* DSBP_PHT_find_line(uint64_t pc, uint64_t memory_address);
             DSBP_PHT_line_t* DSBP_PHT_evict_address(uint64_t pc, uint64_t memory_address);
+            std::string DSBP_PHT_line_to_string(DSBP_PHT_line_t *PHT_line);
 
             INSTANTIATE_GET_SET(uint32_t, DSBP_sub_block_size);
             INSTANTIATE_GET_SET(uint32_t, DSBP_sub_block_total);

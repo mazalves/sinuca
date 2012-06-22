@@ -257,20 +257,20 @@ void sinuca_engine_t::write_statistics(const char *buffer) {
 
 //==============================================================================
 void sinuca_engine_t::write_statistics_small_separator() {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     sprintf(buffer, "#=======================================\n");
     this->write_statistics(buffer);
 };
 
 void sinuca_engine_t::write_statistics_big_separator() {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     sprintf(buffer, "#===============================================================================\n");
     this->write_statistics(buffer);
 };
 
 //==============================================================================
 void sinuca_engine_t::write_statistics_comments(const char *comment) {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     sprintf(buffer, "#%s\n", comment);
     this->write_statistics(buffer);
 };
@@ -278,37 +278,37 @@ void sinuca_engine_t::write_statistics_comments(const char *comment) {
 
 //==============================================================================
 void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, const char *value) {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     sprintf(buffer, "%s.%s.%s:%s\n", obj_type, obj_label, variable_name, value);
     this->write_statistics(buffer);
 };
 
 void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, uint32_t value) {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     sprintf(buffer, "%s.%s.%s:%u\n", obj_type, obj_label, variable_name, value);
     this->write_statistics(buffer);
 };
 
 void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, uint64_t value) {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     sprintf(buffer, "%s.%s.%s:%"PRIu64"\n", obj_type, obj_label, variable_name, value);
     this->write_statistics(buffer);
 };
 
 void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, float value) {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     sprintf(buffer, "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, value);
     this->write_statistics(buffer);
 };
 
 void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, double value) {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     sprintf(buffer, "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, value);
     this->write_statistics(buffer);
 };
 
 void sinuca_engine_t::write_statistics_value_percentage(const char *obj_type, const char *obj_label, const char *variable_name, uint64_t value, uint64_t total) {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     if (value != 0 || total != 0) {
         sprintf(buffer, "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (100.0 *value/total));
     }
@@ -319,7 +319,7 @@ void sinuca_engine_t::write_statistics_value_percentage(const char *obj_type, co
 };
 
 void sinuca_engine_t::write_statistics_value_ratio(const char *obj_type, const char *obj_label, const char *variable_name, uint64_t value, uint64_t total) {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     if (value != 0 || total != 0) {
         sprintf(buffer, "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (1.0 *value/total));
     }
@@ -330,7 +330,7 @@ void sinuca_engine_t::write_statistics_value_ratio(const char *obj_type, const c
 };
 
 void sinuca_engine_t::write_statistics_value_ratio(const char *obj_type, const char *obj_label, const char *variable_name, double value, uint64_t total) {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     if (value != 0 || total != 0) {
         sprintf(buffer, "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (1.0 *value/total));
     }
