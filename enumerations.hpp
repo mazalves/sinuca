@@ -206,6 +206,7 @@ const char *get_enum_prefetch_policy_char(prefetch_policy_t type);
 /// Line Usage Predictor type
 enum line_usage_predictor_policy_t {
     LINE_USAGE_PREDICTOR_POLICY_DSBP,
+    LINE_USAGE_PREDICTOR_POLICY_DSBP_DISABLE,
     LINE_USAGE_PREDICTOR_POLICY_SPP,
     LINE_USAGE_PREDICTOR_POLICY_DISABLE
 };

@@ -4,7 +4,7 @@ LD = g++
 CFLAGS = $(FLAGS)
 CPPFLAGS = $(FLAGS)
 BIN_NAME = sinuca
-RM = rm
+RM = rm -f
 
 ################################################################################
 #

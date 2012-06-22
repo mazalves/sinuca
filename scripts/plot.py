@@ -121,9 +121,7 @@ USER = "mazalves"
 PROJECT_HOME = "/home/" + USER + "/Experiment/"
 PRINT("PROJECT_HOME = " + PROJECT_HOME)
 os.putenv("PROJECT_HOME", PROJECT_HOME)
-os.system("mkdir " + PROJECT_HOME)
-os.system("mkdir " + PROJECT_HOME + "benchmarks")
-os.system("mkdir " + PROJECT_HOME + "benchmarks/plots")
+os.system("mkdir -p" + PROJECT_HOME + "benchmarks/plots")
 
 SINUCA_HOME = PROJECT_HOME + "/SiNUCA/"
 PRINT("SINUCA_HOME = " + SINUCA_HOME)

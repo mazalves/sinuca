@@ -232,9 +232,21 @@ void prefetch_t::treat_prefetch(memory_package_t *s) {
 
 //==============================================================================
 void prefetch_t::print_structures() {
-    SINUCA_PRINTF("%s REQUEST_BUFFER START:%d  END:%d  SIZE:%d\n", this->get_label(), this->request_buffer_position_start, this->request_buffer_position_end, this->request_buffer_position_used);
-    SINUCA_PRINTF("%s REQUEST_BUFFER:\n%s", this->get_label(), memory_package_t::print_all(this->request_buffer, this->request_buffer_size).c_str() )
-    SINUCA_PRINTF("%s STREAM_TABLE:\n%s", this->get_label(), this->stream_table_print_all().c_str() )
+
+    switch (this->get_prefetcher_type()) {
+        case PREFETCHER_STREAM:
+            SINUCA_PRINTF("%s STREAM_TABLE:\n%s", this->get_label(), this->stream_table_print_all().c_str() )
+            SINUCA_PRINTF("%s REQUEST_BUFFER START:%d  END:%d  SIZE:%d\n", this->get_label(), this->request_buffer_position_start, this->request_buffer_position_end, this->request_buffer_position_used);
+            SINUCA_PRINTF("%s REQUEST_BUFFER:\n%s", this->get_label(), memory_package_t::print_all(this->request_buffer, this->request_buffer_size).c_str() )
+        break;
+
+        case PREFETCHER_DISABLE:
+        break;
+
+        default:
+            ERROR_PRINTF("Invalid prefetch strategy %u.\n", this->get_prefetcher_type());
+        break;
+    }
 };
 
 // =============================================================================

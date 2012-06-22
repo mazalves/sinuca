@@ -132,7 +132,8 @@ void sinuca_engine_t::initialize() {
             tree += utils_t::connections_pretty(cache_memory, 0);
         }
     }
-    SINUCA_PRINTF("CONNECTIONS:\n%s\n", tree.c_str())
+
+    CONFIGURATOR_DEBUG_PRINTF("CONNECTIONS:\n%s\n", tree.c_str())
 
     this->directory_controller->allocate();
     this->interconnection_controller->allocate();
@@ -556,6 +557,9 @@ void sinuca_engine_t::initialize_cache_memory() {
             line_usage_predictor_parameters.push_back("TYPE");
             if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "DSBP") ==  0) {
                 this->cache_memory_array[i]->line_usage_predictor.set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_DSBP);
+            }
+            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "DSBP_DISABLE") ==  0) {
+                this->cache_memory_array[i]->line_usage_predictor.set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_DSBP_DISABLE);
             }
             else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "SPP") ==  0) {
                 this->cache_memory_array[i]->line_usage_predictor.set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_SPP);

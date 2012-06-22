@@ -1784,7 +1784,7 @@ class DSBP_PHT_line_t {
         uint64_t offset;
         uint64_t last_access;
         bool pointer;
-        uint32_t *usage_counter;
+        uint64_t *usage_counter;
         bool *overflow;
 
         DSBP_PHT_line_t() {
@@ -1810,8 +1810,8 @@ class DSBP_PHT_sets_t {
 class DSBP_metadata_line_t {
     public:
         line_sub_block_t *valid_sub_blocks;
-        uint32_t *real_usage_counter;
-        uint32_t *usage_counter;
+        uint64_t *real_usage_counter;
+        uint64_t *usage_counter;
         bool *overflow;
         bool learn_mode;
         DSBP_PHT_line_t *PHT_pointer;
@@ -1883,20 +1883,25 @@ class line_usage_predictor_t : public interconnection_interface_t {
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
-            uint64_t DSBP_stat_line_sub_block_disable_always;
-            uint64_t DSBP_stat_line_sub_block_disable_turnoff;
-            uint64_t DSBP_stat_line_sub_block_normal_correct;
-            uint64_t DSBP_stat_line_sub_block_normal_over;
-            uint64_t DSBP_stat_line_sub_block_learn;
-            uint64_t DSBP_stat_line_sub_block_wrong_first;
+            uint64_t stat_DSBP_line_sub_block_disable_always;
+            uint64_t stat_DSBP_line_sub_block_disable_turnoff;
+            uint64_t stat_DSBP_line_sub_block_normal_correct;
+            uint64_t stat_DSBP_line_sub_block_normal_over;
+            uint64_t stat_DSBP_line_sub_block_learn;
+            uint64_t stat_DSBP_line_sub_block_wrong_first;
 
-            uint64_t DSBP_stat_sub_block_touch_0;
-            uint64_t DSBP_stat_sub_block_touch_1;
-            uint64_t DSBP_stat_sub_block_touch_2_3;
-            uint64_t DSBP_stat_sub_block_touch_4_7;
-            uint64_t DSBP_stat_sub_block_touch_8_15;
-            uint64_t DSBP_stat_sub_block_touch_16_127;
-            uint64_t DSBP_stat_sub_block_touch_128_bigger;
+            uint64_t stat_DSBP_PHT_hit;
+            uint64_t stat_DSBP_PHT_miss;
+
+            uint64_t *stat_accessed_sub_block;
+
+            uint64_t stat_sub_block_touch_0;
+            uint64_t stat_sub_block_touch_1;
+            uint64_t stat_sub_block_touch_2_3;
+            uint64_t stat_sub_block_touch_4_7;
+            uint64_t stat_sub_block_touch_8_15;
+            uint64_t stat_sub_block_touch_16_127;
+            uint64_t stat_sub_block_touch_128_bigger;
 
     public:
         /// ====================================================================
@@ -1963,20 +1968,23 @@ class line_usage_predictor_t : public interconnection_interface_t {
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
-            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_line_sub_block_disable_always);
-            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_line_sub_block_disable_turnoff);
-            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_line_sub_block_normal_correct);
-            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_line_sub_block_normal_over);
-            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_line_sub_block_learn);
-            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_line_sub_block_wrong_first);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_line_sub_block_disable_always);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_line_sub_block_disable_turnoff);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_line_sub_block_normal_correct);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_line_sub_block_normal_over);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_line_sub_block_learn);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_line_sub_block_wrong_first);
 
-            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_sub_block_touch_0);
-            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_sub_block_touch_1);
-            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_sub_block_touch_2_3);
-            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_sub_block_touch_4_7);
-            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_sub_block_touch_8_15);
-            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_sub_block_touch_16_127);
-            INSTANTIATE_GET_SET_ADD(uint64_t, DSBP_stat_sub_block_touch_128_bigger);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_PHT_hit);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_PHT_miss);
+
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_touch_0);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_touch_1);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_touch_2_3);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_touch_4_7);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_touch_8_15);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_touch_16_127);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_touch_128_bigger);
 };
 
 
@@ -1989,7 +1997,6 @@ class cache_line_t {
         uint64_t tag;
         protocol_status_t status;
         uint64_t last_access;
-        // fix-me(mazalves): Create a line_clean to erase all the parameters after a line eviction
         uint64_t usage_counter;
         bool dirty;
 

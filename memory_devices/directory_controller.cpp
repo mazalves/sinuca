@@ -172,6 +172,7 @@ bool directory_controller_t::receive_package(memory_package_t *package, uint32_t
 };
 
 //==============================================================================
+// Remember: The package latency is defined as 1 automatically  by the interconnection_controller if the package is_answer
 package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, memory_package_t *package) {
     DIRECTORY_CTRL_DEBUG_PRINTF("new_cache_request() cache_id:%u, package:%s\n", cache_id, package->memory_to_string().c_str())
     ERROR_ASSERT_PRINTF(cache_id < sinuca_engine.get_cache_memory_array_size(), "Wrong cache_id.\n")
@@ -316,8 +317,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                     /// Add Latency
                     if (package->memory_operation == MEMORY_OPERATION_WRITE) {
                         package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_write();
-                        /// Size of ACK
-                        package->memory_size = 1;
                     }
                     else {
                         package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read();
@@ -334,12 +333,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             ///=================================================================
             /// Cache Line Sub_Block Miss
             else if (is_line_hit) {
-                /// Found Line to Evict
-                /// No Need for CopyBack or CopyBack allocated
-                // =============================================================
-                // Line Usage Prediction
-                cache->line_usage_predictor.sub_block_miss(package, index, way);
-
                 /// The request can be treated now !
                 /// New Directory_Line + LOCK
                 if (directory_line == NULL) {
@@ -355,6 +348,11 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 /// Update the Directory_Line
                 directory_line->cache_request_order[cache_id] = ++directory_line->cache_requested;
                 DIRECTORY_CTRL_DEBUG_PRINTF("\t Update Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
+
+                // =============================================================
+                // Line Usage Prediction
+                cache->line_usage_predictor.sub_block_miss(package, index, way);
+
 
                 /// Send Request to fill the cache line
                 if (package->memory_operation == MEMORY_OPERATION_WRITE) {
@@ -378,8 +376,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 else {
                     /// LATENCY = READ
                     package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read();
-
-                    package->memory_size = sinuca_engine.get_global_line_size();
                     package->id_src = cache->get_id();
                     package->id_dst = this->find_next_obj_id(cache, package->memory_address);
                     DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT RQST (Miss)\n")
@@ -392,7 +388,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
                 /// Do not have a reserved line
                 if (cache_line == NULL) {
-
                     cache_line = cache->evict_address(package->memory_address, index, way);
                     /// Could not evict any line
                     if (cache_line == NULL) {
@@ -421,14 +416,10 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 }
 
                 /// Found Line to Evict
-                // =============================================================
-                // Line Usage Prediction
-                cache->line_usage_predictor.line_eviction(index, way);
-
                 /// No Need for CopyBack or CopyBack allocated
                 // =============================================================
                 // Line Usage Prediction
-                cache->line_usage_predictor.line_miss(package, index, way);
+                cache->line_usage_predictor.line_eviction(index, way);
 
                 /// Reserve the evicted line for the new address
                 cache->change_address(cache_line, package->memory_address);
@@ -452,6 +443,10 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 directory_line->cache_request_order[cache_id] = ++directory_line->cache_requested;
                 DIRECTORY_CTRL_DEBUG_PRINTF("\t Update Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
 
+                // =============================================================
+                // Line Usage Prediction
+                cache->line_usage_predictor.line_miss(package, index, way);
+
                 /// Send Request to fill the cache line
                 if (package->memory_operation == MEMORY_OPERATION_WRITE) {
                     package->memory_operation = MEMORY_OPERATION_READ;
@@ -474,8 +469,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 else {
                     /// LATENCY = READ
                     package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read();
-
-                    package->memory_size = sinuca_engine.get_global_line_size();
                     package->id_src = cache->get_id();
                     package->id_dst = this->find_next_obj_id(cache, package->memory_address);
                     DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT RQST (Miss)\n")
@@ -524,11 +517,10 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             }
 
             /// Found Line to Evict
+            /// No Need for CopyBack or CopyBack allocated
             // =============================================================
             // Line Usage Prediction
             cache->line_usage_predictor.line_eviction(index, way);
-
-            /// No Need for CopyBack or CopyBack allocated
 
             /// Reserve the evicted line for the new address
             cache->change_address(cache_line, package->memory_address);
@@ -541,7 +533,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
             /// Send ANSWER
             package->is_answer = true;
-            package->memory_size = 1;
             package->id_dst = package->id_src;
             package->id_src = cache->get_id();
             DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT (Hit)\n")
@@ -641,15 +632,6 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
                         package->id_dst = directory_line->id_owner;
                         package->memory_operation = directory_line->initial_memory_operation;
                         package->memory_address = directory_line->initial_memory_address;
-                        /// Put the correct package size
-                        if (package->memory_operation == MEMORY_OPERATION_WRITE || package->memory_operation == MEMORY_OPERATION_COPYBACK) {
-                            /// Size of ACK
-                            package->memory_size = 1;
-                        }
-                        else {
-                            /// Size of cache line or request
-                            package->memory_size = directory_line->initial_memory_size;
-                        }
                         /// Erase the directory_entry
                         DIRECTORY_CTRL_DEBUG_PRINTF("\t Erasing Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
                         utils_t::template_delete_variable<directory_controller_line_t>(directory_line);
@@ -669,11 +651,6 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
                                 /// Get the DST ID
                                 package->id_src = cache->get_id();
                                 package->id_dst = sinuca_engine.cache_memory_array[i]->get_id();
-                                /// Put the correct package size
-                                if (package->memory_operation == MEMORY_OPERATION_WRITE || package->memory_operation == MEMORY_OPERATION_COPYBACK) {
-                                    /// Size of ACK
-                                    package->memory_size = 1;
-                                }
                                 /// Update Coherence Status
                                 this->coherence_new_operation(cache, cache_line, package, false);
                                 /// Send the answer
@@ -756,7 +733,6 @@ bool directory_controller_t::create_cache_copyback(cache_memory_t *cache, cache_
     cache->line_usage_predictor.line_copy_back(package, index, way);
 
     /// Higher Level Copy Back
-    package->memory_size = sinuca_engine.get_global_line_size();
     package->id_src = cache->get_id();
     package->id_dst = this->find_next_obj_id(cache, package->memory_address);
     DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT RQST (Miss)\n")
@@ -1043,9 +1019,6 @@ void directory_controller_t::coherence_invalidate_all(cache_memory_t *cache_memo
                 cache_line->tag = 0;
                 /// Cache Statistics
                 sinuca_engine.cache_memory_array[i]->cache_invalidate(memory_address, false);
-                // =============================================================
-                // Line Usage Prediction
-                // ~ sinuca_engine.cache_memory_array[i]->line_usage_predictor.line_eviction(index, way);
             }
         }
     }
