@@ -13,15 +13,16 @@ def PRINT( str ):
 ################################################################################
 BENCHMARK_LIST = ["spec_cpu2000", "spec_cpu2006", "spec_omp2001", "npb_omp"]
 
-if (len(sys.argv) < 5) or (sys.argv[2] not in BENCHMARK_LIST):
-    PRINT("Usage: python execute.py config_file "+str(BENCHMARK_LIST)+ " result_base_name app_start app_end")
+if (len(sys.argv) < 6) or (sys.argv[2] not in BENCHMARK_LIST):
+    PRINT("Usage: python execute.py config_file "+str(BENCHMARK_LIST)+ " result_base_name number_threads app_start app_end")
     sys.exit()
 else :
     arg_configure = sys.argv[1]
     arg_benchmark = sys.argv[2]
     arg_result = sys.argv[3]
-    arg_app_start = int(sys.argv[4])
-    arg_app_end = int(sys.argv[5])
+    arg_threads = int(sys.argv[4])
+    arg_app_start = int(sys.argv[5])
+    arg_app_end = int(sys.argv[6])
 
 PRINT("APP_START = " + str(arg_app_start))
 PRINT("APP_END = " + str(arg_app_end))
@@ -59,22 +60,26 @@ os.putenv("SINUCA_HOME", SINUCA_HOME)
 if arg_benchmark == 'spec_cpu2000':
     APP_FILE_NAME   = SINUCA_HOME + "/scripts/command_to_run_spec_cpu2000.txt"
     TRACE_SRC       = PROJECT_HOME + "/benchmarks/traces/spec_cpu2000/"
-    RESUTS_DST       = PROJECT_HOME + "/benchmarks/results/spec_cpu2000/"
+    RESUTS_DST      = PROJECT_HOME + "/benchmarks/results/spec_cpu2000/"
+    TRACE_SUFIX     = ""
 
 elif arg_benchmark == 'spec_cpu2006':
     APP_FILE_NAME   = SINUCA_HOME + "/scripts/command_to_run_spec_cpu2006.txt"
     TRACE_SRC       = PROJECT_HOME + "/benchmarks/traces/spec_cpu2006/"
-    RESUTS_DST       = PROJECT_HOME + "/benchmarks/results/spec_cpu2006/"
+    RESUTS_DST      = PROJECT_HOME + "/benchmarks/results/spec_cpu2006/"
+    TRACE_SUFIX     = ""
 
 elif arg_benchmark == 'spec_omp2001':
     APP_FILE_NAME   = SINUCA_HOME + "/scripts/command_to_run_spec_omp2001.txt"
     TRACE_SRC       = PROJECT_HOME + "/benchmarks/traces/spec_omp2001/"
-    RESUTS_DST       = PROJECT_HOME + "/benchmarks/results/spec_omp2001/"
+    RESUTS_DST      = PROJECT_HOME + "/benchmarks/results/spec_omp2001/"
+    TRACE_SUFIX     = "_" + str(arg_threads) + "t"
 
 elif arg_benchmark == 'npb_omp':
     APP_FILE_NAME   = SINUCA_HOME + "/scripts/command_to_run_npb_omp.txt"
     TRACE_SRC       = PROJECT_HOME + "/benchmarks/traces/npb_omp/"
-    RESUTS_DST       = PROJECT_HOME + "/benchmarks/results/npb_omp/"
+    RESUTS_DST      = PROJECT_HOME + "/benchmarks/results/npb_omp/"
+    TRACE_SUFIX     = "_" + str(arg_threads) + "t"
 
 
 PRINT("mkdir " + RESUTS_DST)
@@ -105,8 +110,14 @@ for app_line in APP_FILE:
         INPUT=split_app_line[1]
         PRINT("INPUT = " + INPUT)
 
+        PRINT("conf = " + arg_configure)
+
         TRACE_FILE=split_app_line[2]
-        COMMAND = "date; time " + SINUCA_HOME + "sinuca -conf " + arg_configure + " -trace " + TRACE_SRC + TRACE_FILE + " -result "+ RESUTS_DST + TRACE_FILE + "." + arg_result + ".result -warmup 10000000 > "+ RESUTS_DST + TRACE_FILE + "." + arg_result +".log"
+        PRINT("trace = " + TRACE_SRC + TRACE_FILE + TRACE_SUFIX)
+
+        PRINT("result = " + RESUTS_DST + TRACE_FILE + "." + arg_result + ".result")
+
+        COMMAND = "date; time " + SINUCA_HOME + "sinuca -conf " + arg_configure + " -trace " + TRACE_SRC + TRACE_FILE + TRACE_SUFIX + " -result "+ RESUTS_DST + TRACE_FILE + "." + arg_result + ".result -warmup 10000000 > "+ RESUTS_DST + TRACE_FILE + "." + arg_result +".log"
         PRINT("COMMAND = " + COMMAND)
         os.system(COMMAND)
 PRINT("===================================================================")

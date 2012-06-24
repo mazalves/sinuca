@@ -63,27 +63,11 @@ void cache_memory_t::allocate() {
     this->write_ready = sinuca_engine.get_global_cycle();  /// Ready to receive from LOWER_PORT
 
     /// MSHR = [    REQUEST    | COPYBACK | PREFETCH ]
-    ERROR_ASSERT_PRINTF(mshr_buffer_request_reserved_size > 0, "mshr_buffer_request_reserved_size should be bigger than one.\n");
-    ERROR_ASSERT_PRINTF(mshr_buffer_copyback_reserved_size > mshr_buffer_prefetch_reserved_size, "mshr_buffer_copyback_reserved_size should be bigger than size_prefetch.\n");
-    ERROR_ASSERT_PRINTF(mshr_buffer_prefetch_reserved_size > 0, "mshr_buffer_prefetch_reserved_size should be bigger than one.\n");
-
     this->mshr_buffer_size = this->mshr_buffer_request_reserved_size +
                                 this->mshr_buffer_copyback_reserved_size +
                                 this->mshr_buffer_prefetch_reserved_size;
     this->mshr_buffer = utils_t::template_allocate_array<memory_package_t>(this->get_mshr_buffer_size());
 
-
-    /*
-    /// Check the MSHR sizes (Sum_Higher_MSHR <= This_MSHR)
-    uint32_t MSHR_size_total = 0;
-    for (uint32_t i = 0; i < this->higher_level_cache->size(); i++) {
-        MSHR_size_total += this->higher_level_cache[0][i]->get_mshr_buffer_request_reserved_size();
-        MSHR_size_total += this->higher_level_cache[0][i]->get_mshr_buffer_copyback_reserved_size();
-        MSHR_size_total += this->higher_level_cache[0][i]->get_mshr_buffer_prefetch_reserved_size();
-    }
-    ERROR_ASSERT_PRINTF(MSHR_size_total <= this->get_mshr_buffer_request_reserved_size(),
-                        "%s, should have %u MSHR entries to avoid dead_locks.\n", this->get_label(), MSHR_size_total);
-    */
 
     this->set_masks();
 
@@ -176,6 +160,31 @@ void cache_memory_t::set_masks() {
             }
         break;
 
+    }
+};
+
+void cache_memory_t::check_mshr_size() {
+    ERROR_ASSERT_PRINTF(mshr_buffer_request_reserved_size > 0, "mshr_buffer_request_reserved_size should be bigger than one.\n");
+    ERROR_ASSERT_PRINTF(mshr_buffer_copyback_reserved_size > 0, "mshr_buffer_copyback_reserved_size should be bigger than one.\n");
+    ERROR_ASSERT_PRINTF(mshr_buffer_prefetch_reserved_size > 0, "mshr_buffer_prefetch_reserved_size should be bigger than one.\n");
+
+    if (this->prefetcher.get_prefetcher_type() != PREFETCHER_DISABLE) {
+        ERROR_ASSERT_PRINTF(mshr_buffer_copyback_reserved_size > mshr_buffer_prefetch_reserved_size, "mshr_buffer_copyback_reserved_size should be bigger than size_prefetch.\n");
+    }
+
+    /// If this is a multi-banked cache
+    if (this->get_total_banks() > 1) {
+        /// Check the MSHR sizes (Sum_Higher_MSHR <= This_MSHR)
+        uint32_t MSHR_size_total = 0;
+        for (uint32_t i = 0; i < this->higher_level_cache->size(); i++) {
+            MSHR_size_total += this->higher_level_cache[0][i]->get_mshr_buffer_request_reserved_size();
+            MSHR_size_total += this->higher_level_cache[0][i]->get_mshr_buffer_copyback_reserved_size();
+            if (this->higher_level_cache[0][i]->prefetcher.get_prefetcher_type() != PREFETCHER_DISABLE) {
+                MSHR_size_total += this->higher_level_cache[0][i]->get_mshr_buffer_prefetch_reserved_size();
+            }
+        }
+        ERROR_ASSERT_PRINTF(MSHR_size_total <= this->get_mshr_buffer_request_reserved_size(),
+                            "%s, should have at least %u MSHR entries to avoid dead_locks.\n", this->get_label(), MSHR_size_total);
     }
 };
 

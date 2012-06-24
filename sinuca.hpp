@@ -2162,6 +2162,8 @@ class cache_memory_t : public interconnection_interface_t {
 
         /// MASKS
         void set_masks();
+        /// Check if MSHR supports the higher levels MSHR
+        void check_mshr_size();
 
         inline uint64_t get_tag(uint64_t addr) {
             return (addr & this->tag_bits_mask) >> this->tag_bits_shift;

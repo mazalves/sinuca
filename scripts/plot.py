@@ -11,16 +11,14 @@ def gnulot_base(TMP_GNU_FILE_NAME):
     TMP_GNU_FILE.write("reset\n")
     ##########################
     # Output
-    TMP_GNU_FILE.write("set terminal jpeg medium size 1600,1024 font Helvetica 16\n")
+    TMP_GNU_FILE.write("set terminal jpeg medium size 1024,768 font Helvetica 16\n")
 
     ##########################
     # Scale
     TMP_GNU_FILE.write("set autoscale x\n")
     TMP_GNU_FILE.write("set autoscale y\n")
-    TMP_GNU_FILE.write("set yrange [ 0.00000 : 100.000 ] noreverse \n")
+
     TMP_GNU_FILE.write("set xtics nomirror rotate by -90 \n")
-    TMP_GNU_FILE.write("set ytics 10\n")
-    TMP_GNU_FILE.write("set format y '%g%%' \n")
 
     ##########################
     # Colors
@@ -67,19 +65,9 @@ def gnulot_base(TMP_GNU_FILE_NAME):
     TMP_GNU_FILE.write("pink5 = '#570232' \n")
 
     ##########################
-    # Stacked Bars
-    TMP_GNU_FILE.write("set border 3\n")
-    TMP_GNU_FILE.write("set style data histograms\n")
-    TMP_GNU_FILE.write("set style histogram rowstacked\n")
-    TMP_GNU_FILE.write("set style histogram rowstack gap 1 title offset character 2, 0.25, 0 \n")
-    TMP_GNU_FILE.write("set style fill solid border -1\n")
-    TMP_GNU_FILE.write("set boxwidth 0.80\n")
-    TMP_GNU_FILE.write("set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000\n")
-    ##########################
     # Subtitle
     TMP_GNU_FILE.write("set key autotitle columnheader\n")
     TMP_GNU_FILE.write("set key outside below center horizontal\n")
-    TMP_GNU_FILE.write("set datafile separator ';' \n")
 
     TMP_GNU_FILE.close()
     return
@@ -94,7 +82,7 @@ def PRINT( str ):
 
 ################################################################################
 BENCHMARK_LIST = ["spec_cpu2000", "spec_cpu2006", "spec_omp2001", "npb_omp"]
-PLOT_LIST = ["lines", "bars"]
+PLOT_LIST = ["lines", "bars", "stacked_bars", "lines_normalized", "bars_normalized", "stacked_bars_normalized"]
 
 if (len(sys.argv) < 2):
     sys.exit("Usage: python plot.py config_file")
@@ -121,7 +109,7 @@ USER = "mazalves"
 PROJECT_HOME = "/home/" + USER + "/Experiment/"
 PRINT("PROJECT_HOME = " + PROJECT_HOME)
 os.putenv("PROJECT_HOME", PROJECT_HOME)
-os.system("mkdir -p" + PROJECT_HOME + "benchmarks/plots")
+os.system("mkdir -p " + PROJECT_HOME + "benchmarks/plots")
 
 SINUCA_HOME = PROJECT_HOME + "/SiNUCA/"
 PRINT("SINUCA_HOME = " + SINUCA_HOME)
@@ -199,12 +187,13 @@ for cfg_line in cfg_file:
         # Open the plot filename
         output_results_file = open(arg_output_results_filename, 'w')
 
-        # Print the header
-        output_results_file.write("ConfigFile Application ")
-        for string in arg_parameter:
-            string = string.split('.')
-            output_results_file.write(string[len(string)-1] + " ")
-        output_results_file.write("\n")
+        # Print the HEADER
+        # ~ output_results_file.write("ConfigFile Application ")
+        output_results_file.write("ConfigFile_Application ")
+        for parameter_name in arg_parameter:
+            parameter_name = parameter_name.split('.')
+            output_results_file.write(parameter_name[len(parameter_name)-2] + "." + parameter_name[len(parameter_name)-1] + " ")
+        output_results_file.write(" Sum_Values\n")
 
 
         if arg_benchmark == 'spec_cpu2000':
@@ -223,31 +212,34 @@ for cfg_line in cfg_file:
         PRINT("\t App List Filename = " + app_list_filename)
         PRINT("\t Results Directory = " + results_directory)
 
-        # Iterates over the EXPERIMENTS (results base name)
-        for results_filename in arg_results_filename:
-            PRINT("\t Analyzing:" + results_filename)
-
-            # Iterates over the APPLICATIONS results file
+        # Iterates over the APPLICATIONS results file
+        try:
             app_list_file = open(app_list_filename, 'r')
-            for app_list_file_line in app_list_file:
-                app_list_file_line = app_list_file_line.rstrip('\r\n')
-                if  app_list_file_line[0] == '#':
-                    continue
+        except IOError:
+            PRINT("\t \t app_list_filename Not Found:" + arg_benchmark + " - File Not Found:" + app_list_filename + " ... skipping")
+            exit()
+        for app_list_file_line in app_list_file:
+            app_list_file_line = app_list_file_line.rstrip('\r\n')
+            if  app_list_file_line[0] == '#':
+                continue
+
+            # Iterates over the EXPERIMENTS (results base name)
+            for results_filename in arg_results_filename:
+
 
                 split_app_list_file_line = app_list_file_line.split(';')
-                app_name = split_app_list_file_line[0] + "." + split_app_list_file_line[1] + ".PP."
-                app_file_name = results_directory + app_name + results_filename + ".result"
+                app_name = split_app_list_file_line[0] + "." + split_app_list_file_line[1]
+                app_file_name = results_directory + app_name + ".PP." + results_filename + ".result"
                 try:
                     app_file = open(app_file_name, 'r')
                 except IOError:
-                    PRINT("\t \t Application Not Found:"+app_name+" - File Not Found:"+app_file_name+" ... skipping")
+                    PRINT("\t \t Application Not Found:" + app_name + " - File Not Found:" + app_file_name + " ... skipping")
                     continue
                 # ~ PRINT("\t Analyzing:" + app_file_name)
 
                 # Iterates over the PARAMETERS wanted
                 results = []
                 for parameter_name in arg_parameter:
-                    # ~ PRINT("\t Grepping:" + parameter_name)
 
                     # Iterates over the RESULTS_PARAMETERS (APPLICATIONS results file)
                     app_file.seek(0,0)
@@ -260,44 +252,195 @@ for cfg_line in cfg_file:
                         split_parameter_line = parameter_line.split(':')
                         if (str.find(split_parameter_line[0].lower(), parameter_name.lower()) != -1):
                             results.append(split_parameter_line[1])
-                            # ~ PRINT("\t =>" + split_parameter_line[0] + "=" + split_parameter_line[1])
                             break;
+                # Experiment + App Name
+                output_results_file.write(results_filename + "_" + app_name + " ")
 
-                output_results_file.write(results_filename + " " + app_name + " ")
+                # Only the App Name
+                # ~ output_results_file.write(app_name + " ")
+
+                sum_values = 0
                 for string in results:
                     output_results_file.write(string + " ")
+                    if string.isdigit():
+                        sum_values += float(string)
+                output_results_file.write(str(sum_values) + " ")
                 output_results_file.write("\n")
 
-            app_list_file.close()
+        app_list_file.close()
+        output_results_file.close()
 
+
+        ########################################################################
         # Open the plot filename
         gnulot_base(arg_gnuplot_filename)
         output_gnuplot_file = open(arg_gnuplot_filename, 'a')
 
+        ########################################################################
+        # Lines
+        ########################################################################
+        if arg_plot_type == 'lines':
+            output_gnuplot_file.write("set border 3\n")
+            output_gnuplot_file.write("set style data lines\n")
+            output_gnuplot_file.write("set style fill solid border 1\n")
+            output_gnuplot_file.write("set boxwidth 1.0\n")
+            output_gnuplot_file.write("set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000\n")
+            output_gnuplot_file.write("set title '" + arg_output_results_filename + "' \n")
+            output_gnuplot_file.write("set output '"+arg_output_results_filename+".jpeg' \n")
 
-            ########################################################################
-            ## PLOT NORMAL
-            ########################################################################
-            # ~ TMP_GNU_FILE_NAME = OUTPUT_DIR+"/"+BASE_NAME+DESCRIPTION_NAME+".gnuplot"
-            # ~ gnulot_base(TMP_GNU_FILE_NAME)
-# ~
-            # ~ TMP_GNU_FILE = open(TMP_GNU_FILE_NAME, 'a')
-            # ~ TMP_GNU_FILE.write("set title 'Histogram Line Usage' \n")
-            # ~ TMP_GNU_FILE.write("set output '"+TMP_OUT_FILE_NAME+".jpeg' \n")
-            # ~ TMP_GNU_FILE.write("plot '"+TMP_OUT_FILE_NAME+".dat' using (100*(column(6)/column(2))):xtic(1) title '"+str(BLOCK)+"'")
-            # ~ for k in range(2, 1+(64/BLOCK)):
-                # ~ TMP_GNU_FILE.write(", '' using (100*(column("+str(k+5)+")/column(2))) title '"+str(k*BLOCK)+"'")
-            # ~ TMP_GNU_FILE.write("\n")
-            # ~ TMP_GNU_FILE.close()
-# ~
-            # ~ print "PLOTING: NORMAL..."
-            # ~ os.system("gnuplot "+TMP_GNU_FILE_NAME)
+            # First two values are Architecture + Application
+            title_size = 1
+            count = 0;
+            for parameter_name in arg_parameter:
+                parameter_name = parameter_name.split('.')
+                title = parameter_name[len(parameter_name)-2] + "." + parameter_name[len(parameter_name)-1]
+                count += 1
+                if count == 1:
+                    output_gnuplot_file.write("plot '" + arg_output_results_filename + "' using (column(" + str(title_size + count) + ")):xtic(1) title '" + str(title) + "'")
+                else :
+                    output_gnuplot_file.write(", '' using (column(" + str(title_size + count) + ")) title '" + str(title) + "'")
+
+        elif arg_plot_type == 'lines_normalized':
+            output_gnuplot_file.write("set yrange [ 0.00000 : 100.000 ] noreverse \n")
+            output_gnuplot_file.write("set format y '%g%%' \n")
+            output_gnuplot_file.write("set ytics 10\n")
+            output_gnuplot_file.write("set border 3\n")
+            output_gnuplot_file.write("set style data lines\n")
+            output_gnuplot_file.write("set style fill solid border 1\n")
+            output_gnuplot_file.write("set boxwidth 1.0\n")
+            output_gnuplot_file.write("set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000\n")
+            output_gnuplot_file.write("set title '" + arg_output_results_filename + "_NORMALIZED' \n")
+            output_gnuplot_file.write("set output '"+arg_output_results_filename+".jpeg' \n")
+
+            # First two values are Architecture + Application
+            title_size = 1
+            # Last Column has the Sum of Values
+            column_sum = title_size + len(arg_parameter) + 1
+            count = 0;
+            for parameter_name in arg_parameter:
+                parameter_name = parameter_name.split('.')
+                title = parameter_name[len(parameter_name)-2] + "." + parameter_name[len(parameter_name)-1]
+                count += 1
+                if count == 1:
+                    output_gnuplot_file.write("plot '" + arg_output_results_filename + "' using (100*(column(" + str(title_size + count) + ")/column(" + str(column_sum) + "))):xtic(1) title '" + str(title) + "'")
+                else :
+                    output_gnuplot_file.write(", '' using (100*(column(" + str(title_size + count) + ")/column(" + str(column_sum) + "))) title '" + str(title) + "'")
+
+        ########################################################################
+        # Bars
+        ########################################################################
+        elif arg_plot_type == 'bars':
+            output_gnuplot_file.write("set border 3\n")
+            output_gnuplot_file.write("set style data histograms\n")
+            output_gnuplot_file.write("set style fill solid border -1\n")
+            output_gnuplot_file.write("set boxwidth 0.80\n")
+            output_gnuplot_file.write("set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000\n")
+            output_gnuplot_file.write("set title '" + arg_output_results_filename + "' \n")
+            output_gnuplot_file.write("set output '" + arg_output_results_filename + ".jpeg' \n")
+
+            # First two values are Architecture + Application
+            title_size = 1
+            # Last Column has the Sum of Values
+            column_sum = title_size + len(arg_parameter) + 1
+            count = 0;
+            for parameter_name in arg_parameter:
+                parameter_name = parameter_name.split('.')
+                title = parameter_name[len(parameter_name)-2] + "." + parameter_name[len(parameter_name)-1]
+                count += 1
+                if count == 1:
+                    output_gnuplot_file.write("plot '" + arg_output_results_filename + "' using (column(" + str(title_size + count) + ")):xtic(1) title '" + str(title) + "'")
+                else :
+                    output_gnuplot_file.write(", '' using (column(" + str(title_size + count) + ")) title '" + str(title) + "'")
+
+        elif arg_plot_type == 'bars_normalized':
+            output_gnuplot_file.write("set yrange [ 0.00000 : 100.000 ] noreverse \n")
+            output_gnuplot_file.write("set format y '%g%%' \n")
+            output_gnuplot_file.write("set ytics 10\n")
+            output_gnuplot_file.write("set border 3\n")
+            output_gnuplot_file.write("set style data histograms\n")
+            output_gnuplot_file.write("set style fill solid border -1\n")
+            output_gnuplot_file.write("set boxwidth 0.80\n")
+            output_gnuplot_file.write("set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000\n")
+            output_gnuplot_file.write("set title '" + arg_output_results_filename + "_NORMALIZED' \n")
+            output_gnuplot_file.write("set output '" + arg_output_results_filename + ".jpeg' \n")
+
+            # First two values are Architecture + Application
+            title_size = 1
+            # Last Column has the Sum of Values
+            column_sum = title_size + len(arg_parameter) + 1
+            count = 0;
+            for parameter_name in arg_parameter:
+                parameter_name = parameter_name.split('.')
+                title = parameter_name[len(parameter_name)-2] + "." + parameter_name[len(parameter_name)-1]
+                count += 1
+                if count == 1:
+                    output_gnuplot_file.write("plot '" + arg_output_results_filename + "' using (100*(column(" + str(title_size + count) + ")/column(" + str(column_sum) + "))):xtic(1) title '" + str(title) + "'")
+                else :
+                    output_gnuplot_file.write(", '' using (100*(column(" + str(title_size + count) + ")/column(" + str(column_sum) + "))) title '" + str(title) + "'")
+
+        ########################################################################
+        # Stacked Bars
+        ########################################################################
+        elif arg_plot_type == 'stacked_bars':
+            output_gnuplot_file.write("set border 3\n")
+            output_gnuplot_file.write("set style data histograms\n")
+            output_gnuplot_file.write("set style histogram rowstack gap 1 title offset character 2, 0.25, 0 \n")
+            output_gnuplot_file.write("set style fill solid border -1\n")
+            output_gnuplot_file.write("set boxwidth 0.80\n")
+            output_gnuplot_file.write("set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000\n")
+            output_gnuplot_file.write("set title '" + arg_output_results_filename + "' \n")
+            output_gnuplot_file.write("set output '" + arg_output_results_filename + ".jpeg' \n")
+
+            # First two values are Architecture + Application
+            title_size = 1
+            # Last Column has the Sum of Values
+            column_sum = title_size + len(arg_parameter) + 1
+            count = 0;
+            for parameter_name in arg_parameter:
+                parameter_name = parameter_name.split('.')
+                title = parameter_name[len(parameter_name)-2] + "." + parameter_name[len(parameter_name)-1]
+                count += 1
+                if count == 1:
+                    output_gnuplot_file.write("plot '" + arg_output_results_filename + "' using (column(" + str(title_size + count) + ")):xtic(1) title '" + str(title) + "'")
+                else :
+                    output_gnuplot_file.write(", '' using (column(" + str(title_size + count) + ")) title '" + str(title) + "'")
+
+        elif arg_plot_type == 'stacked_bars_normalized':
+            output_gnuplot_file.write("set yrange [ 0.00000 : 100.000 ] noreverse \n")
+            output_gnuplot_file.write("set format y '%g%%' \n")
+            output_gnuplot_file.write("set ytics 10\n")
+            output_gnuplot_file.write("set border 3\n")
+            output_gnuplot_file.write("set style data histograms\n")
+            output_gnuplot_file.write("set style histogram rowstack gap 1 title offset character 2, 0.25, 0 \n")
+            output_gnuplot_file.write("set style fill solid border -1\n")
+            output_gnuplot_file.write("set boxwidth 0.80\n")
+            output_gnuplot_file.write("set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000\n")
+            output_gnuplot_file.write("set title '" + arg_output_results_filename + "' \n")
+            output_gnuplot_file.write("set output '" + arg_output_results_filename + ".jpeg' \n")
+
+            # First two values are Architecture + Application
+            title_size = 1
+            # Last Column has the Sum of Values
+            column_sum = title_size + len(arg_parameter) + 1
+            count = 0;
+            for parameter_name in arg_parameter:
+                parameter_name = parameter_name.split('.')
+                title = parameter_name[len(parameter_name)-2] + "." + parameter_name[len(parameter_name)-1]
+                count += 1
+                if count == 1:
+                    output_gnuplot_file.write("plot '" + arg_output_results_filename + "' using (100*(column(" + str(title_size + count) + ")/column(" + str(column_sum) + "))):xtic(1) title '" + str(title) + "'")
+                else :
+                    output_gnuplot_file.write(", '' using (100*(column(" + str(title_size + count) + ")/column(" + str(column_sum) + "))) title '" + str(title) + "'")
 
 
-
+        ########################################################################
+        # Close the gnuplot file and plot it !
+        output_gnuplot_file.write("\n")
         output_gnuplot_file.close()
+
+        PRINT("gnuplot " + arg_gnuplot_filename)
+        os.system("gnuplot " + arg_gnuplot_filename)
+
 
 cfg_file.close()
 sys.exit()
-
-

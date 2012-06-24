@@ -15,6 +15,7 @@ TODO list:
 ################ Long Term
 TRACE_READER -- Remove string, use char instead
 TRACE_READER -- Multiple single threaded applications
+TRACE_READER -- Fast check on the trace / fast get trace size
 PREFETCHER -- Check increment/decrement into a real machine / simulator
 PROCESSOR -- One instruction can be between two instruction cache lines.
 PROCESSOR -- Split requests when the load/store are unaligned.
@@ -22,9 +23,9 @@ PROCESSOR -- Add field NEW_DATA into MEMORY_PACKAGE, always true after write, an
 PROCESSOR -- TLB - Add processor bit, when multiple applications, to change the physical address
 DIRECTORY -- Write don't send answer
 DIRECTORY -- Deadlock if Associativity < Directory Line from the same set.
+DIRECTORY -- Deadlock if MSHR's smaller than higher level MSHR's
 
 ################ Short Term
-DIRECTORY -- Check the cache memory latency
 DIRECTORY -- Time to copyback from the higher level (Directory average)
 
 STATISTICS -- Functional Unit statistics
@@ -43,5 +44,4 @@ STATISTICS -- Average Decoded Opcodes / Uops
     ok-- parallel requests
 
 ################################################################
-PREDICTION BUSINESS -- Check if READ/WRITE change the prediction
-
+PREDICTION BUSINESS -- Check if READ/WRITE change the prediction, write should not request missing blocks ...

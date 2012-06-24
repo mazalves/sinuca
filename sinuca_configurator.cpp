@@ -110,7 +110,9 @@ void sinuca_engine_t::initialize() {
     CONFIGURATOR_DEBUG_PRINTF("Finished allocation\n");
 
     /// ========================================================================
-    /// Add processor and directory inside the cache_memory
+    /// Connects:   processor <=> cache_memory
+    ///             directory <=> cache memory
+    ///             lower cache level <=> higher cache level
     this->make_connections();
     CONFIGURATOR_DEBUG_PRINTF("Finished make connections\n");
 
@@ -122,7 +124,7 @@ void sinuca_engine_t::initialize() {
         }
     }
 
-    /// Print the Cache connections.
+    /// Print the Cache connections IF DEBUG MODE
     std::string tree = "";
     for (uint32_t i = 0; i < get_cache_memory_array_size(); i++) {
         cache_memory_t *cache_memory = cache_memory_array[i];
@@ -132,7 +134,6 @@ void sinuca_engine_t::initialize() {
             tree += utils_t::connections_pretty(cache_memory, 0);
         }
     }
-
     CONFIGURATOR_DEBUG_PRINTF("CONNECTIONS:\n%s\n", tree.c_str())
 
     this->directory_controller->allocate();
@@ -1084,6 +1085,11 @@ void sinuca_engine_t::make_connections() {
             ERROR_ASSERT_PRINTF(found_component == true, "CACHE_MEMORY has a not found LOWER_LEVEL_CACHE:\"%s\"\n", cache_label);
         }
     }
+    /// Check the if the MSHR support higher level MSHRs
+    for (uint32_t component = 0; component < this->get_cache_memory_array_size(); component++) {
+        this->cache_memory_array[component]->check_mshr_size();
+    }
+
 
     /// ========================================================================
     /// INTERCONNECTION_ROUTER => CONNECTED_COMPONENTS
