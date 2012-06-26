@@ -112,11 +112,6 @@ void line_usage_predictor_t::allocate() {
                     this->DSBP_PHT_sets[i].ways[j].offset = 0;
                     this->DSBP_PHT_sets[i].ways[j].pointer = false;
 
-                    this->DSBP_sets[i].ways[j].clock_become_alive = utils_t::template_allocate_initialize_array<uint64_t>(sinuca_engine.get_global_line_size(), 0);
-                    this->DSBP_sets[i].ways[j].clock_become_dead = utils_t::template_allocate_initialize_array<uint64_t>(sinuca_engine.get_global_line_size(), 0);
-
-                    this->DSBP_sets[i].ways[j].active_sub_blocks = 0;
-
                     this->DSBP_PHT_sets[i].ways[j].usage_counter = utils_t::template_allocate_initialize_array<uint64_t>(sinuca_engine.get_global_line_size(), 0);
                     this->DSBP_PHT_sets[i].ways[j].overflow = utils_t::template_allocate_initialize_array<bool>(sinuca_engine.get_global_line_size(), false);
                 }
@@ -143,6 +138,11 @@ void line_usage_predictor_t::allocate() {
                     this->DSBP_sets[i].ways[j].real_usage_counter = utils_t::template_allocate_initialize_array<uint64_t>(sinuca_engine.get_global_line_size(), 0);
                     this->DSBP_sets[i].ways[j].usage_counter = utils_t::template_allocate_initialize_array<uint64_t>(sinuca_engine.get_global_line_size(), 0);
                     this->DSBP_sets[i].ways[j].overflow = utils_t::template_allocate_initialize_array<bool>(sinuca_engine.get_global_line_size(), false);
+
+                    this->DSBP_sets[i].ways[j].clock_become_alive = utils_t::template_allocate_initialize_array<uint64_t>(sinuca_engine.get_global_line_size(), 0);
+                    this->DSBP_sets[i].ways[j].clock_become_dead = utils_t::template_allocate_initialize_array<uint64_t>(sinuca_engine.get_global_line_size(), 0);
+
+                    this->DSBP_sets[i].ways[j].active_sub_blocks = 0;
                     this->DSBP_sets[i].ways[j].is_dead = true;
                 }
             }

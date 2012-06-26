@@ -97,7 +97,7 @@ PRINT("===================================================================")
 app_count = 0
 for app_line in APP_FILE:
     app_line = app_line.rstrip('\r\n')
-    if  app_line[0] == '#':
+    if  (len(app_line) == 0) or (app_line[0] == '#'):
         continue
     app_count += 1
     if (app_count >= arg_app_start) and (app_count <= arg_app_end) :

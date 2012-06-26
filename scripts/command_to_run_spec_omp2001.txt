@@ -1,15 +1,15 @@
 #------------SPEC2006 (11)
 #-----MEDIUM
-wupwise;m;wupwise.M;TraceTime=0;Simulation8CPU=s
-swim;m;swim.M;TraceTime=0;Simulation8CPU=s
-mgrid;m;mgrid.M;TraceTime=0;Simulation8CPU=s
-applu;m;applu.M;TraceTime=0;Simulation8CPU=s
-galgel;m;galgel.M;TraceTime=0;Simulation8CPU=s
-equake;m;equake.M;TraceTime=0;Simulation8CPU=s
-apsi;m;apsi.M;TraceTime=0;Simulation8CPU=s
-gafort;m;gafort.M;TraceTime=0;Simulation8CPU=s
-fma3d;m;fma3d.M;TraceTime=0;Simulation8CPU=s
-art;m;art.M;TraceTime=0;Simulation8CPU=s
-ammp;m;ammp.M;TraceTime=0;Simulation8CPU=s
+wupwise;m;wupwise.M;TraceTime=0;Simulation8CPU=35353s => 16%
+swim;m;swim.M;TraceTime=0;Simulation8CPU=35353s => 23%
+mgrid;m;mgrid.M;TraceTime=0;Simulation8CPU=35353s => 26%
+applu;m;applu.M;TraceTime=0;Simulation8CPU=35353s => 4%
+galgel;m;galgel.M;TraceTime=0;Simulation8CPU=8098s
+equake;m;equake.M;TraceTime=0;Simulation8CPU=388s
+apsi;m;apsi.M;TraceTime=0;Simulation8CPU=35353s => 21%
+gafort;m;gafort.M;TraceTime=0;Simulation8CPU=35353s => 3.5%
+fma3d;m;fma3d.M;TraceTime=0;Simulation8CPU=19090s => FAIL
+art;m;art.M;TraceTime=0;Simulation8CPU=35353s =>
+ammp;m;ammp.M;TraceTime=0;Simulation8CPU=35353s =>
 #-----LARGER
 #-----END OF FILE
