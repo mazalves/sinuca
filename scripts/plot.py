@@ -229,7 +229,7 @@ for cfg_line in cfg_file:
 
                 split_app_list_file_line = app_list_file_line.split(';')
                 app_name = split_app_list_file_line[0] + "." + split_app_list_file_line[1]
-                app_file_name = results_directory + app_name + ".PP." + results_filename + ".result"
+                app_file_name = results_directory + split_app_list_file_line[2] + "." + results_filename + ".result"
                 try:
                     app_file = open(app_file_name, 'r')
                 except IOError:

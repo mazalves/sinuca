@@ -1815,6 +1815,12 @@ class DSBP_metadata_line_t {
         bool *overflow;
         bool learn_mode;
         DSBP_PHT_line_t *PHT_pointer;
+
+        // Static Energy
+        uint64_t *clock_become_alive;
+        uint64_t *clock_become_dead;
+
+        uint32_t active_sub_blocks;
         bool is_dead;
 
         DSBP_metadata_line_t() {
@@ -1823,6 +1829,9 @@ class DSBP_metadata_line_t {
             this->overflow = NULL;
             this->learn_mode = 0;
             this->PHT_pointer = NULL;
+            this->clock_become_alive = NULL;
+            this->clock_become_dead = NULL;
+            this->active_sub_blocks = 0;
             this->is_dead = true;
         };
         ~DSBP_metadata_line_t() {
@@ -1890,10 +1899,13 @@ class line_usage_predictor_t : public interconnection_interface_t {
             uint64_t stat_DSBP_line_sub_block_learn;
             uint64_t stat_DSBP_line_sub_block_wrong_first;
 
+            uint64_t stat_DSBP_PHT_access;
             uint64_t stat_DSBP_PHT_hit;
             uint64_t stat_DSBP_PHT_miss;
 
             uint64_t *stat_accessed_sub_block;
+            uint64_t *stat_active_sub_block_per_access;     /// Number of active sub_blocks on the line during one access
+            uint64_t *stat_active_sub_block_per_cycle;      /// Number of cycles with a set of sub_blocks enabled
 
             uint64_t stat_sub_block_touch_0;
             uint64_t stat_sub_block_touch_1;
@@ -1942,6 +1954,7 @@ class line_usage_predictor_t : public interconnection_interface_t {
         void sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way);
         void line_copy_back(memory_package_t *package, uint32_t index, uint32_t way);
         void line_eviction(uint32_t index, uint32_t way);
+        void compute_static_energy(uint32_t index, uint32_t way);
 
         INSTANTIATE_GET_SET(line_usage_predictor_policy_t, line_usage_predictor_type);
 
@@ -1979,6 +1992,7 @@ class line_usage_predictor_t : public interconnection_interface_t {
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_line_sub_block_learn);
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_line_sub_block_wrong_first);
 
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_PHT_access);
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_PHT_hit);
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_PHT_miss);
 

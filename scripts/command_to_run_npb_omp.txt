@@ -21,13 +21,14 @@
 #ua;W;ua.W
 #dc;W;dc.W
 ## NAS A
-bt;A;bt.A;TraceTime=0;Simulation8CPU=39590s
-cg;A;cg.A;TraceTime=0;Simulation8CPU=16250s
-ep;A;ep.A;TraceTime=0;Simulation8CPU=284s
-ft;A;ft.A;TraceTime=0;Simulation8CPU=53867s
-is;A;is.A;TraceTime=0;Simulation8CPU=7530s
-lu;A;lu.A;TraceTime=0;Simulation8CPU=21073s
-mg;A;mg.A;TraceTime=0;Simulation8CPU=
-sp;A;sp.A;TraceTime=0;Simulation8CPU=18941s
-ua;A;ua.A;TraceTime=0;Simulation8CPU=26653s
+ep;A;ep.A;TraceTime=0;Simulation8CPU=4m
+ft;A;ft.A;TraceTime=0;Simulation8CPU=15h
+is;A;is.A;TraceTime=0;Simulation8CPU=2h
+bt;A;bt.A;TraceTime=0;Simulation8CPU=10h
+cg;A;cg.A;TraceTime=0;Simulation8CPU=5h
+ua;A;ua.A;TraceTime=0;Simulation8CPU=7h
+sp;A;sp.A;TraceTime=0;Simulation8CPU=5h
+lu;A;lu.A;TraceTime=0;Simulation8CPU=6h
+mg;A;mg.A;TraceTime=0;Simulation8CPU=17h
 #dc;A;dc.A;
+
