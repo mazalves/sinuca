@@ -133,7 +133,7 @@ for cfg_line in cfg_file:
     #Erase all the parameters for the new plot
     if cfg_line.lower() == 'begin':
         PRINT("===================================================================")
-        arg_results_filename = []
+        arg_input_results_filename = []
         arg_parameter = []
         continue
 
@@ -167,8 +167,8 @@ for cfg_line in cfg_file:
             split_cfg_line[i] = split_cfg_line[i].rstrip('\r\n')
             split_cfg_line[i] = split_cfg_line[i].rstrip('\t')
             split_cfg_line[i] = split_cfg_line[i].strip()
-            arg_results_filename.append(split_cfg_line[i])
-        PRINT("\t Results Filename:" + str(arg_results_filename))
+            arg_input_results_filename.append(split_cfg_line[i])
+        PRINT("\t Results Filename:" + str(arg_input_results_filename))
 
     elif split_cfg_line[0].lower() == 'parameter':
         split_cfg_line = split_cfg_line[1].split(',')
@@ -224,7 +224,7 @@ for cfg_line in cfg_file:
                 continue
 
             # Iterates over the EXPERIMENTS (results base name)
-            for results_filename in arg_results_filename:
+            for results_filename in arg_input_results_filename:
 
 
                 split_app_list_file_line = app_list_file_line.split(';')
