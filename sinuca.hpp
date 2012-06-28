@@ -345,7 +345,7 @@ class sinuca_engine_t {
         double stat_rss_end;
         double stat_rss_max;
         /// Save during warmup
-        uint64_t stat_reset_cycle;
+        uint64_t reset_cycle;
         /// Oldest Packages
         uint64_t stat_old_memory_package;
         uint64_t stat_old_opcode_package;
@@ -445,7 +445,7 @@ class sinuca_engine_t {
         INSTANTIATE_GET_SET(double, stat_rss_end);
         INSTANTIATE_GET_SET(double, stat_rss_max);
         /// Save during warmup
-        INSTANTIATE_GET_SET(uint64_t, stat_reset_cycle);
+        INSTANTIATE_GET_SET(uint64_t, reset_cycle);
         /// Oldest Packages
         INSTANTIATE_GET_SET(uint64_t, stat_old_memory_package);
         INSTANTIATE_GET_SET(uint64_t, stat_old_opcode_package);

@@ -1446,9 +1446,9 @@ void processor_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "decode_uop_counter_warm", this->decode_uop_counter - this->stat_reset_decode_uop_counter);
 
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "opcode_per_cycle_ratio_warm", this->fetch_opcode_counter - this->stat_reset_fetch_opcode_counter,
-                                                                                                                       sinuca_engine.get_global_cycle() - sinuca_engine.get_stat_reset_cycle());
+                                                                                                                       sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "uop_per_cycle_ratio_warm", this->decode_uop_counter - this->stat_reset_decode_uop_counter,
-                                                                                                                       sinuca_engine.get_global_cycle() - sinuca_engine.get_stat_reset_cycle());
+                                                                                                                       sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_nop_completed", stat_nop_completed);

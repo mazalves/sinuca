@@ -234,7 +234,7 @@ void sinuca_engine_t::global_reset_statistics() {
     }
 
     /// Save the variables after the warmup
-    this->set_stat_reset_cycle(this->global_cycle);
+    this->set_reset_cycle(this->global_cycle);
 
 
     /// Sinuca Reset Statistics
@@ -385,14 +385,17 @@ void sinuca_engine_t::global_print_statistics() {
     ///=========================================================================
     /// Total (with warm-up)
     this->write_statistics_small_separator();
+
     this->write_statistics_value(get_type_component_label(), get_label(), "global_cycle", global_cycle);
-    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_1_0ghz", global_cycle, 1000000000);
-    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_1_5ghz", global_cycle, 1500000000);
-    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_2_0ghz", global_cycle, 2000000000);
-    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_2_5ghz", global_cycle, 2500000000);
-    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_3_0ghz", global_cycle, 3000000000);
-    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_3_5ghz", global_cycle, 3500000000);
-    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_4_0ghz", global_cycle, 4000000000);
+    this->write_statistics_value(get_type_component_label(), get_label(), "reset_cycle", reset_cycle);
+
+    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_1_0ghz_warm", global_cycle - reset_cycle, 1000000000);
+    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_1_5ghz_warm", global_cycle - reset_cycle, 1500000000);
+    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_2_0ghz_warm", global_cycle - reset_cycle, 2000000000);
+    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_2_5ghz_warm", global_cycle - reset_cycle, 2500000000);
+    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_3_0ghz_warm", global_cycle - reset_cycle, 3000000000);
+    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_3_5ghz_warm", global_cycle - reset_cycle, 3500000000);
+    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_4_0ghz_warm", global_cycle - reset_cycle, 4000000000);
 
     this->write_statistics_small_separator();
     double kilo_instructions_simulated = 0;
