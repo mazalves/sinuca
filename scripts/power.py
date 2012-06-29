@@ -10,6 +10,13 @@ def PRINT( str ):
    print "PYTHON: " + str
    return
 
+########################################################################
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
 
 ########################################################################
 def cacti_base_cfg(TMP_CFG_FILE_NAME):
@@ -100,12 +107,12 @@ def cacti_base_cfg(TMP_CFG_FILE_NAME):
 ########################################################################
 
 ########################################################################
-def cacti_defined_cfg(TMP_CFG_FILE_NAME, CacheLevel, CacheSize, LineSize, CacheAssoc, BlockCount, TechInt, OutPut, CacheType, TAG, UCA, Access, DataArray, TagArray, RW_Port, R_Port, W_Port):
+def cacti_defined_cfg(TMP_CFG_FILE_NAME, CacheLevel, CacheSize, LineSize, CacheAssoc, IO_Output, TechInt, BankCount, CacheType, TAG, UCA, Access, DataArray, TagArray, RW_Port, R_Port, W_Port):
     TMP_CFG_FILE = open(TMP_CFG_FILE_NAME, 'w')
 
     TMP_CFG_FILE.write("####################################################\n")
     # Cache Level
-    TMP_CFG_FILE.write("-Cache level (L2/L3) - \""+CacheLevel+"\" \n")
+    TMP_CFG_FILE.write("-Cache level (L2/L3) - \"L"+str(CacheLevel)+"\" \n")
     ### Cache size
     TMP_CFG_FILE.write("-size (bytes) "+str(CacheSize)+" \n")
     ### Line size
@@ -113,11 +120,11 @@ def cacti_defined_cfg(TMP_CFG_FILE_NAME, CacheLevel, CacheSize, LineSize, CacheA
     ### To model Fully Associative cache, set associativity to zero
     TMP_CFG_FILE.write("-associativity "+str(CacheAssoc)+" \n")
     ### Multiple banks connected using a bus
-    TMP_CFG_FILE.write("-UCA bank count "+str(BlockCount)+" \n")
+    TMP_CFG_FILE.write("-UCA bank count "+str(BankCount)+" \n")
     ### Integration Technology -- (0.032, 0.045, 0.068, 0.090)
     TMP_CFG_FILE.write("-technology (u) "+str(TechInt)+" \n")
     ### Bus width include data bits and address bits required by the decoder
-    TMP_CFG_FILE.write("-output/input bus width "+str(OutPut)+" \n")
+    TMP_CFG_FILE.write("-output/input bus width "+str(IO_Output)+" \n")
     # Type of memory - cache (with a tag array) or ram (scratch ram similar to a register file)
     # or main memory (no tag array and every access will happen at a page granularity Ref: CACTI 5.3 report)
     TMP_CFG_FILE.write("-cache type \""+CacheType+"\" \n")
@@ -179,16 +186,19 @@ else :
 USER = "mazalves"
 PROJECT_HOME = "/home/" + USER + "/Experiment/"
 PRINT("PROJECT_HOME = " + PROJECT_HOME)
-os.putenv("PROJECT_HOME", PROJECT_HOME)
-os.system("mkdir -p " + PROJECT_HOME + "benchmarks/plots")
 
 SINUCA_HOME = PROJECT_HOME + "/SiNUCA/"
 PRINT("SINUCA_HOME = " + SINUCA_HOME)
 os.putenv("SINUCA_HOME", SINUCA_HOME)
 
-PRINT("\t Benchmark:" + arg_benchmark)
-PRINT("\t Input Results Filename:" + str(arg_input_results_filename))
-PRINT("\t Output Data Filename:" + arg_output_results_filename)
+## Model all CACTI_CONFIGURATIONS on Cacti 6.5
+CACTI_HOME = PROJECT_HOME + "/cacti65/"
+CACTI_MODEL_CFG_DIR = CACTI_HOME + "/models_cfg/"
+CACTI_MODEL_OUTPUT_DIR = CACTI_HOME + "/models_out/"
+os.system("mkdir -p " + CACTI_MODEL_CFG_DIR)
+os.system("mkdir -p " + CACTI_MODEL_OUTPUT_DIR)
+PRINT("CACTI_MODEL_CFG_DIR = " + CACTI_MODEL_CFG_DIR)
+PRINT("CACTI_MODEL_OUTPUT_DIR = " + CACTI_MODEL_OUTPUT_DIR)
 
 if arg_benchmark == 'spec_cpu2000':
     app_list_filename   = SINUCA_HOME + "/scripts/command_to_run_spec_cpu2000.txt"
@@ -203,9 +213,16 @@ elif arg_benchmark == 'npb_omp':
     app_list_filename   = SINUCA_HOME + "/scripts/command_to_run_npb_omp.txt"
     results_directory       = PROJECT_HOME + "/benchmarks/results/npb_omp/"
 
+
+PRINT("\t Benchmark:" + arg_benchmark)
+PRINT("\t Input Results Filename:" + str(arg_input_results_filename))
+PRINT("\t Output Data Filename:" + arg_output_results_filename)
 PRINT("\t App List Filename = " + app_list_filename)
 PRINT("\t Results Directory = " + results_directory)
 
+# Open the output filename
+has_header = 0
+output_results_file = open(arg_output_results_filename, 'w')
 
 # Iterates over the APPLICATIONS name from benchmark
 try:
@@ -365,28 +382,270 @@ for app_list_file_line in app_list_file:
     counter = -1
     for cache_label in cache_label_list:
         counter += 1
-        print   "#" + str(counter)
-        print   " Label:" + cache_label_list[counter]
-        print   " Cycle:" + str(cache_global_cycle_list[counter])
+        # ~ print   "#" + str(counter)
+        # ~ print   " Label:" + cache_label_list[counter]
+        # ~ print   " Cycle:" + str(cache_global_cycle_list[counter])
         # ~ print   " Reset:" + str(cache_reset_cycle_list[counter])
-        print   " Level:" + str(cache_hierarchy_level_list[counter])
-        print   " Line Size:" + str(cache_line_size_list[counter])
-        print   " Line Number:" + str(cache_line_number_list[counter])
-        print   " Associativity:" + str(cache_associativity_list[counter])
-        print   " Line Usage Predictor:" + cache_line_usage_predictor_type_list[counter]
-        print   " UsageCounter Bits:" + str(cache_DSBP_usage_counter_bits_list[counter])
-        print   " SubBlock Size:" + str(cache_DSBP_sub_block_size_list[counter])
-        print   " PHT Line Number:" + str(cache_DSBP_PHT_line_number_list[counter])
-        print   " PHT Associativity:" + str(cache_DSBP_PHT_associativity_list[counter])
+        # ~ print   " Level:" + str(cache_hierarchy_level_list[counter])
+        # ~ print   " Line Size:" + str(cache_line_size_list[counter])
+        # ~ print   " Line Number:" + str(cache_line_number_list[counter])
+        # ~ print   " Associativity:" + str(cache_associativity_list[counter])
+        # ~ print   " Line Usage Predictor:" + cache_line_usage_predictor_type_list[counter]
+        # ~ print   " UsageCounter Bits:" + str(cache_DSBP_usage_counter_bits_list[counter])
+        # ~ print   " SubBlock Size:" + str(cache_DSBP_sub_block_size_list[counter])
+        # ~ print   " PHT Line Number:" + str(cache_DSBP_PHT_line_number_list[counter])
+        # ~ print   " PHT Associativity:" + str(cache_DSBP_PHT_associativity_list[counter])
+# ~
+        # ~ print   " Cache Accesses:" + str(cache_stat_accesses_list[counter])
+        # ~ print   " PHT Accesses:" + str(cache_stat_DSBP_PHT_access_list[counter])
+        # ~ print   " Sub-Blocks per Accesses:" + str(cache_stat_active_sub_block_per_access_list[counter])
+        # ~ print   " Sub-Blocks per Cycles:" + str(cache_stat_active_sub_block_per_cycle_list[counter])
 
-        print   " Cache Accesses:" + str(cache_stat_accesses_list[counter])
-        print   " PHT Accesses:" + str(cache_stat_DSBP_PHT_access_list[counter])
-        print   " Sub-Blocks per Accesses:" + str(cache_stat_active_sub_block_per_access_list[counter])
-        print   " Sub-Blocks per Cycles:" + str(cache_stat_active_sub_block_per_cycle_list[counter])
+    ### Create all the CACTI Models
 
 
+    total_cache_static_energy = []
+    total_cache_dynamic_energy = []
+    total_aux_static_energy = []
+    total_aux_dynamic_energy = []
 
+    counter = -1
+    for cache_label in cache_label_list:
+        counter += 1
+
+        # Maintain the Energy for the total cycles
+        cache_static_power = 0.0
+        # Maintain the Energy for the total access
+        cache_dynamic_energy = 0.0
+        # Maintain the Energy for different line sizes
+        cache_static_power_array = []
+        cache_dynamic_energy_array = []
+
+        for i in range(0, 1 + line_size) :
+            cache_static_power_array.append(0.0)
+            cache_dynamic_energy_array.append(0.0)
+
+        # Maintain the Energy for the Auxiliar Structure (PHT)
+        auxiliar_static_power = 0.0
+        auxiliar_dynamic_energy = 0.0
+
+        ############################
+        # Simulation Parameters
+        predictor_type = cache_line_usage_predictor_type_list[counter]
+        cache_level = cache_hierarchy_level_list[counter]
+        cache_line_number = cache_line_number_list[counter]
+        cache_line_size = cache_line_size_list[counter]
+        cache_size = cache_line_number * cache_line_size
+        cache_associativity = cache_associativity_list[counter]
+        ############################
+        # User definitions
+        cache_bank = 1
+        cache_integration_technology = 0.045 # 45nm
+        cache_tag_size = 24
+        cache_model = "cache"
+        cache_type = "UCA"
+        access_type = "normal"
+        if (cache_hierarchy_level_list[counter] == 1):
+            access_type = "fast"
+        data_array = "itrs-hp"
+        tag_array = "itrs-hp"
+        rw_port = 0
+        read_port = 1
+        write_port = 1
+
+        ########################################################################
+        ## Compute the Normal Cache Energy
+        ########################################################################
+        if (predictor_type == "DISABLE") or (predictor_type == "DSBP_DISABLE"):
+            TMP_FILE_NAME = "LP_"+ predictor_type + "_L"+ str(cache_level) + "_CS"+ str(cache_size) + "_LS"+ str(cache_line_size) + "_CA"+ str(cache_associativity) \
+                            + "_CO"+ str(cache_line_size) + "_CB"+ str(cache_bank) + "_TI"+ str(cache_integration_technology) + "_CT"+ str(cache_tag_size) + "_"   + cache_type
+            TMP_CFG_FILE_NAME = CACTI_MODEL_CFG_DIR + TMP_FILE_NAME + ".CFG"
+            TMP_OUT_FILE_NAME = CACTI_MODEL_OUTPUT_DIR + TMP_FILE_NAME + ".OUT"
+
+            try:
+                TMP_OUT_FILE = open(TMP_OUT_FILE_NAME, 'r')
+                #print("Using Old Cacti Model: "+TMP_OUT_FILE_NAME)
+            except IOError:
+                print("Creating New Cacti Model: "+TMP_OUT_FILE_NAME)
+                cacti_defined_cfg(TMP_CFG_FILE_NAME, cache_level, cache_size, cache_line_size, cache_associativity, cache_line_size \
+                                                   , cache_integration_technology, cache_bank, cache_model, cache_tag_size, cache_type, access_type, data_array, tag_array, rw_port, read_port, write_port)
+                cacti_base_cfg(TMP_CFG_FILE_NAME)
+                os.system(CACTI_HOME + "cacti -infile " + TMP_CFG_FILE_NAME + " > " + TMP_OUT_FILE_NAME)
+                TMP_OUT_FILE = open(TMP_OUT_FILE_NAME, 'r')
+
+            for out_file_line in TMP_OUT_FILE:
+                out_file_line = out_file_line.rstrip('\r\n')
+                if  "Total dynamic read energy/access" in out_file_line: #(nJ)
+                    out_file_line_split = out_file_line.split(":")
+                    for number in out_file_line_split:
+                        if is_number(number):
+                            cache_dynamic_energy += float(number)
+                elif  "Total leakage read/write power of a bank" in out_file_line: #(mW)
+                    out_file_line_split = out_file_line.split(":")
+                    for number in out_file_line_split:
+                        if is_number(number):
+                            cache_static_power += float(number)
+            TMP_OUT_FILE.close()
+
+        ########################################################################
+        ## Compute the DSBP Energy
+        ########################################################################
+        if (predictor_type == "DSBP"):
+            cache_tag_size += 2 * 8 # Two extra bytes as overhead
+            for i in range(0, 1 + (line_size / cache_DSBP_sub_block_size_list[counter])) :
+                cache_line_size = i * cache_DSBP_sub_block_size_list[counter]
+                ### Add a small overhead in case no sub-block was turned-on
+                if cache_line_size == 0:
+                    cache_line_size = 1
+                cache_size = cache_line_number * cache_line_size
+
+                TMP_FILE_NAME = "LP_"+ predictor_type + "_L"+ str(cache_level) + "_CS"+ str(cache_size) + "_LS"+ str(cache_line_size) + "_CA"+ str(cache_associativity) \
+                                + "_CO"+ str(cache_line_size) + "_CB"+ str(cache_bank) + "_TI"+ str(cache_integration_technology) + "_CT"+ str(cache_tag_size) + "_"   + cache_type
+                TMP_CFG_FILE_NAME = CACTI_MODEL_CFG_DIR + TMP_FILE_NAME + ".CFG"
+                TMP_OUT_FILE_NAME = CACTI_MODEL_OUTPUT_DIR + TMP_FILE_NAME + ".OUT"
+
+                try:
+                    TMP_OUT_FILE = open(TMP_OUT_FILE_NAME, 'r')
+                    #print("Using Old Cacti Model: "+TMP_OUT_FILE_NAME)
+                except IOError:
+                    print("Creating New Cacti Model: "+TMP_OUT_FILE_NAME)
+                    cacti_defined_cfg(TMP_CFG_FILE_NAME, cache_level, cache_size, cache_line_size, cache_associativity, cache_line_size \
+                                                       , cache_integration_technology, cache_bank, cache_model, cache_tag_size, cache_type, access_type, data_array, tag_array, rw_port, read_port, write_port)
+                    cacti_base_cfg(TMP_CFG_FILE_NAME)
+                    os.system(CACTI_HOME + "cacti -infile " + TMP_CFG_FILE_NAME + " > " + TMP_OUT_FILE_NAME)
+                    TMP_OUT_FILE = open(TMP_OUT_FILE_NAME, 'r')
+
+                for out_file_line in TMP_OUT_FILE:
+                    out_file_line = out_file_line.rstrip('\r\n')
+                    if  "Total dynamic read energy/access" in out_file_line: #(nJ)
+                        out_file_line_split = out_file_line.split(":")
+                        for number in out_file_line_split:
+                            if is_number(number):
+                                # ~ PRINT("Dynamic:" + number)
+                                cache_dynamic_energy_array[i] += float(number)
+                    elif  "Total leakage read/write power of a bank" in out_file_line: #(mW)
+                        out_file_line_split = out_file_line.split(":")
+                        for number in out_file_line_split:
+                            if is_number(number):
+                                # ~ PRINT("Leakage:" + number)
+                                cache_static_power_array[i] += float(number)
+                TMP_OUT_FILE.close()
+
+            ####################################################################
+            ### PHT ENERGY
+            predictor_type = cache_line_usage_predictor_type_list[counter] + "PHT"
+            cache_level = 1
+            cache_line_number = cache_DSBP_PHT_line_number_list[counter]
+            cache_line_size = cache_DSBP_sub_block_size_list[counter] * cache_DSBP_usage_counter_bits_list[counter] # Counters and Overflow
+            cache_line_size += 24 # PC and Offset
+            cache_line_size += 1 # Learn
+            cache_line_size += 1 # Prt
+            cache_size = cache_line_number * cache_line_size
+            cache_associativity = cache_associativity_list[counter]
+            cache_bank = 1
+            cache_integration_technology = 0.045
+            cache_tag_size = 24
+            cache_type = "UCA"
+            access_type = "sequential"
+            data_array = "itrs-hp"
+            tag_array = "itrs-hp"
+            rw_port = 1
+            read_port = 0
+            write_port = 0
+
+            TMP_FILE_NAME = "LP_"+ predictor_type + "_L"+ str(cache_level) + "_CS"+ str(cache_size) + "_LS"+ str(cache_line_size) + "_CA"+ str(cache_associativity) \
+                            + "_CO"+ str(cache_line_size) + "_CB"+ str(cache_bank) + "_TI"+ str(cache_integration_technology) + "_CT"+ str(cache_tag_size) + "_"   + cache_type
+            TMP_CFG_FILE_NAME = CACTI_MODEL_CFG_DIR + TMP_FILE_NAME + ".CFG"
+            TMP_OUT_FILE_NAME = CACTI_MODEL_OUTPUT_DIR + TMP_FILE_NAME + ".OUT"
+
+            try:
+                TMP_OUT_FILE = open(TMP_OUT_FILE_NAME, 'r')
+                #print("Using Old Cacti Model: "+TMP_OUT_FILE_NAME)
+            except IOError:
+                print("Creating New Cacti Model: "+TMP_OUT_FILE_NAME)
+                cacti_defined_cfg(TMP_CFG_FILE_NAME, cache_level, cache_size, cache_line_size, cache_associativity, cache_line_size \
+                                                   , cache_integration_technology, cache_bank, cache_model, cache_tag_size, cache_type, access_type, data_array, tag_array, rw_port, read_port, write_port)
+                cacti_base_cfg(TMP_CFG_FILE_NAME)
+                os.system(CACTI_HOME + "cacti -infile " + TMP_CFG_FILE_NAME + " > " + TMP_OUT_FILE_NAME)
+                TMP_OUT_FILE = open(TMP_OUT_FILE_NAME, 'r')
+
+            for out_file_line in TMP_OUT_FILE:
+                out_file_line = out_file_line.rstrip('\r\n')
+                if  "Total dynamic read energy/access" in out_file_line: #(nJ)
+                    out_file_line_split = out_file_line.split(":")
+                    for number in out_file_line_split:
+                        if is_number(number):
+                            # ~ PRINT("PHT Dynamic:" + number)
+                            auxiliar_dynamic_energy += float(number)
+                elif  "Total leakage read/write power of a bank" in out_file_line: #(mW)
+                    out_file_line_split = out_file_line.split(":")
+                    for number in out_file_line_split:
+                        if is_number(number):
+                            # ~ PRINT("PHT Leakage:" + number)
+                            auxiliar_static_power += float(number)
+            TMP_OUT_FILE.close()
+
+
+        ########################################################################
+        ### After get all Simulation and CACTI information
+        ########################################################################
+        FREQUENCY = 4000000000 # 4GHz 4,000,000,000 cycles/second
+        MILI_TO_NANO = 1000000 # 1 mili = 1,000,000 nano
+
+        total_cache_static_energy.append(0.0)
+        total_cache_dynamic_energy.append(0.0)
+        total_aux_static_energy.append(0.0)
+        total_aux_dynamic_energy.append(0.0)
+
+        if (cache_line_usage_predictor_type_list[counter] == "DISABLE") or (cache_line_usage_predictor_type_list[counter] == "DSBP_DISABLE"):
+            total_cache_dynamic_energy[counter] = cache_dynamic_energy * cache_stat_accesses_list[counter]
+            total_cache_static_energy[counter] = MILI_TO_NANO * cache_static_power * cache_global_cycle_list[counter] / FREQUENCY
+
+        if (cache_line_usage_predictor_type_list[counter] == "DSBP"):
+            for i in range(0, 1 + cache_line_size_list[counter]) :
+                total_cache_dynamic_energy[counter] += cache_dynamic_energy_array[i] * cache_stat_active_sub_block_per_access_list[counter][i]
+                total_cache_static_energy[counter] += MILI_TO_NANO * cache_static_power_array[i] * cache_stat_active_sub_block_per_cycle_list[counter][i] / FREQUENCY
+            total_aux_dynamic_energy[counter] = auxiliar_dynamic_energy * cache_stat_DSBP_PHT_access_list[counter]
+            total_aux_static_energy[counter] = MILI_TO_NANO * auxiliar_static_power * cache_global_cycle_list[counter] / FREQUENCY
+
+        # ~ PRINT("Cache Dynamic Energy:" + str(total_cache_dynamic_energy[counter]))
+        # ~ PRINT("Cache Static Energy:" + str(total_cache_static_energy[counter]))
+        # ~ PRINT("Aux Dynamic Energy:" + str(total_aux_dynamic_energy[counter]))
+        # ~ PRINT("Aux Static Energy:" + str(total_aux_static_energy[counter]))
 
     app_file.close()
-app_list_file.close()
 
+    ############################################################################
+    ### Write the output file
+    ############################################################################
+    ## Output file header
+    if has_header == 0:
+        has_header = 1
+        output_results_file.write("Experiment")
+        for cache_label in cache_label_list:
+            output_results_file.write(" " + cache_label)
+        output_results_file.write(" Sum\n")
+
+    # Experiment + App Name
+    output_results_file.write(arg_input_results_filename + "_" + app_name + " ")
+    # Only the App Name
+    # ~ output_results_file.write(app_name + " ")
+
+    sum_values = 0
+    counter = -1
+    for cache_label in cache_label_list:
+        counter += 1
+        output_results_file.write(str(total_cache_static_energy[counter]) + " ")
+        output_results_file.write(str(total_cache_dynamic_energy[counter]) + " ")
+        output_results_file.write(str(total_aux_static_energy[counter]) + " ")
+        output_results_file.write(str(total_aux_dynamic_energy[counter]) + " ")
+        sum_values += total_cache_static_energy[counter]
+        sum_values += total_cache_dynamic_energy[counter]
+        sum_values += total_aux_static_energy[counter]
+        sum_values += total_aux_dynamic_energy[counter]
+    output_results_file.write(str(sum_values) + " ")
+    output_results_file.write("\n")
+app_list_file.close()
+output_results_file.close()
+
+sys.exit()
