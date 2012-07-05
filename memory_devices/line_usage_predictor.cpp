@@ -943,7 +943,7 @@ void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, uin
         break;
 
         case LINE_USAGE_PREDICTOR_POLICY_DISABLE:
-            package->memory_size = sinuca_engine.get_global_line_size();
+            package->memory_size = 1;
         break;
     }
 };
