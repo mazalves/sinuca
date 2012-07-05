@@ -67,9 +67,6 @@ void directory_controller_line_t::packager(uint32_t id_owner, uint64_t opcode_nu
 
     this->lock_type = lock_type;
 
-    // ~ this->cache_request_order = ;
-    // ~ this->cache_requested = ;
-
     this->initial_memory_operation = initial_memory_operation;
     this->initial_memory_address = initial_memory_address;
     this->initial_memory_size = initial_memory_size;
@@ -243,6 +240,10 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
         ERROR_ASSERT_PRINTF(directory_line != NULL, "Higher level REQUEST must have a directory_line.\n. cache_id:%u, package:%s\n", cache->get_id(), package->memory_to_string().c_str())
     }
 
+    /// Get CACHE_LINE
+    uint32_t index, way;
+    cache_line_t *cache_line = cache->find_line(package->memory_address, index, way);
+
 
     /// ========================================================================
     /// Takes care about Parallel Requests at the same Cache Level
@@ -252,22 +253,41 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
         /// Find Parallel Request
         if (directory_lines[0][i]->cache_request_order[cache_id] != 0 &&
         this->cmp_index_tag(directory_lines[0][i]->initial_memory_address, package->memory_address)) {
-            /// No Directory_line yet => create
-            if (directory_line == NULL) {
-                this->directory_lines->push_back(new directory_controller_line_t());
-                directory_line = this->directory_lines->back();
-
-                directory_line->packager(package->id_owner, package->opcode_number, package->opcode_address, package->uop_number,
-                                            is_read ? LOCK_READ : LOCK_WRITE,
-                                            package->memory_operation, package->memory_address, package->memory_size);
-                DIRECTORY_CTRL_DEBUG_PRINTF("\t New Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
+            /// Inspect IS_HIT
+            bool is_line_hit = this->coherence_is_hit(cache_line, package);
+            bool is_sub_block_hit = false;
+            // =============================================================
+            // Line Usage Prediction
+            if (is_line_hit) {
+                is_sub_block_hit = cache->line_usage_predictor.check_sub_block_is_hit(package, index, way);
             }
-            /// Update existing Directory_Line
-            directory_line->cache_request_order[cache_id] = ++directory_line->cache_requested;
-            DIRECTORY_CTRL_DEBUG_PRINTF("\t Parallel Request:%s\n", directory_line->directory_controller_line_to_string().c_str())
-            /// Sit and wait for a answer for the same line
-            DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN WAIT (Parallel Request)\n")
-            return PACKAGE_STATE_WAIT;
+            ///=================================================================
+            /// Cache Line Hit
+            if (is_line_hit && is_sub_block_hit) {
+                // =============================================================
+                // Line Usage Prediction
+                cache->line_usage_predictor.line_hit(package, index, way);
+
+                /// No Directory_line yet => create
+                if (directory_line == NULL) {
+                    this->directory_lines->push_back(new directory_controller_line_t());
+                    directory_line = this->directory_lines->back();
+
+                    directory_line->packager(package->id_owner, package->opcode_number, package->opcode_address, package->uop_number,
+                                                is_read ? LOCK_READ : LOCK_WRITE,
+                                                package->memory_operation, package->memory_address, package->memory_size);
+                    DIRECTORY_CTRL_DEBUG_PRINTF("\t New Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
+                }
+                /// Update existing Directory_Line
+                directory_line->cache_request_order[cache_id] = ++directory_line->cache_requested;
+                DIRECTORY_CTRL_DEBUG_PRINTF("\t Parallel Request:%s\n", directory_line->directory_controller_line_to_string().c_str())
+                /// Sit and wait for a answer for the same line
+                DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN WAIT (Parallel Request)\n")
+                return PACKAGE_STATE_WAIT;
+            }
+            else {
+                return PACKAGE_STATE_UNTREATED;
+            }
         }
     }
 
@@ -275,9 +295,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     /// ========================================================================
     /// Takes care about the CACHE HIT/MISS
     /// ========================================================================
-    /// Get CACHE_LINE
-    uint32_t index, way;
-    cache_line_t *cache_line = cache->find_line(package->memory_address, index, way);
 
     switch (package->memory_operation) {
         ///=====================================================================
@@ -531,6 +548,11 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             /// Add Latency
             package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_write();
 
+            // =============================================================
+            // Line Usage Prediction
+            cache->line_usage_predictor.line_insert_copyback(package, index, way);
+
+
             /// Send ANSWER
             package->is_answer = true;
             package->id_dst = package->id_src;
@@ -730,7 +752,7 @@ bool directory_controller_t::create_cache_copyback(cache_memory_t *cache, cache_
 
     // =============================================================
     // Line Usage Prediction
-    cache->line_usage_predictor.line_copy_back(package, index, way);
+    cache->line_usage_predictor.line_get_copyback(package, index, way);
 
     /// Higher Level Copy Back
     package->id_src = cache->get_id();

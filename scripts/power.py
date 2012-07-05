@@ -161,7 +161,7 @@ def cacti_defined_cfg(TMP_CFG_FILE_NAME, CacheLevel, CacheSize, LineSize, CacheA
 BENCHMARK_LIST = ["spec_cpu2000", "spec_cpu2006", "spec_omp2001", "npb_omp"]
 
 if (len(sys.argv) < 4) or (sys.argv[1] not in BENCHMARK_LIST):
-    sys.exit("Usage: python plot.py benchamrk base_input_name base_output_name")
+    sys.exit("Usage: python plot.py benchmark base_input_name base_output_name")
 else :
     arg_benchmark =  sys.argv[1]
     arg_input_results_filename = sys.argv[2]
@@ -191,12 +191,18 @@ SINUCA_HOME = PROJECT_HOME + "/SiNUCA/"
 PRINT("SINUCA_HOME = " + SINUCA_HOME)
 os.putenv("SINUCA_HOME", SINUCA_HOME)
 
+PLOTS_HOME = PROJECT_HOME + "benchmarks/plots/"
+os.system("mkdir -p " + PLOTS_HOME)
+arg_output_results_filename = PLOTS_HOME + arg_output_results_filename + ".data"
+
 ## Model all CACTI_CONFIGURATIONS on Cacti 6.5
 CACTI_HOME = PROJECT_HOME + "/cacti65/"
 CACTI_MODEL_CFG_DIR = CACTI_HOME + "/models_cfg/"
 CACTI_MODEL_OUTPUT_DIR = CACTI_HOME + "/models_out/"
 os.system("mkdir -p " + CACTI_MODEL_CFG_DIR)
 os.system("mkdir -p " + CACTI_MODEL_OUTPUT_DIR)
+# ~ os.system("rm -f " + CACTI_MODEL_CFG_DIR + "*")
+# ~ os.system("rm -f " + CACTI_MODEL_OUTPUT_DIR + "*")
 PRINT("CACTI_MODEL_CFG_DIR = " + CACTI_MODEL_CFG_DIR)
 PRINT("CACTI_MODEL_OUTPUT_DIR = " + CACTI_MODEL_OUTPUT_DIR)
 
@@ -231,6 +237,7 @@ except IOError:
     PRINT("\t \t app_list_filename Not Found:" + arg_benchmark + " - File Not Found:" + app_list_filename + " ... skipping")
     exit()
 for app_list_file_line in app_list_file:
+    configurations_inside_file = 0
     app_list_file_line = app_list_file_line.rstrip('\r\n')
     if  app_list_file_line[0] == '#':
         continue
@@ -255,12 +262,19 @@ for app_list_file_line in app_list_file:
     for parameter_line in app_file:
         parameter_line = parameter_line.rstrip('\r\n')
         #Comments
+        if (parameter_line == "#Configuration of SINUCA_ENGINE"):
+            configurations_inside_file += 1
+            if (configurations_inside_file > 1):
+                exit("Multiple results for application:" + app_name + " File:" + app_file_name)
+
         if parameter_line[0] == '#':
             continue
 
         split_parameter_line = parameter_line.split('.')
         if (split_parameter_line[0] == "CACHE_MEMORY") and (split_parameter_line[1] not in cache_label_list):
             cache_label_list.append(split_parameter_line[1])
+
+
 
 
     ############################################################################
@@ -395,14 +409,13 @@ for app_list_file_line in app_list_file:
         # ~ print   " SubBlock Size:" + str(cache_DSBP_sub_block_size_list[counter])
         # ~ print   " PHT Line Number:" + str(cache_DSBP_PHT_line_number_list[counter])
         # ~ print   " PHT Associativity:" + str(cache_DSBP_PHT_associativity_list[counter])
-# ~
         # ~ print   " Cache Accesses:" + str(cache_stat_accesses_list[counter])
         # ~ print   " PHT Accesses:" + str(cache_stat_DSBP_PHT_access_list[counter])
         # ~ print   " Sub-Blocks per Accesses:" + str(cache_stat_active_sub_block_per_access_list[counter])
         # ~ print   " Sub-Blocks per Cycles:" + str(cache_stat_active_sub_block_per_cycle_list[counter])
 
+    ############################################################################
     ### Create all the CACTI Models
-
 
     total_cache_static_energy = []
     total_cache_dynamic_energy = []
@@ -475,16 +488,22 @@ for app_list_file_line in app_list_file:
 
             for out_file_line in TMP_OUT_FILE:
                 out_file_line = out_file_line.rstrip('\r\n')
+                #Total dynamic read energy per access (nJ):
                 if  "Total dynamic read energy/access" in out_file_line: #(nJ)
                     out_file_line_split = out_file_line.split(":")
                     for number in out_file_line_split:
-                        if is_number(number):
+                        if is_number(number.strip()):
+                            # ~ PRINT("Dynamic:" + number)
                             cache_dynamic_energy += float(number)
+                            # ~ PRINT("cache_dynamic_energy:" + str(cache_dynamic_energy))
+                #Total leakage power of a bank (mW):
                 elif  "Total leakage read/write power of a bank" in out_file_line: #(mW)
                     out_file_line_split = out_file_line.split(":")
                     for number in out_file_line_split:
-                        if is_number(number):
+                        if is_number(number.strip()):
+                            # ~ PRINT("Leakage:" + number)
                             cache_static_power += float(number)
+                            # ~ PRINT("cache_static_power:" + str(cache_static_power))
             TMP_OUT_FILE.close()
 
         ########################################################################
@@ -492,12 +511,19 @@ for app_list_file_line in app_list_file:
         ########################################################################
         if (predictor_type == "DSBP"):
             cache_tag_size += 2 * 8 # Two extra bytes as overhead
-            for i in range(0, 1 + (line_size / cache_DSBP_sub_block_size_list[counter])) :
-                cache_line_size = i * cache_DSBP_sub_block_size_list[counter]
+            for i in range(0, 1 + cache_line_size_list[counter]) :
+                if (i % cache_DSBP_sub_block_size_list[counter] != 0):
+                    continue
+                cache_line_size = i
+
                 ### Add a small overhead in case no sub-block was turned-on
                 if cache_line_size == 0:
                     cache_line_size = 1
                 cache_size = cache_line_number * cache_line_size
+                ### Add the tag overhead
+                cache_tag_size += cache_DSBP_sub_block_size_list[counter] * cache_DSBP_usage_counter_bits_list[counter] # Counters and Overflow
+                cache_tag_size += 24 # PC and Offset
+                cache_tag_size += 1 # Learn
 
                 TMP_FILE_NAME = "LP_"+ predictor_type + "_L"+ str(cache_level) + "_CS"+ str(cache_size) + "_LS"+ str(cache_line_size) + "_CA"+ str(cache_associativity) \
                                 + "_CO"+ str(cache_line_size) + "_CB"+ str(cache_bank) + "_TI"+ str(cache_integration_technology) + "_CT"+ str(cache_tag_size) + "_"   + cache_type
@@ -520,13 +546,13 @@ for app_list_file_line in app_list_file:
                     if  "Total dynamic read energy/access" in out_file_line: #(nJ)
                         out_file_line_split = out_file_line.split(":")
                         for number in out_file_line_split:
-                            if is_number(number):
+                            if is_number(number.strip()):
                                 # ~ PRINT("Dynamic:" + number)
                                 cache_dynamic_energy_array[i] += float(number)
                     elif  "Total leakage read/write power of a bank" in out_file_line: #(mW)
                         out_file_line_split = out_file_line.split(":")
                         for number in out_file_line_split:
-                            if is_number(number):
+                            if is_number(number.strip()):
                                 # ~ PRINT("Leakage:" + number)
                                 cache_static_power_array[i] += float(number)
                 TMP_OUT_FILE.close()
@@ -544,7 +570,7 @@ for app_list_file_line in app_list_file:
             cache_associativity = cache_associativity_list[counter]
             cache_bank = 1
             cache_integration_technology = 0.045
-            cache_tag_size = 24
+            cache_tag_size = 16
             cache_type = "UCA"
             access_type = "sequential"
             data_array = "itrs-hp"
@@ -574,13 +600,13 @@ for app_list_file_line in app_list_file:
                 if  "Total dynamic read energy/access" in out_file_line: #(nJ)
                     out_file_line_split = out_file_line.split(":")
                     for number in out_file_line_split:
-                        if is_number(number):
+                        if is_number(number.strip()):
                             # ~ PRINT("PHT Dynamic:" + number)
                             auxiliar_dynamic_energy += float(number)
                 elif  "Total leakage read/write power of a bank" in out_file_line: #(mW)
                     out_file_line_split = out_file_line.split(":")
                     for number in out_file_line_split:
-                        if is_number(number):
+                        if is_number(number.strip()):
                             # ~ PRINT("PHT Leakage:" + number)
                             auxiliar_static_power += float(number)
             TMP_OUT_FILE.close()
@@ -599,19 +625,58 @@ for app_list_file_line in app_list_file:
 
         if (cache_line_usage_predictor_type_list[counter] == "DISABLE") or (cache_line_usage_predictor_type_list[counter] == "DSBP_DISABLE"):
             total_cache_dynamic_energy[counter] = cache_dynamic_energy * cache_stat_accesses_list[counter]
-            total_cache_static_energy[counter] = MILI_TO_NANO * cache_static_power * cache_global_cycle_list[counter] / FREQUENCY
+            total_cache_static_energy[counter] = (MILI_TO_NANO * cache_static_power * (cache_global_cycle_list[counter] - cache_reset_cycle_list[counter])) / FREQUENCY
 
-        if (cache_line_usage_predictor_type_list[counter] == "DSBP"):
+        elif (cache_line_usage_predictor_type_list[counter] == "DSBP"):
             for i in range(0, 1 + cache_line_size_list[counter]) :
                 total_cache_dynamic_energy[counter] += cache_dynamic_energy_array[i] * cache_stat_active_sub_block_per_access_list[counter][i]
-                total_cache_static_energy[counter] += MILI_TO_NANO * cache_static_power_array[i] * cache_stat_active_sub_block_per_cycle_list[counter][i] / FREQUENCY
+                total_cache_static_energy[counter] += ((MILI_TO_NANO * cache_static_power_array[i] / cache_line_number_list[counter]) * cache_stat_active_sub_block_per_cycle_list[counter][i]) / FREQUENCY
             total_aux_dynamic_energy[counter] = auxiliar_dynamic_energy * cache_stat_DSBP_PHT_access_list[counter]
-            total_aux_static_energy[counter] = MILI_TO_NANO * auxiliar_static_power * cache_global_cycle_list[counter] / FREQUENCY
+            total_aux_static_energy[counter] = (MILI_TO_NANO * auxiliar_static_power * (cache_global_cycle_list[counter] - cache_reset_cycle_list[counter])) / FREQUENCY
 
-        # ~ PRINT("Cache Dynamic Energy:" + str(total_cache_dynamic_energy[counter]))
-        # ~ PRINT("Cache Static Energy:" + str(total_cache_static_energy[counter]))
-        # ~ PRINT("Aux Dynamic Energy:" + str(total_aux_dynamic_energy[counter]))
-        # ~ PRINT("Aux Static Energy:" + str(total_aux_static_energy[counter]))
+        print("\n=================================")
+        PRINT(app_name)
+        PRINT("#" + str(counter))
+        PRINT("Label:" + cache_label_list[counter])
+        PRINT("Cycle:" + str(cache_global_cycle_list[counter]) + " Reset_Cycle:" + str(cache_reset_cycle_list[counter]))
+
+        PRINT("Cache_Accesses:" + str(cache_stat_accesses_list[counter])        + " Cache_Energy:" + str(cache_dynamic_energy)    + " Cache_Power:" + str(cache_static_power))
+        PRINT("PHT_Accesses:" + str(cache_stat_DSBP_PHT_access_list[counter]) + " Aux_Energy:" + str(auxiliar_dynamic_energy) + " Aux_Power:" + str(auxiliar_static_power))
+
+        str_cache_stat_active_sub_block_per_access_list = ""
+        str_cache_dynamic_energy_array = ""
+        str_cache_stat_active_sub_block_per_cycle_list = ""
+        str_cache_static_power_array = ""
+
+        total_accesses = 0
+        total_cycles = 0
+        for i in range(0, 1 + cache_line_size_list[counter]) :
+            if (i % cache_DSBP_sub_block_size_list[counter] != 0):
+                continue
+            total_accesses += cache_stat_active_sub_block_per_access_list[counter][i]
+            str_cache_stat_active_sub_block_per_access_list += " " + str(cache_stat_active_sub_block_per_access_list[counter][i])
+            str_cache_dynamic_energy_array += " " + str(cache_dynamic_energy_array[i])
+
+            total_cycles = cache_stat_active_sub_block_per_cycle_list[counter][i]
+            str_cache_stat_active_sub_block_per_cycle_list += " " + str(cache_stat_active_sub_block_per_cycle_list[counter][i])
+            str_cache_static_power_array += " " + str(cache_static_power_array[i])
+
+        if (cache_line_usage_predictor_type_list[counter] == "DSBP"):
+            if (total_accesses != cache_stat_accesses_list[counter]):
+                PRINT("WARNING !!!\n Wrong number of accesses !!!")
+            if (total_cycles / cache_line_number_list[counter] != cache_global_cycle_list[counter] - cache_reset_cycle_list[counter]):
+                PRINT("WARNING !!!\n Wrong number of cycles !!!")
+
+        PRINT("Sub_Blocks_per_Accesses:" + str_cache_stat_active_sub_block_per_access_list)
+        PRINT("Dyn_Energy:" + str_cache_dynamic_energy_array)
+
+        PRINT("Sub-Blocks_per_Cycles:" + str_cache_stat_active_sub_block_per_cycle_list)
+        PRINT("Stat_Power:" + str_cache_static_power_array)
+
+        PRINT("Cache_Dynamic_Energy:" + str(total_cache_dynamic_energy[counter]))
+        PRINT("Cache_Static_Energy:" + str(total_cache_static_energy[counter]))
+        PRINT("Aux_Dynamic_Energy:" + str(total_aux_dynamic_energy[counter]))
+        PRINT("Aux_Static_Energy:" + str(total_aux_static_energy[counter]))
 
     app_file.close()
 
@@ -623,7 +688,11 @@ for app_list_file_line in app_list_file:
         has_header = 1
         output_results_file.write("Experiment")
         for cache_label in cache_label_list:
-            output_results_file.write(" " + cache_label)
+            output_results_file.write(" " + cache_label + "_Static")
+            output_results_file.write(" " + cache_label + "_Dynamic")
+            output_results_file.write(" Aux_" + cache_label + "_Static")
+            output_results_file.write(" Aux_" + cache_label + "_Dynamic")
+
         output_results_file.write(" Sum\n")
 
     # Experiment + App Name

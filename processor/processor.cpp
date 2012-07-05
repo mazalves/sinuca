@@ -1471,11 +1471,6 @@ void processor_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_memory_write_completed", stat_memory_write_completed);
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_instruction_read_completed", stat_instruction_read_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_memory_read_completed", stat_memory_read_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_memory_write_completed", stat_memory_write_completed);
-
-    sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_instruction_read_wait_time", stat_min_instruction_read_wait_time);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_instruction_read_wait_time", stat_max_instruction_read_wait_time);
 

@@ -109,7 +109,9 @@ USER = "mazalves"
 PROJECT_HOME = "/home/" + USER + "/Experiment/"
 PRINT("PROJECT_HOME = " + PROJECT_HOME)
 os.putenv("PROJECT_HOME", PROJECT_HOME)
-os.system("mkdir -p " + PROJECT_HOME + "benchmarks/plots")
+
+PLOTS_HOME = PROJECT_HOME + "benchmarks/plots/"
+os.system("mkdir -p " + PLOTS_HOME)
 
 SINUCA_HOME = PROJECT_HOME + "/SiNUCA/"
 PRINT("SINUCA_HOME = " + SINUCA_HOME)
@@ -140,8 +142,8 @@ for cfg_line in cfg_file:
     elif split_cfg_line[0] == 'plot_filename':
         if (len(split_cfg_line) > 2):
             sys.exit("Too many output_results_filename")
-        arg_output_results_filename = PROJECT_HOME + "benchmarks/plots/" + split_cfg_line[1] + ".data"
-        arg_gnuplot_filename = PROJECT_HOME + "benchmarks/plots/" + split_cfg_line[1] + ".gnuplot"
+        arg_output_results_filename = PLOTS_HOME + split_cfg_line[1] + ".data"
+        arg_gnuplot_filename = PLOTS_HOME + split_cfg_line[1] + ".gnuplot"
         PRINT("\t Data Filename:" + arg_output_results_filename)
         PRINT("\t Gnuplot Filename:" + arg_gnuplot_filename)
 

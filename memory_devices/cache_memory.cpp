@@ -508,23 +508,23 @@ void cache_memory_t::reset_statistics() {
     this->set_stat_write_miss(0);
     this->set_stat_copyback_miss(0);
 
-    this->stat_min_instruction_wait_time = MAX_ALIVE_TIME;
+    this->stat_min_instruction_wait_time = 0;
     this->stat_max_instruction_wait_time = 0;
     this->stat_acumulated_instruction_wait_time = 0;
 
-    this->stat_min_read_wait_time = MAX_ALIVE_TIME;
+    this->stat_min_read_wait_time = 0;
     this->stat_max_read_wait_time = 0;
     this->stat_acumulated_read_wait_time = 0;
 
-    this->stat_min_prefetch_wait_time = MAX_ALIVE_TIME;
+    this->stat_min_prefetch_wait_time = 0;
     this->stat_max_prefetch_wait_time = 0;
     this->stat_acumulated_prefetch_wait_time = 0;
 
-    this->stat_min_write_wait_time = MAX_ALIVE_TIME;
+    this->stat_min_write_wait_time = 0;
     this->stat_max_write_wait_time = 0;
     this->stat_acumulated_write_wait_time = 0;
 
-    this->stat_min_copyback_wait_time = MAX_ALIVE_TIME;
+    this->stat_min_copyback_wait_time = 0;
     this->stat_max_copyback_wait_time = 0;
     this->stat_acumulated_copyback_wait_time = 0;
 
@@ -565,7 +565,6 @@ void cache_memory_t::print_statistics() {
     sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_read_miss_percentage",stat_read_miss, stat_read_miss + stat_read_hit);
     sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_prefetch_miss_percentage",stat_prefetch_miss, stat_prefetch_miss + stat_prefetch_hit);
     sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_write_miss_percentage",stat_write_miss, stat_write_miss + stat_write_hit);
-    sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_copyback_miss_percentage",stat_copyback_miss, stat_copyback_miss + stat_copyback_hit);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_instruction_wait_time", stat_min_instruction_wait_time);

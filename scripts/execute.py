@@ -14,15 +14,16 @@ def PRINT( str ):
 BENCHMARK_LIST = ["spec_cpu2000", "spec_cpu2006", "spec_omp2001", "npb_omp"]
 
 if (len(sys.argv) < 6) or (sys.argv[2] not in BENCHMARK_LIST):
-    PRINT("Usage: python execute.py config_file "+str(BENCHMARK_LIST)+ " result_base_name number_threads app_start app_end")
+    PRINT("Usage: python execute.py config_file "+str(BENCHMARK_LIST)+ " result_base_name warmup_instructions number_threads app_start app_end")
     sys.exit()
 else :
     arg_configure = sys.argv[1]
     arg_benchmark = sys.argv[2]
     arg_result = sys.argv[3]
-    arg_threads = int(sys.argv[4])
-    arg_app_start = int(sys.argv[5])
-    arg_app_end = int(sys.argv[6])
+    arg_warmup = int(sys.argv[4])
+    arg_threads = int(sys.argv[5])
+    arg_app_start = int(sys.argv[6])
+    arg_app_end = int(sys.argv[7])
 
 PRINT("APP_START = " + str(arg_app_start))
 PRINT("APP_END = " + str(arg_app_end))
@@ -107,17 +108,16 @@ for app_line in APP_FILE:
         PROGRAM=split_app_line[0]
         PRINT(str(app_count) + "-PROGRAM = " + PROGRAM)
 
-        INPUT=split_app_line[1]
+        INPUT = split_app_line[1]
+        TRACE_FILE = split_app_line[2]
+
         PRINT("INPUT = " + INPUT)
-
         PRINT("conf = " + arg_configure)
-
-        TRACE_FILE=split_app_line[2]
         PRINT("trace = " + TRACE_SRC + TRACE_FILE + TRACE_SUFIX)
-
         PRINT("result = " + RESUTS_DST + TRACE_FILE + "." + arg_result + ".result")
+        PRINT("warmup = " + str(arg_warmup))
 
-        COMMAND = "date; time " + SINUCA_HOME + "sinuca -conf " + arg_configure + " -trace " + TRACE_SRC + TRACE_FILE + TRACE_SUFIX + " -result "+ RESUTS_DST + TRACE_FILE + "." + arg_result + ".result -warmup 10000000 > "+ RESUTS_DST + TRACE_FILE + "." + arg_result +".log"
+        COMMAND = "date; time " + SINUCA_HOME + "sinuca -conf " + arg_configure + " -trace " + TRACE_SRC + TRACE_FILE + TRACE_SUFIX + " -result "+ RESUTS_DST + TRACE_FILE + "." + arg_result + ".result -warmup " + str(arg_warmup) + " > "+ RESUTS_DST + TRACE_FILE + "." + arg_result + ".log"
         PRINT("COMMAND = " + COMMAND)
         os.system(COMMAND)
 PRINT("===================================================================")

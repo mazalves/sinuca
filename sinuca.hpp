@@ -1618,7 +1618,7 @@ class directory_controller_t : public interconnection_interface_t {
             this->stat_instruction_miss++;
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
             this->stat_acumulated_instruction_wait_time += new_time;
-            if (this->stat_min_instruction_wait_time > new_time) this->stat_min_instruction_wait_time = new_time;
+            if (this->stat_min_instruction_wait_time > new_time || this->stat_min_instruction_wait_time == 0) this->stat_min_instruction_wait_time = new_time;
             if (this->stat_max_instruction_wait_time < new_time) this->stat_max_instruction_wait_time = new_time;
         };
 
@@ -1626,7 +1626,7 @@ class directory_controller_t : public interconnection_interface_t {
             this->stat_read_miss++;
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
             this->stat_acumulated_read_wait_time += new_time;
-            if (this->stat_min_read_wait_time > new_time) this->stat_min_read_wait_time = new_time;
+            if (this->stat_min_read_wait_time > new_time || this->stat_min_read_wait_time == 0) this->stat_min_read_wait_time = new_time;
             if (this->stat_max_read_wait_time < new_time) this->stat_max_read_wait_time = new_time;
         };
 
@@ -1634,7 +1634,7 @@ class directory_controller_t : public interconnection_interface_t {
             this->stat_prefetch_miss++;
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
             this->stat_acumulated_prefetch_wait_time += new_time;
-            if (this->stat_min_prefetch_wait_time > new_time) this->stat_min_prefetch_wait_time = new_time;
+            if (this->stat_min_prefetch_wait_time > new_time || this->stat_min_prefetch_wait_time == 0) this->stat_min_prefetch_wait_time = new_time;
             if (this->stat_max_prefetch_wait_time < new_time) this->stat_max_prefetch_wait_time = new_time;
         };
 
@@ -1642,7 +1642,7 @@ class directory_controller_t : public interconnection_interface_t {
             this->stat_write_miss++;
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
             this->stat_acumulated_write_wait_time += new_time;
-            if (this->stat_min_write_wait_time > new_time) this->stat_min_write_wait_time = new_time;
+            if (this->stat_min_write_wait_time > new_time || this->stat_min_write_wait_time == 0) this->stat_min_write_wait_time = new_time;
             if (this->stat_max_write_wait_time < new_time) this->stat_max_write_wait_time = new_time;
         };
 
@@ -1650,7 +1650,7 @@ class directory_controller_t : public interconnection_interface_t {
             this->stat_copyback_miss++;
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
             this->stat_acumulated_copyback_wait_time += new_time;
-            if (this->stat_min_copyback_wait_time > new_time) this->stat_min_copyback_wait_time = new_time;
+            if (this->stat_min_copyback_wait_time > new_time || this->stat_min_copyback_wait_time == 0) this->stat_min_copyback_wait_time = new_time;
             if (this->stat_max_copyback_wait_time < new_time) this->stat_max_copyback_wait_time = new_time;
         };
 };
@@ -1898,6 +1898,12 @@ class line_usage_predictor_t : public interconnection_interface_t {
             uint64_t stat_DSBP_line_sub_block_normal_over;
             uint64_t stat_DSBP_line_sub_block_learn;
             uint64_t stat_DSBP_line_sub_block_wrong_first;
+            uint64_t stat_DSBP_line_sub_block_copyback;
+
+            uint64_t stat_line_miss;
+            uint64_t stat_sub_block_miss;
+            uint64_t stat_copyback;
+            uint64_t stat_eviction;
 
             uint64_t stat_DSBP_PHT_access;
             uint64_t stat_DSBP_PHT_hit;
@@ -1952,7 +1958,8 @@ class line_usage_predictor_t : public interconnection_interface_t {
         void line_hit(memory_package_t *package, uint32_t index, uint32_t way);
         void line_miss(memory_package_t *package, uint32_t index, uint32_t way);
         void sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way);
-        void line_copy_back(memory_package_t *package, uint32_t index, uint32_t way);
+        void line_insert_copyback(memory_package_t *package, uint32_t index, uint32_t way);
+        void line_get_copyback(memory_package_t *package, uint32_t index, uint32_t way);
         void line_eviction(uint32_t index, uint32_t way);
         void compute_static_energy(uint32_t index, uint32_t way);
 
@@ -1991,6 +1998,12 @@ class line_usage_predictor_t : public interconnection_interface_t {
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_line_sub_block_normal_over);
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_line_sub_block_learn);
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_line_sub_block_wrong_first);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_line_sub_block_copyback);
+
+            INSTANTIATE_GET_SET_ADD(uint64_t,  stat_line_miss);
+            INSTANTIATE_GET_SET_ADD(uint64_t,  stat_sub_block_miss);
+            INSTANTIATE_GET_SET_ADD(uint64_t,  stat_copyback);
+            INSTANTIATE_GET_SET_ADD(uint64_t,  stat_eviction);
 
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_PHT_access);
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_PHT_hit);
