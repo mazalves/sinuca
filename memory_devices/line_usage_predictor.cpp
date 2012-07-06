@@ -544,9 +544,32 @@ void line_usage_predictor_t::line_hit(memory_package_t *package, uint32_t index,
 
 // =============================================================================
 void line_usage_predictor_t::compute_static_energy(uint32_t index, uint32_t way) {
+// ~
+    // ~ if (this->DSBP_line_number == 16384){
+        // ~ printf("stat_active_sub_block_per_cycle:");
+        // ~ for (uint32_t i = 0; i < sinuca_engine.get_global_line_size() + 1; i++) {
+            // ~ printf(" %"PRIu64"", stat_active_sub_block_per_cycle[i]);
+        // ~ }
+        // ~ printf("\n");
+    // ~ }
+
+
+// ~
+    // ~ printf("become alive:");
+    // ~ for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
+        // ~ printf(" %"PRIu64"", this->DSBP_sets[index].ways[way].clock_become_alive[i]);
+    // ~ }
+    // ~ printf("\n");
+// ~
+// ~
+    // ~ printf("become dead:");
+    // ~ for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
+        // ~ printf(" %"PRIu64"", this->DSBP_sets[index].ways[way].clock_become_dead[i]);
+    // ~ }
+    // ~ printf("\n");
+
     // Statistics for Static Energy
     bool aux_computed_sub_blocks[sinuca_engine.get_global_line_size()];
-    uint32_t aux_computed_number = sinuca_engine.get_global_line_size();
 
     // Add the clock_become_dead for the never turned-off sub_blocks
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
@@ -555,14 +578,17 @@ void line_usage_predictor_t::compute_static_energy(uint32_t index, uint32_t way)
         }
         aux_computed_sub_blocks[i] = false;
     }
+
+    uint32_t aux_computed_number = sinuca_engine.get_global_line_size();
     uint64_t computed_cycles = 0;
-    uint64_t old_sub_block_clock = sinuca_engine.get_global_cycle() + 1;
-    uint64_t old_sub_block_position = 0;
-    uint32_t sub_blocks_become_dead = 1;
+
+    // ~ uint64_t old_sub_block_clock;
+    // ~ uint64_t old_sub_block_position;
+    // ~ uint32_t sub_blocks_become_dead;
     while (aux_computed_number > 0 ) {
-        old_sub_block_clock = sinuca_engine.get_global_cycle();
-        old_sub_block_position = 0;
-        sub_blocks_become_dead = 1;
+        uint64_t old_sub_block_clock = sinuca_engine.get_global_cycle() + 1;
+        uint32_t old_sub_block_position = 0;
+        uint32_t sub_blocks_become_dead = 1;
 
         // Find the (Not computed yet) and (become dead first)
         for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
@@ -573,6 +599,8 @@ void line_usage_predictor_t::compute_static_energy(uint32_t index, uint32_t way)
                     sub_blocks_become_dead = 1;
                 }
                 else if (this->DSBP_sets[index].ways[way].clock_become_dead[i] == old_sub_block_clock) {
+                    old_sub_block_clock = this->DSBP_sets[index].ways[way].clock_become_dead[i];
+                    old_sub_block_position = i;
                     sub_blocks_become_dead++;
                 }
             }
@@ -581,9 +609,11 @@ void line_usage_predictor_t::compute_static_energy(uint32_t index, uint32_t way)
         // Compute the sub_block time of life
         uint64_t time_of_life = 0;
         if (computed_cycles == 0) {
+            ERROR_ASSERT_PRINTF(this->DSBP_sets[index].ways[way].clock_become_dead[old_sub_block_position] >= this->DSBP_sets[index].ways[way].clock_become_alive[old_sub_block_position], "Buffer underflow\n")
             time_of_life = this->DSBP_sets[index].ways[way].clock_become_dead[old_sub_block_position] - this->DSBP_sets[index].ways[way].clock_become_alive[old_sub_block_position];
         }
         else {
+            ERROR_ASSERT_PRINTF(this->DSBP_sets[index].ways[way].clock_become_dead[old_sub_block_position] >= computed_cycles, "Buffer underflow\n")
             time_of_life = this->DSBP_sets[index].ways[way].clock_become_dead[old_sub_block_position] - computed_cycles;
         }
         this->stat_active_sub_block_per_cycle[aux_computed_number] += time_of_life;
@@ -592,30 +622,17 @@ void line_usage_predictor_t::compute_static_energy(uint32_t index, uint32_t way)
         computed_cycles = this->DSBP_sets[index].ways[way].clock_become_dead[old_sub_block_position];
 
         // Reduce the number of sub_blocks to compute
-        // If only one sub_block was turned off on the same cycle
-        if (sub_blocks_become_dead == 1) {
-            aux_computed_sub_blocks[old_sub_block_position] = true;
-            aux_computed_number--;
-        }
-        // if multiple sub_blocks were turned off on the same cycle
-        else {
-            for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-                if (this->DSBP_sets[index].ways[way].clock_become_dead[i] == old_sub_block_clock) {
-                    aux_computed_sub_blocks[i] = true;
-                    aux_computed_number--;
-                }
+        for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
+            if (this->DSBP_sets[index].ways[way].clock_become_dead[i] == old_sub_block_clock) {
+                aux_computed_sub_blocks[i] = true;
+                aux_computed_number--;
             }
         }
     }
 
     // Compute the sub_block time of life (Zero sub_blocks turned on)
-    uint64_t time_of_life = 0;
-    // ~ if (computed_cycles == 0) {
-        // ~ time_of_life = sinuca_engine.get_global_cycle() - this->DSBP_sets[index].ways[way].clock_become_alive[old_sub_block_position];
-    // ~ }
-    // ~ else {
-        time_of_life = sinuca_engine.get_global_cycle() - computed_cycles;
-    // ~ }
+    ERROR_ASSERT_PRINTF(sinuca_engine.get_global_cycle() >= computed_cycles, "Subtracting a smalled integer\n")
+    uint64_t time_of_life = sinuca_engine.get_global_cycle() - computed_cycles;
     this->stat_active_sub_block_per_cycle[0] += time_of_life;
 };
 
@@ -742,6 +759,7 @@ void line_usage_predictor_t::line_miss(memory_package_t *package, uint32_t index
 
             // Clean the metadata entry
             this->DSBP_sets[index].ways[way].learn_mode = true;
+            this->DSBP_sets[index].ways[way].PHT_pointer = NULL;
             this->DSBP_sets[index].ways[way].active_sub_blocks = sinuca_engine.get_global_line_size();
             for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
                 this->DSBP_sets[index].ways[way].real_usage_counter[i] = 0;
@@ -903,6 +921,7 @@ void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, uin
 
             // Clean the metadata entry
             this->DSBP_sets[index].ways[way].learn_mode = true;
+            this->DSBP_sets[index].ways[way].PHT_pointer = NULL;
             this->DSBP_sets[index].ways[way].active_sub_blocks = 0;
             for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
                 this->DSBP_sets[index].ways[way].real_usage_counter[i] = 0;
@@ -924,6 +943,7 @@ void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, uin
         case LINE_USAGE_PREDICTOR_POLICY_DSBP_DISABLE:
             // Clean the metadata entry
             this->DSBP_sets[index].ways[way].learn_mode = true;
+            this->DSBP_sets[index].ways[way].PHT_pointer = NULL;
             this->DSBP_sets[index].ways[way].active_sub_blocks = sinuca_engine.get_global_line_size();
             for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
                 this->DSBP_sets[index].ways[way].real_usage_counter[i] = 0;

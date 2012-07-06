@@ -3,6 +3,77 @@ import os
 import subprocess
 import stat
 import re
+
+################################################################################
+## Print the GNUPLOT header
+################################################################################
+def gnulot_base(TMP_GNU_FILE_NAME):
+    TMP_GNU_FILE = open(TMP_GNU_FILE_NAME, 'w')
+    TMP_GNU_FILE.write("reset\n")
+    ##########################
+    # Output
+    TMP_GNU_FILE.write("set terminal jpeg medium size 1024,768 font Helvetica 16\n")
+
+    ##########################
+    # Scale
+    TMP_GNU_FILE.write("set autoscale x\n")
+    TMP_GNU_FILE.write("set autoscale y\n")
+
+    TMP_GNU_FILE.write("set xtics nomirror rotate by -90 \n")
+
+    ##########################
+    # Colors
+    TMP_GNU_FILE.write("red1 = '#F9B0B0' \n")
+    TMP_GNU_FILE.write("red2 = '#F96D6D' \n")
+    TMP_GNU_FILE.write("red3 = '#E61717' \n")
+    TMP_GNU_FILE.write("red4 = '#8F3F3F' \n")
+    TMP_GNU_FILE.write("red5 = '#6D0303' \n")
+
+    TMP_GNU_FILE.write("orange1 = '#F9C5B0' \n")
+    TMP_GNU_FILE.write("orange2 = '#F9956D' \n")
+    TMP_GNU_FILE.write("orange3 = '#E65217' \n")
+    TMP_GNU_FILE.write("orange4 = '#8F563F' \n")
+    TMP_GNU_FILE.write("orange5 = '#6D2103' \n")
+
+    TMP_GNU_FILE.write("yellow1 = '#F9ECB0' \n")
+    TMP_GNU_FILE.write("yellow2 = '#F9E16D' \n")
+    TMP_GNU_FILE.write("yellow3 = '#E6C217' \n")
+    TMP_GNU_FILE.write("yellow4 = '#8F823F' \n")
+    TMP_GNU_FILE.write("yellow5 = '#6D5B03' \n")
+
+    TMP_GNU_FILE.write("green1 = '#A8EDA8' \n")
+    TMP_GNU_FILE.write("green2 = '#68ED68' \n")
+    TMP_GNU_FILE.write("green3 = '#12B812' \n")
+    TMP_GNU_FILE.write("green4 = '#327332' \n")
+    TMP_GNU_FILE.write("green5 = '#025702' \n")
+
+    TMP_GNU_FILE.write("cian1 = '#A0E2E2' \n")
+    TMP_GNU_FILE.write("cian2 = '#63E2E2' \n")
+    TMP_GNU_FILE.write("cian3 = '#0E8A8A' \n")
+    TMP_GNU_FILE.write("cian4 = '#265656' \n")
+    TMP_GNU_FILE.write("cian5 = '#024141' \n")
+
+    TMP_GNU_FILE.write("blue1 = '#AABCE6' \n")
+    TMP_GNU_FILE.write("blue2 = '#7295E6' \n")
+    TMP_GNU_FILE.write("blue3 = '#1E439A' \n")
+    TMP_GNU_FILE.write("blue4 = '#303E60' \n")
+    TMP_GNU_FILE.write("blue5 = '#041949' \n")
+
+    TMP_GNU_FILE.write("pink1 = '#EDA8CF' \n")
+    TMP_GNU_FILE.write("pink2 = '#ED68B3' \n")
+    TMP_GNU_FILE.write("pink3 = '#B81270' \n")
+    TMP_GNU_FILE.write("pink4 = '#733257' \n")
+    TMP_GNU_FILE.write("pink5 = '#570232' \n")
+
+    ##########################
+    # Subtitle
+    TMP_GNU_FILE.write("set key autotitle columnheader\n")
+    TMP_GNU_FILE.write("set key outside below center horizontal\n")
+
+    TMP_GNU_FILE.close()
+    return
+########################################################################
+
 ################################################################################
 # This prints a passed string into this function
 ################################################################################
@@ -193,7 +264,9 @@ os.putenv("SINUCA_HOME", SINUCA_HOME)
 
 PLOTS_HOME = PROJECT_HOME + "benchmarks/plots/"
 os.system("mkdir -p " + PLOTS_HOME)
+arg_gnuplot_filename = PLOTS_HOME + arg_output_results_filename + ".gnuplot"
 arg_output_results_filename = PLOTS_HOME + arg_output_results_filename + ".data"
+
 
 ## Model all CACTI_CONFIGURATIONS on Cacti 6.5
 CACTI_HOME = PROJECT_HOME + "/cacti65/"
@@ -228,6 +301,7 @@ PRINT("\t Results Directory = " + results_directory)
 
 # Open the output filename
 has_header = 0
+header = ""
 output_results_file = open(arg_output_results_filename, 'w')
 
 # Iterates over the APPLICATIONS name from benchmark
@@ -630,7 +704,7 @@ for app_list_file_line in app_list_file:
         elif (cache_line_usage_predictor_type_list[counter] == "DSBP"):
             for i in range(0, 1 + cache_line_size_list[counter]) :
                 total_cache_dynamic_energy[counter] += cache_dynamic_energy_array[i] * cache_stat_active_sub_block_per_access_list[counter][i]
-                total_cache_static_energy[counter] += ((MILI_TO_NANO * cache_static_power_array[i] / cache_line_number_list[counter]) * cache_stat_active_sub_block_per_cycle_list[counter][i]) / FREQUENCY
+                total_cache_static_energy[counter] += ((MILI_TO_NANO * cache_static_power_array[i]) * (cache_stat_active_sub_block_per_cycle_list[counter][i] / cache_line_number_list[counter])) / FREQUENCY
             total_aux_dynamic_energy[counter] = auxiliar_dynamic_energy * cache_stat_DSBP_PHT_access_list[counter]
             total_aux_static_energy[counter] = (MILI_TO_NANO * auxiliar_static_power * (cache_global_cycle_list[counter] - cache_reset_cycle_list[counter])) / FREQUENCY
 
@@ -657,14 +731,18 @@ for app_list_file_line in app_list_file:
             str_cache_stat_active_sub_block_per_access_list += " " + str(cache_stat_active_sub_block_per_access_list[counter][i])
             str_cache_dynamic_energy_array += " " + str(cache_dynamic_energy_array[i])
 
-            total_cycles = cache_stat_active_sub_block_per_cycle_list[counter][i]
+            total_cycles += cache_stat_active_sub_block_per_cycle_list[counter][i]
             str_cache_stat_active_sub_block_per_cycle_list += " " + str(cache_stat_active_sub_block_per_cycle_list[counter][i])
             str_cache_static_power_array += " " + str(cache_static_power_array[i])
 
         if (cache_line_usage_predictor_type_list[counter] == "DSBP"):
             if (total_accesses != cache_stat_accesses_list[counter]):
                 PRINT("WARNING !!!\n Wrong number of accesses !!!")
-            if (total_cycles / cache_line_number_list[counter] != cache_global_cycle_list[counter] - cache_reset_cycle_list[counter]):
+            if (total_cycles / cache_line_number_list[counter]  != cache_global_cycle_list[counter] - cache_reset_cycle_list[counter] + 1):
+                print("total_cycles:" + str(total_cycles))
+                print("cache_line_number_list[counter]:" + str(cache_line_number_list[counter]))
+                print("cache_global_cycle_list[counter]:" + str(cache_global_cycle_list[counter]))
+                print("cache_reset_cycle_list[counter]:" + str(cache_reset_cycle_list[counter]))
                 PRINT("WARNING !!!\n Wrong number of cycles !!!")
 
         PRINT("Sub_Blocks_per_Accesses:" + str_cache_stat_active_sub_block_per_access_list)
@@ -686,14 +764,16 @@ for app_list_file_line in app_list_file:
     ## Output file header
     if has_header == 0:
         has_header = 1
+        header = ""
         output_results_file.write("Experiment")
         for cache_label in cache_label_list:
-            output_results_file.write(" " + cache_label + "_Static")
-            output_results_file.write(" " + cache_label + "_Dynamic")
-            output_results_file.write(" Aux_" + cache_label + "_Static")
-            output_results_file.write(" Aux_" + cache_label + "_Dynamic")
-
+            header += " " + cache_label + "_Static"
+            header += " " + cache_label + "_Dynamic"
+            header += " Aux_" + cache_label + "_Static"
+            header += " Aux_" + cache_label + "_Dynamic"
+        output_results_file.write(header)
         output_results_file.write(" Sum\n")
+
 
     # Experiment + App Name
     output_results_file.write(arg_input_results_filename + "_" + app_name + " ")
@@ -716,5 +796,67 @@ for app_list_file_line in app_list_file:
     output_results_file.write("\n")
 app_list_file.close()
 output_results_file.close()
+
+
+########################################################################
+# Stacked Bars
+########################################################################
+
+# Open the plot filename
+gnulot_base(arg_gnuplot_filename)
+output_gnuplot_file = open(arg_gnuplot_filename, 'a')
+
+output_gnuplot_file.write("set border 3\n")
+output_gnuplot_file.write("set style data histograms\n")
+output_gnuplot_file.write("set style histogram rowstack gap 1 title offset character 2, 0.25, 0 \n")
+output_gnuplot_file.write("set style fill solid border -1\n")
+output_gnuplot_file.write("set boxwidth 0.80\n")
+output_gnuplot_file.write("set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000\n")
+output_gnuplot_file.write("set title '" + arg_output_results_filename + "' \n")
+output_gnuplot_file.write("set output '" + arg_output_results_filename + ".jpeg' \n")
+
+# ~ output_gnuplot_file.write("set yrange [ 0.00000 : 100.000 ] noreverse \n")
+# ~ output_gnuplot_file.write("set format y '%g%%' \n")
+# ~ output_gnuplot_file.write("set ytics 10\n")
+# ~ output_gnuplot_file.write("set border 3\n")
+# ~ output_gnuplot_file.write("set style data histograms\n")
+# ~ output_gnuplot_file.write("set style histogram rowstack gap 1 title offset character 2, 0.25, 0 \n")
+# ~ output_gnuplot_file.write("set style fill solid border -1\n")
+# ~ output_gnuplot_file.write("set boxwidth 0.80\n")
+# ~ output_gnuplot_file.write("set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000\n")
+# ~ output_gnuplot_file.write("set title '" + arg_output_results_filename + "' \n")
+# ~ output_gnuplot_file.write("set output '" + arg_output_results_filename + ".jpeg' \n")
+
+header = header.strip()
+header_list = header.split(" ")
+# First two values are Architecture + Application
+title_size = 1
+# Last Column has the Sum of Values
+column_sum = title_size + len(header_list) + 1
+count = 0;
+for parameter_name in header_list:
+    parameter_name = parameter_name.split('.')
+    title = parameter_name[0]
+    count += 1
+    if count == 1:
+        output_gnuplot_file.write("plot '" + arg_output_results_filename + "' using (column(" + str(title_size + count) + ")):xtic(1) title '" + str(title) + "'")
+    else :
+        output_gnuplot_file.write(", '' using (column(" + str(title_size + count) + ")) title '" + str(title) + "'")
+
+    # ~ if count == 1:
+        # ~ output_gnuplot_file.write("plot '" + arg_output_results_filename + "' using (100*(column(" + str(title_size + count) + ")/column(" + str(column_sum) + "))):xtic(1) title '" + str(title) + "'")
+    # ~ else :
+        # ~ output_gnuplot_file.write(", '' using (100*(column(" + str(title_size + count) + ")/column(" + str(column_sum) + "))) title '" + str(title) + "'")
+
+
+########################################################################
+# Close the gnuplot file and plot it !
+output_gnuplot_file.write("\n")
+output_gnuplot_file.close()
+
+PRINT("gnuplot " + arg_gnuplot_filename)
+os.system("gnuplot " + arg_gnuplot_filename)
+
+
 
 sys.exit()

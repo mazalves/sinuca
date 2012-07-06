@@ -47,12 +47,12 @@ USER = "mazalves"
 PROJECT_HOME = "/home/" + USER + "/Experiment/"
 PRINT("PROJECT_HOME = " + PROJECT_HOME)
 os.putenv("PROJECT_HOME", PROJECT_HOME)
-os.system("mkdir " + PROJECT_HOME)
-os.system("mkdir " + PROJECT_HOME + "benchmarks")
-os.system("mkdir " + PROJECT_HOME + "benchmarks/pin_points")
-os.system("mkdir " + PROJECT_HOME + "benchmarks/traces")
-os.system("mkdir " + PROJECT_HOME + "benchmarks/profiles")
-os.system("mkdir " + PROJECT_HOME + "benchmarks/results")
+os.system("mkdir -p " + PROJECT_HOME)
+os.system("mkdir -p " + PROJECT_HOME + "benchmarks")
+os.system("mkdir -p " + PROJECT_HOME + "benchmarks/pin_points")
+os.system("mkdir -p " + PROJECT_HOME + "benchmarks/traces")
+os.system("mkdir -p " + PROJECT_HOME + "benchmarks/profiles")
+os.system("mkdir -p " + PROJECT_HOME + "benchmarks/results")
 
 SINUCA_HOME = PROJECT_HOME + "/SiNUCA/"
 PRINT("SINUCA_HOME = " + SINUCA_HOME)
@@ -83,8 +83,8 @@ elif arg_benchmark == 'npb_omp':
     TRACE_SUFIX     = "_" + str(arg_threads) + "t"
 
 
-PRINT("mkdir " + RESUTS_DST)
-os.system("mkdir " + RESUTS_DST)
+PRINT("mkdir -p " + RESUTS_DST)
+os.system("mkdir -p " + RESUTS_DST)
 
 
 ################################################################################
