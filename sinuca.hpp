@@ -1820,6 +1820,10 @@ class DSBP_metadata_line_t {
         uint64_t *clock_become_alive;
         uint64_t *clock_become_dead;
 
+        // Copyback
+        bool is_dirty;
+        uint64_t *written_sub_blocks;
+
         uint32_t active_sub_blocks;
         bool is_dead;
 
@@ -1831,6 +1835,8 @@ class DSBP_metadata_line_t {
             this->PHT_pointer = NULL;
             this->clock_become_alive = NULL;
             this->clock_become_dead = NULL;
+            this->is_dirty = false;
+            this->written_sub_blocks = NULL;
             this->active_sub_blocks = 0;
             this->is_dead = true;
         };
@@ -1920,6 +1926,19 @@ class line_usage_predictor_t : public interconnection_interface_t {
             uint64_t stat_sub_block_touch_8_15;
             uint64_t stat_sub_block_touch_16_127;
             uint64_t stat_sub_block_touch_128_bigger;
+
+            /// Number of sub_blocks written
+            uint64_t *stat_written_sub_blocks_per_line;     
+
+            /// Number of times each sub_block was written before eviction
+            uint64_t stat_writes_per_sub_blocks_1;
+            uint64_t stat_writes_per_sub_blocks_2;
+            uint64_t stat_writes_per_sub_blocks_3;
+            uint64_t stat_writes_per_sub_blocks_4;
+            uint64_t stat_writes_per_sub_blocks_5;
+            uint64_t stat_writes_per_sub_blocks_10;
+            uint64_t stat_writes_per_sub_blocks_100;
+            uint64_t stat_writes_per_sub_blocks_bigger;
 
     public:
         /// ====================================================================
@@ -2016,6 +2035,15 @@ class line_usage_predictor_t : public interconnection_interface_t {
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_touch_8_15);
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_touch_16_127);
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_touch_128_bigger);
+
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_writes_per_sub_blocks_1);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_writes_per_sub_blocks_2);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_writes_per_sub_blocks_3);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_writes_per_sub_blocks_4);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_writes_per_sub_blocks_5);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_writes_per_sub_blocks_10);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_writes_per_sub_blocks_100);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_writes_per_sub_blocks_bigger);
 };
 
 

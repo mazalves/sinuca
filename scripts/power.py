@@ -264,8 +264,8 @@ os.putenv("SINUCA_HOME", SINUCA_HOME)
 
 PLOTS_HOME = PROJECT_HOME + "benchmarks/plots/"
 os.system("mkdir -p " + PLOTS_HOME)
-arg_gnuplot_filename = PLOTS_HOME + arg_output_results_filename + ".gnuplot"
-arg_output_results_filename = PLOTS_HOME + arg_output_results_filename + ".data"
+arg_gnuplot_filename = PLOTS_HOME + "Energy_" + arg_output_results_filename + ".gnuplot"
+arg_output_results_filename = PLOTS_HOME + "Energy_" + arg_output_results_filename + ".data"
 
 
 ## Model all CACTI_CONFIGURATIONS on Cacti 6.5
@@ -274,8 +274,8 @@ CACTI_MODEL_CFG_DIR = CACTI_HOME + "/models_cfg/"
 CACTI_MODEL_OUTPUT_DIR = CACTI_HOME + "/models_out/"
 os.system("mkdir -p " + CACTI_MODEL_CFG_DIR)
 os.system("mkdir -p " + CACTI_MODEL_OUTPUT_DIR)
-# ~ os.system("rm -f " + CACTI_MODEL_CFG_DIR + "*")
-# ~ os.system("rm -f " + CACTI_MODEL_OUTPUT_DIR + "*")
+os.system("rm -f " + CACTI_MODEL_CFG_DIR + "*")
+os.system("rm -f " + CACTI_MODEL_OUTPUT_DIR + "*")
 PRINT("CACTI_MODEL_CFG_DIR = " + CACTI_MODEL_CFG_DIR)
 PRINT("CACTI_MODEL_OUTPUT_DIR = " + CACTI_MODEL_OUTPUT_DIR)
 
@@ -529,6 +529,7 @@ for app_list_file_line in app_list_file:
         cache_bank = 1
         cache_integration_technology = 0.045 # 45nm
         cache_tag_size = 24
+        cache_out = cache_line_size_list[counter]
         cache_model = "cache"
         cache_type = "UCA"
         access_type = "normal"
@@ -545,7 +546,7 @@ for app_list_file_line in app_list_file:
         ########################################################################
         if (predictor_type == "DISABLE") or (predictor_type == "DSBP_DISABLE"):
             TMP_FILE_NAME = "LP_"+ predictor_type + "_L"+ str(cache_level) + "_CS"+ str(cache_size) + "_LS"+ str(cache_line_size) + "_CA"+ str(cache_associativity) \
-                            + "_CO"+ str(cache_line_size) + "_CB"+ str(cache_bank) + "_TI"+ str(cache_integration_technology) + "_CT"+ str(cache_tag_size) + "_"   + cache_type
+                            + "_CO"+ str(cache_out) + "_CB"+ str(cache_bank) + "_TI"+ str(cache_integration_technology) + "_CT"+ str(cache_tag_size) + "_"   + cache_type
             TMP_CFG_FILE_NAME = CACTI_MODEL_CFG_DIR + TMP_FILE_NAME + ".CFG"
             TMP_OUT_FILE_NAME = CACTI_MODEL_OUTPUT_DIR + TMP_FILE_NAME + ".OUT"
 
@@ -596,11 +597,11 @@ for app_list_file_line in app_list_file:
                 cache_size = cache_line_number * cache_line_size
                 ### Add the tag overhead
                 cache_tag_size += cache_DSBP_sub_block_size_list[counter] * cache_DSBP_usage_counter_bits_list[counter] # Counters and Overflow
-                cache_tag_size += 24 # PC and Offset
+                cache_tag_size += 10 # PC and Offset
                 cache_tag_size += 1 # Learn
 
                 TMP_FILE_NAME = "LP_"+ predictor_type + "_L"+ str(cache_level) + "_CS"+ str(cache_size) + "_LS"+ str(cache_line_size) + "_CA"+ str(cache_associativity) \
-                                + "_CO"+ str(cache_line_size) + "_CB"+ str(cache_bank) + "_TI"+ str(cache_integration_technology) + "_CT"+ str(cache_tag_size) + "_"   + cache_type
+                                + "_CO"+ str(cache_out) + "_CB"+ str(cache_bank) + "_TI"+ str(cache_integration_technology) + "_CT"+ str(cache_tag_size) + "_"   + cache_type
                 TMP_CFG_FILE_NAME = CACTI_MODEL_CFG_DIR + TMP_FILE_NAME + ".CFG"
                 TMP_OUT_FILE_NAME = CACTI_MODEL_OUTPUT_DIR + TMP_FILE_NAME + ".OUT"
 
@@ -636,15 +637,17 @@ for app_list_file_line in app_list_file:
             predictor_type = cache_line_usage_predictor_type_list[counter] + "PHT"
             cache_level = 1
             cache_line_number = cache_DSBP_PHT_line_number_list[counter]
-            cache_line_size = cache_DSBP_sub_block_size_list[counter] * cache_DSBP_usage_counter_bits_list[counter] # Counters and Overflow
-            cache_line_size += 24 # PC and Offset
-            cache_line_size += 1 # Learn
-            cache_line_size += 1 # Prt
+            cache_line_size = cache_DSBP_sub_block_size_list[counter] * cache_DSBP_usage_counter_bits_list[counter] # Counters and Overflow bits
+            cache_line_size += 24 # PC and Offset bits
+            cache_line_size += 1 # Learn bit
+            cache_line_size += 1 # Prt bit
+            cache_line_size /= 8
             cache_size = cache_line_number * cache_line_size
             cache_associativity = cache_associativity_list[counter]
             cache_bank = 1
             cache_integration_technology = 0.045
             cache_tag_size = 16
+            cache_out = 3
             cache_type = "UCA"
             access_type = "sequential"
             data_array = "itrs-hp"
@@ -654,7 +657,7 @@ for app_list_file_line in app_list_file:
             write_port = 0
 
             TMP_FILE_NAME = "LP_"+ predictor_type + "_L"+ str(cache_level) + "_CS"+ str(cache_size) + "_LS"+ str(cache_line_size) + "_CA"+ str(cache_associativity) \
-                            + "_CO"+ str(cache_line_size) + "_CB"+ str(cache_bank) + "_TI"+ str(cache_integration_technology) + "_CT"+ str(cache_tag_size) + "_"   + cache_type
+                            + "_CO"+ str(cache_out) + "_CB"+ str(cache_bank) + "_TI"+ str(cache_integration_technology) + "_CT"+ str(cache_tag_size) + "_"   + cache_type
             TMP_CFG_FILE_NAME = CACTI_MODEL_CFG_DIR + TMP_FILE_NAME + ".CFG"
             TMP_OUT_FILE_NAME = CACTI_MODEL_OUTPUT_DIR + TMP_FILE_NAME + ".OUT"
 
@@ -767,10 +770,13 @@ for app_list_file_line in app_list_file:
         header = ""
         output_results_file.write("Experiment")
         for cache_label in cache_label_list:
-            header += " " + cache_label + "_Static"
-            header += " " + cache_label + "_Dynamic"
-            header += " Aux_" + cache_label + "_Static"
-            header += " Aux_" + cache_label + "_Dynamic"
+            #~ header += " " + cache_label + "_Static"
+            #~ header += " " + cache_label + "_Dynamic"
+            #~ header += " Aux_" + cache_label + "_Static"
+            #~ header += " Aux_" + cache_label + "_Dynamic"
+            header += " " + cache_label
+            header += " Aux_" + cache_label
+
         output_results_file.write(header)
         output_results_file.write(" Sum\n")
 
@@ -784,10 +790,13 @@ for app_list_file_line in app_list_file:
     counter = -1
     for cache_label in cache_label_list:
         counter += 1
-        output_results_file.write(str(total_cache_static_energy[counter]) + " ")
-        output_results_file.write(str(total_cache_dynamic_energy[counter]) + " ")
-        output_results_file.write(str(total_aux_static_energy[counter]) + " ")
-        output_results_file.write(str(total_aux_dynamic_energy[counter]) + " ")
+        #~ output_results_file.write(str(total_cache_static_energy[counter]) + " ")
+        #~ output_results_file.write(str(total_cache_dynamic_energy[counter]) + " ")
+        #~ output_results_file.write(str(total_aux_static_energy[counter]) + " ")
+        #~ output_results_file.write(str(total_aux_dynamic_energy[counter]) + " ")
+        output_results_file.write(str(total_cache_static_energy[counter] + total_cache_dynamic_energy[counter]) + " ")
+        output_results_file.write(str(total_aux_static_energy[counter] + total_aux_dynamic_energy[counter]) + " ")
+
         sum_values += total_cache_static_energy[counter]
         sum_values += total_cache_dynamic_energy[counter]
         sum_values += total_aux_static_energy[counter]
