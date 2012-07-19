@@ -33,7 +33,14 @@ LDFLAGS = -ggdb
 
 
 ########################################################
-LIBRARY = -L./libs/64bits -L./libs/32bits -lz -lconfig++
+MACHINE=$(shell uname -m)
+
+ifeq ($(MACHINE),x86_64)
+	LIBRARY = -L./libs/64bits -lz -lconfig++
+else
+	LIBRARY = -L./libs/32bits -lz -lconfig++
+endif
+
 
 SRC_BASIC =			enumerations.cpp \
 			 		utils.cpp \
