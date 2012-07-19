@@ -12,7 +12,7 @@ def gnulot_base(TMP_GNU_FILE_NAME):
     TMP_GNU_FILE.write("reset\n")
     ##########################
     # Output
-    TMP_GNU_FILE.write("set terminal jpeg medium size 1024,768 font Helvetica 16\n")
+    TMP_GNU_FILE.write("set terminal jpeg medium size 1280,1024 font Helvetica 16\n")
 
     ##########################
     # Scale
@@ -274,8 +274,8 @@ CACTI_MODEL_CFG_DIR = CACTI_HOME + "/models_cfg/"
 CACTI_MODEL_OUTPUT_DIR = CACTI_HOME + "/models_out/"
 os.system("mkdir -p " + CACTI_MODEL_CFG_DIR)
 os.system("mkdir -p " + CACTI_MODEL_OUTPUT_DIR)
-os.system("rm -f " + CACTI_MODEL_CFG_DIR + "*")
-os.system("rm -f " + CACTI_MODEL_OUTPUT_DIR + "*")
+# ~ os.system("rm -f " + CACTI_MODEL_CFG_DIR + "*")
+# ~ os.system("rm -f " + CACTI_MODEL_OUTPUT_DIR + "*")
 PRINT("CACTI_MODEL_CFG_DIR = " + CACTI_MODEL_CFG_DIR)
 PRINT("CACTI_MODEL_OUTPUT_DIR = " + CACTI_MODEL_OUTPUT_DIR)
 
@@ -545,6 +545,10 @@ for app_list_file_line in app_list_file:
         ## Compute the Normal Cache Energy
         ########################################################################
         if (predictor_type == "DISABLE") or (predictor_type == "DSBP_DISABLE"):
+
+            ### Add the tag overhead
+            cache_tag_size += cache_DSBP_sub_block_size_list[counter] # Sector Cache Bits
+
             TMP_FILE_NAME = "LP_"+ predictor_type + "_L"+ str(cache_level) + "_CS"+ str(cache_size) + "_LS"+ str(cache_line_size) + "_CA"+ str(cache_associativity) \
                             + "_CO"+ str(cache_out) + "_CB"+ str(cache_bank) + "_TI"+ str(cache_integration_technology) + "_CT"+ str(cache_tag_size) + "_"   + cache_type
             TMP_CFG_FILE_NAME = CACTI_MODEL_CFG_DIR + TMP_FILE_NAME + ".CFG"
@@ -585,7 +589,14 @@ for app_list_file_line in app_list_file:
         ## Compute the DSBP Energy
         ########################################################################
         if (predictor_type == "DSBP"):
-            cache_tag_size += 2 * 8 # Two extra bytes as overhead
+             # Two extra bytes as overhead for VDD transistor
+            cache_tag_size += 2 * 8
+            ### Add the tag overhead
+            cache_tag_size += cache_DSBP_sub_block_size_list[counter] * cache_DSBP_usage_counter_bits_list[counter] # Counters bits
+            cache_tag_size += cache_DSBP_sub_block_size_list[counter] # Overflow bits
+            cache_tag_size += 10 # PC and Offset
+            cache_tag_size += 1 # Learn
+
             for i in range(0, 1 + cache_line_size_list[counter]) :
                 if (i % cache_DSBP_sub_block_size_list[counter] != 0):
                     continue
@@ -595,11 +606,6 @@ for app_list_file_line in app_list_file:
                 if cache_line_size == 0:
                     cache_line_size = 1
                 cache_size = cache_line_number * cache_line_size
-                ### Add the tag overhead
-                cache_tag_size += cache_DSBP_sub_block_size_list[counter] * cache_DSBP_usage_counter_bits_list[counter] # Counters and Overflow
-                cache_tag_size += 10 # PC and Offset
-                cache_tag_size += 1 # Learn
-
                 TMP_FILE_NAME = "LP_"+ predictor_type + "_L"+ str(cache_level) + "_CS"+ str(cache_size) + "_LS"+ str(cache_line_size) + "_CA"+ str(cache_associativity) \
                                 + "_CO"+ str(cache_out) + "_CB"+ str(cache_bank) + "_TI"+ str(cache_integration_technology) + "_CT"+ str(cache_tag_size) + "_"   + cache_type
                 TMP_CFG_FILE_NAME = CACTI_MODEL_CFG_DIR + TMP_FILE_NAME + ".CFG"

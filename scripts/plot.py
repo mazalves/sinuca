@@ -11,7 +11,7 @@ def gnulot_base(TMP_GNU_FILE_NAME):
     TMP_GNU_FILE.write("reset\n")
     ##########################
     # Output
-    TMP_GNU_FILE.write("set terminal jpeg medium size 1024,768 font Helvetica 16\n")
+    TMP_GNU_FILE.write("set terminal jpeg medium size 1280,1024 font Helvetica 16\n")
 
     ##########################
     # Scale

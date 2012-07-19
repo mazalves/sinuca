@@ -330,6 +330,7 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
                 this->mshr_buffer[i].memory_size = package->memory_size;
                 this->mshr_buffer[i].id_src = package->id_src;
                 this->mshr_buffer[i].id_dst = package->id_dst;
+                // to-do:(mazalves) Change it to make trail edge - get from main memory the byte you requested first
                 this->mshr_buffer[i].package_untreated(transmission_latency);
                 return OK;
             }

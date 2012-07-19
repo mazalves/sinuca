@@ -295,6 +295,9 @@ void interconnection_controller_t::find_package_route(memory_package_t *package)
 
 /// ============================================================================
 uint32_t interconnection_controller_t::find_package_route_latency(memory_package_t *package) {
+
+
+
     uint32_t max_latency = 0;
     uint32_t min_width = 0;
 

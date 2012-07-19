@@ -1928,7 +1928,10 @@ class line_usage_predictor_t : public interconnection_interface_t {
             uint64_t stat_sub_block_touch_128_bigger;
 
             /// Number of sub_blocks written
-            uint64_t *stat_written_sub_blocks_per_line;     
+            uint64_t *stat_written_sub_blocks_per_line;
+            uint64_t stat_dirty_lines_predicted_dead;
+            uint64_t stat_clean_lines_predicted_dead;
+            uint64_t stat_written_lines_miss_predicted;
 
             /// Number of times each sub_block was written before eviction
             uint64_t stat_writes_per_sub_blocks_1;
@@ -2035,6 +2038,11 @@ class line_usage_predictor_t : public interconnection_interface_t {
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_touch_8_15);
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_touch_16_127);
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_touch_128_bigger);
+
+
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_dirty_lines_predicted_dead);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_clean_lines_predicted_dead);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_written_lines_miss_predicted);
 
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_writes_per_sub_blocks_1);
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_writes_per_sub_blocks_2);

@@ -145,7 +145,7 @@ void line_usage_predictor_t::allocate() {
                     this->DSBP_sets[i].ways[j].clock_become_dead = utils_t::template_allocate_initialize_array<uint64_t>(sinuca_engine.get_global_line_size(), 0);
 
                     this->DSBP_sets[i].ways[j].written_sub_blocks = utils_t::template_allocate_initialize_array<uint64_t>(sinuca_engine.get_global_line_size(), 0);
-                    
+
                     this->DSBP_sets[i].ways[j].active_sub_blocks = 0;
                     this->DSBP_sets[i].ways[j].is_dead = true;
                 }
@@ -238,6 +238,12 @@ void line_usage_predictor_t::reset_statistics() {
         this->stat_written_sub_blocks_per_line[i] = 0;
     }
 
+    /// Number of dirty lines predicted to be dead
+    this->stat_dirty_lines_predicted_dead = 0;
+    this->stat_clean_lines_predicted_dead = 0;
+    
+    this->stat_written_lines_miss_predicted = 0;
+
     /// Number of times each sub_block was written before eviction
     this->stat_writes_per_sub_blocks_1 = 0;
     this->stat_writes_per_sub_blocks_2 = 0;
@@ -309,6 +315,12 @@ void line_usage_predictor_t::print_statistics() {
         sprintf(name, "stat_active_sub_block_per_cycle_%u", i);
         sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), name, stat_active_sub_block_per_cycle[i]);
     }
+
+    /// Number of dirty lines predicted to be dead
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dirty_lines_predicted_dead", stat_dirty_lines_predicted_dead);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_clean_lines_predicted_dead", stat_clean_lines_predicted_dead);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_written_lines_miss_predicted", stat_written_lines_miss_predicted);
 
     /// Number of times each sub_block was written before eviction
     sinuca_engine.write_statistics_small_separator();
@@ -512,6 +524,7 @@ void line_usage_predictor_t::line_hit(memory_package_t *package, uint32_t index,
                 }
             }
 
+            uint32_t predicted_alive = sinuca_engine.get_global_line_size();
             /// ================================================================
             /// METADATA Learn Mode
             /// ================================================================
@@ -556,14 +569,29 @@ void line_usage_predictor_t::line_hit(memory_package_t *package, uint32_t index,
                         }
                     }
                 }
+
+                // Check if it can be evicted earlier
+                for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
+                    // METADATA Not Overflow + METADATA Used Predicted Number of Times
+                    if (this->DSBP_sets[index].ways[way].overflow[i] == false &&
+                    this->DSBP_sets[index].ways[way].real_usage_counter[i] == this->DSBP_sets[index].ways[way].usage_counter[i]) {
+                        predicted_alive--;
+                    }
+                }
             }
 
+
             // Enable/Disable IS-DEAD flag
-            if (this->DSBP_sets[index].ways[way].active_sub_blocks > 0) {
+            if (predicted_alive > 0) {
                 this->DSBP_sets[index].ways[way].is_dead = false;
             }
             else {
-                ERROR_ASSERT_PRINTF(this->DSBP_sets[index].ways[way].is_dirty == false, "Dead line was dirty.\n")
+                if (this->DSBP_sets[index].ways[way].is_dirty == true) {
+                    add_stat_dirty_lines_predicted_dead();
+                }
+                else {
+                    add_stat_clean_lines_predicted_dead();
+                }
                 this->DSBP_sets[index].ways[way].is_dead = true;
             }
 
@@ -702,7 +730,7 @@ void line_usage_predictor_t::line_miss(memory_package_t *package, uint32_t index
 
                     this->DSBP_sets[index].ways[way].real_usage_counter[i] = 0;
                     this->DSBP_sets[index].ways[way].written_sub_blocks[i] = 0;
-                    
+
                     this->DSBP_sets[index].ways[way].clock_become_alive[i] = sinuca_engine.get_global_cycle();
                     this->DSBP_sets[index].ways[way].clock_become_dead[i] = sinuca_engine.get_global_cycle();
                     this->DSBP_sets[index].ways[way].valid_sub_blocks[i] = LINE_SUB_BLOCK_DISABLE;
@@ -753,7 +781,7 @@ void line_usage_predictor_t::line_miss(memory_package_t *package, uint32_t index
 
                 // Clean the metadata entry
                 this->DSBP_sets[index].ways[way].learn_mode = true;
-                this->DSBP_sets[index].ways[way].is_dirty = false;                
+                this->DSBP_sets[index].ways[way].is_dirty = false;
                 this->DSBP_sets[index].ways[way].active_sub_blocks = sinuca_engine.get_global_line_size();
                 for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
                     this->DSBP_sets[index].ways[way].usage_counter[i] = 0;
@@ -786,7 +814,7 @@ void line_usage_predictor_t::line_miss(memory_package_t *package, uint32_t index
 
             // Clean the metadata entry
             this->DSBP_sets[index].ways[way].learn_mode = true;
-            this->DSBP_sets[index].ways[way].is_dirty = false;            
+            this->DSBP_sets[index].ways[way].is_dirty = false;
             this->DSBP_sets[index].ways[way].PHT_pointer = NULL;
             this->DSBP_sets[index].ways[way].active_sub_blocks = sinuca_engine.get_global_line_size();
             for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
@@ -952,6 +980,9 @@ void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, uin
 
             // Clean the metadata entry
             this->DSBP_sets[index].ways[way].learn_mode = true;
+            // Mark as victim for eviction
+            // ~ this->DSBP_sets[index].ways[way].is_dead = true;
+            // Mark as dirty
             this->DSBP_sets[index].ways[way].is_dirty = true;
             this->DSBP_sets[index].ways[way].PHT_pointer = NULL;
             this->DSBP_sets[index].ways[way].active_sub_blocks = 0;
@@ -961,7 +992,7 @@ void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, uin
 
                 this->DSBP_sets[index].ways[way].real_usage_counter[i] = 0;
                 this->DSBP_sets[index].ways[way].written_sub_blocks[i] = 0;
-                
+
                 this->DSBP_sets[index].ways[way].clock_become_alive[i] = sinuca_engine.get_global_cycle();
                 this->DSBP_sets[index].ways[way].clock_become_dead[i] = sinuca_engine.get_global_cycle();
                 this->DSBP_sets[index].ways[way].valid_sub_blocks[i] = LINE_SUB_BLOCK_DISABLE;
@@ -971,7 +1002,7 @@ void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, uin
                     this->DSBP_sets[index].ways[way].written_sub_blocks[i]++;
                 }
             }
-
+            // Modify the package->sub_blocks (next level request)
             package->memory_size = 1;
         }
         break;
@@ -979,7 +1010,7 @@ void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, uin
         case LINE_USAGE_PREDICTOR_POLICY_DSBP_DISABLE:
             // Clean the metadata entry
             this->DSBP_sets[index].ways[way].learn_mode = true;
-            this->DSBP_sets[index].ways[way].is_dirty = true;            
+            this->DSBP_sets[index].ways[way].is_dirty = true;
             this->DSBP_sets[index].ways[way].PHT_pointer = NULL;
             this->DSBP_sets[index].ways[way].active_sub_blocks = sinuca_engine.get_global_line_size();
             for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
@@ -988,7 +1019,7 @@ void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, uin
 
                 this->DSBP_sets[index].ways[way].real_usage_counter[i] = 0;
                 this->DSBP_sets[index].ways[way].written_sub_blocks[i] = 0;
-                
+
                 this->DSBP_sets[index].ways[way].clock_become_alive[i] = sinuca_engine.get_global_cycle();
                 this->DSBP_sets[index].ways[way].clock_become_dead[i] = sinuca_engine.get_global_cycle();
                 this->DSBP_sets[index].ways[way].valid_sub_blocks[i] = LINE_SUB_BLOCK_NORMAL;
@@ -1003,6 +1034,7 @@ void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, uin
         break;
 
         case LINE_USAGE_PREDICTOR_POLICY_DISABLE:
+            // Modify the package->sub_blocks (next level request)
             package->memory_size = 1;
         break;
     }
@@ -1099,6 +1131,7 @@ void line_usage_predictor_t::line_eviction(uint32_t index, uint32_t way) {
             // Statistics
             uint32_t sub_blocks_touched = 0;
             uint32_t sub_blocks_written = 0;
+            uint32_t sub_blocks_wrong_first = 0;
             for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
                 // Prediction Accuracy
                 switch (this->DSBP_sets[index].ways[way].valid_sub_blocks[i]) {
@@ -1163,13 +1196,17 @@ void line_usage_predictor_t::line_eviction(uint32_t index, uint32_t way) {
                 }
 
                 if (this->DSBP_sets[index].ways[way].is_dirty == true) {
-    
+
+                    if (this->DSBP_sets[index].ways[way].valid_sub_blocks[i] == LINE_SUB_BLOCK_WRONG_FIRST) {
+                        sub_blocks_wrong_first++;
+                    }
+
                     // Written Sub-blocks before eviction
                     if (this->DSBP_sets[index].ways[way].written_sub_blocks[i] != 0) {
                         sub_blocks_written++;
                     }
-    
-                    // Writes before eviction 
+
+                    // Writes before eviction
                     if (this->DSBP_sets[index].ways[way].written_sub_blocks[i] == 1) {
                         this->add_stat_writes_per_sub_blocks_1();
                     }
@@ -1201,6 +1238,9 @@ void line_usage_predictor_t::line_eviction(uint32_t index, uint32_t way) {
 
             if (this->DSBP_sets[index].ways[way].is_dirty == true) {
                 this->stat_written_sub_blocks_per_line[sub_blocks_written]++;
+                if (sub_blocks_wrong_first != 0) {
+                    this->stat_written_lines_miss_predicted++;
+                }
             }
 
             LINE_USAGE_PREDICTOR_DEBUG_PRINTF("Stats %u %"PRIu64"\n", sub_blocks_touched, this->stat_accessed_sub_block[sub_blocks_touched] )
