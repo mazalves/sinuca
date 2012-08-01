@@ -120,6 +120,8 @@ processor_t::processor_t() {
     this->read_buffer_size = 0;
     this->write_buffer_size = 0;
 
+	this->branch_per_fetch = 0;
+
     this->data_cache = NULL;
     this->inst_cache = NULL;
 };
@@ -176,6 +178,8 @@ void processor_t::allocate() {
     this->branch_predictor.allocate();
     this->branch_solve_stage = PROCESSOR_STAGE_FETCH;
     this->branch_opcode_number = 0;
+
+    ERROR_ASSERT_PRINTF(this->branch_per_fetch > 0, "Maximum number of branches per fetch must be greater than 0.\n")
 
     /// Functional Units
     uint32_t total_dispatched = this->number_fu_int_alu + this->number_fu_int_mul + this->number_fu_int_div
@@ -373,15 +377,18 @@ void processor_t::stage_fetch() {
 
     /// 1st. Trace => Fetch_Buffer
     bool valid_opcode = false;
+    uint32_t count_branches = 0;
 
     for (i = 0; i < this->stage_fetch_width; i++) {
         /// If must wait Branch miss prediction
         if (this->branch_solve_stage != PROCESSOR_STAGE_FETCH) {
+            add_stat_branch_stall_cycles();
             break;
         }
 
         /// If must wait synchronization
         if (this->sync_status != SYNC_FREE && this->sync_status != SYNC_CRITICAL_START) {
+            add_stat_sync_stall_cycles();
             break;
         }
 
@@ -400,13 +407,22 @@ void processor_t::stage_fetch() {
             continue;
         }
 
+		/// If the instruction is a branch
+	    if (this->trace_next_opcode.opcode_operation == INSTRUCTION_OPERATION_BRANCH) {
+			count_branches++;
+			if (count_branches > this->branch_per_fetch){
+				break;
+			}
+	    }
+
+
         position_buffer = this->fetch_buffer_insert();
         if (position_buffer == POSITION_FAIL) {
             break;
         }
 
         PROCESSOR_DEBUG_PRINTF("\t Inserting on fetch_buffer[%d] package:%s\n", position_buffer, trace_next_opcode.opcode_to_string().c_str());
-        this->fetch_buffer[position_buffer] = trace_next_opcode;
+        this->fetch_buffer[position_buffer] = this->trace_next_opcode;
         this->fetch_buffer[position_buffer].package_untreated(this->stage_fetch_cycles);
         trace_next_opcode.package_clean();
         valid_opcode = sinuca_engine.trace_reader->trace_fetch(this->core_id, &this->trace_next_opcode);
@@ -540,7 +556,7 @@ int32_t processor_t::send_instruction_package(opcode_package_t *inst_package) {
     bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port));
     if (sent) {
         PROCESSOR_DEBUG_PRINTF("\tSEND DATA OK\n");
-		uint32_t latency = sinuca_engine.interconnection_controller->find_package_route_latency(package);
+        uint32_t latency = sinuca_engine.interconnection_controller->find_package_route_latency(package);
         delete package;
         return latency;
     }
@@ -1395,6 +1411,9 @@ void processor_t::reset_statistics() {
     this->set_stat_reset_fetch_opcode_counter(this->fetch_opcode_counter);
     this->set_stat_reset_decode_uop_counter(this->decode_uop_counter);
 
+    this->set_stat_branch_stall_cycles(0);
+    this->set_stat_sync_stall_cycles(0);
+
     this->set_stat_nop_completed(0);
     this->set_stat_branch_completed(0);
     this->set_stat_other_completed(0);
@@ -1449,6 +1468,16 @@ void processor_t::print_statistics() {
                                                                                                                        sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "uop_per_cycle_ratio_warm", this->decode_uop_counter - this->stat_reset_decode_uop_counter,
                                                                                                                        sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_branch_stall_cycles", stat_branch_stall_cycles);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sync_stall_cycles", stat_sync_stall_cycles);
+
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_branch_stall_cycles_ratio_warm", this->stat_branch_stall_cycles,
+                                                                                                                       sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_sync_stall_cycles_ratio_warm", this->stat_sync_stall_cycles,
+                                                                                                                       sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
+
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_nop_completed", stat_nop_completed);
@@ -1563,6 +1592,9 @@ void processor_t::print_configuration() {
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "offset_bits_mask", utils_t::address_to_binary(this->offset_bits_mask).c_str());
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "not_offset_bits_mask", utils_t::address_to_binary(this->not_offset_bits_mask).c_str());
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "branch_per_fetch", branch_per_fetch);
 
     this->branch_predictor.print_configuration();
 };
