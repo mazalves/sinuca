@@ -129,7 +129,7 @@ void main_memory_t::set_masks() {
         break;
 
         case MAIN_MEMORY_MASK_ROW_BANK_COLUMN:
-            ERROR_ASSERT_PRINTF(this->get_total_channels() > 1 || this->get_channel_number() == 0, "Wrong number of channels (%u).\n", this->get_total_channels());
+            ERROR_ASSERT_PRINTF(this->get_total_channels() == 1, "Wrong number of channels (%u).\n", this->get_total_channels());
 
             this->column_bits_shift = 0;
             this->channel_bits_shift = 0;
@@ -508,8 +508,9 @@ void main_memory_t::periodic_check(){
 // STATISTICS
 //==============================================================================
 void main_memory_t::reset_statistics() {
-    this->stat_open_new_row = 0;
 
+    this->stat_accesses = 0;
+    this->stat_open_new_row = 0;
     this->stat_full_read_buffer = 0;
     this->stat_full_write_buffer = 0;
 
