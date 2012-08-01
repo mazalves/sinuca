@@ -338,7 +338,7 @@ void opcode_package_t::opcode_to_trace_char(char *trace_line) {
 ///     Ex:     W 8 0x140735291283448
 ///             W 8 0x140735291283440
 ///             W 8 0x140735291283432
-void opcode_package_t::trace_string_to_read(std::string input_string) {
+void opcode_package_t::trace_string_to_read(std::string input_string, uint32_t actual_bbl) {
     int32_t start_pos = 0;
     uint32_t end_pos = 0, field = 1;
     std::string sub_string;
@@ -368,6 +368,12 @@ void opcode_package_t::trace_string_to_read(std::string input_string) {
                     field = 4;  /// Next Field
                 break;
 
+                case 4:
+                    /// Basic Block Number
+                    field = 5; /// Next Field
+                    ERROR_ASSERT_PRINTF((uint32_t)strtoul(sub_string.c_str(), NULL, 10) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%u)\n", actual_bbl, (uint32_t)strtoul(sub_string.c_str(), NULL, 10))
+                break;
+
                 default:
                     ERROR_ASSERT_PRINTF(false, "Error converting Text to Memory (Wrong  number of fields)\n")
                 break;
@@ -377,7 +383,7 @@ void opcode_package_t::trace_string_to_read(std::string input_string) {
 };
 
 //==============================================================================
-void opcode_package_t::trace_string_to_read2(std::string input_string) {
+void opcode_package_t::trace_string_to_read2(std::string input_string, uint32_t actual_bbl) {
     int32_t start_pos = 0;
     uint32_t end_pos = 0, field = 1;
     std::string sub_string;
@@ -403,6 +409,12 @@ void opcode_package_t::trace_string_to_read2(std::string input_string) {
                     field = 4;  /// Next Field
                 break;
 
+                case 4:
+                    /// Basic Block Number
+                    field = 5; /// Next Field
+                    ERROR_ASSERT_PRINTF((uint32_t)strtoul(sub_string.c_str(), NULL, 10) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%u)\n", actual_bbl, (uint32_t)strtoul(sub_string.c_str(), NULL, 10))
+                break;
+
                 default:
                     ERROR_ASSERT_PRINTF(false, "Error converting Text to Memory (Wrong  number of fields)\n")
                 break;
@@ -412,7 +424,7 @@ void opcode_package_t::trace_string_to_read2(std::string input_string) {
 };
 
 //==============================================================================
-void opcode_package_t::trace_string_to_write(std::string input_string) {
+void opcode_package_t::trace_string_to_write(std::string input_string, uint32_t actual_bbl) {
     int32_t start_pos = 0;
     uint32_t end_pos = 0, field = 1;
     std::string sub_string;
@@ -436,6 +448,12 @@ void opcode_package_t::trace_string_to_write(std::string input_string) {
                 case 3:     /// Memory Address
                     this->write_address = strtoull(sub_string.c_str(), NULL, 10);
                     field = 4;  /// Next Field
+                break;
+
+                case 4:
+                    /// Basic Block Number
+                    field = 5; /// Next Field
+                    ERROR_ASSERT_PRINTF((uint32_t)strtoul(sub_string.c_str(), NULL, 10) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%u)\n", actual_bbl, (uint32_t)strtoul(sub_string.c_str(), NULL, 10))
                 break;
 
                 default:

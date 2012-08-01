@@ -350,7 +350,7 @@ bool trace_reader_t::trace_fetch(uint32_t cpuid, opcode_package_t *m) {
     this->actual_bbl_opcode[cpuid]++;
     if (this->actual_bbl_opcode[cpuid] >= deque_size) {
         this->insideBBL[cpuid] = false;
-        this->actual_bbl[cpuid] = 0;
+        //~ this->actual_bbl[cpuid] = 0;
         this->actual_bbl_opcode[cpuid] = 0;
     }
 
@@ -379,17 +379,17 @@ bool trace_reader_t::trace_fetch(uint32_t cpuid, opcode_package_t *m) {
     //==========================================================================
     if (m->is_read) {
         line_memory = this->trace_next_memory(cpuid);
-        m->trace_string_to_read(line_memory);
+        m->trace_string_to_read(line_memory, this->actual_bbl[cpuid]);
     }
 
     if (m->is_read2) {
         line_memory = this->trace_next_memory(cpuid);
-        m->trace_string_to_read2(line_memory);
+        m->trace_string_to_read2(line_memory, this->actual_bbl[cpuid]);
     }
 
     if (m->is_write) {
         line_memory = this->trace_next_memory(cpuid);
-        m->trace_string_to_write(line_memory);
+        m->trace_string_to_write(line_memory, this->actual_bbl[cpuid]);
     }
 
     TRACE_READER_DEBUG_PRINTF("CPU[%d] Found Operation [%s]. Found Memory [%s].\n", cpuid, m->opcode_to_string().c_str(), line_memory.c_str());

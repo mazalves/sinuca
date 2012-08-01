@@ -507,9 +507,9 @@ class opcode_package_t {
 
         std::string opcode_to_trace_string();
         void trace_string_to_opcode(std::string input_string);
-        void trace_string_to_read(std::string input_string);
-        void trace_string_to_read2(std::string input_string);
-        void trace_string_to_write(std::string input_string);
+        void trace_string_to_read(std::string input_string, uint32_t actual_bbl);
+        void trace_string_to_read2(std::string input_string, uint32_t actual_bbl);
+        void trace_string_to_write(std::string input_string, uint32_t actual_bbl);
 
         opcode_package_t & operator=(const opcode_package_t &package);
         bool operator==(const opcode_package_t &package);
@@ -1166,6 +1166,7 @@ class processor_t : public interconnection_interface_t {
         uint32_t read_buffer_size;
         uint32_t write_buffer_size;
 
+		uint32_t branch_per_fetch;
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
@@ -1242,6 +1243,9 @@ class processor_t : public interconnection_interface_t {
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
+        uint64_t stat_branch_stall_cycles;
+        uint64_t stat_sync_stall_cycles;
+
         uint64_t stat_reset_fetch_opcode_counter;
         uint64_t stat_reset_decode_uop_counter;
 
@@ -1398,6 +1402,8 @@ class processor_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(cache_memory_t*, data_cache)
         INSTANTIATE_GET_SET(cache_memory_t*, inst_cache)
 
+        INSTANTIATE_GET_SET(uint32_t, branch_per_fetch)
+
         /// Processor Synchronization
         INSTANTIATE_GET_SET(sync_t, sync_status);
         INSTANTIATE_GET_SET(uint64_t, sync_status_time);
@@ -1405,6 +1411,9 @@ class processor_t : public interconnection_interface_t {
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_branch_stall_cycles)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sync_stall_cycles)
+
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_reset_fetch_opcode_counter)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_reset_decode_uop_counter)
 

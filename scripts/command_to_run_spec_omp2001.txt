@@ -1,15 +1,16 @@
 #------------SPEC2006 (11)
 #-----MEDIUM
-wupwise;m;wupwise.M;TraceTime=0;Simulation8CPU=35353s => 16%
-swim;m;swim.M;TraceTime=0;Simulation8CPU=35353s => 23%
-mgrid;m;mgrid.M;TraceTime=0;Simulation8CPU=35353s => 26%
-applu;m;applu.M;TraceTime=0;Simulation8CPU=35353s => 4%
-galgel;m;galgel.M;TraceTime=0;Simulation8CPU=8098s
-equake;m;equake.M;TraceTime=0;Simulation8CPU=388s
-apsi;m;apsi.M;TraceTime=0;Simulation8CPU=35353s => 21%
-gafort;m;gafort.M;TraceTime=0;Simulation8CPU=35353s => 3.5%
-fma3d;m;fma3d.M;TraceTime=0;Simulation8CPU=19090s => FAIL
-art;m;art.M;TraceTime=0;Simulation8CPU=35353s =>
-ammp;m;ammp.M;TraceTime=0;Simulation8CPU=35353s =>
+ammp;m;ammp.M;TraceTime=0;      Simulation8CPU=15.000s-4h
+applu;m;applu.M;TraceTime=0;    Simulation8CPU=42.000s-12h
+apsi;m;apsi.M;TraceTime=0;      Simulation8CPU=18.000s-5h
+art;m;art.M;TraceTime=0;        Simulation8CPU=280s-5m
+equake;m;equake.M;TraceTime=0;  Simulation8CPU=22.000s-6h
+fma3d;m;fma3d.M;TraceTime=0;    Simulation8CPU=17.000s-FAIL
+gafort;m;gafort.M;TraceTime=0;  Simulation8CPU=58.000s-16h
+galgel;m;galgel.M;TraceTime=0;  Simulation8CPU=7.000s-2h
+mgrid;m;mgrid.M;TraceTime=0;    Simulation8CPU=49.000s-14h
+swim;m;swim.M;TraceTime=0;      Simulation8CPU=49.000s-14h
+wupwise;m;wupwise.M;TraceTime=0;Simulation8CPU=75.000s-21h
 #-----LARGER
 #-----END OF FILE
+18

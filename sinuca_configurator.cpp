@@ -286,6 +286,9 @@ void sinuca_engine_t::initialize_processor() {
             processor_parameters.push_back("WRITE_BUFFER_SIZE");
             this->processor_array[i]->set_write_buffer_size( cfg_processor[ processor_parameters.back() ] );
 
+            processor_parameters.push_back("BRANCH_PER_FETCH");
+            this->processor_array[i]->set_branch_per_fetch( cfg_processor[ processor_parameters.back() ] );
+
             processor_parameters.push_back("CONNECTED_DATA_CACHE");
             processor_parameters.push_back("CONNECTED_INST_CACHE");
 
