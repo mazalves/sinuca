@@ -34,6 +34,8 @@ cache_memory_t::cache_memory_t() {
     this->set_type_component(COMPONENT_CACHE_MEMORY);
     this->lower_level_cache = new container_ptr_cache_memory_t;
     this->higher_level_cache = new container_ptr_cache_memory_t;
+
+    this->mshr_born_ordered = new container_ptr_memory_package_t;
 };
 
 // =============================================================================
@@ -43,6 +45,8 @@ cache_memory_t::~cache_memory_t() {
     utils_t::template_delete_array<memory_package_t>(mshr_buffer);
     utils_t::template_delete_variable<container_ptr_cache_memory_t>(lower_level_cache);
     utils_t::template_delete_variable<container_ptr_cache_memory_t>(higher_level_cache);
+
+    utils_t::template_delete_variable<container_ptr_memory_package_t>(mshr_born_ordered);
 };
 
 // =============================================================================
@@ -163,6 +167,7 @@ void cache_memory_t::set_masks() {
     }
 };
 
+// =============================================================================
 void cache_memory_t::check_mshr_size() {
     ERROR_ASSERT_PRINTF(mshr_buffer_request_reserved_size > 0, "mshr_buffer_request_reserved_size should be bigger than one.\n");
     ERROR_ASSERT_PRINTF(mshr_buffer_copyback_reserved_size > 0, "mshr_buffer_copyback_reserved_size should be bigger than one.\n");
@@ -196,91 +201,204 @@ void cache_memory_t::clock(uint32_t subcycle) {
     CACHE_DEBUG_PRINTF("cycle() \n");
 
     this->prefetcher.clock(subcycle);
-    int32_t position_ans = POSITION_FAIL;
-    int32_t position_rqst = POSITION_FAIL;
-
+    // ~ int32_t position_ans = POSITION_FAIL;
+    // ~ int32_t position_rqst = POSITION_FAIL;
     // =================================================================
     // MSHR_BUFFER - TRANSMISSION
     // =================================================================
-    memory_package_t::find_old_rqst_ans_state_ready(this->mshr_buffer, this->mshr_buffer_size, PACKAGE_STATE_TRANSMIT, position_rqst, position_ans);
-    /// PACKAGE_STATE_TRANSMIT (answer) => send()
-    if (position_ans != POSITION_FAIL) {
-        CACHE_DEBUG_PRINTF("\t Send ANSWER MSHR[%d] %s\n", position_ans, this->mshr_buffer[position_ans].memory_to_string().c_str());
-        int32_t transmission_latency = send_package(&this->mshr_buffer[position_ans]);
-        if (transmission_latency != POSITION_FAIL) {
-            this->mshr_buffer[position_ans].package_clean();
+    // ~ memory_package_t::find_old_rqst_ans_state_ready(this->mshr_buffer, this->mshr_buffer_size, PACKAGE_STATE_TRANSMIT, position_rqst, position_ans);
+    // ~ /// PACKAGE_STATE_TRANSMIT (answer) => send()
+    // ~ if (position_ans != POSITION_FAIL) {
+        // ~ CACHE_DEBUG_PRINTF("\t Send ANSWER MSHR[%d] %s\n", position_ans, this->mshr_buffer[position_ans].memory_to_string().c_str());
+        // ~ int32_t transmission_latency = send_package(&this->mshr_buffer[position_ans]);
+        // ~ if (transmission_latency != POSITION_FAIL) {
+            // ~ this->mshr_buffer[position_ans].package_clean();
+        // ~ }
+    // ~ }
+// ~ // ~
+    // ~ /// PACKAGE_STATE_TRANSMIT (request) => send()
+    // ~ if (position_rqst != POSITION_FAIL) {
+        // ~ CACHE_DEBUG_PRINTF("\t Send REQUEST MSHR[%d] %s\n", position_rqst, this->mshr_buffer[position_rqst].memory_to_string().c_str());
+        // ~ int32_t transmission_latency = send_package(&this->mshr_buffer[position_rqst]);
+        // ~ if (transmission_latency != POSITION_FAIL) {
+            // ~ this->mshr_buffer[position_rqst].package_wait(transmission_latency);
+        // ~ }
+    // ~ }
+
+    for (uint32_t i = 0; i < this->mshr_born_ordered->size(); i++){
+        if (mshr_born_ordered[0][i]->state == PACKAGE_STATE_TRANSMIT &&
+        mshr_born_ordered[0][i]->is_answer == true &&
+        mshr_born_ordered[0][i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
+
+            CACHE_DEBUG_PRINTF("\t Send ANSWER MSHR_BORN_ORDERED[%d] %s\n", i, mshr_born_ordered[0][i]->memory_to_string().c_str());
+            int32_t transmission_latency = send_package(mshr_born_ordered[0][i]);
+            if (transmission_latency != POSITION_FAIL) {
+                mshr_born_ordered[0][i]->package_clean();
+                mshr_born_ordered->erase(this->mshr_born_ordered->begin() + i);
+            }
+            break;
         }
     }
 
-    /// PACKAGE_STATE_TRANSMIT (request) => send()
-    if (position_rqst != POSITION_FAIL) {
-        CACHE_DEBUG_PRINTF("\t Send REQUEST MSHR[%d] %s\n", position_rqst, this->mshr_buffer[position_rqst].memory_to_string().c_str());
-        int32_t transmission_latency = send_package(&this->mshr_buffer[position_rqst]);
-        if (transmission_latency != POSITION_FAIL) {
-            this->mshr_buffer[position_rqst].package_wait(transmission_latency);
+    for (uint32_t i = 0; i < this->mshr_born_ordered->size(); i++){
+        if (mshr_born_ordered[0][i]->state == PACKAGE_STATE_TRANSMIT &&
+        mshr_born_ordered[0][i]->is_answer == false &&
+        mshr_born_ordered[0][i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
+
+            CACHE_DEBUG_PRINTF("\t Send REQUEST MSHR_BORN_ORDERED[%d] %s\n", i, mshr_born_ordered[0][i]->memory_to_string().c_str());
+            int32_t transmission_latency = send_package(mshr_born_ordered[0][i]);
+            if (transmission_latency != POSITION_FAIL) {
+                mshr_born_ordered[0][i]->package_wait(transmission_latency);
+            }
+            break;
         }
     }
 
-    // =================================================================
-    // MSHR_BUFFER - UNTREATED
-    // =================================================================
-    memory_package_t::find_old_rqst_ans_state_ready(this->mshr_buffer, this->mshr_buffer_size, PACKAGE_STATE_UNTREATED, position_rqst, position_ans);
-    /// PACKAGE_STATE_UNTREATED + ANSWER => treat()
-    if (position_ans != POSITION_FAIL) {
-        CACHE_DEBUG_PRINTF("\t Treat ANSWER MSHR[%d] %s\n", position_ans, this->mshr_buffer[position_ans].memory_to_string().c_str());
-        this->mshr_buffer[position_ans].state = sinuca_engine.directory_controller->treat_cache_answer(this->get_cache_id(), &this->mshr_buffer[position_ans]);
-        /// Could not treat, then restart born_cycle (change priority)
-        if (this->mshr_buffer[position_ans].state == PACKAGE_STATE_UNTREATED) {
-                this->mshr_buffer[position_ans].born_cycle = sinuca_engine.get_global_cycle();
+    // ~ // =================================================================
+    // ~ // MSHR_BUFFER - UNTREATED
+    // ~ // =================================================================
+    // ~ memory_package_t::find_old_rqst_ans_state_ready(this->mshr_buffer, this->mshr_buffer_size, PACKAGE_STATE_UNTREATED, position_rqst, position_ans);
+    // ~ /// PACKAGE_STATE_UNTREATED + ANSWER => treat()
+    // ~ if (position_ans != POSITION_FAIL) {
+        // ~ CACHE_DEBUG_PRINTF("\t Treat ANSWER MSHR[%d] %s\n", position_ans, this->mshr_buffer[position_ans].memory_to_string().c_str());
+        // ~ this->mshr_buffer[position_ans].state = sinuca_engine.directory_controller->treat_cache_answer(this->get_cache_id(), &this->mshr_buffer[position_ans]);
+        // ~ /// Could not treat, then restart born_cycle (change priority)
+        // ~ if (this->mshr_buffer[position_ans].state == PACKAGE_STATE_UNTREATED) {
+                // ~ this->mshr_buffer[position_ans].born_cycle = sinuca_engine.get_global_cycle();
+        // ~ }
+    // ~ }
+// ~
+    // ~ /// PACKAGE_STATE_UNTREATED + REQUEST => treat()
+    // ~ if (position_rqst != POSITION_FAIL) {
+        // ~ CACHE_DEBUG_PRINTF("\t Treat REQUEST MSHR[%d] %s\n", position_rqst, this->mshr_buffer[position_rqst].memory_to_string().c_str());
+        // ~ this->prefetcher.treat_prefetch(&this->mshr_buffer[position_rqst]);
+        // ~ this->mshr_buffer[position_rqst].state = sinuca_engine.directory_controller->treat_cache_request(this->get_cache_id(), &this->mshr_buffer[position_rqst]);
+        // ~ /// Could not treat, then restart born_cycle (change priority)
+        // ~ if (this->mshr_buffer[position_rqst].state == PACKAGE_STATE_UNTREATED) {
+                // ~ this->mshr_buffer[position_rqst].born_cycle = sinuca_engine.get_global_cycle();
+        // ~ }
+    // ~ }
+
+    for (uint32_t i = 0; i < this->mshr_born_ordered->size(); i++){
+        if (mshr_born_ordered[0][i]->state == PACKAGE_STATE_UNTREATED &&
+        mshr_born_ordered[0][i]->is_answer == true &&
+        mshr_born_ordered[0][i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
+
+            CACHE_DEBUG_PRINTF("\t Treat REQUEST MSHR_BORN_ORDERED[%d] %s\n", i, this->mshr_born_ordered[0][i]->memory_to_string().c_str());
+            this->prefetcher.treat_prefetch(this->mshr_born_ordered[0][i]);
+            this->mshr_born_ordered[0][i]->state = sinuca_engine.directory_controller->treat_cache_answer(this->get_cache_id(), this->mshr_born_ordered[0][i]);
+            /// Could not treat, then restart born_cycle (change priority)
+            if (this->mshr_born_ordered[0][i]->state == PACKAGE_STATE_UNTREATED) {
+                this->mshr_born_ordered[0][i]->born_cycle = sinuca_engine.get_global_cycle();
+
+                memory_package_t *package = this->mshr_born_ordered[0][i];
+                mshr_born_ordered->erase(this->mshr_born_ordered->begin() + i);
+                this->insert_mshr_born_ordered(package);
+            }
+            else if (this->mshr_born_ordered[0][i]->state == PACKAGE_STATE_FREE) {
+                mshr_born_ordered->erase(this->mshr_born_ordered->begin() + i);
+            }
+            break;
         }
     }
 
-    /// PACKAGE_STATE_UNTREATED + REQUEST => treat()
-    if (position_rqst != POSITION_FAIL) {
-        CACHE_DEBUG_PRINTF("\t Treat REQUEST MSHR[%d] %s\n", position_rqst, this->mshr_buffer[position_rqst].memory_to_string().c_str());
-        this->prefetcher.treat_prefetch(&this->mshr_buffer[position_rqst]);
-        this->mshr_buffer[position_rqst].state = sinuca_engine.directory_controller->treat_cache_request(this->get_cache_id(), &this->mshr_buffer[position_rqst]);
-        /// Could not treat, then restart born_cycle (change priority)
-        if (this->mshr_buffer[position_rqst].state == PACKAGE_STATE_UNTREATED) {
-                this->mshr_buffer[position_rqst].born_cycle = sinuca_engine.get_global_cycle();
+    for (uint32_t i = 0; i < this->mshr_born_ordered->size(); i++){
+        if (mshr_born_ordered[0][i]->state == PACKAGE_STATE_UNTREATED &&
+        mshr_born_ordered[0][i]->is_answer == false &&
+        mshr_born_ordered[0][i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
+
+            CACHE_DEBUG_PRINTF("\t Treat REQUEST MSHR_BORN_ORDERED[%d] %s\n", i, this->mshr_born_ordered[0][i]->memory_to_string().c_str());
+            this->prefetcher.treat_prefetch(this->mshr_born_ordered[0][i]);
+            this->mshr_born_ordered[0][i]->state = sinuca_engine.directory_controller->treat_cache_request(this->get_cache_id(), this->mshr_born_ordered[0][i]);
+            /// Could not treat, then restart born_cycle (change priority)
+            if (this->mshr_born_ordered[0][i]->state == PACKAGE_STATE_UNTREATED) {
+                this->mshr_born_ordered[0][i]->born_cycle = sinuca_engine.get_global_cycle();
+
+                memory_package_t *package = this->mshr_born_ordered[0][i];
+                mshr_born_ordered->erase(this->mshr_born_ordered->begin() + i);
+                this->insert_mshr_born_ordered(package);
+            }
+            else if (this->mshr_born_ordered[0][i]->state == PACKAGE_STATE_FREE) {
+                mshr_born_ordered->erase(this->mshr_born_ordered->begin() + i);
+            }
+            break;
         }
     }
 
     // =================================================================
     // PREFETCHER
     // =================================================================
+    // ~ memory_package_t* memory_package = this->prefetcher.request_buffer_get_older();
+    // ~ if (memory_package != NULL) {
+        // ~ bool already_requested = false;
+        // ~ CACHE_DEBUG_PRINTF("\t Has New Prefetch.\n");
+// ~ 
+        // ~ /// Check if the same address has been already requested
+        // ~ for (uint32_t i = 0 ; i < this->mshr_buffer_size; i++) {
+            // ~ if (this->cmp_tag_index_bank(this->mshr_buffer[i].memory_address, memory_package->memory_address)) {
+                // ~ already_requested = true;
+                // ~ CACHE_DEBUG_PRINTF("\t\t Dropping PREFETCH\n");
+                // ~ this->prefetcher.request_buffer_remove();
+                // ~ break;
+            // ~ }
+        // ~ }
+// ~ 
+        // ~ if (already_requested == false) {
+            // ~ /// Check for free space into MSHR[PREFETCH]
+            // ~ int32_t position_pfetch = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size, this->mshr_buffer_prefetch_reserved_size);
+            // ~ if (position_pfetch != POSITION_FAIL) {
+                // ~ position_pfetch += this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size;
+                    // ~ CACHE_DEBUG_PRINTF("\t RECEIVED PREFETCH\n");
+                    // ~ this->mshr_buffer[position_pfetch] = *memory_package;
+                    // ~ this->mshr_buffer[position_pfetch].id_owner = get_id();
+                    // ~ this->mshr_buffer[position_pfetch].id_src = get_id();
+                    // ~ this->mshr_buffer[position_pfetch].id_dst = get_id();
+                    // ~ this->mshr_buffer[position_pfetch].package_untreated(0);
+                // ~ }
+            // ~ else {
+                // ~ add_stat_full_mshr_buffer_prefetch();
+            // ~ }
+        // ~ }
+    // ~ }
+
+    // =================================================================
+    // PREFETCHER
+    // =================================================================
     memory_package_t* memory_package = this->prefetcher.request_buffer_get_older();
     if (memory_package != NULL) {
-        bool already_requested = false;
         CACHE_DEBUG_PRINTF("\t Has New Prefetch.\n");
 
         /// Check if the same address has been already requested
-        for (uint32_t i = 0 ; i < this->mshr_buffer_size; i++) {
-            if (this->cmp_tag_index_bank(this->mshr_buffer[i].memory_address, memory_package->memory_address)) {
+        bool already_requested = false;
+        for (uint32_t i = 0; i < this->mshr_born_ordered->size(); i++){
+            if (this->cmp_tag_index_bank(this->mshr_born_ordered[0][i]->memory_address, memory_package->memory_address)) {
                 already_requested = true;
-                CACHE_DEBUG_PRINTF("\t\t Dropping PREFETCH\n");
-                this->prefetcher.request_buffer_remove();
                 break;
             }
         }
 
-        if (already_requested == false) {
-            /// Check for free space into MSHR[PREFETCH]
-            int32_t position_pfetch = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size, this->mshr_buffer_prefetch_reserved_size);
-            if (position_pfetch != POSITION_FAIL) {
-                position_pfetch += this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size;
-                    CACHE_DEBUG_PRINTF("\t RECEIVED PREFETCH\n");
-                    this->mshr_buffer[position_pfetch] = *memory_package;
-                    this->mshr_buffer[position_pfetch].id_owner = get_id();
-                    this->mshr_buffer[position_pfetch].id_src = get_id();
-                    this->mshr_buffer[position_pfetch].id_dst = get_id();
-                    this->mshr_buffer[position_pfetch].package_untreated(0);
-                }
-            else {
-                add_stat_full_mshr_buffer_prefetch();
+        /// Already requested => Drop Resquest
+        if (already_requested == true) {
+            CACHE_DEBUG_PRINTF("\t\t Dropping PREFETCH\n");
+            this->prefetcher.request_buffer_remove();
+        }
+        /// Not requested => Allocate the Resquest
+        else {
+            /// Identity information
+            memory_package->id_owner = get_id();
+            memory_package->id_src = get_id();
+            memory_package->id_dst = get_id();
+            memory_package->package_untreated(0);
+
+            int32_t slot = this->allocate_prefetch(memory_package);
+            if (slot != POSITION_FAIL) {
+                CACHE_DEBUG_PRINTF("\t\t Allocating PREFETCH\n");
+                this->prefetcher.request_buffer_remove();
             }
         }
     }
+
+    
 };
 
 // =============================================================================
@@ -305,6 +423,81 @@ int32_t cache_memory_t::send_package(memory_package_t *package) {
         return POSITION_FAIL;
     }
 };
+
+
+// =============================================================================
+void cache_memory_t::insert_mshr_born_ordered(memory_package_t* package){
+
+    // ~ /// Most of the insertions are made in the end !!!
+    // ~ for (uint32_t i = 0; i < this->mshr_born_ordered->size(); i++){
+        // ~ if (this->mshr_born_ordered[0][i]->born_cycle > package->born_cycle) {
+            // ~ this->mshr_born_ordered->insert(this->mshr_born_ordered->begin() + i, package);
+            // ~ return;
+        // ~ }
+    // ~ }
+    // ~ /// Could not find a yunger package to insert or it is just empty
+    // ~ this->mshr_born_ordered->insert(this->mshr_born_ordered->end(), package);
+
+    /// mshr_born_ordered            = [OLDER --------> NEWER]
+    /// mshr_born_ordered.born_cycle = [SMALLER -----> BIGGER]
+
+    /// Most of the insertions are made in the end !!!
+    for (int32_t i = this->mshr_born_ordered->size() - 1; i >= 0 ; i--){
+        if (this->mshr_born_ordered[0][i]->born_cycle <= package->born_cycle) {
+            this->mshr_born_ordered->insert(this->mshr_born_ordered->begin() + i + 1, package);
+            return;
+        }
+    }
+    /// Could not find a older package to insert or it is just empty
+    this->mshr_born_ordered->insert(this->mshr_born_ordered->begin(), package);
+
+    /// Check the MSHR BORN ORDERED
+    #ifdef CACHE_DEBUG
+        uint64_t test_order = 0;
+        for (uint32_t i = 0; i < this->mshr_born_ordered->size(); i++){
+            if (test_order > this->mshr_born_ordered[0][i]->born_cycle) {
+                for (uint32_t j = 0; j < this->mshr_born_ordered->size(); j++){
+                    CACHE_DEBUG_PRINTF("%"PRIu64" ", this->mshr_born_ordered[0][j]->born_cycle);
+                }
+                ERROR_ASSERT_PRINTF(test_order > this->mshr_born_ordered[0][i]->born_cycle, "Wrong order when inserting (%"PRIu64")\n", package->born_cycle);
+            }
+            test_order = this->mshr_born_ordered[0][i]->born_cycle;
+        }
+    #endif
+};
+
+// =============================================================================
+int32_t cache_memory_t::allocate_copyback(memory_package_t* package){
+
+    int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size, this->mshr_buffer_copyback_reserved_size);
+    if (slot != POSITION_FAIL) {
+        slot += this->mshr_buffer_request_reserved_size;
+            CACHE_DEBUG_PRINTF("\t NEW COPYBACK\n");
+            this->mshr_buffer[slot] = *package;
+            this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
+        }
+    else {
+        add_stat_full_mshr_buffer_copyback();
+    }
+    return slot;
+};
+
+// =============================================================================
+int32_t cache_memory_t::allocate_prefetch(memory_package_t* package){
+
+    int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size, this->mshr_buffer_prefetch_reserved_size);
+    if (slot != POSITION_FAIL) {
+        slot += this->mshr_buffer_request_reserved_size;
+            CACHE_DEBUG_PRINTF("\t NEW PREFETCH\n");
+            this->mshr_buffer[slot] = *package;
+            this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
+        }
+    else {
+        add_stat_full_mshr_buffer_copyback();
+    }
+    return slot;
+};
+
 
 // =============================================================================
 bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_port) {
@@ -351,6 +544,8 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
                         this->mshr_buffer[slot] = *package;
                         this->mshr_buffer[slot].package_untreated(transmission_latency);
                         this->read_ready = 1 + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
+
+                        this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
                         return OK;
                     }
                     else {
@@ -371,6 +566,8 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
                         this->mshr_buffer[slot] = *package;
                         this->mshr_buffer[slot].package_untreated(transmission_latency);
                         this->write_ready = 1 + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
+
+                        this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
                         return OK;
                     }
                     else {
@@ -529,6 +726,10 @@ void cache_memory_t::reset_statistics() {
     this->stat_max_copyback_wait_time = 0;
     this->stat_acumulated_copyback_wait_time = 0;
 
+    this->stat_full_mshr_buffer_request = 0;
+    this->stat_full_mshr_buffer_copyback = 0;
+    this->stat_full_mshr_buffer_prefetch = 0;
+
     this->prefetcher.reset_statistics();
     this->line_usage_predictor.reset_statistics();
 };
@@ -587,6 +788,12 @@ void cache_memory_t::print_statistics() {
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_prefetch_wait_time_ratio",stat_acumulated_prefetch_wait_time, stat_prefetch_miss);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_write_wait_time_ratio",stat_acumulated_write_wait_time, stat_write_miss);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_copyback_wait_time_ratio",stat_acumulated_copyback_wait_time, stat_copyback_miss);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_buffer_request", stat_full_mshr_buffer_request);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_buffer_copyback", stat_full_mshr_buffer_copyback);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_buffer_prefetch", stat_full_mshr_buffer_prefetch);
+
 
     this->prefetcher.print_statistics();
     this->line_usage_predictor.print_statistics();

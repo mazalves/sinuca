@@ -695,23 +695,10 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
  * cache line being copyback.
  */
 bool directory_controller_t::create_cache_copyback(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way) {
-    /// Get CACHE_MSHR
-    memory_package_t *cache_mshr_buffer = cache->get_mshr_buffer();
-    /// Get CACHE_MSHR_SIZE
-    uint32_t mshr_buffer_request_reserved_size = cache->get_mshr_buffer_request_reserved_size();
-    uint32_t mshr_buffer_copyback_reserved_size = cache->get_mshr_buffer_copyback_reserved_size();
 
-    /// Check for MSHR empty position
-    int32_t slot = memory_package_t::find_free(cache_mshr_buffer + mshr_buffer_request_reserved_size, mshr_buffer_copyback_reserved_size);
-    if (slot == POSITION_FAIL) {
-        cache->add_stat_full_mshr_buffer_copyback();
-        return FAIL;
-    }
-    slot += mshr_buffer_request_reserved_size;
-    ///=========================================================================
-    /// Allocate CopyBack at the MSHR
-    ///=========================================================================
-    cache_mshr_buffer[slot].packager(
+    /// Create the copyback package
+    memory_package_t copyback_package;
+    copyback_package.packager(
                 cache->get_id(),                        /// Request Owner
                 0,                                      /// Opcode. Number
                 0,                                      /// Opcode. Address
@@ -731,9 +718,19 @@ bool directory_controller_t::create_cache_copyback(cache_memory_t *cache, cache_
                 NULL,                                   /// *Hops
                 0                                       /// Hop Counter
                 );
+
+    ///=========================================================================
+    /// Allocate CopyBack at the MSHR
+    ///=========================================================================    
+    int32_t slot = cache->allocate_copyback(&copyback_package);
+    if (slot == POSITION_FAIL) {
+        return FAIL;
+    }
+    memory_package_t *cache_mshr_buffer = cache->get_mshr_buffer();
     memory_package_t *package = &cache_mshr_buffer[slot];
     cache->change_status(cache_line, PROTOCOL_STATUS_I);
     cache->change_address(cache_line, 0);
+
 
     ///=========================================================================
     /// Allocate CopyBack at the Directory_Line + LOCK

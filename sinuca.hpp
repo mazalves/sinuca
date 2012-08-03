@@ -220,6 +220,7 @@ typedef std::vector <uint32_t>                      container_register_t;
 typedef std::vector <opcode_package_t>              container_opcode_package_t;
 typedef std::vector <container_opcode_package_t>    container_static_dictionary_t;
 
+typedef std::vector <memory_package_t*>             container_ptr_memory_package_t;
 typedef std::vector <reorder_buffer_line_t*>        container_ptr_reorder_buffer_line_t;
 typedef std::vector <directory_controller_line_t*>  container_ptr_directory_controller_line_t;
 typedef std::vector <cache_memory_t*>               container_ptr_cache_memory_t;
@@ -1166,7 +1167,7 @@ class processor_t : public interconnection_interface_t {
         uint32_t read_buffer_size;
         uint32_t write_buffer_size;
 
-		uint32_t branch_per_fetch;
+        uint32_t branch_per_fetch;
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
@@ -2156,6 +2157,8 @@ class cache_memory_t : public interconnection_interface_t {
         memory_package_t *mshr_buffer;  /// Buffer of Missed Requests
         uint32_t mshr_buffer_size;
 
+        container_ptr_memory_package_t *mshr_born_ordered;
+
         uint64_t read_ready;            /// Ready to receive new READ
         uint64_t write_ready;           /// Ready to receive new WRITE
 
@@ -2268,6 +2271,11 @@ class cache_memory_t : public interconnection_interface_t {
             this->lower_level_cache->push_back(cache_memory);
         }
         INSTANTIATE_GET_SET(container_ptr_cache_memory_t*, lower_level_cache)
+
+
+        void insert_mshr_born_ordered(memory_package_t* package);
+        int32_t allocate_copyback(memory_package_t* package);
+        int32_t allocate_prefetch(memory_package_t* package);
 
         cache_line_t* find_line(uint64_t memory_address, uint32_t& index, uint32_t& way);
         cache_line_t* evict_address(uint64_t memory_address, uint32_t& index, uint32_t& way);
