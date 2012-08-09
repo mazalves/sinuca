@@ -163,13 +163,13 @@ void directory_controller_t::clock(uint32_t subcycle) {
 };
 
 //==============================================================================
-bool directory_controller_t::receive_package(memory_package_t *package, uint32_t input_port) {
-    ERROR_PRINTF("Received package %s into the input_port %u.\n", package->memory_to_string().c_str(), input_port);
+bool directory_controller_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
+    ERROR_PRINTF("Received package %s into the input_port %u, latency %u.\n", package->memory_to_string().c_str(), input_port, transmission_latency);
     return FAIL;
 };
 
 //==============================================================================
-// Remember: The package latency is defined as 1 automatically  by the interconnection_controller if the package is_answer
+// Remember: The package latency is defined as 1 automatically by the interconnection_controller if the package is_answer
 package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, memory_package_t *package) {
     DIRECTORY_CTRL_DEBUG_PRINTF("new_cache_request() cache_id:%u, package:%s\n", cache_id, package->memory_to_string().c_str())
     ERROR_ASSERT_PRINTF(cache_id < sinuca_engine.get_cache_memory_array_size(), "Wrong cache_id.\n")
@@ -721,7 +721,7 @@ bool directory_controller_t::create_cache_copyback(cache_memory_t *cache, cache_
 
     ///=========================================================================
     /// Allocate CopyBack at the MSHR
-    ///=========================================================================    
+    ///=========================================================================
     int32_t slot = cache->allocate_copyback(&copyback_package);
     if (slot == POSITION_FAIL) {
         return FAIL;

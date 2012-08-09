@@ -181,8 +181,8 @@ void line_usage_predictor_t::clock(uint32_t subcycle) {
 
 
 //==============================================================================
-bool line_usage_predictor_t::receive_package(memory_package_t *package, uint32_t input_port) {
-    ERROR_PRINTF("Received package %s into the input_port %u.\n", package->memory_to_string().c_str(), input_port);
+bool line_usage_predictor_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
+    ERROR_PRINTF("Received package %s into the input_port %u, latency %u.\n", package->memory_to_string().c_str(), input_port, transmission_latency);
     return FAIL;
 };
 
@@ -241,7 +241,7 @@ void line_usage_predictor_t::reset_statistics() {
     /// Number of dirty lines predicted to be dead
     this->stat_dirty_lines_predicted_dead = 0;
     this->stat_clean_lines_predicted_dead = 0;
-    
+
     this->stat_written_lines_miss_predicted = 0;
 
     /// Number of times each sub_block was written before eviction

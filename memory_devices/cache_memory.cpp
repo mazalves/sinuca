@@ -36,6 +36,11 @@ cache_memory_t::cache_memory_t() {
     this->higher_level_cache = new container_ptr_cache_memory_t;
 
     this->mshr_born_ordered = new container_ptr_memory_package_t;
+
+    this->send_ready_cycle = 0;
+    this->recv_ans_ready_cycle = 0;
+    this->recv_rqst_read_ready_cycle = 0;
+    this->recv_rqst_write_ready_cycle = 0;
 };
 
 // =============================================================================
@@ -51,20 +56,15 @@ cache_memory_t::~cache_memory_t() {
 
 // =============================================================================
 void cache_memory_t::allocate() {
-    uint32_t i;
-
     ERROR_ASSERT_PRINTF(this->get_replacement_policy() != REPLACEMENT_LRU_DSBP || this->line_usage_predictor.get_line_usage_predictor_type() == LINE_USAGE_PREDICTOR_POLICY_DSBP, "Should only use LRU_DSBP if using the DSBP line_usage_predictor.\n" )
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_line_number() / this->get_associativity()), "Wrong line number(%u) or associativity(%u).\n", this->get_line_number(), this->get_associativity());
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_line_size()), "Wrong line size.\n");
 
     this->set_total_sets(this->get_line_number() / this->get_associativity());
     this->sets = utils_t::template_allocate_array<cache_set_t>(this->get_total_sets());
-    for (i = 0; i < this->get_total_sets(); i++) {
+    for (uint32_t i = 0; i < this->get_total_sets(); i++) {
         this->sets[i].ways = utils_t::template_allocate_array<cache_line_t>(this->get_associativity());
     }
-
-    this->read_ready = sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
-    this->write_ready = sinuca_engine.get_global_cycle();  /// Ready to receive from LOWER_PORT
 
     /// MSHR = [    REQUEST    | COPYBACK | PREFETCH ]
     this->mshr_buffer_size = this->mshr_buffer_request_reserved_size +
@@ -91,7 +91,6 @@ void cache_memory_t::allocate() {
     sprintf(label, "Line_Usage_Predictor_%s", this->get_label());
     this->line_usage_predictor.set_label(label);
     this->line_usage_predictor.allocate();
-
 
     #ifdef CACHE_DEBUG
         this->print_configuration();
@@ -201,30 +200,9 @@ void cache_memory_t::clock(uint32_t subcycle) {
     CACHE_DEBUG_PRINTF("cycle() \n");
 
     this->prefetcher.clock(subcycle);
-    // ~ int32_t position_ans = POSITION_FAIL;
-    // ~ int32_t position_rqst = POSITION_FAIL;
     // =================================================================
     // MSHR_BUFFER - TRANSMISSION
     // =================================================================
-    // ~ memory_package_t::find_old_rqst_ans_state_ready(this->mshr_buffer, this->mshr_buffer_size, PACKAGE_STATE_TRANSMIT, position_rqst, position_ans);
-    // ~ /// PACKAGE_STATE_TRANSMIT (answer) => send()
-    // ~ if (position_ans != POSITION_FAIL) {
-        // ~ CACHE_DEBUG_PRINTF("\t Send ANSWER MSHR[%d] %s\n", position_ans, this->mshr_buffer[position_ans].memory_to_string().c_str());
-        // ~ int32_t transmission_latency = send_package(&this->mshr_buffer[position_ans]);
-        // ~ if (transmission_latency != POSITION_FAIL) {
-            // ~ this->mshr_buffer[position_ans].package_clean();
-        // ~ }
-    // ~ }
-// ~ // ~
-    // ~ /// PACKAGE_STATE_TRANSMIT (request) => send()
-    // ~ if (position_rqst != POSITION_FAIL) {
-        // ~ CACHE_DEBUG_PRINTF("\t Send REQUEST MSHR[%d] %s\n", position_rqst, this->mshr_buffer[position_rqst].memory_to_string().c_str());
-        // ~ int32_t transmission_latency = send_package(&this->mshr_buffer[position_rqst]);
-        // ~ if (transmission_latency != POSITION_FAIL) {
-            // ~ this->mshr_buffer[position_rqst].package_wait(transmission_latency);
-        // ~ }
-    // ~ }
-
     for (uint32_t i = 0; i < this->mshr_born_ordered->size(); i++){
         if (mshr_born_ordered[0][i]->state == PACKAGE_STATE_TRANSMIT &&
         mshr_born_ordered[0][i]->is_answer == true &&
@@ -254,31 +232,9 @@ void cache_memory_t::clock(uint32_t subcycle) {
         }
     }
 
-    // ~ // =================================================================
-    // ~ // MSHR_BUFFER - UNTREATED
-    // ~ // =================================================================
-    // ~ memory_package_t::find_old_rqst_ans_state_ready(this->mshr_buffer, this->mshr_buffer_size, PACKAGE_STATE_UNTREATED, position_rqst, position_ans);
-    // ~ /// PACKAGE_STATE_UNTREATED + ANSWER => treat()
-    // ~ if (position_ans != POSITION_FAIL) {
-        // ~ CACHE_DEBUG_PRINTF("\t Treat ANSWER MSHR[%d] %s\n", position_ans, this->mshr_buffer[position_ans].memory_to_string().c_str());
-        // ~ this->mshr_buffer[position_ans].state = sinuca_engine.directory_controller->treat_cache_answer(this->get_cache_id(), &this->mshr_buffer[position_ans]);
-        // ~ /// Could not treat, then restart born_cycle (change priority)
-        // ~ if (this->mshr_buffer[position_ans].state == PACKAGE_STATE_UNTREATED) {
-                // ~ this->mshr_buffer[position_ans].born_cycle = sinuca_engine.get_global_cycle();
-        // ~ }
-    // ~ }
-// ~
-    // ~ /// PACKAGE_STATE_UNTREATED + REQUEST => treat()
-    // ~ if (position_rqst != POSITION_FAIL) {
-        // ~ CACHE_DEBUG_PRINTF("\t Treat REQUEST MSHR[%d] %s\n", position_rqst, this->mshr_buffer[position_rqst].memory_to_string().c_str());
-        // ~ this->prefetcher.treat_prefetch(&this->mshr_buffer[position_rqst]);
-        // ~ this->mshr_buffer[position_rqst].state = sinuca_engine.directory_controller->treat_cache_request(this->get_cache_id(), &this->mshr_buffer[position_rqst]);
-        // ~ /// Could not treat, then restart born_cycle (change priority)
-        // ~ if (this->mshr_buffer[position_rqst].state == PACKAGE_STATE_UNTREATED) {
-                // ~ this->mshr_buffer[position_rqst].born_cycle = sinuca_engine.get_global_cycle();
-        // ~ }
-    // ~ }
-
+    // =================================================================
+    // MSHR_BUFFER - UNTREATED
+    // =================================================================
     for (uint32_t i = 0; i < this->mshr_born_ordered->size(); i++){
         if (mshr_born_ordered[0][i]->state == PACKAGE_STATE_UNTREATED &&
         mshr_born_ordered[0][i]->is_answer == true &&
@@ -328,42 +284,6 @@ void cache_memory_t::clock(uint32_t subcycle) {
     // =================================================================
     // PREFETCHER
     // =================================================================
-    // ~ memory_package_t* memory_package = this->prefetcher.request_buffer_get_older();
-    // ~ if (memory_package != NULL) {
-        // ~ bool already_requested = false;
-        // ~ CACHE_DEBUG_PRINTF("\t Has New Prefetch.\n");
-// ~ 
-        // ~ /// Check if the same address has been already requested
-        // ~ for (uint32_t i = 0 ; i < this->mshr_buffer_size; i++) {
-            // ~ if (this->cmp_tag_index_bank(this->mshr_buffer[i].memory_address, memory_package->memory_address)) {
-                // ~ already_requested = true;
-                // ~ CACHE_DEBUG_PRINTF("\t\t Dropping PREFETCH\n");
-                // ~ this->prefetcher.request_buffer_remove();
-                // ~ break;
-            // ~ }
-        // ~ }
-// ~ 
-        // ~ if (already_requested == false) {
-            // ~ /// Check for free space into MSHR[PREFETCH]
-            // ~ int32_t position_pfetch = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size, this->mshr_buffer_prefetch_reserved_size);
-            // ~ if (position_pfetch != POSITION_FAIL) {
-                // ~ position_pfetch += this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size;
-                    // ~ CACHE_DEBUG_PRINTF("\t RECEIVED PREFETCH\n");
-                    // ~ this->mshr_buffer[position_pfetch] = *memory_package;
-                    // ~ this->mshr_buffer[position_pfetch].id_owner = get_id();
-                    // ~ this->mshr_buffer[position_pfetch].id_src = get_id();
-                    // ~ this->mshr_buffer[position_pfetch].id_dst = get_id();
-                    // ~ this->mshr_buffer[position_pfetch].package_untreated(0);
-                // ~ }
-            // ~ else {
-                // ~ add_stat_full_mshr_buffer_prefetch();
-            // ~ }
-        // ~ }
-    // ~ }
-
-    // =================================================================
-    // PREFETCHER
-    // =================================================================
     memory_package_t* memory_package = this->prefetcher.request_buffer_get_older();
     if (memory_package != NULL) {
         CACHE_DEBUG_PRINTF("\t Has New Prefetch.\n");
@@ -398,46 +318,39 @@ void cache_memory_t::clock(uint32_t subcycle) {
         }
     }
 
-    
 };
 
 // =============================================================================
 int32_t cache_memory_t::send_package(memory_package_t *package) {
     CACHE_DEBUG_PRINTF("send_package() package:%s\n", package->memory_to_string().c_str());
-    sinuca_engine.interconnection_controller->find_package_route(package);
 
-    ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
-    uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
-    ERROR_ASSERT_PRINTF(output_port < this->get_max_ports(), "Output Port does not exist\n");
-    package->hop_count--;  /// Consume its own port
+    if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
+        sinuca_engine.interconnection_controller->find_package_route(package);
+        ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
+        uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
+        ERROR_ASSERT_PRINTF(output_port < this->get_max_ports(), "Output Port does not exist\n");
+        package->hop_count--;  /// Consume its own port
 
-    bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port));
-    if (sent) {
-        CACHE_DEBUG_PRINTF("\tSEND OK\n");
-        uint32_t latency = sinuca_engine.interconnection_controller->find_package_route_latency(package);
-        return latency;
+        uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(package, this, this->get_interface_output_component(output_port));
+        bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port), transmission_latency);
+        if (sent) {
+            CACHE_DEBUG_PRINTF("\tSEND OK\n");
+            this->send_ready_cycle = sinuca_engine.get_global_cycle() + transmission_latency;
+            return transmission_latency;
+        }
+        else {
+            CACHE_DEBUG_PRINTF("\tSEND FAIL\n");
+            package->hop_count++;  /// Do not Consume its own port
+            return POSITION_FAIL;
+        }
     }
-    else {
-        CACHE_DEBUG_PRINTF("\tSEND FAIL\n");
-        package->hop_count++;  /// Do not Consume its own port
-        return POSITION_FAIL;
-    }
+    CACHE_DEBUG_PRINTF("\tSEND FAIL (BUSY)\n");
+    return POSITION_FAIL;
 };
 
 
 // =============================================================================
 void cache_memory_t::insert_mshr_born_ordered(memory_package_t* package){
-
-    // ~ /// Most of the insertions are made in the end !!!
-    // ~ for (uint32_t i = 0; i < this->mshr_born_ordered->size(); i++){
-        // ~ if (this->mshr_born_ordered[0][i]->born_cycle > package->born_cycle) {
-            // ~ this->mshr_born_ordered->insert(this->mshr_born_ordered->begin() + i, package);
-            // ~ return;
-        // ~ }
-    // ~ }
-    // ~ /// Could not find a yunger package to insert or it is just empty
-    // ~ this->mshr_born_ordered->insert(this->mshr_born_ordered->end(), package);
-
     /// mshr_born_ordered            = [OLDER --------> NEWER]
     /// mshr_born_ordered.born_cycle = [SMALLER -----> BIGGER]
 
@@ -500,35 +413,39 @@ int32_t cache_memory_t::allocate_prefetch(memory_package_t* package){
 
 
 // =============================================================================
-bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_port) {
+bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
     CACHE_DEBUG_PRINTF("receive_package() port:%u, package:%s\n", input_port, package->memory_to_string().c_str());
+
     ERROR_ASSERT_PRINTF(get_bank(package->memory_address) == this->get_bank_number(), "Wrong bank.\n")
     ERROR_ASSERT_PRINTF(package->id_dst == this->get_id(), "Received some package for a different id_dst.\n");
     ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Received a wrong input_port\n");
 
-    uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(package);
     int32_t slot = POSITION_FAIL;
-
     /// NEW ANSWER
     if (package->is_answer) {
-        for (uint32_t i = 0 ; i < this->mshr_buffer_size; i++) {
-            /// Find the correct REQUEST which matches with the ANSWER
-            if (this->mshr_buffer[i].state == PACKAGE_STATE_WAIT &&
-            this->mshr_buffer[i].id_owner == package->id_owner &&
-            this->mshr_buffer[i].opcode_number == package->opcode_number &&
-            this->mshr_buffer[i].uop_number == package->uop_number &&
-            this->cmp_tag_index_bank(this->mshr_buffer[i].memory_address, package->memory_address)) {
-                CACHE_DEBUG_PRINTF("\t RECEIVED ANSWER package WANTED\n");
-                this->mshr_buffer[i].is_answer = package->is_answer;
-                this->mshr_buffer[i].memory_size = package->memory_size;
-                this->mshr_buffer[i].id_src = package->id_src;
-                this->mshr_buffer[i].id_dst = package->id_dst;
-                // to-do:(mazalves) Change it to make trail edge - get from main memory the byte you requested first
-                this->mshr_buffer[i].package_untreated(transmission_latency);
-                return OK;
+        if (this->recv_ans_ready_cycle <= sinuca_engine.get_global_cycle()) {
+            for (uint32_t i = 0 ; i < this->mshr_buffer_size; i++) {
+                /// Find the correct REQUEST which matches with the ANSWER
+                if (this->mshr_buffer[i].state == PACKAGE_STATE_WAIT &&
+                this->mshr_buffer[i].id_owner == package->id_owner &&
+                this->mshr_buffer[i].opcode_number == package->opcode_number &&
+                this->mshr_buffer[i].uop_number == package->uop_number &&
+                this->cmp_tag_index_bank(this->mshr_buffer[i].memory_address, package->memory_address)) {
+                    CACHE_DEBUG_PRINTF("\t RECEIVED ANSWER package WANTED\n");
+                    this->mshr_buffer[i].is_answer = package->is_answer;
+                    this->mshr_buffer[i].memory_size = package->memory_size;
+                    this->mshr_buffer[i].id_src = package->id_src;
+                    this->mshr_buffer[i].id_dst = package->id_dst;
+                    /// Consider The critical word (word originally requested by the processor) is requested first.
+                    this->mshr_buffer[i].package_untreated(1);
+                    this->recv_ans_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
+                    return OK;
+                }
             }
+            ERROR_PRINTF("Receive a NOT WANTED package %s.\n", package->memory_to_string().c_str())
         }
-        ERROR_PRINTF("Receive a NOT WANTED package %s.\n", package->memory_to_string().c_str())
+        CACHE_DEBUG_PRINTF("\tRECV DATA FAIL (BUSY)\n");
+        return FAIL;
     }
     /// NEW REQUEST
     else {
@@ -537,13 +454,13 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
             case MEMORY_OPERATION_INST:
             case MEMORY_OPERATION_PREFETCH:
             {
-                if (this->read_ready <= sinuca_engine.get_global_cycle()) {
+                if (this->recv_rqst_read_ready_cycle <= sinuca_engine.get_global_cycle()) {
                     slot = memory_package_t::find_free(this->mshr_buffer, this->mshr_buffer_request_reserved_size);
                     if (slot != POSITION_FAIL) {
                         CACHE_DEBUG_PRINTF("\t RECEIVED READ REQUEST\n");
                         this->mshr_buffer[slot] = *package;
-                        this->mshr_buffer[slot].package_untreated(transmission_latency);
-                        this->read_ready = 1 + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
+                        this->mshr_buffer[slot].package_untreated(1);
+                        this->recv_rqst_read_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
 
                         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
                         return OK;
@@ -553,19 +470,21 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
                         return FAIL;
                     }
                 }
+                CACHE_DEBUG_PRINTF("\tRECV DATA FAIL (BUSY)\n");
+                return FAIL;
             }
             break;
 
             case MEMORY_OPERATION_WRITE:
             case MEMORY_OPERATION_COPYBACK:
             {
-                if (this->write_ready <= sinuca_engine.get_global_cycle()) {
+                if (this->recv_rqst_write_ready_cycle <= sinuca_engine.get_global_cycle()) {
                     slot = memory_package_t::find_free(this->mshr_buffer, this->mshr_buffer_request_reserved_size);
                     if (slot != POSITION_FAIL) {
                         CACHE_DEBUG_PRINTF("\t RECEIVED WRITE REQUEST\n");
                         this->mshr_buffer[slot] = *package;
-                        this->mshr_buffer[slot].package_untreated(transmission_latency);
-                        this->write_ready = 1 + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
+                        this->mshr_buffer[slot].package_untreated(1);
+                        this->recv_rqst_write_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
 
                         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
                         return OK;
@@ -575,11 +494,12 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
                         return FAIL;
                     }
                 }
+                CACHE_DEBUG_PRINTF("\tRECV DATA FAIL (BUSY)\n");
+                return FAIL;
             }
             break;
         }
     }
-
     return FAIL;
 };
 

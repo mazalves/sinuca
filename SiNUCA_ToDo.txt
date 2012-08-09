@@ -42,6 +42,3 @@ STATISTICS -- Average Decoded Opcodes / Uops
     ok-- protocol (MOESI)
     ok-- lock (R/W/NULL)
     ok-- parallel requests
-
-################################################################
-PREDICTION BUSINESS -- Check if READ/WRITE change the prediction, write should not request missing blocks ...

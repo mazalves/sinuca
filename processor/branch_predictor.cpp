@@ -115,8 +115,8 @@ void branch_predictor_t::clock(uint32_t subcycle) {
 };
 
 //==============================================================================
-bool branch_predictor_t::receive_package(memory_package_t *package, uint32_t input_port) {
-    ERROR_PRINTF("Received package %s into the input_port %u.\n", package->memory_to_string().c_str(), input_port);
+bool branch_predictor_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
+    ERROR_PRINTF("Received package %s into the input_port %u, latency %u.\n", package->memory_to_string().c_str(), input_port, transmission_latency);
     return FAIL;
 };
 

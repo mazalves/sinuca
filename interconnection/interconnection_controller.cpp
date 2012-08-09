@@ -99,8 +99,8 @@ void interconnection_controller_t::clock(uint32_t subcycle) {
 };
 
 /// ============================================================================
-bool interconnection_controller_t::receive_package(memory_package_t *package, uint32_t input_port) {
-    ERROR_PRINTF("Received package %s into the input_port %u.\n", package->memory_to_string().c_str(), input_port);
+bool interconnection_controller_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
+    ERROR_PRINTF("Received package %s into the input_port %u, latency %u.\n", package->memory_to_string().c_str(), input_port, transmission_latency);
     return FAIL;
 };
 
@@ -294,23 +294,19 @@ void interconnection_controller_t::find_package_route(memory_package_t *package)
 };
 
 /// ============================================================================
-uint32_t interconnection_controller_t::find_package_route_latency(memory_package_t *package) {
-
-
-
+uint32_t interconnection_controller_t::find_package_route_latency(memory_package_t *package, interconnection_interface_t *src, interconnection_interface_t *dst){
     uint32_t max_latency = 0;
     uint32_t min_width = 0;
 
-    max_latency = sinuca_engine.interconnection_interface_array[package->id_src]->get_interconnection_latency();
-    if (sinuca_engine.interconnection_interface_array[package->id_dst]->get_interconnection_latency() > max_latency) {
-        max_latency = sinuca_engine.interconnection_interface_array[package->id_dst]->get_interconnection_latency();
+    max_latency = src->get_interconnection_latency();
+    if (dst->get_interconnection_latency() > max_latency) {
+        max_latency = dst->get_interconnection_latency();
     }
 
-    min_width = sinuca_engine.interconnection_interface_array[package->id_src]->get_interconnection_width();
-    if (sinuca_engine.interconnection_interface_array[package->id_dst]->get_interconnection_width() > min_width) {
-        min_width = sinuca_engine.interconnection_interface_array[package->id_dst]->get_interconnection_width();
+    min_width = src->get_interconnection_width();
+    if (dst->get_interconnection_width() > min_width) {
+        min_width = dst->get_interconnection_width();
     }
-
 
     switch (package->memory_operation) {
         case MEMORY_OPERATION_INST:

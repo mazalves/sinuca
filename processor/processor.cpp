@@ -44,6 +44,9 @@ processor_t::processor_t() {
     this->sync_status_time = 0;             /// Last time the sync changed
     this->trace_over = false;
 
+    this->send_instruction_ready_cycle = 0;
+    this->send_data_ready_cycle = 0;
+
     /// Stages Control Variables
     this->trace_next_opcode.package_clean();
     this->fetch_pc = 0;                     /// Last PC requested to IC
@@ -129,6 +132,8 @@ processor_t::processor_t() {
 //==============================================================================
 processor_t::~processor_t() {
     // De-Allocate memory to prevent memory leak
+    utils_t::template_delete_array<uint64_t>(recv_ready_cycle);
+
     utils_t::template_delete_array<opcode_package_t>(fetch_buffer);
     utils_t::template_delete_array<uop_package_t>(decode_buffer);
     utils_t::template_delete_array<reorder_buffer_line_t>(reorder_buffer);
@@ -144,6 +149,8 @@ processor_t::~processor_t() {
 void processor_t::allocate() {
     PROCESSOR_DEBUG_PRINTF("allocate()\n");
     this->trace_next_opcode.package_clean();
+
+    this->recv_ready_cycle = utils_t::template_allocate_initialize_array<uint64_t>(this->get_max_ports(), 0);
 
     /// Fetch Buffer
     this->fetch_buffer = utils_t::template_allocate_array<opcode_package_t>(this->fetch_buffer_size);
@@ -523,49 +530,53 @@ void processor_t::stage_fetch() {
 
 int32_t processor_t::send_instruction_package(opcode_package_t *inst_package) {
     PROCESSOR_DEBUG_PRINTF("send_instruction_package() package:%s\n", inst_package->opcode_to_string().c_str());
-    memory_package_t *package = new memory_package_t;
 
-    package->packager(
-        this->get_id(),                     /// Request Owner Id
-        inst_package->opcode_number,        /// opcode Number
-        inst_package->opcode_address,       /// opcode Address
-        0,                                  /// uop Number
+    if (this->send_instruction_ready_cycle <= sinuca_engine.get_global_cycle()) {
+        memory_package_t package;
+        package.packager(
+            this->get_id(),                     /// Request Owner Id
+            inst_package->opcode_number,        /// opcode Number
+            inst_package->opcode_address,       /// opcode Address
+            0,                                  /// uop Number
 
-        /// Request the whole line
-        inst_package->opcode_address & this->not_offset_bits_mask,     /// Mem. Address
-        sinuca_engine.get_global_line_size(),               /// Instruction Size
+            /// Request the whole line
+            inst_package->opcode_address & this->not_offset_bits_mask,     /// Mem. Address
+            sinuca_engine.get_global_line_size(),               /// Instruction Size
 
-        PACKAGE_STATE_TRANSMIT,             /// Pack. State
-        0,                                  /// Ready Cycle Latency
+            PACKAGE_STATE_TRANSMIT,             /// Pack. State
+            0,                                  /// Ready Cycle Latency
 
-        MEMORY_OPERATION_INST,              /// Mem Op. Type
-        false,                              /// Is Answer
+            MEMORY_OPERATION_INST,              /// Mem Op. Type
+            false,                              /// Is Answer
 
-        this->get_id(),                                                                 /// Src ID
-        this->get_interface_output_component(PROCESSOR_PORT_INST_CACHE)->get_id(),      /// Dst ID
-        NULL,                               /// *Hops
-        0                                   /// Hop Counter
-        );
+            this->get_id(),                                                                 /// Src ID
+            this->get_interface_output_component(PROCESSOR_PORT_INST_CACHE)->get_id(),      /// Dst ID
+            NULL,                               /// *Hops
+            0                                   /// Hop Counter
+            );
 
-    sinuca_engine.interconnection_controller->find_package_route(package);
-    ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
-    uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
-    ERROR_ASSERT_PRINTF(output_port < this->get_max_ports(), "Output Port does not exist\n");
-    package->hop_count--;  /// Consume its own port
+        sinuca_engine.interconnection_controller->find_package_route(&package);
+        ERROR_ASSERT_PRINTF(package.hop_count != POSITION_FAIL, "Achieved the end of the route\n");
+        uint32_t output_port = package.hops[package.hop_count];  /// Where to send the package ?
+        ERROR_ASSERT_PRINTF(output_port < this->get_max_ports(), "Output Port does not exist\n");
+        package.hop_count--;  /// Consume its own port
 
-    bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port));
-    if (sent) {
-        PROCESSOR_DEBUG_PRINTF("\tSEND DATA OK\n");
-        uint32_t latency = sinuca_engine.interconnection_controller->find_package_route_latency(package);
-        delete package;
-        return latency;
+        uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(&package, this, this->get_interface_output_component(output_port));
+        bool sent = this->get_interface_output_component(output_port)->receive_package(&package, this->get_ports_output_component(output_port), transmission_latency);
+        if (sent) {
+            PROCESSOR_DEBUG_PRINTF("\tSEND DATA OK\n");
+            this->send_instruction_ready_cycle = sinuca_engine.get_global_cycle() + transmission_latency;
+            return transmission_latency;
+        }
+        else {
+            PROCESSOR_DEBUG_PRINTF("\tSEND DATA FAIL\n");
+            package.hop_count++;  /// Do not Consume its own port
+            return POSITION_FAIL;
+        }
     }
-    else {
-        PROCESSOR_DEBUG_PRINTF("\tSEND DATA FAIL\n");
-        package->hop_count++;  /// Do not Consume its own port
-        delete package;
-        return POSITION_FAIL;
-    }
+    PROCESSOR_DEBUG_PRINTF("\tSEND DATA FAIL (BUSY)\n");
+    return POSITION_FAIL;
+
 };
 
 //==============================================================================
@@ -1099,24 +1110,28 @@ void processor_t::stage_execution() {
 ///         Return POSITION_FAIL
 int32_t processor_t::send_data_package(memory_package_t *package) {
     PROCESSOR_DEBUG_PRINTF("send_data_package() package:%s\n", package->memory_to_string().c_str());
-    sinuca_engine.interconnection_controller->find_package_route(package);
 
-    ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
-    uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
-    ERROR_ASSERT_PRINTF(output_port < this->get_max_ports(), "Output Port does not exist\n");
-    package->hop_count--;  /// Consume its own port
+    if (this->send_data_ready_cycle <= sinuca_engine.get_global_cycle()) {
+        sinuca_engine.interconnection_controller->find_package_route(package);
+        ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
+        uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
+        ERROR_ASSERT_PRINTF(output_port < this->get_max_ports(), "Output Port does not exist\n");
+        package->hop_count--;  /// Consume its own port
 
-    bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port));
-    if (sent) {
-        PROCESSOR_DEBUG_PRINTF("\tSEND DATA OK\n");
-        uint32_t latency = sinuca_engine.interconnection_controller->find_package_route_latency(package);
-        return latency;
+        uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(package, this, this->get_interface_output_component(output_port));
+        bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port), transmission_latency);
+        if (sent) {
+            PROCESSOR_DEBUG_PRINTF("\tSEND DATA OK\n");
+            this->send_data_ready_cycle = sinuca_engine.get_global_cycle() + transmission_latency;
+            return transmission_latency;
+        }
+        else {
+            PROCESSOR_DEBUG_PRINTF("\tSEND DATA FAIL\n");
+            package->hop_count++;  /// Do not Consume its own port
+            return POSITION_FAIL;
+        }
     }
-    else {
-        PROCESSOR_DEBUG_PRINTF("\tSEND DATA FAIL\n");
-        package->hop_count++;  /// Do not Consume its own port
-        return POSITION_FAIL;
-    }
+    return POSITION_FAIL;
 };
 
 //==============================================================================
@@ -1280,73 +1295,79 @@ void processor_t::clock(uint32_t subcycle) {
 };
 
 //==============================================================================
-bool processor_t::receive_package(memory_package_t *package, uint32_t input_port) {
-    PROCESSOR_DEBUG_PRINTF("receive_package() port:%u, package:%s\n", input_port, package->memory_to_string().c_str());
-    ERROR_ASSERT_PRINTF(package->id_owner == this->get_id(), "Received some package for a different owner.\n");
-    ERROR_ASSERT_PRINTF(package->id_dst == this->get_id(), "Received some package for a different id_dst.\n");
-    ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Received a wrong input_port\n");
-    ERROR_ASSERT_PRINTF(package->is_answer == true, "Only answers are expected.\n");
+bool processor_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
 
-    int32_t slot = POSITION_FAIL;
-    uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(package);
+    if (this->recv_ready_cycle[input_port] <= sinuca_engine.get_global_cycle()) {
+        PROCESSOR_DEBUG_PRINTF("receive_package() port:%u, package:%s\n", input_port, package->memory_to_string().c_str());
+        ERROR_ASSERT_PRINTF(package->id_owner == this->get_id(), "Received some package for a different owner.\n");
+        ERROR_ASSERT_PRINTF(package->id_dst == this->get_id(), "Received some package for a different id_dst.\n");
+        ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Received a wrong input_port\n");
+        ERROR_ASSERT_PRINTF(package->is_answer == true, "Only answers are expected.\n");
 
-    switch (package->memory_operation) {
-        case MEMORY_OPERATION_INST:
-            ERROR_ASSERT_PRINTF(input_port == PROCESSOR_PORT_INST_CACHE, "Receiving instruction package from a wrong port.\n");
+        int32_t slot = POSITION_FAIL;
 
-            /// Add to the buffer the whole line fetched
-            this->fetch_pc_line_buffer = package->memory_address;
+        switch (package->memory_operation) {
+            case MEMORY_OPERATION_INST:
+                ERROR_ASSERT_PRINTF(input_port == PROCESSOR_PORT_INST_CACHE, "Receiving instruction package from a wrong port.\n");
 
-            /// Find packages WAITING
-            for (uint32_t k = 0; k < this->fetch_buffer_position_used; k++) {
-                /// Update the FETCH BUFFER position
-                uint32_t i = this->fetch_buffer_position_start + k;
-                if (i >= this->fetch_buffer_size) {
-                    i -= this->fetch_buffer_size;
+                /// Add to the buffer the whole line fetched
+                this->fetch_pc_line_buffer = package->memory_address;
+
+                /// Find packages WAITING
+                for (uint32_t k = 0; k < this->fetch_buffer_position_used; k++) {
+                    /// Update the FETCH BUFFER position
+                    uint32_t i = this->fetch_buffer_position_start + k;
+                    if (i >= this->fetch_buffer_size) {
+                        i -= this->fetch_buffer_size;
+                    }
+
+                    /// Wake up ALL instructions waiting
+                    if (this->fetch_buffer[i].state == PACKAGE_STATE_WAIT && this->cmp_index_tag(this->fetch_buffer[i].opcode_address, package->memory_address)) {
+                        PROCESSOR_DEBUG_PRINTF("\t WANTED INSTRUCTION\n");
+                        this->fetch_buffer[i].package_ready(transmission_latency);
+                        slot = i;
+                    }
                 }
+                ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read Instruction done, but it is not on the fetch-buffer anymore.\n")
+                this->recv_ready_cycle[input_port] = sinuca_engine.get_global_cycle() + transmission_latency;
+                return OK;
+            break;
 
-                /// Wake up ALL instructions waiting
-                if (this->fetch_buffer[i].state == PACKAGE_STATE_WAIT && this->cmp_index_tag(this->fetch_buffer[i].opcode_address, package->memory_address)) {
-                    PROCESSOR_DEBUG_PRINTF("\t WANTED INSTRUCTION\n");
-                    this->fetch_buffer[i].package_ready(transmission_latency);
-                    slot = i;
-                }
-            }
-            ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read Instruction done, but it is not on the fetch-buffer anymore.\n")
-            return OK;
-        break;
+            case MEMORY_OPERATION_READ:
+                ERROR_ASSERT_PRINTF(input_port == PROCESSOR_PORT_DATA_CACHE, "Receiving read package from a wrong port.\n");
 
-        case MEMORY_OPERATION_READ:
-            ERROR_ASSERT_PRINTF(input_port == PROCESSOR_PORT_DATA_CACHE, "Receiving read package from a wrong port.\n");
+                slot = memory_package_t::find_state_mem_address(this->read_buffer, this->read_buffer_size, PACKAGE_STATE_WAIT, package->memory_address);
+                ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read done, but it is not on the read-buffer anymore.\n")
 
-            slot = memory_package_t::find_state_mem_address(this->read_buffer, this->read_buffer_size, PACKAGE_STATE_WAIT, package->memory_address);
-            ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read done, but it is not on the read-buffer anymore.\n")
+                PROCESSOR_DEBUG_PRINTF("\t WANTED READ.\n");
+                this->read_buffer[slot].is_answer = true;
+                this->read_buffer[slot].package_ready(transmission_latency);
+                this->recv_ready_cycle[input_port] = sinuca_engine.get_global_cycle() + transmission_latency;
+                return OK;
+            break;
 
-            PROCESSOR_DEBUG_PRINTF("\t WANTED READ.\n");
-            this->read_buffer[slot].is_answer = true;
-            this->read_buffer[slot].package_ready(transmission_latency);
-            return OK;
-        break;
+            case MEMORY_OPERATION_WRITE:
+                ERROR_ASSERT_PRINTF(input_port == PROCESSOR_PORT_DATA_CACHE, "Receiving write package from a wrong port.\n");
 
-        case MEMORY_OPERATION_WRITE:
-            ERROR_ASSERT_PRINTF(input_port == PROCESSOR_PORT_DATA_CACHE, "Receiving write package from a wrong port.\n");
+                slot = memory_package_t::find_state_mem_address(this->write_buffer, this->write_buffer_size, PACKAGE_STATE_WAIT, package->memory_address);
+                ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read done, but it is not on the read-buffer anymore.\n")
 
-            slot = memory_package_t::find_state_mem_address(this->write_buffer, this->write_buffer_size, PACKAGE_STATE_WAIT, package->memory_address);
-            ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read done, but it is not on the read-buffer anymore.\n")
+                PROCESSOR_DEBUG_PRINTF("\t WANTED WRITE.\n");
+                this->write_buffer[slot].is_answer = true;
+                this->write_buffer[slot].package_ready(transmission_latency);
+                this->recv_ready_cycle[input_port] = sinuca_engine.get_global_cycle() + transmission_latency;
+                return OK;
+            break;
 
-            PROCESSOR_DEBUG_PRINTF("\t WANTED WRITE.\n");
-            this->write_buffer[slot].is_answer = true;
-            this->write_buffer[slot].package_ready(transmission_latency);
-            return OK;
-        break;
-
-        case MEMORY_OPERATION_COPYBACK:
-        case MEMORY_OPERATION_PREFETCH:
-            ERROR_PRINTF("Processor receiving %s.\n", get_enum_memory_operation_char(package->memory_operation))
-            return FAIL;
-        break;
+            case MEMORY_OPERATION_COPYBACK:
+            case MEMORY_OPERATION_PREFETCH:
+                ERROR_PRINTF("Processor receiving %s.\n", get_enum_memory_operation_char(package->memory_operation))
+                return FAIL;
+            break;
+        }
+        ERROR_PRINTF("Processor receiving %s.\n", get_enum_memory_operation_char(package->memory_operation))
+        return FAIL;
     }
-    ERROR_PRINTF("Processor receiving %s.\n", get_enum_memory_operation_char(package->memory_operation))
     return FAIL;
 };
 

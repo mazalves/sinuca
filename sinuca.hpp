@@ -745,7 +745,7 @@ class interconnection_interface_t : public statistics_t {
         /// ====================================================================
         virtual void allocate()=0;  /// Called after all the parameters are set
         virtual void clock(uint32_t sub_cycle)=0;   /// Called every cycle
-        virtual bool receive_package(memory_package_t *package, uint32_t input_port)=0; /// return OK or FAIL
+        virtual bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency)=0; /// Only Sender calculate the latency and pass to the receiver.
         virtual void periodic_check()=0;    /// Check all the internal structures
         virtual void print_structures()=0;  /// Print the internal structures
         virtual void panic()=0;             /// Called when some ERROR happens
@@ -824,7 +824,7 @@ class interconnection_controller_t : public interconnection_interface_t {
         void allocate();
         void clock(uint32_t sub_cycle);
         int32_t send_package(memory_package_t *package);
-        bool receive_package(memory_package_t *package, uint32_t input_port);
+        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_lantecy);
         void print_structures();
         void panic();
         void periodic_check();
@@ -837,7 +837,7 @@ class interconnection_controller_t : public interconnection_interface_t {
 
         void create_route(interconnection_interface_t *src, interconnection_interface_t *dst);
         void find_package_route(memory_package_t *package);
-        uint32_t find_package_route_latency(memory_package_t *package);
+        uint32_t find_package_route_latency(memory_package_t *package, interconnection_interface_t *src, interconnection_interface_t *dst);
         void create_communication_graph();
 
         /// routing algorithms
@@ -869,7 +869,9 @@ class interconnection_router_t : public interconnection_interface_t {
         uint32_t *input_buffer_position_end;
         uint32_t *input_buffer_position_used;
 
-        uint64_t ready_cycle;  /// Time left for the router's next operation.
+        uint64_t send_ready_cycle;  /// Time left for the router's next send operation.
+        uint64_t *recv_ready_cycle;  /// Time left for the router's next receive operation (per port).
+
         uint32_t last_send;  /// The last port that has something been sent. Used by RoundRobin and BufferLevel selection.
 
 
@@ -877,6 +879,7 @@ class interconnection_router_t : public interconnection_interface_t {
         /// Statistics related
         /// ====================================================================
         uint64_t stat_transmissions;
+        uint64_t *stat_transmitted_package_size;
     public:
         /// ====================================================================
         /// Methods
@@ -891,7 +894,7 @@ class interconnection_router_t : public interconnection_interface_t {
         void allocate();
         void clock(uint32_t sub_cycle);
         int32_t send_package(memory_package_t *package);
-        bool receive_package(memory_package_t *package, uint32_t input_port);
+        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
         void print_structures();
         void panic();
         void periodic_check();
@@ -914,7 +917,7 @@ class interconnection_router_t : public interconnection_interface_t {
         uint32_t selectionRoundRobin();
 
         INSTANTIATE_GET_SET(selection_t, selection_policy)
-        INSTANTIATE_GET_SET(uint32_t, ready_cycle)
+        INSTANTIATE_GET_SET(uint32_t, send_ready_cycle)
         INSTANTIATE_GET_SET(uint32_t, input_buffer_size)
 
         /// ====================================================================
@@ -1020,7 +1023,7 @@ class branch_predictor_t : public interconnection_interface_t {
         void allocate();
         void clock(uint32_t sub_cycle);
         int32_t send_package(memory_package_t *package);
-        bool receive_package(memory_package_t *package, uint32_t input_port);
+        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
         void print_structures();
         void panic();
         void periodic_check();
@@ -1174,6 +1177,10 @@ class processor_t : public interconnection_interface_t {
         uint64_t offset_bits_mask;      /// Offset mask
         uint64_t not_offset_bits_mask;  /// Offset mask
 
+        /// Interconnection controls
+        uint64_t send_instruction_ready_cycle;
+        uint64_t send_data_ready_cycle;
+        uint64_t *recv_ready_cycle;
 
         /// Synchronization Control Variables
         sync_t sync_status;                    /// Used to sync or request sync
@@ -1294,7 +1301,7 @@ class processor_t : public interconnection_interface_t {
         void allocate();
         void clock(uint32_t sub_cycle);
         int32_t send_package(memory_package_t *package);
-        bool receive_package(memory_package_t *package, uint32_t input_port);
+        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_lantecy);
         void print_structures();
         void panic();
         void periodic_check();
@@ -1569,7 +1576,7 @@ class directory_controller_t : public interconnection_interface_t {
         void allocate();
         void clock(uint32_t sub_cycle);
         int32_t send_package(memory_package_t *package);
-        bool receive_package(memory_package_t *package, uint32_t input_port);
+        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_lantecy);
         void print_structures();
         void panic();
         void periodic_check();
@@ -1739,7 +1746,7 @@ class prefetch_t : public interconnection_interface_t {
         void allocate();
         void clock(uint32_t sub_cycle);
         int32_t send_package(memory_package_t *package);
-        bool receive_package(memory_package_t *package, uint32_t input_port);
+        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_lantecy);
         void print_structures();
         void panic();
         void periodic_check();
@@ -1970,7 +1977,7 @@ class line_usage_predictor_t : public interconnection_interface_t {
         void allocate();
         void clock(uint32_t sub_cycle);
         int32_t send_package(memory_package_t *package);
-        bool receive_package(memory_package_t *package, uint32_t input_port);
+        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_lantecy);
         void print_structures();
         void panic();
         void periodic_check();
@@ -2159,8 +2166,10 @@ class cache_memory_t : public interconnection_interface_t {
 
         container_ptr_memory_package_t *mshr_born_ordered;
 
-        uint64_t read_ready;            /// Ready to receive new READ
-        uint64_t write_ready;           /// Ready to receive new WRITE
+        uint64_t send_ready_cycle;
+        uint64_t recv_ans_ready_cycle;            /// Ready to receive new READ
+        uint64_t recv_rqst_read_ready_cycle;            /// Ready to receive new READ
+        uint64_t recv_rqst_write_ready_cycle;           /// Ready to receive new WRITE
 
         container_ptr_cache_memory_t *higher_level_cache;    /// Higher Level Caches
         container_ptr_cache_memory_t *lower_level_cache;     /// Lower Level Caches
@@ -2224,7 +2233,7 @@ class cache_memory_t : public interconnection_interface_t {
         void allocate();
         void clock(uint32_t sub_cycle);
         int32_t send_package(memory_package_t *package);
-        bool receive_package(memory_package_t *package, uint32_t input_port);
+        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_lantecy);
         void print_structures();
         void panic();
         void periodic_check();
@@ -2419,9 +2428,9 @@ class main_memory_t : public interconnection_interface_t {
         uint64_t not_column_bits_mask;
         uint64_t column_bits_shift;
 
-        uint64_t data_bus_ready;
-        uint64_t read_ready;    /// Ready to receive new READ
-        uint64_t write_ready;   /// Ready to receive new WRITE
+        uint64_t send_ready_cycle;
+        uint64_t recv_read_ready_cycle;/// Ready to receive new READ
+        uint64_t recv_write_ready_cycle;/// Ready to receive new WRITE
 
         memory_package_t **read_buffer;
         memory_package_t **write_buffer;
@@ -2480,7 +2489,7 @@ class main_memory_t : public interconnection_interface_t {
         void allocate();
         void clock(uint32_t sub_cycle);
         int32_t send_package(memory_package_t *package);
-        bool receive_package(memory_package_t *package, uint32_t input_port);
+        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_lantecy);
         void print_structures();
         void panic();
         void periodic_check();
@@ -2527,9 +2536,9 @@ class main_memory_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, read_buffer_size)
         INSTANTIATE_GET_SET(uint32_t, write_buffer_size)
 
-        INSTANTIATE_GET_SET(uint64_t, data_bus_ready)
-        INSTANTIATE_GET_SET(uint64_t, read_ready)
-        INSTANTIATE_GET_SET(uint64_t, write_ready)
+        INSTANTIATE_GET_SET(uint64_t, send_ready_cycle)
+        INSTANTIATE_GET_SET(uint64_t, recv_read_ready_cycle)
+        INSTANTIATE_GET_SET(uint64_t, recv_write_ready_cycle)
 
         INSTANTIATE_GET_SET(uint32_t, bank_penalty_ras)
         INSTANTIATE_GET_SET(uint32_t, bank_penalty_cas)

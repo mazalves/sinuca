@@ -49,9 +49,9 @@ main_memory_t::main_memory_t() {
     this->row_buffer_size = 0;
     this->drain_write = false;
 
-    this->data_bus_ready = 0;
-    this->read_ready = 0;
-    this->write_ready = 0;
+    this->send_ready_cycle = 0;
+    this->recv_read_ready_cycle = 0;
+    this->recv_write_ready_cycle = 0;
 };
 
 //==============================================================================
@@ -298,7 +298,7 @@ void main_memory_t::clock(uint32_t subcycle) {
             /// Have some CAS for the opened row buffer (row buffer hit)
             if (read_cas != POSITION_FAIL || write_cas != POSITION_FAIL) {
                 /// BUS && ROW ready for next CAS
-                if (this->data_bus_ready <= sinuca_engine.get_global_cycle()) {
+                if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
                     /// Have some READ CAS
                     if (read_cas != POSITION_FAIL) {
                         MAIN_MEMORY_DEBUG_PRINTF("CAS: READ Bank %u, Position:%d\n", bank, read_cas);
@@ -313,7 +313,7 @@ void main_memory_t::clock(uint32_t subcycle) {
 
                         this->read_buffer[bank][read_cas].package_clean();
                         this->read_buffer_position_used[bank]--;
-                        this->data_bus_ready = this->get_data_bus_latency() + sinuca_engine.get_global_cycle();
+                        this->send_ready_cycle = this->get_data_bus_latency() + sinuca_engine.get_global_cycle();
                     }
                     /// Have some WRITE CAS
                     else if (write_cas != POSITION_FAIL) {
@@ -329,7 +329,7 @@ void main_memory_t::clock(uint32_t subcycle) {
 
                         this->write_buffer[bank][write_cas].package_clean();
                         this->write_buffer_position_used[bank]--;
-                        this->data_bus_ready = 1 + sinuca_engine.get_global_cycle();
+                        this->send_ready_cycle = 1 + sinuca_engine.get_global_cycle();
                     }
                 }
             }
@@ -359,35 +359,37 @@ void main_memory_t::clock(uint32_t subcycle) {
 
     /// ========================================================================
     /// SEND DATA
-    int32_t position = memory_package_t::find_old_answer_state_ready(this->row_buffer, this->get_banks_per_channel(), PACKAGE_STATE_TRANSMIT);
-    if (position != POSITION_FAIL) {
-        MAIN_MEMORY_DEBUG_PRINTF("%s: State TO_HIGHER ROW_BUFFER[%d].\n", this->get_label(), position);
-        int32_t transmission_latency = send_package(this->row_buffer + position);
-        if  (transmission_latency != POSITION_FAIL) {
-            this->row_buffer[position].package_ready(transmission_latency);
-            this->add_stat_accesses();
-
-            /// Statistics
-            switch (this->row_buffer[position].memory_operation) {
-                case MEMORY_OPERATION_READ:
-                    this->add_stat_read_completed(this->row_buffer[position].born_cycle);
-                break;
-
-                case MEMORY_OPERATION_INST:
-                    this->add_stat_instruction_completed(this->row_buffer[position].born_cycle);
-                break;
-
-                case MEMORY_OPERATION_WRITE:
-                    this->add_stat_write_completed(this->row_buffer[position].born_cycle);
-                break;
-
-                case MEMORY_OPERATION_PREFETCH:
-                    this->add_stat_prefetch_completed(this->row_buffer[position].born_cycle);
-                break;
-
-                case MEMORY_OPERATION_COPYBACK:
-                    this->add_stat_copyback_completed(this->row_buffer[position].born_cycle);
-                break;
+    if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
+        int32_t position = memory_package_t::find_old_answer_state_ready(this->row_buffer, this->get_banks_per_channel(), PACKAGE_STATE_TRANSMIT);
+        if (position != POSITION_FAIL) {
+            MAIN_MEMORY_DEBUG_PRINTF("%s: State TO_HIGHER ROW_BUFFER[%d].\n", this->get_label(), position);
+            int32_t transmission_latency = send_package(this->row_buffer + position);
+            if  (transmission_latency != POSITION_FAIL) {
+                this->row_buffer[position].package_ready(transmission_latency);
+                this->add_stat_accesses();
+    
+                /// Statistics
+                switch (this->row_buffer[position].memory_operation) {
+                    case MEMORY_OPERATION_READ:
+                        this->add_stat_read_completed(this->row_buffer[position].born_cycle);
+                    break;
+    
+                    case MEMORY_OPERATION_INST:
+                        this->add_stat_instruction_completed(this->row_buffer[position].born_cycle);
+                    break;
+    
+                    case MEMORY_OPERATION_WRITE:
+                        this->add_stat_write_completed(this->row_buffer[position].born_cycle);
+                    break;
+    
+                    case MEMORY_OPERATION_PREFETCH:
+                        this->add_stat_prefetch_completed(this->row_buffer[position].born_cycle);
+                    break;
+    
+                    case MEMORY_OPERATION_COPYBACK:
+                        this->add_stat_copyback_completed(this->row_buffer[position].born_cycle);
+                    break;
+                }
             }
         }
     }
@@ -397,28 +399,33 @@ void main_memory_t::clock(uint32_t subcycle) {
 //==============================================================================
 int32_t main_memory_t::send_package(memory_package_t *package) {
     MAIN_MEMORY_DEBUG_PRINTF("send_package() package:%s\n", package->memory_to_string().c_str());
-    sinuca_engine.interconnection_controller->find_package_route(package);
 
-    ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
-    uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
-    ERROR_ASSERT_PRINTF(output_port < this->get_max_ports(), "Output Port does not exist\n");
-    package->hop_count--;  /// Consume its own port
-
-    bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port));
-    if (sent) {
-        MAIN_MEMORY_DEBUG_PRINTF("\tSEND OK\n");
-        uint32_t latency = sinuca_engine.interconnection_controller->find_package_route_latency(package);
-        return latency;
+    if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
+        sinuca_engine.interconnection_controller->find_package_route(package);
+        ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
+        uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
+        ERROR_ASSERT_PRINTF(output_port < this->get_max_ports(), "Output Port does not exist\n");
+        package->hop_count--;  /// Consume its own port
+    
+        uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(package, this, this->get_interface_output_component(output_port));
+        bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port), transmission_latency);
+        if (sent) {
+            MAIN_MEMORY_DEBUG_PRINTF("\tSEND OK\n");
+            this->send_ready_cycle = sinuca_engine.get_global_cycle() + transmission_latency;
+            return transmission_latency;
+        }
+        else {
+            MAIN_MEMORY_DEBUG_PRINTF("\tSEND FAIL\n");
+            package->hop_count++;  /// Do not Consume its own port
+            return POSITION_FAIL;
+        }
     }
-    else {
-        MAIN_MEMORY_DEBUG_PRINTF("\tSEND FAIL\n");
-        package->hop_count++;  /// Do not Consume its own port
-        return POSITION_FAIL;
-    }
+    MAIN_MEMORY_DEBUG_PRINTF("\tSEND FAIL (BUSY)\n");
+    return POSITION_FAIL;
 };
 
 //==============================================================================
-bool main_memory_t::receive_package(memory_package_t *package, uint32_t input_port) {
+bool main_memory_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
     ERROR_ASSERT_PRINTF(package->id_dst == this->get_id(), "Received some package for a different id_dst.\n");
     ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Received a wrong input_port\n");
     ERROR_ASSERT_PRINTF(get_channel(package->memory_address) == this->get_channel_number(), "Wrong channel.\n")
@@ -428,43 +435,50 @@ bool main_memory_t::receive_package(memory_package_t *package, uint32_t input_po
     uint32_t bank = 0;
 
     bank = get_bank(package->memory_address);
-
     switch (package->memory_operation) {
         case MEMORY_OPERATION_READ:
         case MEMORY_OPERATION_INST:
         case MEMORY_OPERATION_PREFETCH:
-            slot = memory_package_t::find_free(this->read_buffer[bank], this->read_buffer_size);
-            if (slot == -1 || this->read_ready > sinuca_engine.get_global_cycle()) {
-                add_stat_full_read_buffer();
-                return FAIL;
+            if (this->recv_read_ready_cycle <= sinuca_engine.get_global_cycle()) {
+                slot = memory_package_t::find_free(this->read_buffer[bank], this->read_buffer_size);
+                if (slot != POSITION_FAIL) {
+                    this->read_buffer_position_used[bank]++;
+                    this->read_buffer[bank][slot] = *package;
+                    this->read_buffer[bank][slot].package_untreated(transmission_latency);
+                    this->recv_read_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
+                    MAIN_MEMORY_DEBUG_PRINTF("RECEIVED READ/INST from Port[%d]\n", input_port);
+                    MAIN_MEMORY_DEBUG_PRINTF("RECEIVED OK: %s\n", package->memory_to_string().c_str());
+                    return OK;
+                }
+                else {
+                    add_stat_full_read_buffer();
+                    return FAIL;
+                }
             }
-            this->read_buffer_position_used[bank]++;
-            this->read_buffer[bank][slot] = *package;
-            this->read_buffer[bank][slot].state = PACKAGE_STATE_UNTREATED;
-            this->read_buffer[bank][slot].born_cycle = sinuca_engine.get_global_cycle();
-            MAIN_MEMORY_DEBUG_PRINTF("RECEIVED READ/INST from Port[%d]\n", input_port);
-            MAIN_MEMORY_DEBUG_PRINTF("RECEIVED OK: %s\n", package->memory_to_string().c_str());
-
-            this->read_ready = 1 + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
-            return OK;
+            MAIN_MEMORY_DEBUG_PRINTF("\tRECV READ/INST FAIL (BUSY)\n");
+            return FAIL;
         break;
 
         case MEMORY_OPERATION_WRITE:
         case MEMORY_OPERATION_COPYBACK:
-            slot = memory_package_t::find_free(this->write_buffer[bank], this->write_buffer_size);
-            if (slot == -1 || this->write_ready > sinuca_engine.get_global_cycle()) {
-                add_stat_full_write_buffer();
-                return FAIL;
+            if (this->recv_write_ready_cycle <= sinuca_engine.get_global_cycle()) {
+                slot = memory_package_t::find_free(this->write_buffer[bank], this->write_buffer_size);
+                if (slot != POSITION_FAIL) {
+                    this->write_buffer_position_used[bank]++;
+                    this->write_buffer[bank][slot] = *package;
+                    this->write_buffer[bank][slot].package_untreated(transmission_latency);
+                    this->recv_write_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
+                    MAIN_MEMORY_DEBUG_PRINTF("RECEIVED WRITE/COPYBACK from Port[%d]\n", input_port);
+                    MAIN_MEMORY_DEBUG_PRINTF("RECEIVED OK: %s\n", package->memory_to_string().c_str());
+                    return OK;
+                }
+                else {
+                    add_stat_full_write_buffer();
+                    return FAIL;
+                }
             }
-            this->write_buffer_position_used[bank]++;
-            this->write_buffer[bank][slot] = *package;
-            this->write_buffer[bank][slot].state = PACKAGE_STATE_UNTREATED;
-            this->write_buffer[bank][slot].born_cycle = sinuca_engine.get_global_cycle();
-            MAIN_MEMORY_DEBUG_PRINTF("RECEIVED WRITE from Port[%d]\n", input_port);
-            MAIN_MEMORY_DEBUG_PRINTF("RECEIVED OK: %s\n", package->memory_to_string().c_str());
-
-            this->write_ready = 1 + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
-            return OK;
+            MAIN_MEMORY_DEBUG_PRINTF("\tRECV WRITE/COPYBACK FAIL (BUSY)\n");
+            return FAIL;
         break;
     }
     ERROR_PRINTF("Memory receiving %s.\n", get_enum_memory_operation_char(package->memory_operation))

@@ -8,6 +8,11 @@ for i in `seq 1 30` ; do
                                 teste $(echo -ne '\r')";
 done
 
+## This is how we can find the length of the longest line in a file.
+$ awk ' { if ( length > L ) { L=length} }END{ print L}' file.txt
+## And also to print the longest line along with the length:
+$ awk ' { if ( length > L ) { L=length ;s=$0 } }END{ print L,"\""s"\"" }' file.txt
+
 ## Get the libraries linked dynamic
 ldd <binary>
 
@@ -103,10 +108,7 @@ for i in `seq 1 9` ; do
     byobu -p$i -X stuff "reset ; \
     cd ~/Experiment/SiNUCA/scripts ; \
     python execute.py ~/Experiment/SiNUCA/configurations/SBAC-Baseline-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp Base 0 8 $i $i ; \
-    $(echo -ne '\r')";
-    byobu -p1$i -X stuff "reset ; \
-    cd ~/Experiment/SiNUCA/scripts ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp DSBP 0 8 $i $i ; \
+    #python execute.py ~/Experiment/SiNUCA/configurations/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp DSBP 0 8 $i $i ; \
     $(echo -ne '\r')";
 done
 
@@ -136,7 +138,7 @@ for i in `seq 1 26` ; do
     cd ~/Experiment/SiNUCA/trace_generator/source/tools/sinuca_tracer/scripts ; \
     python create_pin_points_trace.py pin_point spec_cpu2000 1 $i $i ; \
     python create_pin_points_trace.py trace spec_cpu2000 1 $i $i ; \
-     $(echo -ne '\r')";
+    $(echo -ne '\r')";
 done
 
 # Create pin_points, traces for all SPEC2006
@@ -146,11 +148,49 @@ cd ~/Experiment/SiNUCA/trace_generator/source/tools/sinuca_tracer/scripts ; \
 python create_pin_points_trace.py clean spec_cpu2006 1 0 0 ; \
 python create_pin_points_trace.py prepare spec_cpu2006 1 0 0 ; \
 $(echo -ne '\r')";
-for i in `seq 27 29` ; do
+for i in `seq 1 29` ; do
     byobu -p$i -X stuff "reset ; \
     echo $i ; \
     cd ~/Experiment/SiNUCA/trace_generator/source/tools/sinuca_tracer/scripts ; \
     python create_pin_points_trace.py pin_point spec_cpu2006 1 $i $i ; \
     python create_pin_points_trace.py trace spec_cpu2006 1 $i $i ; \
-     $(echo -ne '\r')";
+    $(echo -ne '\r')";
 done
+
+# Create pin_point traces for all NPB_OMP - 8 Threads
+byobu -p0 -X stuff \
+"reset ; \
+cd ~/Experiment/SiNUCA/trace_generator/source/tools/sinuca_tracer/scripts ; \
+python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
+python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
+python create_pin_points_trace.py parallel_trace npb_omp 8 1 11 ; \
+$(echo -ne '\r')";
+
+
+# Create pin_point traces for all SPEC_OMP2001 - 8 Threads
+byobu -p0 -X stuff \
+"reset ; \
+cd ~/Experiment/SiNUCA/trace_generator/source/tools/sinuca_tracer/scripts ; \
+python create_pin_points_trace.py clean spec_omp2001 1 0 0 ; \
+python create_pin_points_trace.py prepare spec_omp2001 1 0 0 ; \
+python create_pin_points_trace.py parallel_trace spec_omp2001 8 1 11 ; \
+$(echo -ne '\r')";
+
+
+
+byobu -p0 -X stuff \
+"reset ; \
+cd ~/Experiment/SiNUCA/trace_generator/source/tools/sinuca_tracer/scripts ; \
+python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
+python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
+python create_pin_points_trace.py parallel_trace npb_omp 4 1 11 ; \
+python create_pin_points_trace.py clean spec_omp2001 1 0 0 ; \
+python create_pin_points_trace.py prepare spec_omp2001 1 0 0 ; \
+python create_pin_points_trace.py parallel_trace spec_omp2001 4 1 11 ; \
+python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
+python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
+python create_pin_points_trace.py parallel_trace npb_omp 16 1 11 ; \
+python create_pin_points_trace.py clean spec_omp2001 1 0 0 ; \
+python create_pin_points_trace.py prepare spec_omp2001 1 0 0 ; \
+python create_pin_points_trace.py parallel_trace spec_omp2001 16 1 11 ; \
+$(echo -ne '\r')";
