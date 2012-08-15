@@ -97,10 +97,25 @@ done
 reset;
 python power.py npb_omp Base base_200M_npb_omp ;
 python power.py npb_omp DSBP dsbp_200M_npb_omp ;
+python power.py spec_omp2001 Base base_200M_spec_omp2001 ;
+python power.py spec_omp2001 DSBP dsbp_200M_spec_omp2001 ;
 python plot.py parameters_npb_omp.cfg ;
+python plot.py parameters_spec_omp2001.cfg ;
 
 
 for i in *pdf ; do echo $i ; pdfcrop $i $i; done
+
+# Run the Base and DSBP for all SPEC_OMP2001
+for i in `seq 1 11` ; do
+    byobu -p$i -X stuff "reset ; \
+    cd ~/Experiment/SiNUCA/scripts ; \
+    python execute.py ~/Experiment/SiNUCA/configurations/SBAC-Baseline-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp Base 0 8 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/configurations/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp DSBP 0 8 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/configurations/SBAC-Baseline-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 Base 0 8 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/configurations/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 DSBP 0 8 $i $i ; \
+    $(echo -ne '\r')";
+done
+
 
 
 # Run the Base and DSBP for all NPB_OMP
@@ -108,7 +123,7 @@ for i in `seq 1 9` ; do
     byobu -p$i -X stuff "reset ; \
     cd ~/Experiment/SiNUCA/scripts ; \
     python execute.py ~/Experiment/SiNUCA/configurations/SBAC-Baseline-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp Base 0 8 $i $i ; \
-    #python execute.py ~/Experiment/SiNUCA/configurations/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp DSBP 0 8 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/configurations/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp DSBP 0 8 $i $i ; \
     $(echo -ne '\r')";
 done
 
@@ -118,7 +133,7 @@ for i in `seq 1 11` ; do
     byobu -p$i -X stuff "reset ; \
     cd ~/Experiment/SiNUCA/scripts ; \
     python execute.py ~/Experiment/SiNUCA/configurations/SBAC-Baseline-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 Base 0 8 $i $i ; \
-    #python execute.py ~/Experiment/SiNUCA/configurations/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 DSBP 0 8 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/configurations/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 DSBP 0 8 $i $i ; \
     $(echo -ne '\r')";
 done
 

@@ -143,8 +143,6 @@ void interconnection_router_t::clock(uint32_t subcycle) {
             ROUTER_DEBUG_PRINTF("SENDING INPUT_BUFFER[%d][%d]: %s\n", port, position, this->input_buffer[port][position].memory_to_string().c_str());
             int32_t transmission_latency = send_package(&this->input_buffer[port][position]);
             if (transmission_latency != POSITION_FAIL) {
-                this->add_stat_transmissions();
-                this->stat_transmitted_package_size[this->input_buffer[port][position].memory_size]++;
                 this->input_buffer_remove(port);
             }
             else {
@@ -169,6 +167,13 @@ int32_t interconnection_router_t::send_package(memory_package_t *package) {
         if (sent) {
             ROUTER_DEBUG_PRINTF("\tSEND DATA OK\n");
             this->send_ready_cycle = sinuca_engine.get_global_cycle() + transmission_latency;
+
+            /// Statistics
+            this->add_stat_transmissions();
+            this->stat_transmitted_package_size[package->memory_size]++;
+            this->stat_total_send_size += package->memory_size;
+            this->stat_total_send_flits += package->memory_size / this->get_interconnection_width();
+
             return transmission_latency;
         }
         else {
@@ -193,11 +198,16 @@ bool interconnection_router_t::receive_package(memory_package_t *package, uint32
         /// Get the next position into the Circular Buffer
         int32_t position = this->input_buffer_insert(input_port);
         if (position != POSITION_FAIL) {
+            ROUTER_DEBUG_PRINTF("\tRECV DATA OK\n");
             this->input_buffer[input_port][position] = *package;
             this->input_buffer[input_port][position].package_untreated(1);
 
             this->recv_ready_cycle[input_port] = sinuca_engine.get_global_cycle() + transmission_latency;
-            ROUTER_DEBUG_PRINTF("\tRECV DATA OK\n");
+
+            /// Statistics
+            this->stat_total_recv_size += package->memory_size;
+            this->stat_total_recv_flits += package->memory_size / this->get_interconnection_width();
+
             return OK;
         }
     }
@@ -250,6 +260,13 @@ void interconnection_router_t::periodic_check(){
 //==============================================================================
 void interconnection_router_t::reset_statistics() {
     this->set_stat_transmissions(0);
+
+    this->set_stat_total_send_size(0);
+    this->set_stat_total_recv_size(0);
+
+    this->set_stat_total_send_flits(0);
+    this->set_stat_total_recv_flits(0);
+
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size() + 1; i++) {
         this->stat_transmitted_package_size[i] = 0;
     }
@@ -265,6 +282,26 @@ void interconnection_router_t::print_statistics() {
 
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_transmissions", stat_transmissions);
 
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_total_send_size", this->stat_total_send_size);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_total_recv_size", this->stat_total_recv_size);
+
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "send_size_per_cycle_warm", stat_total_send_size,
+                                                                                                                       sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "recv_size_per_cycle_warm", this->stat_total_recv_size,
+                                                                                                                       sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_total_send_flits", this->stat_total_send_flits);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_total_recv_flits", this->stat_total_recv_flits);
+
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "send_flits_per_cycle_warm", stat_total_send_flits,
+                                                                                                                       sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "recv_flits_per_cycle_warm", this->stat_total_recv_flits,
+                                                                                                                       sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
+
+    sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_small_separator();
     char name[100];
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size() + 1; i++) {

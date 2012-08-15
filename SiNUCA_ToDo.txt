@@ -28,11 +28,9 @@ DIRECTORY -- Deadlock if MSHR's smaller than higher level MSHR's
 ################ Short Term
 DIRECTORY -- Time to copyback from the higher level (Directory average)
 
-STATISTICS -- Functional Unit statistics
 STATISTICS -- Average Instruction Size and Number of cache lines
 STATISTICS -- Average Memory Size and Number of cache lines
 STATISTICS -- Average Fetched Uops
-STATISTICS -- Average Decoded Opcodes / Uops
 
 -- CHECK:
     -- cache state

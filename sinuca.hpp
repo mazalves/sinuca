@@ -879,6 +879,13 @@ class interconnection_router_t : public interconnection_interface_t {
         /// Statistics related
         /// ====================================================================
         uint64_t stat_transmissions;
+
+        uint64_t stat_total_send_size;
+        uint64_t stat_total_recv_size;
+
+        uint64_t stat_total_send_flits;
+        uint64_t stat_total_recv_flits;
+
         uint64_t *stat_transmitted_package_size;
     public:
         /// ====================================================================
@@ -924,6 +931,12 @@ class interconnection_router_t : public interconnection_interface_t {
         /// Statistics related
         /// ====================================================================
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_transmissions)
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_total_send_size)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_total_recv_size)
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_total_send_flits)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_total_recv_flits)
 };
 
 
