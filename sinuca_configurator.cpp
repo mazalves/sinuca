@@ -58,7 +58,7 @@ void sinuca_engine_t::initialize() {
     SINUCA_PRINTF("\n");
     this->initialize_processor();
     this->initialize_cache_memory();
-    this->initialize_main_memory();
+    this->initialize_memory_controller();
     this->initialize_interconnection_router();
 
     this->initialize_directory_controller();
@@ -70,7 +70,7 @@ void sinuca_engine_t::initialize() {
     /// Connect the pointers to the interconnection interface
     this->set_interconnection_interface_array_size( this->get_processor_array_size() +
                                                     this->get_cache_memory_array_size() +
-                                                    this->get_main_memory_array_size() +
+                                                    this->get_memory_controller_array_size() +
                                                     this->get_interconnection_router_array_size()
                                                     );
     this->interconnection_interface_array = utils_t::template_allocate_initialize_array<interconnection_interface_t*>(this->interconnection_interface_array_size, NULL);
@@ -87,8 +87,8 @@ void sinuca_engine_t::initialize() {
         this->interconnection_interface_array[total_components]->set_id(total_components);
         total_components++;
     }
-    for (uint32_t i = 0; i < this->get_main_memory_array_size(); i++) {
-        this->interconnection_interface_array[total_components] = this->main_memory_array[i];
+    for (uint32_t i = 0; i < this->get_memory_controller_array_size(); i++) {
+        this->interconnection_interface_array[total_components] = this->memory_controller_array[i];
         this->interconnection_interface_array[total_components]->set_id(total_components);
         total_components++;
     }
@@ -689,124 +689,133 @@ void sinuca_engine_t::initialize_cache_memory() {
 
 
 //==============================================================================
-void sinuca_engine_t::initialize_main_memory() {
+void sinuca_engine_t::initialize_memory_controller() {
     libconfig::Config cfg;
     cfg.readFile(this->arg_configuration_file_name);
 
     libconfig::Setting &cfg_root = cfg.getRoot();
-    libconfig::Setting &cfg_main_memory_list = cfg_root["MAIN_MEMORY"];
-    SINUCA_PRINTF("MAIN_MEMORIES:%d\n", cfg_main_memory_list.getLength());
+    libconfig::Setting &cfg_memory_controller_list = cfg_root["MAIN_MEMORY"];
+    SINUCA_PRINTF("MAIN_MEMORIES:%d\n", cfg_memory_controller_list.getLength());
 
-    this->set_main_memory_array_size(cfg_main_memory_list.getLength());
-    this->main_memory_array = utils_t::template_allocate_initialize_array<main_memory_t*>(this->main_memory_array_size, NULL);
+    this->set_memory_controller_array_size(cfg_memory_controller_list.getLength());
+    this->memory_controller_array = utils_t::template_allocate_initialize_array<memory_controller_t*>(this->memory_controller_array_size, NULL);
 
     /// ========================================================================
     /// Required MAIN_MEMORY Parameters
     /// ========================================================================
-    for (int32_t i = 0; i < cfg_main_memory_list.getLength(); i++) {
-        this->main_memory_array[i] = new main_memory_t;
+    for (int32_t i = 0; i < cfg_memory_controller_list.getLength(); i++) {
+        this->memory_controller_array[i] = new memory_controller_t;
 
-        std::deque<const char*> main_memory_parameters;
-        libconfig::Setting &cfg_main_memory = cfg_main_memory_list[i];
+        std::deque<const char*> memory_controller_parameters;
+        libconfig::Setting &cfg_memory_controller = cfg_memory_controller_list[i];
 
         /// ====================================================================
         /// MAIN_MEMORY PARAMETERS
         /// ====================================================================
         try {
-            main_memory_parameters.push_back("LABEL");
-            this->main_memory_array[i]->set_label( cfg_main_memory[ main_memory_parameters.back() ] );
+            memory_controller_parameters.push_back("LABEL");
+            this->memory_controller_array[i]->set_label( cfg_memory_controller[ memory_controller_parameters.back() ] );
 
-            main_memory_parameters.push_back("INTERCONNECTION_LATENCY");
-            this->main_memory_array[i]->set_interconnection_latency( cfg_main_memory[ main_memory_parameters.back() ] );
+            memory_controller_parameters.push_back("INTERCONNECTION_LATENCY");
+            this->memory_controller_array[i]->set_interconnection_latency( cfg_memory_controller[ memory_controller_parameters.back() ] );
 
-            main_memory_parameters.push_back("INTERCONNECTION_WIDTH");
-            this->main_memory_array[i]->set_interconnection_width( cfg_main_memory[ main_memory_parameters.back() ] );
+            memory_controller_parameters.push_back("INTERCONNECTION_WIDTH");
+            this->memory_controller_array[i]->set_interconnection_width( cfg_memory_controller[ memory_controller_parameters.back() ] );
 
-            main_memory_parameters.push_back("LINE_SIZE");
-            this->main_memory_array[i]->set_line_size( cfg_main_memory[ main_memory_parameters.back() ] );
-            this->set_global_line_size(this->main_memory_array[i]->get_line_size());
-
-            main_memory_parameters.push_back("DATA_BUS_LATENCY");
-            this->main_memory_array[i]->set_data_bus_latency( cfg_main_memory[ main_memory_parameters.back() ] );
-
-            main_memory_parameters.push_back("READ_BUFFER_SIZE");
-            this->main_memory_array[i]->set_read_buffer_size( cfg_main_memory[ main_memory_parameters.back() ] );
-
-            main_memory_parameters.push_back("WRITE_BUFFER_SIZE");
-            this->main_memory_array[i]->set_write_buffer_size( cfg_main_memory[ main_memory_parameters.back() ] );
-
-            main_memory_parameters.push_back("CHANNEL_NUMBER");
-            this->main_memory_array[i]->set_channel_number( cfg_main_memory[ main_memory_parameters.back() ] );
-
-            main_memory_parameters.push_back("TOTAL_CHANNELS");
-            this->main_memory_array[i]->set_total_channels( cfg_main_memory[ main_memory_parameters.back() ] );
-
-            main_memory_parameters.push_back("BANKS_PER_CHANNEL");
-            this->main_memory_array[i]->set_banks_per_channel( cfg_main_memory[ main_memory_parameters.back() ] );
-
-            main_memory_parameters.push_back("ADDRESS_MASK");
-            if (strcasecmp(cfg_main_memory[ main_memory_parameters.back() ], "ROW_BANK_CHANNEL_COLUMN") ==  0) {
-                this->main_memory_array[i]->set_address_mask_type(MAIN_MEMORY_MASK_ROW_BANK_CHANNEL_COLUMN);
+            memory_controller_parameters.push_back("ADDRESS_MASK");
+            if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_CHANNEL_CTRL_COLUMN") ==  0) {
+                this->memory_controller_array[i]->set_address_mask_type(MAIN_MEMORY_MASK_ROW_BANK_CHANNEL_CTRL_COLUMN);
             }
-            else if (strcasecmp(cfg_main_memory[ main_memory_parameters.back() ], "ROW_BANK_COLUMN") ==  0) {
-                this->main_memory_array[i]->set_address_mask_type(MAIN_MEMORY_MASK_ROW_BANK_COLUMN);
+            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_CHANNEL_COLUMN") ==  0) {
+                this->memory_controller_array[i]->set_address_mask_type(MAIN_MEMORY_MASK_ROW_BANK_CHANNEL_COLUMN);
+            }
+            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_COLUMN") ==  0) {
+                this->memory_controller_array[i]->set_address_mask_type(MAIN_MEMORY_MASK_ROW_BANK_COLUMN);
             }
             else {
-                ERROR_PRINTF("MAIN MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_main_memory[ main_memory_parameters.back() ].c_str(), main_memory_parameters.back());
+                ERROR_PRINTF("MAIN MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_memory_controller[ memory_controller_parameters.back() ].c_str(), memory_controller_parameters.back());
             }
 
-            main_memory_parameters.push_back("BANK_PENALTY_CAS");
-            this->main_memory_array[i]->set_bank_penalty_cas( cfg_main_memory[ main_memory_parameters.back() ] );
+            memory_controller_parameters.push_back("LINE_SIZE");
+            this->memory_controller_array[i]->set_line_size( cfg_memory_controller[ memory_controller_parameters.back() ] );
+            this->set_global_line_size(this->memory_controller_array[i]->get_line_size());
 
-            main_memory_parameters.push_back("BANK_PENALTY_RAS");
-            this->main_memory_array[i]->set_bank_penalty_ras( cfg_main_memory[ main_memory_parameters.back() ] );
+            memory_controller_parameters.push_back("CONTROLLER_NUMBER");
+            this->memory_controller_array[i]->set_controller_number( cfg_memory_controller[ memory_controller_parameters.back() ] );
 
-            main_memory_parameters.push_back("ROW_BUFFER_SIZE");
-            this->main_memory_array[i]->set_row_buffer_size( cfg_main_memory[ main_memory_parameters.back() ] );
+            memory_controller_parameters.push_back("TOTAL_CONTROLLERS");
+            this->memory_controller_array[i]->set_total_controllers( cfg_memory_controller[ memory_controller_parameters.back() ] );
 
-            main_memory_parameters.push_back("ROW_BUFFER_POLICY");
-            if (strcasecmp(cfg_main_memory[ main_memory_parameters.back() ], "HITS_FIRST") ==  0) {
-                this->main_memory_array[i]->set_row_buffer_policy(ROW_BUFFER_HITS_FIRST);
+            memory_controller_parameters.push_back("CHANNELS_PER_CONTROLLER");
+            this->memory_controller_array[i]->set_channels_per_controller( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("BANKS_PER_CHANNEL");
+            this->memory_controller_array[i]->set_banks_per_channel( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("READ_BUFFER_SIZE");
+            this->memory_controller_array[i]->set_read_buffer_size( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("WRITE_BUFFER_SIZE");
+            this->memory_controller_array[i]->set_write_buffer_size( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("ROW_BUFFER_SIZE");
+            this->memory_controller_array[i]->set_row_buffer_size( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("REQUEST_PRIORITY_POLICY");
+            if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BUFFER_HITS_FIRST") ==  0) {
+                this->memory_controller_array[i]->set_request_priority_policy(REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST);
             }
-            else if (strcasecmp(cfg_main_memory[ main_memory_parameters.back() ], "FIFO") ==  0) {
-                this->main_memory_array[i]->set_row_buffer_policy(ROW_BUFFER_FIFO);
+            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "FIRST_COME_FIRST_SERVE") ==  0) {
+                this->memory_controller_array[i]->set_request_priority_policy(REQUEST_PRIORITY_FIRST_COME_FIRST_SERVE);
             }
             else {
-                ERROR_PRINTF("MAIN MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_main_memory[ main_memory_parameters.back() ].c_str(), main_memory_parameters.back());
+                ERROR_PRINTF("MAIN MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_memory_controller[ memory_controller_parameters.back() ].c_str(), memory_controller_parameters.back());
             }
 
-            main_memory_parameters.push_back("WRITE_PRIORITY_POLICY");
-            if (strcasecmp(cfg_main_memory[ main_memory_parameters.back() ], "SERVICE_AT_NO_READ") ==  0) {
-                this->main_memory_array[i]->set_write_priority_policy(WRITE_PRIORITY_SERVICE_AT_NO_READ);
+            memory_controller_parameters.push_back("WRITE_PRIORITY_POLICY");
+            if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "SERVICE_AT_NO_READ") ==  0) {
+                this->memory_controller_array[i]->set_write_priority_policy(WRITE_PRIORITY_SERVICE_AT_NO_READ);
             }
-            else if (strcasecmp(cfg_main_memory[ main_memory_parameters.back() ], "DRAIN_WHEN_FULL") ==  0) {
-                this->main_memory_array[i]->set_write_priority_policy(WRITE_PRIORITY_DRAIN_WHEN_FULL);
+            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "DRAIN_WHEN_FULL") ==  0) {
+                this->memory_controller_array[i]->set_write_priority_policy(WRITE_PRIORITY_DRAIN_WHEN_FULL);
             }
             else {
-                ERROR_PRINTF("MAIN MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_main_memory[ main_memory_parameters.back() ].c_str(), main_memory_parameters.back());
+                ERROR_PRINTF("MAIN MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_memory_controller[ memory_controller_parameters.back() ].c_str(), memory_controller_parameters.back());
             }
 
-            this->main_memory_array[i]->set_max_ports(1);
+            memory_controller_parameters.push_back("RP_LATENCY");
+            this->memory_controller_array[i]->set_RP_latency( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("RCD_LATENCY");
+            this->memory_controller_array[i]->set_RCD_latency( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("CAS_LATENCY");
+            this->memory_controller_array[i]->set_CAS_latency( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("RAS_LATENCY");
+            this->memory_controller_array[i]->set_RAS_latency( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            this->memory_controller_array[i]->set_max_ports(1);
 
             /// ================================================================
             /// Check if any MAIN_MEMORY non-required parameters exist
-            for (int32_t j = 0 ; j < cfg_main_memory.getLength(); j++) {
+            for (int32_t j = 0 ; j < cfg_memory_controller.getLength(); j++) {
                 bool is_required = false;
-                for (uint32_t k = 0 ; k < main_memory_parameters.size(); k++) {
-                    if (strcmp(cfg_main_memory[j].getName(), main_memory_parameters[k]) == 0) {
+                for (uint32_t k = 0 ; k < memory_controller_parameters.size(); k++) {
+                    if (strcmp(cfg_memory_controller[j].getName(), memory_controller_parameters[k]) == 0) {
                         is_required = true;
                         break;
                     }
                 }
-                ERROR_ASSERT_PRINTF(is_required, "MAIN_MEMORY %d has PARAMETER not required: \"%s\"\n", i, cfg_main_memory[j].getName());
+                ERROR_ASSERT_PRINTF(is_required, "MAIN_MEMORY %d has PARAMETER not required: \"%s\"\n", i, cfg_memory_controller[j].getName());
             }
 
         }
         catch(libconfig::SettingNotFoundException &nfex) {
-            ERROR_PRINTF(" MAIN_MEMORY %d has required PARAMETER missing: \"%s\"\n", i, main_memory_parameters.back());
+            ERROR_PRINTF(" MAIN_MEMORY %d has required PARAMETER missing: \"%s\"\n", i, memory_controller_parameters.back());
         }
         catch(libconfig::SettingTypeException &tex) {
-            ERROR_PRINTF(" MAIN_MEMORY %d has PARAMETER wrong type: \"%s\"\n", i, main_memory_parameters.back());
+            ERROR_PRINTF(" MAIN_MEMORY %d has PARAMETER wrong type: \"%s\"\n", i, memory_controller_parameters.back());
         }
     }
 };

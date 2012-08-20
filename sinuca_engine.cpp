@@ -43,7 +43,7 @@ sinuca_engine_t::sinuca_engine_t() {
     this->interconnection_interface_array_size = 0;
     this->processor_array_size = 0;
     this->cache_memory_array_size = 0;
-    this->main_memory_array_size = 0;
+    this->memory_controller_array_size = 0;
     this->interconnection_router_array_size = 0;
 
     this->global_cycle = 0;
@@ -82,11 +82,11 @@ sinuca_engine_t::~sinuca_engine_t() {
         utils_t::template_delete_array<cache_memory_t*>(this->cache_memory_array);
     }
 
-    if (this->main_memory_array != NULL) {
-        for (uint32_t i = 0; i < this->get_main_memory_array_size(); ++i) {
-            utils_t::template_delete_variable<main_memory_t>(this->main_memory_array[i]);
+    if (this->memory_controller_array != NULL) {
+        for (uint32_t i = 0; i < this->get_memory_controller_array_size(); ++i) {
+            utils_t::template_delete_variable<memory_controller_t>(this->memory_controller_array[i]);
         }
-        utils_t::template_delete_array<main_memory_t*>(this->main_memory_array);
+        utils_t::template_delete_array<memory_controller_t*>(this->memory_controller_array);
     }
 
     if (this->interconnection_router_array != NULL) {
@@ -456,7 +456,7 @@ void sinuca_engine_t::global_print_configuration() {
     this->write_statistics_value(get_type_component_label(), get_label(), "interconnection_interface_array_size", interconnection_interface_array_size);
     this->write_statistics_value(get_type_component_label(), get_label(), "processor_array_size", processor_array_size);
     this->write_statistics_value(get_type_component_label(), get_label(), "cache_memory_array_size", cache_memory_array_size);
-    this->write_statistics_value(get_type_component_label(), get_label(), "main_memory_array_size", main_memory_array_size);
+    this->write_statistics_value(get_type_component_label(), get_label(), "memory_controller_array_size", memory_controller_array_size);
     this->write_statistics_value(get_type_component_label(), get_label(), "interconnection_router_array_size", interconnection_router_array_size);
 
     for (uint32_t i = 0 ; i < this->get_interconnection_interface_array_size() ; i++) {

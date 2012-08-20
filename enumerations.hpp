@@ -172,11 +172,12 @@ const char *get_enum_routing_algorithm_char(routing_algorithm_t type);
 /// ============================================================================
 /// Cache replacement policy
 enum replacement_t {
-    REPLACEMENT_LRU,     /// way list order: MRU -> LRU
-    REPLACEMENT_LRU_DSBP, /// way list order: MRU -> LRU with DSBP line_usage_predictor
-    REPLACEMENT_RANDOM,  /// way list order: arbitrary
-    REPLACEMENT_FIFO,    /// way list order: oldest block -> newest block
-    REPLACEMENT_LRF      /// way list order: Least recently filled
+    REPLACEMENT_LRU,            /// way list order: MRU -> LRU
+    REPLACEMENT_LRU_INVALID,    /// way list order: MRU -> LRU with priority to Invalid Lines
+    REPLACEMENT_LRU_DSBP,       /// way list order: MRU -> LRU with DSBP line_usage_predictor
+    REPLACEMENT_RANDOM,         /// way list order: arbitrary
+    REPLACEMENT_FIFO,           /// way list order: oldest block -> newest block
+    REPLACEMENT_LRF             /// way list order: Least recently filled
 };
 const char *get_enum_replacement_char(replacement_t type);
 
@@ -190,7 +191,8 @@ const char *get_enum_coherence_protocol_char(coherence_protocol_t type);
 /// ============================================================================
 /// Directory coherence protocol
 enum inclusiveness_t {
-    INCLUSIVENESS_NON_INCLUSIVE
+    INCLUSIVENESS_NON_INCLUSIVE,
+    INCLUSIVENESS_INCLUSIVE
 };
 const char *get_enum_inclusiveness_char(inclusiveness_t type);
 
@@ -250,19 +252,20 @@ const char *get_enum_cache_mask_char(cache_mask_t type);
 
 /// ============================================================================
 /// How the main memory will create its address mask
-enum main_memory_mask_t {
+enum memory_controller_mask_t {
     MAIN_MEMORY_MASK_ROW_BANK_COLUMN,
-    MAIN_MEMORY_MASK_ROW_BANK_CHANNEL_COLUMN
+    MAIN_MEMORY_MASK_ROW_BANK_CHANNEL_COLUMN,
+    MAIN_MEMORY_MASK_ROW_BANK_CHANNEL_CTRL_COLUMN
 };
-const char *get_enum_main_memory_mask_char(main_memory_mask_t type);
+const char *get_enum_memory_controller_mask_char(memory_controller_mask_t type);
 
 /// ============================================================================
 /// Policy to set the priority during the Row Buffer access
-enum row_buffer_t {
-    ROW_BUFFER_HITS_FIRST,
-    ROW_BUFFER_FIFO
+enum request_priority_t {
+    REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST,
+    REQUEST_PRIORITY_FIRST_COME_FIRST_SERVE
 };
-const char *get_enum_row_buffer_char(row_buffer_t type);
+const char *get_enum_request_priority_char(request_priority_t type);
 
 /// ============================================================================
 /// Policy to give privilege of some operations over others

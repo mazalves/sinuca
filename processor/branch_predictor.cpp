@@ -146,6 +146,10 @@ uint32_t branch_predictor_t::btb_evict_address(uint64_t opcode_address) {
         }
         break;
 
+        case REPLACEMENT_LRU_INVALID:
+            ERROR_PRINTF("Replacement Policy: REPLACEMENT_LRU_INVALID not implemented.\n");
+        break;
+
         case REPLACEMENT_FIFO:
             ERROR_PRINTF("Replacement Policy: REPLACEMENT_POLICY_FIFO not implemented.\n");
         break;

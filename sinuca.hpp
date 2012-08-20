@@ -86,7 +86,8 @@ class line_usage_predictor_t;
 class cache_line_t;
 class cache_set_t;
 class cache_memory_t;
-class main_memory_t;
+class memory_channel_t;
+class memory_controller_t;
 /// Useful static methods
 class utils_t;
 
@@ -224,7 +225,7 @@ typedef std::vector <memory_package_t*>             container_ptr_memory_package
 typedef std::vector <reorder_buffer_line_t*>        container_ptr_reorder_buffer_line_t;
 typedef std::vector <directory_controller_line_t*>  container_ptr_directory_controller_line_t;
 typedef std::vector <cache_memory_t*>               container_ptr_cache_memory_t;
-typedef std::vector <main_memory_t*>                container_ptr_main_memory_t;
+typedef std::vector <memory_controller_t*>                container_ptr_memory_controller_t;
 /// ============================================================================
 /// Trace Reader
 /// ============================================================================
@@ -301,13 +302,13 @@ class sinuca_engine_t {
         interconnection_interface_t* *interconnection_interface_array;
         processor_t* *processor_array;
         cache_memory_t* *cache_memory_array;
-        main_memory_t* *main_memory_array;
+        memory_controller_t* *memory_controller_array;
         interconnection_router_t* *interconnection_router_array;
 
         uint32_t interconnection_interface_array_size;
         uint32_t processor_array_size;
         uint32_t cache_memory_array_size;
-        uint32_t main_memory_array_size;
+        uint32_t memory_controller_array_size;
         uint32_t interconnection_router_array_size;
 
         /// Control the Global Cycle
@@ -372,7 +373,7 @@ class sinuca_engine_t {
         void initialize();
         void initialize_processor();
         void initialize_cache_memory();
-        void initialize_main_memory();
+        void initialize_memory_controller();
         void initialize_interconnection_router();
 
         void initialize_directory_controller();
@@ -388,13 +389,13 @@ class sinuca_engine_t {
         INSTANTIATE_GET_SET(interconnection_interface_t**, interconnection_interface_array);
         INSTANTIATE_GET_SET(processor_t**, processor_array);
         INSTANTIATE_GET_SET(cache_memory_t**, cache_memory_array);
-        INSTANTIATE_GET_SET(main_memory_t**, main_memory_array);
+        INSTANTIATE_GET_SET(memory_controller_t**, memory_controller_array);
         INSTANTIATE_GET_SET(interconnection_router_t**, interconnection_router_array);
 
         INSTANTIATE_GET_SET(uint32_t, interconnection_interface_array_size);
         INSTANTIATE_GET_SET(uint32_t, processor_array_size);
         INSTANTIATE_GET_SET(uint32_t, cache_memory_array_size);
-        INSTANTIATE_GET_SET(uint32_t, main_memory_array_size);
+        INSTANTIATE_GET_SET(uint32_t, memory_controller_array_size);
         INSTANTIATE_GET_SET(uint32_t, interconnection_router_array_size);
 
         INSTANTIATE_GET_SET(bool, is_simulation_allocated);
@@ -1270,6 +1271,7 @@ class processor_t : public interconnection_interface_t {
         uint64_t stat_reset_fetch_opcode_counter;
         uint64_t stat_reset_decode_uop_counter;
 
+        /// Executed Instructions
         uint64_t stat_nop_completed;
         uint64_t stat_branch_completed;
         uint64_t stat_other_completed;
@@ -1286,6 +1288,19 @@ class processor_t : public interconnection_interface_t {
         uint64_t stat_memory_read_completed;
         uint64_t stat_memory_write_completed;
 
+        /// Dispatch Cycles Stall
+        uint64_t stat_dispatch_cycles_fu_int_alu;
+        uint64_t stat_dispatch_cycles_fu_int_mul;
+        uint64_t stat_dispatch_cycles_fu_int_div;
+
+        uint64_t stat_dispatch_cycles_fu_fp_alu;
+        uint64_t stat_dispatch_cycles_fu_fp_mul;
+        uint64_t stat_dispatch_cycles_fu_fp_div;
+
+        uint64_t stat_dispatch_cycles_fu_mem_load;
+        uint64_t stat_dispatch_cycles_fu_mem_store;
+
+        /// Memory Cycles Stall
         uint64_t stat_min_instruction_read_wait_time;
         uint64_t stat_max_instruction_read_wait_time;
         uint64_t stat_acumulated_instruction_read_wait_time;
@@ -1297,6 +1312,7 @@ class processor_t : public interconnection_interface_t {
         uint64_t stat_min_memory_write_wait_time;
         uint64_t stat_max_memory_write_wait_time;
         uint64_t stat_acumulated_memory_write_wait_time;
+
 
     public:
         /// ====================================================================
@@ -1453,6 +1469,17 @@ class processor_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_instruction_read_completed)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_memory_read_completed)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_memory_write_completed)
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dispatch_cycles_fu_int_alu)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dispatch_cycles_fu_int_mul)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dispatch_cycles_fu_int_div)
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dispatch_cycles_fu_fp_alu)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dispatch_cycles_fu_fp_mul)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dispatch_cycles_fu_fp_div)
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dispatch_cycles_fu_mem_load)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dispatch_cycles_fu_mem_store)
 
         inline void add_stat_instruction_read_completed(uint64_t born_cycle) {
             this->stat_instruction_read_completed++;
@@ -2402,28 +2429,65 @@ class cache_memory_t : public interconnection_interface_t {
 /// ============================================================================
 /// Main Memories
 /// ============================================================================
-class main_memory_t : public interconnection_interface_t {
+class memory_channel_t {
+    public:
+        memory_package_t **read_buffer;    /// Channel x Bank x Position
+        memory_package_t **write_buffer;   /// Channel x Bank x Position
+
+        memory_package_t *row_buffer;      /// Channel x Bank
+
+        uint32_t *read_buffer_position_used;   /// Channel x Bank
+        uint32_t *write_buffer_position_used;  /// Channel x Bank
+
+        bool *drain_write;
+
+        /// ====================================================================
+        /// Methods
+        /// ====================================================================
+        memory_channel_t() {
+        };
+        ~memory_channel_t() {
+            /// De-Allocate memory to prevent memory leak
+            if (this->row_buffer) delete [] row_buffer;
+            if (this->read_buffer_position_used) delete [] read_buffer_position_used;
+            if (this->write_buffer_position_used) delete [] write_buffer_position_used;
+            if (this->drain_write) delete [] drain_write;
+
+            if (read_buffer && read_buffer[0]) {
+                delete[] read_buffer[0];
+                delete[] read_buffer;
+            }
+
+            if (write_buffer && write_buffer[0]) {
+                delete[] write_buffer[0];
+                delete[] write_buffer;
+            }
+        };
+};
+
+class memory_controller_t : public interconnection_interface_t {
     private:
         /// ====================================================================
         /// Set by sinuca_configurator
         /// ====================================================================
-        uint32_t channel_number;
-        uint32_t total_channels;
-        uint32_t banks_per_channel;
-        main_memory_mask_t address_mask_type;
-
+        memory_controller_mask_t address_mask_type;
         uint32_t line_size;
-        uint32_t data_bus_latency;
 
+        uint32_t controller_number;
+        uint32_t total_controllers;
+        uint32_t channels_per_controller;
+        uint32_t banks_per_channel;
         uint32_t read_buffer_size;
         uint32_t write_buffer_size;
-
-        uint32_t bank_penalty_ras;
-        uint32_t bank_penalty_cas;
-
         uint32_t row_buffer_size;
-        row_buffer_t row_buffer_policy;
+
+        request_priority_t request_priority_policy;
         write_priority_t write_priority_policy;
+
+        uint32_t RP_latency;
+        uint32_t RCD_latency;
+        uint32_t CAS_latency;
+        uint32_t RAS_latency;
 
         /// ====================================================================
         /// Set by this->allocate()
@@ -2437,22 +2501,20 @@ class main_memory_t : public interconnection_interface_t {
         uint64_t channel_bits_mask;
         uint64_t channel_bits_shift;
 
+        uint64_t controller_bits_mask;
+        uint64_t controller_bits_shift;
+
         uint64_t column_bits_mask;
         uint64_t not_column_bits_mask;
         uint64_t column_bits_shift;
 
-        uint64_t send_ready_cycle;
-        uint64_t recv_read_ready_cycle;/// Ready to receive new READ
-        uint64_t recv_write_ready_cycle;/// Ready to receive new WRITE
+        uint32_t bus_latency;          /// Ready to send new CAS signal
+        uint64_t *bus_ready_cycle;          /// Ready to send new CAS signal
+        uint64_t *send_ready_cycle;         /// Ready to send new READ
+        uint64_t *recv_read_ready_cycle;    /// Ready to receive new READ
+        uint64_t *recv_write_ready_cycle;   /// Ready to receive new WRITE
 
-        memory_package_t **read_buffer;
-        memory_package_t **write_buffer;
-        memory_package_t *row_buffer;
-
-        uint32_t *read_buffer_position_used;
-        uint32_t *write_buffer_position_used;
-
-        bool drain_write;
+        memory_channel_t *channels;
 
         /// ====================================================================
         /// Statistics related
@@ -2492,8 +2554,8 @@ class main_memory_t : public interconnection_interface_t {
         /// ====================================================================
         /// Methods
         /// ====================================================================
-        main_memory_t();
-        ~main_memory_t();
+        memory_controller_t();
+        ~memory_controller_t();
 
         /// ====================================================================
         /// Inheritance
@@ -2528,6 +2590,10 @@ class main_memory_t : public interconnection_interface_t {
             return (addr & this->channel_bits_mask) >> this->channel_bits_shift;
         }
 
+        inline uint64_t get_controller(uint64_t addr) {
+            return (addr & this->controller_bits_mask) >> this->controller_bits_shift;
+        }
+
         inline uint64_t get_column(uint64_t addr) {
             return (addr & this->column_bits_mask) >> this->column_bits_shift;
         }
@@ -2536,31 +2602,30 @@ class main_memory_t : public interconnection_interface_t {
             return (memory_addressA & this->not_column_bits_mask) == (memory_addressB & this->not_column_bits_mask);
         }
 
-        void find_cas_and_ras(memory_package_t **input_buffer, uint32_t input_buffer_size, uint32_t bank, int32_t& cas_position, int32_t& ras_position);
+        void find_cas_and_ras(memory_package_t *input_buffer, uint32_t input_buffer_size, memory_package_t *row_buffer, int32_t& cas_position, int32_t& ras_position);
 
-        INSTANTIATE_GET_SET(uint32_t, channel_number)
-        INSTANTIATE_GET_SET(uint32_t, total_channels)
-        INSTANTIATE_GET_SET(uint32_t, banks_per_channel)
-        INSTANTIATE_GET_SET(main_memory_mask_t, address_mask_type)
-
+        INSTANTIATE_GET_SET(memory_controller_mask_t, address_mask_type)
         INSTANTIATE_GET_SET(uint32_t, line_size)
 
-        INSTANTIATE_GET_SET(uint32_t, data_bus_latency)
+        INSTANTIATE_GET_SET(uint32_t, controller_number)
+        INSTANTIATE_GET_SET(uint32_t, total_controllers)
+        INSTANTIATE_GET_SET(uint32_t, channels_per_controller)
+        INSTANTIATE_GET_SET(uint32_t, banks_per_channel)
         INSTANTIATE_GET_SET(uint32_t, read_buffer_size)
         INSTANTIATE_GET_SET(uint32_t, write_buffer_size)
-
-        INSTANTIATE_GET_SET(uint64_t, send_ready_cycle)
-        INSTANTIATE_GET_SET(uint64_t, recv_read_ready_cycle)
-        INSTANTIATE_GET_SET(uint64_t, recv_write_ready_cycle)
-
-        INSTANTIATE_GET_SET(uint32_t, bank_penalty_ras)
-        INSTANTIATE_GET_SET(uint32_t, bank_penalty_cas)
-
         INSTANTIATE_GET_SET(uint32_t, row_buffer_size)
-        INSTANTIATE_GET_SET(row_buffer_t, row_buffer_policy)
+
+        INSTANTIATE_GET_SET(request_priority_t, request_priority_policy)
         INSTANTIATE_GET_SET(write_priority_t, write_priority_policy)
 
-        INSTANTIATE_GET_SET(bool, drain_write)
+        INSTANTIATE_GET_SET(uint32_t, bus_latency)
+
+        INSTANTIATE_GET_SET(uint32_t, RP_latency)
+        INSTANTIATE_GET_SET(uint32_t, RCD_latency)
+        INSTANTIATE_GET_SET(uint32_t, CAS_latency)
+        INSTANTIATE_GET_SET(uint32_t, RAS_latency)
+
+
         /// ====================================================================
         /// Statistics related
         /// ====================================================================

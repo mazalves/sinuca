@@ -63,7 +63,7 @@ SRC_CACHE_MEMORY =	memory_devices/prefetcher.cpp \
 
 SRC_DIRECTORY =		memory_devices/directory_controller.cpp
 
-SRC_MAIN_MEMORY =   memory_devices/main_memory.cpp
+SRC_MAIN_MEMORY =   memory_devices/memory_controller.cpp
 
 SRC_CORE = sinuca.cpp sinuca_engine.cpp sinuca_configurator.cpp $(SRC_BASIC) $(SRC_TRACE_READER) $(SRC_PROCESSOR) $(SRC_INTERCONNECTION) $(SRC_CACHE_MEMORY) $(SRC_DIRECTORY) $(SRC_MAIN_MEMORY) $(SRC_PARSER)
 

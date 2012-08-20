@@ -204,11 +204,12 @@ const char *get_enum_routing_algorithm_char(routing_algorithm_t type) {
 /// Cache replacement policy
 const char *get_enum_replacement_char(replacement_t type) {
     switch (type) {
-        case REPLACEMENT_LRU:       return "LRU"; break;
-        case REPLACEMENT_LRU_DSBP:  return "LRU_DSBP"; break;
-        case REPLACEMENT_RANDOM:    return "RANDOM"; break;
-        case REPLACEMENT_FIFO:      return "FIFO"; break;
-        case REPLACEMENT_LRF:       return "LRF"; break;
+        case REPLACEMENT_LRU:           return "LRU"; break;
+        case REPLACEMENT_LRU_INVALID:   return "LRU_INVALID"; break;
+        case REPLACEMENT_LRU_DSBP:      return "LRU_DSBP"; break;
+        case REPLACEMENT_RANDOM:        return "RANDOM"; break;
+        case REPLACEMENT_FIFO:          return "FIFO"; break;
+        case REPLACEMENT_LRF:           return "LRF"; break;
     };
     ERROR_PRINTF("Wrong REPLACEMENT\n");
     return "FAIL";
@@ -229,6 +230,7 @@ const char *get_enum_coherence_protocol_char(coherence_protocol_t type) {
 const char *get_enum_inclusiveness_char(inclusiveness_t type) {
     switch (type) {
         case INCLUSIVENESS_NON_INCLUSIVE:   return "NON_INCLUSIVE"; break;
+        case INCLUSIVENESS_INCLUSIVE:       return "INCLUSIVE"; break;
     };
     ERROR_PRINTF("Wrong INCLUSIVENESS\n");
     return "FAIL";
@@ -296,23 +298,25 @@ const char *get_enum_cache_mask_char(cache_mask_t type) {
 
 /// ============================================================================
 /// How the main memory will create its address mask
-const char *get_enum_main_memory_mask_char(main_memory_mask_t type) {
+const char *get_enum_memory_controller_mask_char(memory_controller_mask_t type) {
     switch (type) {
-        case MAIN_MEMORY_MASK_ROW_BANK_COLUMN:          return "ROW_BANK_COLUMN"; break;
-        case MAIN_MEMORY_MASK_ROW_BANK_CHANNEL_COLUMN:  return "ROW_BANK_CHANNEL_COLUMN"; break;
+        case MAIN_MEMORY_MASK_ROW_BANK_COLUMN:              return "ROW_BANK_COLUMN"; break;
+        case MAIN_MEMORY_MASK_ROW_BANK_CHANNEL_COLUMN:      return "ROW_BANK_CHANNEL_COLUMN"; break;
+        case MAIN_MEMORY_MASK_ROW_BANK_CHANNEL_CTRL_COLUMN: return "ROW_BANK_CHANNEL_CTRL_COLUMN"; break;
     };
     ERROR_PRINTF("Wrong MAIN_MEMORY_MASK\n");
     return "FAIL";
 };
 
+
 /// ============================================================================
 /// Policy to set the priority during the Row Buffer access
-const char *get_enum_row_buffer_char(row_buffer_t type) {
+const char *get_enum_request_priority_char(request_priority_t type) {
     switch (type) {
-        case ROW_BUFFER_HITS_FIRST:     return "ROW_BUFFER_HITS_FIRST"; break;
-        case ROW_BUFFER_FIFO:           return "ROW_BUFFER_FIFO"; break;
+        case REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST:     return "ROW_BUFFER_HITS_FIRST"; break;
+        case REQUEST_PRIORITY_FIRST_COME_FIRST_SERVE:     return "FIRST_COME_FIRST_SERVE"; break;
     };
-    ERROR_PRINTF("Wrong MAIN_MEMORY_ROW_BUFFER\n");
+    ERROR_PRINTF("Wrong MAIN_MEMORY_REQUEST_PRIORITY\n");
     return "FAIL";
 };
 

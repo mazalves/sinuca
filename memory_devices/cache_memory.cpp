@@ -318,6 +318,45 @@ void cache_memory_t::clock(uint32_t subcycle) {
         }
     }
 
+
+/*
+    // =================================================================
+    // PREFETCHER
+    // =================================================================
+    memory_package_t* memory_package = this->prefetcher.request_buffer_get_older();
+    if (memory_package != NULL) {
+        bool already_requested = false;
+        CACHE_DEBUG_PRINTF("\t Has New Prefetch.\n");
+
+        /// Check if the same address has been already requested
+        for (uint32_t i = 0 ; i < this->mshr_buffer_size; i++) {
+            if (this->cmp_tag_index_bank(this->mshr_buffer[i].memory_address, memory_package->memory_address)) {
+                already_requested = true;
+                CACHE_DEBUG_PRINTF("\t\t Dropping PREFETCH\n");
+                this->prefetcher.request_buffer_remove();
+                break;
+            }
+        }
+
+        if (already_requested == false) {
+            /// Check for free space into MSHR[PREFETCH]
+            int32_t position_pfetch = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size, this->mshr_buffer_prefetch_reserved_size);
+            if (position_pfetch != POSITION_FAIL) {
+                position_pfetch += this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size;
+                    CACHE_DEBUG_PRINTF("\t RECEIVED PREFETCH\n");
+                    this->mshr_buffer[position_pfetch] = *memory_package;
+                    this->mshr_buffer[position_pfetch].id_owner = get_id();
+                    this->mshr_buffer[position_pfetch].id_src = get_id();
+                    this->mshr_buffer[position_pfetch].id_dst = get_id();
+                    this->mshr_buffer[position_pfetch].package_untreated(0);
+                }
+            else {
+                add_stat_full_mshr_buffer_prefetch();
+            }
+        }
+    }
+ * */
+
 };
 
 // =============================================================================
@@ -385,10 +424,10 @@ int32_t cache_memory_t::allocate_copyback(memory_package_t* package){
     int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size, this->mshr_buffer_copyback_reserved_size);
     if (slot != POSITION_FAIL) {
         slot += this->mshr_buffer_request_reserved_size;
-            CACHE_DEBUG_PRINTF("\t NEW COPYBACK\n");
-            this->mshr_buffer[slot] = *package;
-            this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
-        }
+        CACHE_DEBUG_PRINTF("\t NEW COPYBACK\n");
+        this->mshr_buffer[slot] = *package;
+        this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
+    }
     else {
         add_stat_full_mshr_buffer_copyback();
     }
@@ -400,11 +439,11 @@ int32_t cache_memory_t::allocate_prefetch(memory_package_t* package){
 
     int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size, this->mshr_buffer_prefetch_reserved_size);
     if (slot != POSITION_FAIL) {
-        slot += this->mshr_buffer_request_reserved_size;
-            CACHE_DEBUG_PRINTF("\t NEW PREFETCH\n");
-            this->mshr_buffer[slot] = *package;
-            this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
-        }
+        slot += this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size;
+        CACHE_DEBUG_PRINTF("\t NEW PREFETCH\n");
+        this->mshr_buffer[slot] = *package;
+        this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
+    }
     else {
         add_stat_full_mshr_buffer_copyback();
     }
@@ -788,7 +827,7 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& i
     index = get_index(memory_address);
 
     switch (this->replacement_policy) {
-        case REPLACEMENT_LRU: {
+        case REPLACEMENT_LRU_INVALID: {
             uint64_t last_access = sinuca_engine.get_global_cycle() + 1;
             for (uint32_t way = 0; way < this->get_associativity(); way++) {
                 /// The line is not locked by directory
@@ -813,15 +852,34 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& i
         }
         break;
 
+
+        case REPLACEMENT_LRU: {
+            uint64_t last_access = sinuca_engine.get_global_cycle() + 1;
+            for (uint32_t way = 0; way < this->get_associativity(); way++) {
+                /// The line is not locked by directory
+                if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[way].tag) == FAIL) {
+                    /// If the line is LRU && the line is not locked by directory
+                    if (this->sets[index].ways[way].last_access <= last_access) {
+                        choosen_line = &this->sets[index].ways[way];
+                        last_access = this->sets[index].ways[way].last_access;
+                        choosen_way = way;
+                    }
+                }
+                else {
+                    ERROR_ASSERT_PRINTF(cmp_tag_index_bank(memory_address, this->sets[index].ways[way].tag) == FAIL, "Trying to find one line to evict, but tag == address\n")
+                }
+            }
+        }
+        break;
+
         case REPLACEMENT_LRU_DSBP: {
             uint64_t last_access = sinuca_engine.get_global_cycle() + 1;
             DSBP_metadata_sets_t *DSBP_metada = this->line_usage_predictor.get_DSBP_sets();
             for (uint32_t way = 0; way < this->get_associativity(); way++) {
                 /// The line is not locked by directory
                 if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[way].tag) == FAIL) {
-                    /// If there is free space || is_dead
-                    if (this->sets[index].ways[way].status == PROTOCOL_STATUS_I ||
-                    DSBP_metada[index].ways[way].is_dead == true) {
+                    /// If is_dead
+                    if (DSBP_metada[index].ways[way].is_dead == true) {
                         choosen_line = &this->sets[index].ways[way];
                         choosen_way = way;
                         break;

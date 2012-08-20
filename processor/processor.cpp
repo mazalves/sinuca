@@ -123,7 +123,7 @@ processor_t::processor_t() {
     this->read_buffer_size = 0;
     this->write_buffer_size = 0;
 
-	this->branch_per_fetch = 0;
+    this->branch_per_fetch = 0;
 
     this->data_cache = NULL;
     this->inst_cache = NULL;
@@ -414,13 +414,13 @@ void processor_t::stage_fetch() {
             continue;
         }
 
-		/// If the instruction is a branch
-	    if (this->trace_next_opcode.opcode_operation == INSTRUCTION_OPERATION_BRANCH) {
-			count_branches++;
-			if (count_branches > this->branch_per_fetch){
-				break;
-			}
-	    }
+        /// If the instruction is a branch
+        if (this->trace_next_opcode.opcode_operation == INSTRUCTION_OPERATION_BRANCH) {
+            count_branches++;
+            if (count_branches > this->branch_per_fetch){
+                break;
+            }
+        }
 
 
         position_buffer = this->fetch_buffer_insert();
@@ -825,6 +825,8 @@ void processor_t::stage_dispatch() {
                 /// NOT INDENTIFIED
                 case INSTRUCTION_OPERATION_OTHER:
                     if (this->fu_int_alu < this->number_fu_int_alu) {
+                        this->stat_dispatch_cycles_fu_int_alu += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+
                         this->fu_int_alu++;
                         dispatched = true;
                         reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
@@ -834,6 +836,8 @@ void processor_t::stage_dispatch() {
                 /// INTEGERS MUL ===============================================
                 case INSTRUCTION_OPERATION_INT_MUL:
                     if (this->fu_int_mul < this->number_fu_int_mul) {
+                        this->stat_dispatch_cycles_fu_int_mul += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+
                         this->fu_int_mul++;
                         dispatched = true;
                         reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
@@ -843,6 +847,8 @@ void processor_t::stage_dispatch() {
                 /// INTEGERS DIV ===============================================
                 case INSTRUCTION_OPERATION_INT_DIV:
                     if (this->fu_int_div < this->number_fu_int_div) {
+                        this->stat_dispatch_cycles_fu_int_div += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+
                         this->fu_int_div++;
                         dispatched = true;
                         reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
@@ -854,6 +860,8 @@ void processor_t::stage_dispatch() {
                 /// FLOAT POINT ALU ============================================
                 case INSTRUCTION_OPERATION_FP_ALU:
                     if (this->fu_fp_alu < this->number_fu_fp_alu) {
+                        this->stat_dispatch_cycles_fu_fp_alu += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+
                         this->fu_fp_alu++;
                         dispatched = true;
                         reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
@@ -863,6 +871,8 @@ void processor_t::stage_dispatch() {
                 /// FLOAT POINT MUL ============================================
                 case INSTRUCTION_OPERATION_FP_MUL:
                     if (this->fu_fp_mul < this->number_fu_fp_mul) {
+                        this->stat_dispatch_cycles_fu_fp_mul += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+
                         this->fu_fp_mul++;
                         dispatched = true;
                         reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
@@ -872,6 +882,8 @@ void processor_t::stage_dispatch() {
                 /// FLOAT POINT DIV ============================================
                 case INSTRUCTION_OPERATION_FP_DIV:
                     if (this->fu_fp_div < this->number_fu_fp_div) {
+                        this->stat_dispatch_cycles_fu_fp_div += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+
                         this->fu_fp_div++;
                         dispatched = true;
                         reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
@@ -883,6 +895,8 @@ void processor_t::stage_dispatch() {
                 /// MEMORY OPERATIONS ==========================================
                 case INSTRUCTION_OPERATION_MEM_LOAD:
                     if (this->fu_mem_load < this->number_fu_mem_load) {
+                        this->stat_dispatch_cycles_fu_mem_load += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+
                         this->fu_mem_load++;
                         dispatched = true;
                         reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
@@ -891,6 +905,8 @@ void processor_t::stage_dispatch() {
                 break;
                 case INSTRUCTION_OPERATION_MEM_STORE:
                     if (this->fu_mem_store < this->number_fu_mem_store) {
+                        this->stat_dispatch_cycles_fu_mem_store += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+
                         this->fu_mem_store++;
                         dispatched = true;
                         reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
@@ -980,7 +996,6 @@ void processor_t::stage_execution() {
 
             ERROR_ASSERT_PRINTF(reorder_buffer_line->stage == PROCESSOR_STAGE_EXECUTION, "Reservation Station with package not in Rename Stage.\n")
             ERROR_ASSERT_PRINTF(reorder_buffer_line->uop.state == PACKAGE_STATE_READY, "Reservation Station with package not Ready.\n")
-
 
             switch (reorder_buffer_line->uop.uop_operation) {
             ///=============================================================
@@ -1161,6 +1176,8 @@ void processor_t::solve_data_forward(reorder_buffer_line_t *rob_line) {
         /// There is an unsolved dependency
         if (rob_line->deps_ptr_array[j] != NULL) {
             rob_line->deps_ptr_array[j]->wait_deps_number--;
+            /// This update the ready cycle, and it is usefull to compute the time each instruction waits for the functional unit
+            rob_line->deps_ptr_array[j]->uop.ready_cycle = sinuca_engine.get_global_cycle();
             rob_line->deps_ptr_array[j] = NULL;
         }
         /// All the dependencies are solved
@@ -1435,6 +1452,7 @@ void processor_t::reset_statistics() {
     this->set_stat_branch_stall_cycles(0);
     this->set_stat_sync_stall_cycles(0);
 
+    /// Executed Instructions
     this->set_stat_nop_completed(0);
     this->set_stat_branch_completed(0);
     this->set_stat_other_completed(0);
@@ -1451,6 +1469,19 @@ void processor_t::reset_statistics() {
     this->set_stat_instruction_read_completed(0);
     this->set_stat_memory_write_completed(0);
 
+    /// Dispatch Cycles Stall
+    this->set_stat_dispatch_cycles_fu_int_alu(0);
+    this->set_stat_dispatch_cycles_fu_int_mul(0);
+    this->set_stat_dispatch_cycles_fu_int_div(0);
+
+    this->set_stat_dispatch_cycles_fu_fp_alu(0);
+    this->set_stat_dispatch_cycles_fu_fp_mul(0);
+    this->set_stat_dispatch_cycles_fu_fp_div(0);
+
+    this->set_stat_dispatch_cycles_fu_mem_load(0);
+    this->set_stat_dispatch_cycles_fu_mem_store(0);
+
+    /// Memory Cycles Stall
     this->stat_min_instruction_read_wait_time = MAX_ALIVE_TIME;
     this->stat_max_instruction_read_wait_time = 0;
     this->stat_acumulated_instruction_read_wait_time = 0;
@@ -1499,7 +1530,7 @@ void processor_t::print_statistics() {
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_sync_stall_cycles_ratio_warm", this->stat_sync_stall_cycles,
                                                                                                                        sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
 
-
+    /// Executed Instructions
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_nop_completed", stat_nop_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_branch_completed", stat_branch_completed);
@@ -1520,6 +1551,37 @@ void processor_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_memory_read_completed", stat_memory_read_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_memory_write_completed", stat_memory_write_completed);
 
+    /// Dispatch Cycles Stall
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dispatch_cycles_fu_int_alu", stat_dispatch_cycles_fu_int_alu);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dispatch_cycles_fu_int_mul", stat_dispatch_cycles_fu_int_mul);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dispatch_cycles_fu_int_div", stat_dispatch_cycles_fu_int_div);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dispatch_cycles_fu_fp_alu", stat_dispatch_cycles_fu_fp_alu);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dispatch_cycles_fu_fp_mul", stat_dispatch_cycles_fu_fp_mul);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dispatch_cycles_fu_fp_div", stat_dispatch_cycles_fu_fp_div);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dispatch_cycles_fu_mem_load", stat_dispatch_cycles_fu_mem_load);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dispatch_cycles_fu_mem_store", stat_dispatch_cycles_fu_mem_store);
+
+    /// Dispatch Cycles Stall per Uop
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_dispatch_cycles_fu_int_alu_ratio", stat_dispatch_cycles_fu_int_alu, stat_int_alu_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_dispatch_cycles_fu_int_mul_ratio", stat_dispatch_cycles_fu_int_mul, stat_int_mul_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_dispatch_cycles_fu_int_div_ratio", stat_dispatch_cycles_fu_int_div, stat_int_div_completed);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_dispatch_cycles_fu_fp_alu_ratio", stat_dispatch_cycles_fu_fp_alu, stat_fp_alu_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_dispatch_cycles_fu_fp_mul_ratio", stat_dispatch_cycles_fu_fp_mul, stat_fp_mul_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_dispatch_cycles_fu_fp_div_ratio", stat_dispatch_cycles_fu_fp_div, stat_fp_div_completed);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_dispatch_cycles_fu_mem_load_ratio", stat_dispatch_cycles_fu_mem_load, stat_memory_read_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_dispatch_cycles_fu_mem_store_ratio", stat_dispatch_cycles_fu_mem_store, stat_memory_write_completed);
+
+    /// Memory Cycles Stall
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_instruction_read_wait_time", stat_min_instruction_read_wait_time);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_instruction_read_wait_time", stat_max_instruction_read_wait_time);
@@ -1531,9 +1593,9 @@ void processor_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_memory_write_wait_time", stat_max_memory_write_wait_time);
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_instruction_read_wait_time",stat_acumulated_instruction_read_wait_time, stat_instruction_read_completed);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_memory_read_wait_time",stat_acumulated_memory_read_wait_time, stat_memory_read_completed);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_memory_write_wait_time",stat_acumulated_memory_write_wait_time, stat_memory_write_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_instruction_read_wait_time_ratio",stat_acumulated_instruction_read_wait_time, stat_instruction_read_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_memory_read_wait_time_ratio",stat_acumulated_memory_read_wait_time, stat_memory_read_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_memory_write_wait_time_ratio",stat_acumulated_memory_write_wait_time, stat_memory_write_completed);
 
     this->branch_predictor.print_statistics();
 };

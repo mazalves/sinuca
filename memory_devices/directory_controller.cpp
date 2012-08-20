@@ -772,9 +772,9 @@ uint32_t directory_controller_t::find_next_obj_id(cache_memory_t *cache_memory, 
     }
     ERROR_ASSERT_PRINTF(lower_level_cache->size() == 0, "Could not find a valid lower_level_cache\n")
     /// Find Next Main Memory
-    for (uint32_t i = 0; i < sinuca_engine.main_memory_array_size; i++) {
-        if (sinuca_engine.main_memory_array[i]->get_channel(memory_address) == sinuca_engine.main_memory_array[i]->get_channel_number()) {
-            return sinuca_engine.main_memory_array[i]->get_id();
+    for (uint32_t i = 0; i < sinuca_engine.memory_controller_array_size; i++) {
+        if (sinuca_engine.memory_controller_array[i]->get_controller(memory_address) == sinuca_engine.memory_controller_array[i]->get_controller_number()) {
+            return sinuca_engine.memory_controller_array[i]->get_id();
         }
     }
     ERROR_PRINTF("Could not find a next_level for the memory address\n")
@@ -901,6 +901,15 @@ protocol_status_t directory_controller_t::look_higher_levels(cache_memory_t *cac
                                     }
                                     return PROTOCOL_STATUS_O;
                                 break;
+
+                                case INCLUSIVENESS_INCLUSIVE:
+                                    /// Allocate in this level only if line already exist
+                                    if (this_cache_line != NULL) {
+                                        cache_memory->change_status(this_cache_line, PROTOCOL_STATUS_S);
+                                    }
+                                    return PROTOCOL_STATUS_O;
+                                break;
+
                             }
                         break;
 
