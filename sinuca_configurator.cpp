@@ -761,6 +761,20 @@ void sinuca_engine_t::initialize_memory_controller() {
             memory_controller_parameters.push_back("ROW_BUFFER_SIZE");
             this->memory_controller_array[i]->set_row_buffer_size( cfg_memory_controller[ memory_controller_parameters.back() ] );
 
+            memory_controller_parameters.push_back("BANK_SELECTION_POLICY");
+            if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "RANDOM") ==  0) {
+                this->memory_controller_array[i]->set_bank_selection_policy(SELECTION_RANDOM);
+            }
+            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROUND_ROBIN") ==  0) {
+                this->memory_controller_array[i]->set_bank_selection_policy(SELECTION_ROUND_ROBIN);
+            }
+            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "BUFFER_LEVEL") ==  0) {
+                this->memory_controller_array[i]->set_bank_selection_policy(SELECTION_BUFFER_LEVEL);
+            }
+            else {
+                ERROR_PRINTF("MAIN MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_memory_controller[ memory_controller_parameters.back() ].c_str(), memory_controller_parameters.back());
+            }
+
             memory_controller_parameters.push_back("REQUEST_PRIORITY_POLICY");
             if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BUFFER_HITS_FIRST") ==  0) {
                 this->memory_controller_array[i]->set_request_priority_policy(REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST);
@@ -860,6 +874,9 @@ void sinuca_engine_t::initialize_interconnection_router() {
             }
             else if (strcasecmp(cfg_interconnection_router[ interconnection_router_parameters.back() ], "ROUND_ROBIN") ==  0) {
                 this->interconnection_router_array[i]->set_selection_policy(SELECTION_ROUND_ROBIN);
+            }
+            else if (strcasecmp(cfg_interconnection_router[ interconnection_router_parameters.back() ], "BUFFER_LEVEL") ==  0) {
+                this->interconnection_router_array[i]->set_selection_policy(SELECTION_BUFFER_LEVEL);
             }
             else {
                 ERROR_PRINTF("INTERCONNECTION_ROUTER %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_interconnection_router[ interconnection_router_parameters.back() ].c_str(), interconnection_router_parameters.back());

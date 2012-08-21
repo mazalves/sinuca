@@ -189,7 +189,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
         /// Transaction on the same address was found
         if (this->cmp_index_tag(this->directory_lines[0][i]->initial_memory_address, package->memory_address)){
             ///===========================================
-            /// Directory Line Refers to this package ?
+            /// Directory Line Refers to this package
             if (cache->get_hierarchy_level() != 1 &&                                    /// If NOT Cache L1 (New directory line may be created)
             cache->get_id() != package->id_owner &&                                     /// If NOT This level created the package (New directory line may be created) (Avoid the case when a copy back and prefetch happens together)
             this->directory_lines[0][i]->id_owner == package->id_owner &&               /// If the package Owner is the same
@@ -201,7 +201,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             }
 
             ///===========================================
-            /// Directory Line Refers to other transaction
+            /// Directory Line Refers to other package
             else {
                 ERROR_ASSERT_PRINTF(directory_lines[0][i]->lock_type != LOCK_FREE, "Found directory with LOCK_FREE\n");
 
@@ -285,6 +285,8 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN WAIT (Parallel Request)\n")
                 return PACKAGE_STATE_WAIT;
             }
+            ///=================================================================
+            /// Cache Line Miss
             else {
                 return PACKAGE_STATE_UNTREATED;
             }
@@ -295,7 +297,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     /// ========================================================================
     /// Takes care about the CACHE HIT/MISS
     /// ========================================================================
-
     switch (package->memory_operation) {
         ///=====================================================================
         /// READ and WRITE
@@ -321,7 +322,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
                 /// THIS cache level started the request (PREFETCH)
                 if (package->id_owner == cache->get_id()) {
-                    /// Update Coherence Status
+                    /// Update Coherence Status and Last Access Time
                     this->coherence_new_operation(cache, cache_line, package, true);
                     /// Erase the answer
                     DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (Requester = This)\n")
@@ -329,7 +330,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 }
                 /// Need to send answer to higher level
                 else {
-                    /// Update Coherence Status
+                    /// Update Coherence Status and Last Access Time
                     this->coherence_new_operation(cache, cache_line, package, true);
                     /// Add Latency
                     if (package->memory_operation == MEMORY_OPERATION_WRITE) {
@@ -350,6 +351,11 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             ///=================================================================
             /// Cache Line Sub_Block Miss
             else if (is_line_hit) {
+                // =============================================================
+                // Line Usage Prediction
+                cache->line_usage_predictor.sub_block_miss(package, index, way);
+
+
                 /// The request can be treated now !
                 /// New Directory_Line + LOCK
                 if (directory_line == NULL) {
@@ -366,9 +372,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 directory_line->cache_request_order[cache_id] = ++directory_line->cache_requested;
                 DIRECTORY_CTRL_DEBUG_PRINTF("\t Update Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
 
-                // =============================================================
-                // Line Usage Prediction
-                cache->line_usage_predictor.sub_block_miss(package, index, way);
 
 
                 /// Send Request to fill the cache line
@@ -378,7 +381,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
                 /// Check if some HIGHER LEVEL has the cache line Modified
                 cache->change_status(cache_line, this->look_higher_levels(cache, package, true));
-
 
                 /// Higher Level Hit
                 if (cache_line->status != PROTOCOL_STATUS_I) {
@@ -403,6 +405,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             /// Cache Line Miss
             else {
 
+                ///=============================================================
+                /// Make room for the new cache line
+                ///=============================================================
                 /// Do not have a reserved line
                 if (cache_line == NULL) {
                     cache_line = cache->evict_address(package->memory_address, index, way);
@@ -412,31 +417,36 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                         DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED (Cache_line == NULL)\n")
                         return PACKAGE_STATE_UNTREATED;
                     }
-                }
-                /// Already have a reserved line or Found Line to Evict
-
-                /// Need CopyBack ?
-                if (!coherence_need_copyback(cache_line)) {
-                    /// Add statistics to the cache
-                    cache->cache_evict(package->memory_address, false);
-                }
-                else {
-                    if (this->create_cache_copyback(cache, cache_line, index, way)) {
-                        /// Add statistics to the cache
-                        cache->cache_evict(package->memory_address, true);
-                    }
                     else {
-                        /// Cannot continue right now
-                        DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED (Find_free MSHR == NULL)\n")
-                        return PACKAGE_STATE_UNTREATED;
+                        /// Need CopyBack ?
+                        if (!coherence_need_copyback(cache_line)) {
+                            /// Add statistics to the cache
+                            cache->cache_evict(package->memory_address, false);
+                        }
+                        else {
+                            if (this->create_cache_copyback(cache, cache_line, index, way)) {
+                                /// Add statistics to the cache
+                                cache->cache_evict(package->memory_address, true);
+                            }
+                            else {
+                                /// Cannot continue right now
+                                DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED (Find_free MSHR == NULL)\n")
+                                return PACKAGE_STATE_UNTREATED;
+                            }
+                        }
+
                     }
+
                 }
 
-                /// Found Line to Evict
-                /// No Need for CopyBack or CopyBack allocated
+                ///=============================================================
+                /// Free space for the new line is ready
+                ///=============================================================
+
                 // =============================================================
                 // Line Usage Prediction
                 cache->line_usage_predictor.line_eviction(index, way);
+                cache->line_usage_predictor.line_miss(package, index, way);
 
                 /// Reserve the evicted line for the new address
                 cache->change_address(cache_line, package->memory_address);
@@ -460,9 +470,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 directory_line->cache_request_order[cache_id] = ++directory_line->cache_requested;
                 DIRECTORY_CTRL_DEBUG_PRINTF("\t Update Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
 
-                // =============================================================
-                // Line Usage Prediction
-                cache->line_usage_predictor.line_miss(package, index, way);
 
                 /// Send Request to fill the cache line
                 if (package->memory_operation == MEMORY_OPERATION_WRITE) {
@@ -471,7 +478,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
                 /// Check if some HIGHER LEVEL has the cache line Modified
                 cache->change_status(cache_line, this->look_higher_levels(cache, package, true));
-
 
                 /// Higher Level Hit
                 if (cache_line->status != PROTOCOL_STATUS_I) {
@@ -503,7 +509,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             /// COPYBACK from THIS cache => LOWER level
             ERROR_ASSERT_PRINTF(cache->get_id() != package->id_owner, "Copyback should be created using create_cache_copyback.\n")
 
-            /// COPYBACK from HIGHER cache => THIS level
+            ///=================================================================
+            /// Make room for the new cache line
+            ///=================================================================
             /// Do not have a reserved line
             if (cache_line == NULL) {
                 cache_line = cache->evict_address(package->memory_address, index, way);
@@ -513,45 +521,42 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                     DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED (Cache_line == NULL)\n")
                     return PACKAGE_STATE_UNTREATED;
                 }
-            }
-            /// Already have a reserved line or Found Line to Evict
-
-            /// Need CopyBack ?
-            if (!coherence_need_copyback(cache_line)) {
-                /// Add statistics to the cache
-                cache->cache_evict(package->memory_address, false);
-            }
-            else {
-                if (this->create_cache_copyback(cache, cache_line, index, way)) {
-                    /// Add statistics to the cache
-                    cache->cache_evict(package->memory_address, true);
-                }
                 else {
-                    /// Cannot continue right now
-                    DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED (Find_free MSHR == NULL)\n")
-                    return PACKAGE_STATE_UNTREATED;
+                    /// Need CopyBack ?
+                    if (!coherence_need_copyback(cache_line)) {
+                        /// Add statistics to the cache
+                        cache->cache_evict(package->memory_address, false);
+                    }
+                    else {
+                        if (this->create_cache_copyback(cache, cache_line, index, way)) {
+                            /// Add statistics to the cache
+                            cache->cache_evict(package->memory_address, true);
+                        }
+                        else {
+                            /// Cannot continue right now
+                            DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED (Find_free MSHR == NULL)\n")
+                            return PACKAGE_STATE_UNTREATED;
+                        }
+                    }
                 }
             }
 
-            /// Found Line to Evict
-            /// No Need for CopyBack or CopyBack allocated
+            ///=================================================================
+            /// Free space for the new line is ready
+            ///=================================================================
             // =============================================================
             // Line Usage Prediction
-            cache->line_usage_predictor.line_eviction(index, way);
+            // ~ cache->line_usage_predictor.line_eviction(index, way);
+            cache->line_usage_predictor.line_insert_copyback(package, cache, cache_line, index, way);
 
             /// Reserve the evicted line for the new address
             cache->change_address(cache_line, package->memory_address);
             /// Coherence Invalidate
             cache->change_status(cache_line, PROTOCOL_STATUS_I);
-            /// Update Coherence Status
+            /// Update Coherence Status and Last Access Time
             this->coherence_new_operation(cache, cache_line, package, true);
             /// Add Latency
             package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_write();
-
-            // =============================================================
-            // Line Usage Prediction
-            cache->line_usage_predictor.line_insert_copyback(package, index, way);
-
 
             /// Send ANSWER
             package->is_answer = true;
@@ -619,70 +624,65 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
     uint32_t index, way;
     cache_line_t *cache_line = cache->find_line(package->memory_address, index, way);
 
-    switch (package->memory_operation) {
-        ///=====================================================================
-        /// READ AND WRITE
-        case MEMORY_OPERATION_READ:
-        case MEMORY_OPERATION_INST:
-        case MEMORY_OPERATION_PREFETCH:
-        case MEMORY_OPERATION_WRITE:
-        case MEMORY_OPERATION_COPYBACK:
-                /// THIS cache level started the request
-                if (directory_line->id_owner == cache->get_id()) {
-                    /// Erase the directory_entry
-                    DIRECTORY_CTRL_DEBUG_PRINTF("\t Erasing Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
-                    utils_t::template_delete_variable<directory_controller_line_t>(directory_line);
-                    directory_line = NULL;
-                    this->directory_lines->erase(this->directory_lines->begin() + directory_line_number);
+    /// ========================================================================
+    /// THIS cache level generated the request (PREFETCH / COPYBACK)
+    if (directory_line->id_owner == cache->get_id()) {
+        /// Erase the directory_entry
+        DIRECTORY_CTRL_DEBUG_PRINTF("\t Erasing Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
+        utils_t::template_delete_variable<directory_controller_line_t>(directory_line);
+        directory_line = NULL;
+        this->directory_lines->erase(this->directory_lines->begin() + directory_line_number);
+        /// Update Coherence Status
+        this->coherence_new_operation(cache, cache_line, package, false);
+        /// Erase the package
+        DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (Requester = This)\n")
+        return PACKAGE_STATE_FREE;
+    }
+    /// Need to send answer to higher level
+    else {
+        /// Update existing Directory_Line
+        ERROR_ASSERT_PRINTF(directory_line->cache_request_order[cache_id] == directory_line->cache_requested, "Wrong Cache Request Order\n")
+        directory_line->cache_requested--;
+        directory_line->cache_request_order[cache_id] = 0;
+        DIRECTORY_CTRL_DEBUG_PRINTF("\t Update Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
+
+        /// ====================================================================
+        /// This is the FIRST cache to receive the request
+        if (directory_line->cache_requested == 0) {
+            /// Get the DST ID
+            package->id_src = cache->get_id();
+            package->id_dst = directory_line->id_owner;
+            package->memory_operation = directory_line->initial_memory_operation;
+            package->memory_address = directory_line->initial_memory_address;
+            /// Erase the directory_entry
+            DIRECTORY_CTRL_DEBUG_PRINTF("\t Erasing Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
+            utils_t::template_delete_variable<directory_controller_line_t>(directory_line);
+            directory_line = NULL;
+            this->directory_lines->erase(this->directory_lines->begin() + directory_line_number);
+            /// Update Coherence Status
+            this->coherence_new_operation(cache, cache_line, package, false);
+            /// Send the package answer
+            DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT ANS (First Cache Requested)\n")
+            return PACKAGE_STATE_TRANSMIT;
+        }
+
+        /// ====================================================================
+        /// This is NOT the FIRST cache to receive the request
+        else {
+            for (uint32_t i = 0; i < sinuca_engine.cache_memory_array_size; i++) {
+                /// Found the previous requester
+                if (directory_line->cache_request_order[i] == directory_line->cache_requested) {
+                    /// Get the DST ID
+                    package->id_src = cache->get_id();
+                    package->id_dst = sinuca_engine.cache_memory_array[i]->get_id();
                     /// Update Coherence Status
                     this->coherence_new_operation(cache, cache_line, package, false);
-                    /// Erase the answer
-                    DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (Requester = This)\n")
-                    return PACKAGE_STATE_FREE;
+                    /// Send the package answer
+                    DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT ANS (NOT First Cache Requested)\n")
+                    return PACKAGE_STATE_TRANSMIT;
                 }
-                /// Need to send answer to higher level
-                else {
-                    /// Update existing Directory_Line
-                    ERROR_ASSERT_PRINTF(directory_line->cache_request_order[cache_id] == directory_line->cache_requested, "Wrong Cache Request Order\n")
-                    directory_line->cache_requested--;
-                    directory_line->cache_request_order[cache_id] = 0;
-                    DIRECTORY_CTRL_DEBUG_PRINTF("\t Update Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
-                    /// This is the first cache requester
-                    if (directory_line->cache_requested == 0) {
-                        /// Get the DST ID
-                        package->id_src = cache->get_id();
-                        package->id_dst = directory_line->id_owner;
-                        package->memory_operation = directory_line->initial_memory_operation;
-                        package->memory_address = directory_line->initial_memory_address;
-                        /// Erase the directory_entry
-                        DIRECTORY_CTRL_DEBUG_PRINTF("\t Erasing Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
-                        utils_t::template_delete_variable<directory_controller_line_t>(directory_line);
-                        directory_line = NULL;
-                        this->directory_lines->erase(this->directory_lines->begin() + directory_line_number);
-                        /// Update Coherence Status
-                        this->coherence_new_operation(cache, cache_line, package, false);
-                        /// Send the answer
-                        DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT ANS (First Cache Requested)\n")
-                        return PACKAGE_STATE_TRANSMIT;
-                    }
-                    /// This is NOT the first cache requester
-                    else {
-                        for (uint32_t i = 0; i < sinuca_engine.cache_memory_array_size; i++) {
-                            /// Found the previous requester
-                            if (directory_line->cache_request_order[i] == directory_line->cache_requested) {
-                                /// Get the DST ID
-                                package->id_src = cache->get_id();
-                                package->id_dst = sinuca_engine.cache_memory_array[i]->get_id();
-                                /// Update Coherence Status
-                                this->coherence_new_operation(cache, cache_line, package, false);
-                                /// Send the answer
-                                DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT ANS (NOT First Cache Requested)\n")
-                                return PACKAGE_STATE_TRANSMIT;
-                            }
-                        }
-                    }
-                }
-        break;
+            }
+        }
     }
 
     ERROR_PRINTF("Could not treat the cache answer\n")
@@ -1044,7 +1044,7 @@ void directory_controller_t::coherence_invalidate_all(cache_memory_t *cache_memo
             cache_line_t *cache_line = sinuca_engine.cache_memory_array[i]->find_line(memory_address, index, way);
             if (cache_line != NULL) {
                 cache_line->status = PROTOCOL_STATUS_I;
-                cache_line->tag = 0;
+                // ~ cache_line->tag = 0;
                 /// Cache Statistics
                 sinuca_engine.cache_memory_array[i]->cache_invalidate(memory_address, false);
             }
@@ -1070,9 +1070,9 @@ void directory_controller_t::coherence_new_operation(cache_memory_t *cache, cach
                 break;
 
                 case MEMORY_OPERATION_WRITE:
+                    this->coherence_invalidate_all(cache, package->memory_address);
                     /// Update the Replacemente Policy information
                     cache->update_last_access(cache_line);
-                    this->coherence_invalidate_all(cache, package->memory_address);
                     cache_line->status = PROTOCOL_STATUS_M;
                 break;
 
@@ -1205,6 +1205,7 @@ void directory_controller_t::reset_statistics() {
 
 };
 
+//==============================================================================
 void directory_controller_t::print_statistics() {
     char title[100] = "";
     sprintf(title, "Statistics of %s", this->get_label());
@@ -1255,6 +1256,7 @@ void directory_controller_t::print_statistics() {
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_copyback_wait_time_ratio",stat_acumulated_copyback_wait_time, stat_copyback_miss);
 };
 
+//==============================================================================
 void directory_controller_t::print_configuration() {
     char title[100] = "";
     sprintf(title, "Configuration of %s", this->get_label());

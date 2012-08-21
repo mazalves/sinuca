@@ -63,7 +63,9 @@ memory_controller_t::~memory_controller_t() {
 //==============================================================================
 void memory_controller_t::allocate() {
 
+    this->bus_latency = (this->line_size / this->get_interconnection_width()) * this->get_interconnection_latency();
     this->bus_ready_cycle = utils_t::template_allocate_initialize_array<uint64_t>(this->get_channels_per_controller(), 0);
+
     this->send_ready_cycle = utils_t::template_allocate_initialize_array<uint64_t>(this->get_channels_per_controller(), 0);
     this->recv_read_ready_cycle = utils_t::template_allocate_initialize_array<uint64_t>(this->get_channels_per_controller(), 0);
     this->recv_write_ready_cycle = utils_t::template_allocate_initialize_array<uint64_t>(this->get_channels_per_controller(), 0);
@@ -72,6 +74,7 @@ void memory_controller_t::allocate() {
 
     for (uint32_t i = 0; i < this->get_channels_per_controller(); i++) {
         this->channels[i].row_buffer = utils_t::template_allocate_array<memory_package_t>(this->get_banks_per_channel());
+        this->channels[i].cas_ready_cycle = utils_t::template_allocate_initialize_array<uint64_t>(this->get_banks_per_channel(), 0);
 
         /// Initialize with the row 0 opened. (Anyway a new row need to be opened, but save one IF on the clock)
         for (uint32_t j = 0; j < this->get_banks_per_channel(); j++) {
@@ -87,8 +90,6 @@ void memory_controller_t::allocate() {
     }
 
     this->set_masks();
-
-    this->bus_latency = (this->line_size / this->get_interconnection_width()) * this->get_interconnection_latency();
 
     #ifdef MAIN_MEMORY_DEBUG
         this->print_configuration();
@@ -296,160 +297,256 @@ void memory_controller_t::clock(uint32_t subcycle) {
     MAIN_MEMORY_DEBUG_PRINTF("====================\n");
     MAIN_MEMORY_DEBUG_PRINTF("cycle() \n");
 
+
+    uint32_t bank = 0;
+    /// Select a port to be activated.
+    switch (this->get_bank_selection_policy()) {
+        case SELECTION_RANDOM:
+            bank = this->selectionRandom(this->get_banks_per_channel());
+        break;
+
+        case SELECTION_ROUND_ROBIN:
+            bank = this->selectionRoundRobin(this->get_banks_per_channel());
+        break;
+
+        case SELECTION_BUFFER_LEVEL:
+        break;
+    }
+    
     for (uint32_t channel = 0; channel < this->get_channels_per_controller(); channel++) {
+
+        switch (this->get_bank_selection_policy()) {
+            case SELECTION_RANDOM:
+            break;
+
+            case SELECTION_ROUND_ROBIN:
+            break;
+
+            case SELECTION_BUFFER_LEVEL:
+                uint32_t max_read = 0;
+                uint32_t bank_max_read = 0;
+    
+                uint32_t max_write = 0;
+                uint32_t bank_max_write = 0;
+                for (uint32_t i = 0; i < this->get_banks_per_channel(); i++) {
+                    if (this->channels[channel].read_buffer_position_used[i] > max_read) {
+                        max_read = this->channels[channel].read_buffer_position_used[i];
+                        bank_max_read = i;
+                    }
+    
+                    if (this->channels[channel].write_buffer_position_used[i] > max_write) {
+                        max_write = this->channels[channel].write_buffer_position_used[i];
+                        bank_max_write = i;
+                    }
+                }
+                if (max_read > 1) {
+                    bank = bank_max_read;
+                }
+                else {
+                    bank = bank_max_write;
+                }
+            break;
+    
+        }   
         /// ========================================================================
         /// Row Buffer States:
         ///     READY       ==> Row opened and ready
         ///     TRANSMIT    ==> Row opened not ready (waiting to transmit)
         /// ========================================================================
-        for (uint32_t bank = 0; bank < this->get_banks_per_channel(); bank++) {
 
-            /// If the last operations is over
-            if (this->channels[channel].row_buffer[bank].state == PACKAGE_STATE_READY &&
-            this->channels[channel].row_buffer[bank].ready_cycle <= sinuca_engine.get_global_cycle()) {
-                int32_t read_cas = POSITION_FAIL;
-                int32_t read_ras = POSITION_FAIL;
-                int32_t write_cas = POSITION_FAIL;
-                int32_t write_ras = POSITION_FAIL;
+        /// If the last operations is over
+        if (this->channels[channel].row_buffer[bank].state == PACKAGE_STATE_READY &&
+        this->channels[channel].row_buffer[bank].ready_cycle <= sinuca_engine.get_global_cycle()) {
+            int32_t read_cas = POSITION_FAIL;
+            int32_t read_ras = POSITION_FAIL;
+            int32_t write_cas = POSITION_FAIL;
+            int32_t write_ras = POSITION_FAIL;
 
-                /// ================================================================
-                /// WRITE PRIORITY
-                switch (this->write_priority_policy) {
-                    case WRITE_PRIORITY_DRAIN_WHEN_FULL:
-                        /// If WRITE_BUFFER FULL or READ_BUFFER EMPTY => DRAIN WRITE
-                        if (this->channels[channel].write_buffer_position_used[bank] == this->write_buffer_size -1 ||
-                        this->channels[channel].read_buffer_position_used[bank] == 0 ) {
-                            this->channels[channel].drain_write[bank] = true;
-                        }
-                        /// Keep Drain until drain all
-                        else if (this->channels[channel].write_buffer_position_used[bank] == 0) {
-                            this->channels[channel].drain_write[bank] = false;
-                        }
-                    break;
-
-                    case WRITE_PRIORITY_SERVICE_AT_NO_READ:
-                        /// If WRITE_BUFFER FULL or READ_BUFFER EMPTY => DRAIN WRITE
-                        if (this->channels[channel].write_buffer_position_used[bank] == this->write_buffer_size -1 ||
-                        this->channels[channel].read_buffer_position_used[bank] == 0 ) {
-                            this->channels[channel].drain_write[bank] = true;
-                        }
-                        else {
-                            this->channels[channel].drain_write[bank] = false;
-                        }
-
-                    break;
-                }
-
-                if (this->channels[channel].drain_write[bank] == true) {
-                    this->find_cas_and_ras(this->channels[channel].write_buffer[bank], this->write_buffer_size, &this->channels[channel].row_buffer[bank], write_cas, write_ras);
-                }
-                else {
-                    this->find_cas_and_ras(this->channels[channel].read_buffer[bank], this->read_buffer_size, &this->channels[channel].row_buffer[bank], read_cas, read_ras);
-                }
-
-                /// ================================================================
-                /// THREAT THE CAS or RAS
-                /// Have some CAS for the opened row buffer (row buffer hit)
-                if (read_cas != POSITION_FAIL || write_cas != POSITION_FAIL) {
-                    /// BUS && ROW ready for next CAS
-                    if (this->bus_ready_cycle[channel] <= sinuca_engine.get_global_cycle()) {
-                        /// Have some READ CAS
-                        if (read_cas != POSITION_FAIL) {
-                            MAIN_MEMORY_DEBUG_PRINTF("CAS: READ Bank %u, Position:%d\n", bank, read_cas);
-                            this->channels[channel].row_buffer[bank] = this->channels[channel].read_buffer[bank][read_cas];
-                            this->channels[channel].row_buffer[bank].born_cycle = this->channels[channel].read_buffer[bank][read_cas].born_cycle;
-
-                            this->channels[channel].row_buffer[bank].is_answer = true;
-                            this->channels[channel].row_buffer[bank].memory_size = this->get_line_size();
-                            this->channels[channel].row_buffer[bank].id_dst = this->channels[channel].row_buffer[bank].id_src;
-                            this->channels[channel].row_buffer[bank].id_src = this->get_id();
-                            this->channels[channel].row_buffer[bank].package_transmit(this->get_CAS_latency());
-
-                            this->channels[channel].read_buffer[bank][read_cas].package_clean();
-                            this->channels[channel].read_buffer_position_used[bank]--;
-                            this->bus_ready_cycle[channel] = this->bus_latency + sinuca_engine.get_global_cycle();
-                        }
-                        /// Have some WRITE CAS
-                        else if (write_cas != POSITION_FAIL) {
-                            MAIN_MEMORY_DEBUG_PRINTF("CAS: WRITE Bank %u, Position:%d\n", bank, write_cas);
-                            this->channels[channel].row_buffer[bank] = this->channels[channel].write_buffer[bank][write_cas];
-                            this->channels[channel].row_buffer[bank].born_cycle = this->channels[channel].write_buffer[bank][write_cas].born_cycle;
-
-                            this->channels[channel].row_buffer[bank].is_answer = true;
-                            this->channels[channel].row_buffer[bank].memory_size = 1;
-                            this->channels[channel].row_buffer[bank].id_dst = this->channels[channel].row_buffer[bank].id_src;
-                            this->channels[channel].row_buffer[bank].id_src = this->get_id();
-                            this->channels[channel].row_buffer[bank].package_transmit(this->get_CAS_latency());
-
-                            this->channels[channel].write_buffer[bank][write_cas].package_clean();
-                            this->channels[channel].write_buffer_position_used[bank]--;
-                            this->bus_ready_cycle[channel] = this->bus_latency + sinuca_engine.get_global_cycle();
-                        }
+            /// ================================================================
+            /// WRITE PRIORITY
+            switch (this->write_priority_policy) {
+                case WRITE_PRIORITY_DRAIN_WHEN_FULL:
+                    /// If WRITE_BUFFER FULL or READ_BUFFER EMPTY => DRAIN WRITE
+                    if (this->channels[channel].write_buffer_position_used[bank] == this->write_buffer_size - 1 ||
+                    this->channels[channel].read_buffer_position_used[bank] == 0 ) {
+                        this->channels[channel].drain_write[bank] = true;
                     }
-                }
-                /// No CAS available (row buffer miss), Open new Row (RAS)
-                else {
-                    /// New Row can be opened
-                    /// Have some READ RAS
-                    if (read_ras != POSITION_FAIL) {
-                        MAIN_MEMORY_DEBUG_PRINTF("RAS: READ Bank %u, Position:%d\n", bank, read_ras);
-                        this->channels[channel].row_buffer[bank] = this->channels[channel].read_buffer[bank][read_ras];
-                        this->channels[channel].row_buffer[bank].package_ready(this->get_RP_latency() + this->get_RCD_latency());
-                        /// Statistics
-                        this->add_stat_open_new_row();
+                    /// Keep Drain until drain all
+                    else if (this->channels[channel].write_buffer_position_used[bank] == 0) {
+                        this->channels[channel].drain_write[bank] = false;
                     }
-                    /// Have some WRITE RAS
-                    else if (write_ras != POSITION_FAIL) {
-                        MAIN_MEMORY_DEBUG_PRINTF("RAS: WRITE Bank %u, Position:%d\n", bank, write_ras);
-                        this->channels[channel].row_buffer[bank] = this->channels[channel].write_buffer[bank][write_ras];
-                        this->channels[channel].row_buffer[bank].package_ready(this->get_RP_latency() + this->get_RCD_latency());
-                        /// Statistics
-                        this->add_stat_open_new_row();
+                break;
+
+                case WRITE_PRIORITY_SERVICE_AT_NO_READ:
+                    /// If WRITE_BUFFER FULL or READ_BUFFER EMPTY => DRAIN WRITE
+                    if (this->channels[channel].write_buffer_position_used[bank] == this->write_buffer_size - 1 ||
+                    this->channels[channel].read_buffer_position_used[bank] == 0 ) {
+                        this->channels[channel].drain_write[bank] = true;
+                    }
+                    else {
+                        this->channels[channel].drain_write[bank] = false;
+                    }
+
+                break;
+            }
+
+            if (this->channels[channel].drain_write[bank] == true) {
+                this->find_cas_and_ras(this->channels[channel].write_buffer[bank], this->write_buffer_size, &this->channels[channel].row_buffer[bank], write_cas, write_ras);
+            }
+            else {
+                this->find_cas_and_ras(this->channels[channel].read_buffer[bank], this->read_buffer_size, &this->channels[channel].row_buffer[bank], read_cas, read_ras);
+            }
+
+            /// ================================================================
+            /// THREAT THE CAS or RAS
+            /// Have some CAS for the opened row buffer (row buffer hit)
+            if (read_cas != POSITION_FAIL || write_cas != POSITION_FAIL) {
+                /// BUS && ROW ready for next CAS
+                if (this->bus_ready_cycle[channel] <= sinuca_engine.get_global_cycle()) {
+                    /// Have some READ CAS
+                    if (read_cas != POSITION_FAIL) {
+                        MAIN_MEMORY_DEBUG_PRINTF("CAS: READ Bank:%u, Position:%d\n", bank, read_cas);
+                        this->channels[channel].row_buffer[bank] = this->channels[channel].read_buffer[bank][read_cas];
+                        this->channels[channel].row_buffer[bank].born_cycle = this->channels[channel].read_buffer[bank][read_cas].born_cycle;
+
+                        this->channels[channel].row_buffer[bank].is_answer = true;
+                        this->channels[channel].row_buffer[bank].memory_size = this->get_line_size();
+                        this->channels[channel].row_buffer[bank].id_dst = this->channels[channel].row_buffer[bank].id_src;
+                        this->channels[channel].row_buffer[bank].id_src = this->get_id();
+                        this->channels[channel].row_buffer[bank].package_transmit(this->get_CAS_latency());
+
+                        this->channels[channel].read_buffer[bank][read_cas].package_clean();
+                        this->channels[channel].read_buffer_position_used[bank]--;
+                        this->bus_ready_cycle[channel] = this->bus_latency + sinuca_engine.get_global_cycle();
+                    }
+                    /// Have some WRITE CAS
+                    else if (write_cas != POSITION_FAIL) {
+                        MAIN_MEMORY_DEBUG_PRINTF("CAS: WRITE Bank:%u, Position:%d\n", bank, write_cas);
+                        this->channels[channel].row_buffer[bank] = this->channels[channel].write_buffer[bank][write_cas];
+                        this->channels[channel].row_buffer[bank].born_cycle = this->channels[channel].write_buffer[bank][write_cas].born_cycle;
+
+                        this->channels[channel].row_buffer[bank].is_answer = true;
+                        this->channels[channel].row_buffer[bank].memory_size = 1;
+                        this->channels[channel].row_buffer[bank].id_dst = this->channels[channel].row_buffer[bank].id_src;
+                        this->channels[channel].row_buffer[bank].id_src = this->get_id();
+                        this->channels[channel].row_buffer[bank].package_transmit(this->get_CAS_latency());
+
+                        this->channels[channel].write_buffer[bank][write_cas].package_clean();
+                        this->channels[channel].write_buffer_position_used[bank]--;
+                        this->bus_ready_cycle[channel] = this->bus_latency + sinuca_engine.get_global_cycle();
                     }
                 }
             }
+            /// No CAS available (row buffer miss), Open new Row (RAS)
+            else {
+                if (this->channels[channel].cas_ready_cycle[bank] > sinuca_engine.get_global_cycle()) {
+                    continue;
+                }
+                
+                /// New Row can be opened
+                /// Have some READ RAS
+                if (read_ras != POSITION_FAIL) {
+                    MAIN_MEMORY_DEBUG_PRINTF("RAS: READ Bank %u, Position:%d\n", bank, read_ras);
+                    this->channels[channel].row_buffer[bank] = this->channels[channel].read_buffer[bank][read_ras];
+                    this->channels[channel].row_buffer[bank].package_ready(this->get_RP_latency() + this->get_RCD_latency());
+                    this->channels[channel].cas_ready_cycle[bank] = this->get_RAS_latency() + sinuca_engine.get_global_cycle();
+                    /// Statistics
+                    this->add_stat_open_new_row();
+                }
+                /// Have some WRITE RAS
+                else if (write_ras != POSITION_FAIL) {
+                    MAIN_MEMORY_DEBUG_PRINTF("RAS: WRITE Bank %u, Position:%d\n", bank, write_ras);
+                    this->channels[channel].row_buffer[bank] = this->channels[channel].write_buffer[bank][write_ras];
+                    this->channels[channel].row_buffer[bank].package_ready(this->get_RP_latency() + this->get_RCD_latency());
+                    this->channels[channel].cas_ready_cycle[bank] = this->get_RAS_latency() + sinuca_engine.get_global_cycle();
+                    /// Statistics
+                    this->add_stat_open_new_row();
+                }
+            }
+        }
+    }
+
+    /// ========================================================================
+    /// SEND DATA
+    for (uint32_t channel = 0; channel < this->get_channels_per_controller(); channel++) {
+        if (this->send_ready_cycle[channel] > sinuca_engine.get_global_cycle()) {
+            continue;
         }
 
+        int32_t position = memory_package_t::find_old_answer_state_ready(this->channels[channel].row_buffer, this->get_banks_per_channel(), PACKAGE_STATE_TRANSMIT);
+        if (position != POSITION_FAIL) {
+            MAIN_MEMORY_DEBUG_PRINTF("%s: State TO_HIGHER ROW_BUFFER[%d].\n", this->get_label(), position);
+            int32_t transmission_latency = this->send_package(this->channels[channel].row_buffer + position);
+            if (transmission_latency != POSITION_FAIL) {
+                this->channels[channel].row_buffer[position].package_ready(transmission_latency);
+                this->add_stat_accesses();
 
-        /// ========================================================================
-        /// SEND DATA
-        if (this->send_ready_cycle[channel] <= sinuca_engine.get_global_cycle()) {
-            int32_t position = memory_package_t::find_old_answer_state_ready(this->channels[channel].row_buffer, this->get_banks_per_channel(), PACKAGE_STATE_TRANSMIT);
-            if (position != POSITION_FAIL) {
-                MAIN_MEMORY_DEBUG_PRINTF("%s: State TO_HIGHER ROW_BUFFER[%d].\n", this->get_label(), position);
-                int32_t transmission_latency = this->send_package(this->channels[channel].row_buffer + position);
-                if  (transmission_latency != POSITION_FAIL) {
-                    this->channels[channel].row_buffer[position].package_ready(transmission_latency);
-                    this->add_stat_accesses();
+                /// Statistics
+                switch (this->channels[channel].row_buffer[position].memory_operation) {
+                    case MEMORY_OPERATION_READ:
+                        this->add_stat_read_completed(this->channels[channel].row_buffer[position].born_cycle);
+                    break;
 
-                    /// Statistics
-                    switch (this->channels[channel].row_buffer[position].memory_operation) {
-                        case MEMORY_OPERATION_READ:
-                            this->add_stat_read_completed(this->channels[channel].row_buffer[position].born_cycle);
-                        break;
+                    case MEMORY_OPERATION_INST:
+                        this->add_stat_instruction_completed(this->channels[channel].row_buffer[position].born_cycle);
+                    break;
 
-                        case MEMORY_OPERATION_INST:
-                            this->add_stat_instruction_completed(this->channels[channel].row_buffer[position].born_cycle);
-                        break;
+                    case MEMORY_OPERATION_WRITE:
+                        this->add_stat_write_completed(this->channels[channel].row_buffer[position].born_cycle);
+                    break;
 
-                        case MEMORY_OPERATION_WRITE:
-                            this->add_stat_write_completed(this->channels[channel].row_buffer[position].born_cycle);
-                        break;
+                    case MEMORY_OPERATION_PREFETCH:
+                        this->add_stat_prefetch_completed(this->channels[channel].row_buffer[position].born_cycle);
+                    break;
 
-                        case MEMORY_OPERATION_PREFETCH:
-                            this->add_stat_prefetch_completed(this->channels[channel].row_buffer[position].born_cycle);
-                        break;
-
-                        case MEMORY_OPERATION_COPYBACK:
-                            this->add_stat_copyback_completed(this->channels[channel].row_buffer[position].born_cycle);
-                        break;
-                    }
+                    case MEMORY_OPERATION_COPYBACK:
+                        this->add_stat_copyback_completed(this->channels[channel].row_buffer[position].born_cycle);
+                    break;
                 }
             }
         }
     }
 };
 
+//==============================================================================
+// Selection Strategies
+//==============================================================================
+/// Selection strategy: Random
+uint32_t memory_controller_t::selectionRandom(uint32_t total_buffers) {
+    unsigned int seed = sinuca_engine.get_global_cycle() % 1000;
+    uint32_t selected = (rand_r(&seed) % total_buffers);
+    return selected;
+};
+
+//==============================================================================
+/// Selection strategy: Round Robin
+uint32_t memory_controller_t::selectionRoundRobin(uint32_t total_buffers) {
+    this->last_bank_selected++;
+    if (this->last_bank_selected >= total_buffers) {
+        this->last_bank_selected = 0;
+    }
+    return this->last_bank_selected;
+};
+
+//==============================================================================
+/// Selection strategy: Buffer Level
+uint32_t memory_controller_t::selectionBufferLevel(memory_package_t **buffer, uint32_t total_buffers, uint32_t buffer_size){
+    uint32_t size_selected = 0;
+    uint32_t selected = 0;
+    for (uint32_t i = 0; i < total_buffers; i++) {
+        uint32_t total = 0;
+        for (uint32_t j = 0; j < buffer_size; j++) {
+            if (buffer[i][j].state != PACKAGE_STATE_FREE) {
+                total++;
+            }
+        }
+        if (total > size_selected) {
+            selected = i;
+            size_selected = total;
+        }
+    }
+    return selected;
+};
 
 //==============================================================================
 int32_t memory_controller_t::send_package(memory_package_t *package) {

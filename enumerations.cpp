@@ -183,6 +183,7 @@ const char *get_enum_selection_char(selection_t type) {
     switch (type) {
         case SELECTION_RANDOM:          return "RANDOM"; break;
         case SELECTION_ROUND_ROBIN:     return "ROUND_ROBIN"; break;
+        case SELECTION_BUFFER_LEVEL:     return "BUFFER_LEVEL"; break;
     };
     ERROR_PRINTF("Wrong SELECTION\n");
     return "FAIL";

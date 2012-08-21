@@ -34,7 +34,7 @@
 interconnection_router_t::interconnection_router_t() {
     this->send_ready_cycle = 0;
 
-    this->last_send = 0;
+    this->last_selected = 0;
     this->set_type_component(COMPONENT_INTERCONNECTION_ROUTER);
 };
 
@@ -127,11 +127,15 @@ void interconnection_router_t::clock(uint32_t subcycle) {
         /// Select a port to be activated.
         switch (this->get_selection_policy()) {
             case SELECTION_RANDOM:
-                port = this->selectionRandom();
+                port = this->selectionRandom(this->get_max_ports());
             break;
 
             case SELECTION_ROUND_ROBIN:
-                port = this->selectionRoundRobin();
+                port = this->selectionRoundRobin(this->get_max_ports());
+            break;
+
+            case SELECTION_BUFFER_LEVEL:
+                port = this->selectionBufferLevel(this->input_buffer, this->get_max_ports(), this->get_input_buffer_size());
             break;
         }
 
@@ -220,20 +224,40 @@ bool interconnection_router_t::receive_package(memory_package_t *package, uint32
 // Selection Strategies
 //==============================================================================
 /// Selection strategy: Random
-uint32_t interconnection_router_t::selectionRandom() {
+uint32_t interconnection_router_t::selectionRandom(uint32_t total_buffers) {
     unsigned int seed = sinuca_engine.get_global_cycle() % 1000;
-    uint32_t selected = (rand_r(&seed) % this->get_max_ports());
+    uint32_t selected = (rand_r(&seed) % total_buffers);
     return selected;
 };
 
 //==============================================================================
 /// Selection strategy: Round Robin
-uint32_t interconnection_router_t::selectionRoundRobin() {
-    this->last_send++;
-    if (this->last_send >= this->get_max_ports()) {
-        this->last_send = 0;
+uint32_t interconnection_router_t::selectionRoundRobin(uint32_t total_buffers) {
+    this->last_selected++;
+    if (this->last_selected >= total_buffers) {
+        this->last_selected = 0;
     }
-    return this->last_send;
+    return this->last_selected;
+};
+
+//==============================================================================
+/// Selection strategy: Buffer Level
+uint32_t interconnection_router_t::selectionBufferLevel(memory_package_t **buffer, uint32_t total_buffers, uint32_t buffer_size){
+    uint32_t size_selected = 0;
+    uint32_t selected = 0;
+    for (uint32_t i = 0; i < total_buffers; i++) {
+        uint32_t total = 0;
+        for (uint32_t j = 0; j < buffer_size; j++) {
+            if (buffer[i][j].state != PACKAGE_STATE_FREE) {
+                total++;
+            }
+        }
+        if (total > size_selected) {
+            selected = i;
+            size_selected = total;
+        }
+    }
+    return selected;
 };
 
 //==============================================================================

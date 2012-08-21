@@ -873,8 +873,7 @@ class interconnection_router_t : public interconnection_interface_t {
         uint64_t send_ready_cycle;  /// Time left for the router's next send operation.
         uint64_t *recv_ready_cycle;  /// Time left for the router's next receive operation (per port).
 
-        uint32_t last_send;  /// The last port that has something been sent. Used by RoundRobin and BufferLevel selection.
-
+        uint32_t last_selected;  /// The last port that has something been sent. Used by RoundRobin and BufferLevel selection.
 
         /// ====================================================================
         /// Statistics related
@@ -920,9 +919,10 @@ class interconnection_router_t : public interconnection_interface_t {
         void input_buffer_reinsert(uint32_t port);
 
         /// Selection strategies
-        uint32_t selectionRandom();
-        uint32_t selectionBufferLevel();
-        uint32_t selectionRoundRobin();
+        uint32_t selectionRandom(uint32_t total_buffers);
+        uint32_t selectionRoundRobin(uint32_t total_buffers);
+        uint32_t selectionBufferLevel(memory_package_t **buffer, uint32_t total_buffers, uint32_t buffer_size);
+
 
         INSTANTIATE_GET_SET(selection_t, selection_policy)
         INSTANTIATE_GET_SET(uint32_t, send_ready_cycle)
@@ -1873,16 +1873,20 @@ class DSBP_metadata_line_t {
         bool learn_mode;
         DSBP_PHT_line_t *PHT_pointer;
 
-        // Static Energy
+        /// Static Energy
         uint64_t *clock_become_alive;
         uint64_t *clock_become_dead;
 
-        // Copyback
+        /// Copyback
         bool is_dirty;
         uint64_t *written_sub_blocks;
 
+        /// Dead Flag
         uint32_t active_sub_blocks;
         bool is_dead;
+
+        /// Dead Statistics
+        uint64_t stat_total_dead_cycles;
 
         DSBP_metadata_line_t() {
             this->valid_sub_blocks = NULL;
@@ -1896,6 +1900,7 @@ class DSBP_metadata_line_t {
             this->written_sub_blocks = NULL;
             this->active_sub_blocks = 0;
             this->is_dead = true;
+            this->stat_total_dead_cycles = 0;
         };
         ~DSBP_metadata_line_t() {
             if (this->valid_sub_blocks) delete [] valid_sub_blocks;
@@ -1903,6 +1908,8 @@ class DSBP_metadata_line_t {
             if (this->usage_counter) delete [] usage_counter;
             if (this->overflow) delete [] overflow;
         };
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_total_dead_cycles);
 };
 
 class DSBP_metadata_sets_t {
@@ -2037,7 +2044,7 @@ class line_usage_predictor_t : public interconnection_interface_t {
         void line_hit(memory_package_t *package, uint32_t index, uint32_t way);
         void line_miss(memory_package_t *package, uint32_t index, uint32_t way);
         void sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way);
-        void line_insert_copyback(memory_package_t *package, uint32_t index, uint32_t way);
+        void line_insert_copyback(memory_package_t *package, cache_memory_t *cache_memory, cache_line_t *cache_line, uint32_t index, uint32_t way);
         void line_get_copyback(memory_package_t *package, uint32_t index, uint32_t way);
         void line_eviction(uint32_t index, uint32_t way);
         void compute_static_energy(uint32_t index, uint32_t way);
@@ -2079,10 +2086,10 @@ class line_usage_predictor_t : public interconnection_interface_t {
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_line_sub_block_wrong_first);
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_line_sub_block_copyback);
 
-            INSTANTIATE_GET_SET_ADD(uint64_t,  stat_line_miss);
-            INSTANTIATE_GET_SET_ADD(uint64_t,  stat_sub_block_miss);
-            INSTANTIATE_GET_SET_ADD(uint64_t,  stat_copyback);
-            INSTANTIATE_GET_SET_ADD(uint64_t,  stat_eviction);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_miss);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_miss);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_copyback);
+            INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction);
 
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_PHT_access);
             INSTANTIATE_GET_SET_ADD(uint64_t, stat_DSBP_PHT_hit);
@@ -2435,6 +2442,7 @@ class memory_channel_t {
         memory_package_t **write_buffer;   /// Channel x Bank x Position
 
         memory_package_t *row_buffer;      /// Channel x Bank
+        uint64_t *cas_ready_cycle;      /// Channel x Bank
 
         uint32_t *read_buffer_position_used;   /// Channel x Bank
         uint32_t *write_buffer_position_used;  /// Channel x Bank
@@ -2452,6 +2460,7 @@ class memory_channel_t {
             if (this->read_buffer_position_used) delete [] read_buffer_position_used;
             if (this->write_buffer_position_used) delete [] write_buffer_position_used;
             if (this->drain_write) delete [] drain_write;
+            if (this->cas_ready_cycle) delete [] cas_ready_cycle;
 
             if (read_buffer && read_buffer[0]) {
                 delete[] read_buffer[0];
@@ -2484,6 +2493,8 @@ class memory_controller_t : public interconnection_interface_t {
         request_priority_t request_priority_policy;
         write_priority_t write_priority_policy;
 
+        selection_t bank_selection_policy;
+
         uint32_t RP_latency;
         uint32_t RCD_latency;
         uint32_t CAS_latency;
@@ -2514,6 +2525,7 @@ class memory_controller_t : public interconnection_interface_t {
         uint64_t *recv_read_ready_cycle;    /// Ready to receive new READ
         uint64_t *recv_write_ready_cycle;   /// Ready to receive new WRITE
 
+        uint32_t last_bank_selected;
         memory_channel_t *channels;
 
         /// ====================================================================
@@ -2575,6 +2587,11 @@ class memory_controller_t : public interconnection_interface_t {
         void print_configuration();
         /// ====================================================================
 
+        /// Selection strategies
+        uint32_t selectionRandom(uint32_t total_buffers);
+        uint32_t selectionRoundRobin(uint32_t total_buffers);
+        uint32_t selectionBufferLevel(memory_package_t **buffer, uint32_t total_buffers, uint32_t buffer_size);
+
         /// MASKS
         void set_masks();
 
@@ -2615,6 +2632,7 @@ class memory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, write_buffer_size)
         INSTANTIATE_GET_SET(uint32_t, row_buffer_size)
 
+        INSTANTIATE_GET_SET(selection_t, bank_selection_policy)
         INSTANTIATE_GET_SET(request_priority_t, request_priority_policy)
         INSTANTIATE_GET_SET(write_priority_t, write_priority_policy)
 
@@ -2624,7 +2642,6 @@ class memory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, RCD_latency)
         INSTANTIATE_GET_SET(uint32_t, CAS_latency)
         INSTANTIATE_GET_SET(uint32_t, RAS_latency)
-
 
         /// ====================================================================
         /// Statistics related

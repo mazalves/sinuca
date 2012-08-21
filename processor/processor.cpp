@@ -1522,12 +1522,18 @@ void processor_t::print_statistics() {
                                                                                                                        sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_branch_stall_cycles", stat_branch_stall_cycles);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sync_stall_cycles", stat_sync_stall_cycles);
-
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_branch_stall_cycles_ratio_warm", this->stat_branch_stall_cycles,
-                                                                                                                       sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_sync_stall_cycles_ratio_warm", this->stat_sync_stall_cycles,
+                                                                                                                       sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
+
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "opcode_per_cycle_ratio_warm_nosync", this->fetch_opcode_counter - this->stat_reset_fetch_opcode_counter,
+                                                                                                                       sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle() - stat_sync_stall_cycles);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "uop_per_cycle_ratio_warm_nosync", this->decode_uop_counter - this->stat_reset_decode_uop_counter,
+                                                                                                                       sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle() - stat_sync_stall_cycles);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_branch_stall_cycles", stat_branch_stall_cycles);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_branch_stall_cycles_ratio_warm", this->stat_branch_stall_cycles,
                                                                                                                        sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
 
     /// Executed Instructions

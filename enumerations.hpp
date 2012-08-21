@@ -156,7 +156,8 @@ const char *get_enum_sync_char(sync_t type);
 /// Enumarates the selection policy to pick a sender or next to be treated.
 enum selection_t {
     SELECTION_RANDOM,
-    SELECTION_ROUND_ROBIN
+    SELECTION_ROUND_ROBIN,
+    SELECTION_BUFFER_LEVEL
 };
 const char *get_enum_selection_char(selection_t type);
 
