@@ -109,7 +109,7 @@ const char *get_enum_component_char(component_t type) {
     switch (type) {
         case COMPONENT_PROCESSOR:                   return "PROCESSOR"; break;
         case COMPONENT_CACHE_MEMORY:                return "CACHE_MEMORY"; break;
-        case COMPONENT_MAIN_MEMORY:                 return "MAIN_MEMORY"; break;
+        case COMPONENT_MEMORY_CONTROLLER:                 return "MEMORY_CONTROLLER"; break;
         case COMPONENT_INTERCONNECTION_ROUTER:      return "INTERCONNECTION_ROUTER"; break;
         case COMPONENT_DIRECTORY_CONTROLLER:        return "DIRECTORY_CONTROLLER"; break;
         case COMPONENT_INTERCONNECTION_CONTROLLER:  return "INTERCONNECTION_CONTROLLER"; break;
@@ -301,11 +301,11 @@ const char *get_enum_cache_mask_char(cache_mask_t type) {
 /// How the main memory will create its address mask
 const char *get_enum_memory_controller_mask_char(memory_controller_mask_t type) {
     switch (type) {
-        case MAIN_MEMORY_MASK_ROW_BANK_COLUMN:              return "ROW_BANK_COLUMN"; break;
-        case MAIN_MEMORY_MASK_ROW_BANK_CHANNEL_COLUMN:      return "ROW_BANK_CHANNEL_COLUMN"; break;
-        case MAIN_MEMORY_MASK_ROW_BANK_CHANNEL_CTRL_COLUMN: return "ROW_BANK_CHANNEL_CTRL_COLUMN"; break;
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_COLUMN:              return "ROW_BANK_COLUMN"; break;
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLUMN:      return "ROW_BANK_CHANNEL_COLUMN"; break;
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLUMN: return "ROW_BANK_CHANNEL_CTRL_COLUMN"; break;
     };
-    ERROR_PRINTF("Wrong MAIN_MEMORY_MASK\n");
+    ERROR_PRINTF("Wrong MEMORY_CONTROLLER_MASK\n");
     return "FAIL";
 };
 
@@ -317,7 +317,7 @@ const char *get_enum_request_priority_char(request_priority_t type) {
         case REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST:     return "ROW_BUFFER_HITS_FIRST"; break;
         case REQUEST_PRIORITY_FIRST_COME_FIRST_SERVE:     return "FIRST_COME_FIRST_SERVE"; break;
     };
-    ERROR_PRINTF("Wrong MAIN_MEMORY_REQUEST_PRIORITY\n");
+    ERROR_PRINTF("Wrong MEMORY_CONTROLLER_REQUEST_PRIORITY\n");
     return "FAIL";
 };
 

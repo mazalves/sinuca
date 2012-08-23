@@ -127,30 +127,45 @@ void interconnection_router_t::clock(uint32_t subcycle) {
         /// Select a port to be activated.
         switch (this->get_selection_policy()) {
             case SELECTION_RANDOM:
-                port = this->selectionRandom(this->get_max_ports());
+                port = this->selection_random(this->get_max_ports());
             break;
 
             case SELECTION_ROUND_ROBIN:
-                port = this->selectionRoundRobin(this->get_max_ports());
+                port = this->selection_round_robin(this->get_max_ports());
             break;
 
             case SELECTION_BUFFER_LEVEL:
-                port = this->selectionBufferLevel(this->input_buffer, this->get_max_ports(), this->get_input_buffer_size());
+                port = this->selection_buffer_level(this->input_buffer, this->get_max_ports(), this->get_input_buffer_size());
             break;
         }
 
-        /// Send the oldest UNTREATED package.
-        uint32_t position = this->input_buffer_position_start[port];
-        if (this->input_buffer_position_used[port] != 0 &&
-        input_buffer[port][position].state == PACKAGE_STATE_UNTREATED &&
-        input_buffer[port][position].ready_cycle <= sinuca_engine.get_global_cycle()) {
-            ROUTER_DEBUG_PRINTF("SENDING INPUT_BUFFER[%d][%d]: %s\n", port, position, this->input_buffer[port][position].memory_to_string().c_str());
-            int32_t transmission_latency = send_package(&this->input_buffer[port][position]);
-            if (transmission_latency != POSITION_FAIL) {
-                this->input_buffer_remove(port);
+        /// From the selected port find a non empty one.
+        for (uint32_t i = 0; i < this->get_max_ports(); i++) {
+            uint32_t position = this->input_buffer_position_start[port];
+
+            /// If NOT UNTREATED or NOT READY package
+            if (this->input_buffer_position_used[port] == 0 ||
+            input_buffer[port][position].state != PACKAGE_STATE_UNTREATED ||
+            input_buffer[port][position].ready_cycle > sinuca_engine.get_global_cycle()) {
+
+                port++;
+                if (port >= this->get_max_ports()) {
+                    port = 0;
+                }
+                this->last_selected = port;
             }
+
+            /// Send the oldest UNTREATED package.
             else {
-                this->input_buffer_reinsert(port);
+                ROUTER_DEBUG_PRINTF("SENDING INPUT_BUFFER[%d][%d]: %s\n", port, position, this->input_buffer[port][position].memory_to_string().c_str());
+                int32_t transmission_latency = send_package(&this->input_buffer[port][position]);
+                if (transmission_latency != POSITION_FAIL) {
+                    this->input_buffer_remove(port);
+                }
+                else {
+                    this->input_buffer_reinsert(port);
+                }
+                break;
             }
         }
     }
@@ -224,7 +239,7 @@ bool interconnection_router_t::receive_package(memory_package_t *package, uint32
 // Selection Strategies
 //==============================================================================
 /// Selection strategy: Random
-uint32_t interconnection_router_t::selectionRandom(uint32_t total_buffers) {
+uint32_t interconnection_router_t::selection_random(uint32_t total_buffers) {
     unsigned int seed = sinuca_engine.get_global_cycle() % 1000;
     uint32_t selected = (rand_r(&seed) % total_buffers);
     return selected;
@@ -232,7 +247,7 @@ uint32_t interconnection_router_t::selectionRandom(uint32_t total_buffers) {
 
 //==============================================================================
 /// Selection strategy: Round Robin
-uint32_t interconnection_router_t::selectionRoundRobin(uint32_t total_buffers) {
+uint32_t interconnection_router_t::selection_round_robin(uint32_t total_buffers) {
     this->last_selected++;
     if (this->last_selected >= total_buffers) {
         this->last_selected = 0;
@@ -242,7 +257,7 @@ uint32_t interconnection_router_t::selectionRoundRobin(uint32_t total_buffers) {
 
 //==============================================================================
 /// Selection strategy: Buffer Level
-uint32_t interconnection_router_t::selectionBufferLevel(memory_package_t **buffer, uint32_t total_buffers, uint32_t buffer_size){
+uint32_t interconnection_router_t::selection_buffer_level(memory_package_t **buffer, uint32_t total_buffers, uint32_t buffer_size){
     uint32_t size_selected = 0;
     uint32_t selected = 0;
     for (uint32_t i = 0; i < total_buffers; i++) {

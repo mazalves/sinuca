@@ -694,14 +694,14 @@ void sinuca_engine_t::initialize_memory_controller() {
     cfg.readFile(this->arg_configuration_file_name);
 
     libconfig::Setting &cfg_root = cfg.getRoot();
-    libconfig::Setting &cfg_memory_controller_list = cfg_root["MAIN_MEMORY"];
+    libconfig::Setting &cfg_memory_controller_list = cfg_root["MEMORY_CONTROLLER"];
     SINUCA_PRINTF("MAIN_MEMORIES:%d\n", cfg_memory_controller_list.getLength());
 
     this->set_memory_controller_array_size(cfg_memory_controller_list.getLength());
     this->memory_controller_array = utils_t::template_allocate_initialize_array<memory_controller_t*>(this->memory_controller_array_size, NULL);
 
     /// ========================================================================
-    /// Required MAIN_MEMORY Parameters
+    /// Required MEMORY_CONTROLLER Parameters
     /// ========================================================================
     for (int32_t i = 0; i < cfg_memory_controller_list.getLength(); i++) {
         this->memory_controller_array[i] = new memory_controller_t;
@@ -710,7 +710,7 @@ void sinuca_engine_t::initialize_memory_controller() {
         libconfig::Setting &cfg_memory_controller = cfg_memory_controller_list[i];
 
         /// ====================================================================
-        /// MAIN_MEMORY PARAMETERS
+        /// MEMORY_CONTROLLER PARAMETERS
         /// ====================================================================
         try {
             memory_controller_parameters.push_back("LABEL");
@@ -722,15 +722,24 @@ void sinuca_engine_t::initialize_memory_controller() {
             memory_controller_parameters.push_back("INTERCONNECTION_WIDTH");
             this->memory_controller_array[i]->set_interconnection_width( cfg_memory_controller[ memory_controller_parameters.back() ] );
 
+            memory_controller_parameters.push_back("BUS_WIDTH");
+            this->memory_controller_array[i]->set_bus_width( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("BUS_FREQUENCY");
+            this->memory_controller_array[i]->set_bus_frequency( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("CORE_TO_BUS_CLOCK_RATIO");
+            this->memory_controller_array[i]->set_core_to_bus_clock_ratio( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
             memory_controller_parameters.push_back("ADDRESS_MASK");
             if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_CHANNEL_CTRL_COLUMN") ==  0) {
-                this->memory_controller_array[i]->set_address_mask_type(MAIN_MEMORY_MASK_ROW_BANK_CHANNEL_CTRL_COLUMN);
+                this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLUMN);
             }
             else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_CHANNEL_COLUMN") ==  0) {
-                this->memory_controller_array[i]->set_address_mask_type(MAIN_MEMORY_MASK_ROW_BANK_CHANNEL_COLUMN);
+                this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLUMN);
             }
             else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_COLUMN") ==  0) {
-                this->memory_controller_array[i]->set_address_mask_type(MAIN_MEMORY_MASK_ROW_BANK_COLUMN);
+                this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_COLUMN);
             }
             else {
                 ERROR_PRINTF("MAIN MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_memory_controller[ memory_controller_parameters.back() ].c_str(), memory_controller_parameters.back());
@@ -775,6 +784,20 @@ void sinuca_engine_t::initialize_memory_controller() {
                 ERROR_PRINTF("MAIN MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_memory_controller[ memory_controller_parameters.back() ].c_str(), memory_controller_parameters.back());
             }
 
+            memory_controller_parameters.push_back("CHANNEL_SELECTION_POLICY");
+            if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "RANDOM") ==  0) {
+                this->memory_controller_array[i]->set_channel_selection_policy(SELECTION_RANDOM);
+            }
+            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROUND_ROBIN") ==  0) {
+                this->memory_controller_array[i]->set_channel_selection_policy(SELECTION_ROUND_ROBIN);
+            }
+            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "BUFFER_LEVEL") ==  0) {
+                this->memory_controller_array[i]->set_channel_selection_policy(SELECTION_BUFFER_LEVEL);
+            }
+            else {
+                ERROR_PRINTF("MAIN MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_memory_controller[ memory_controller_parameters.back() ].c_str(), memory_controller_parameters.back());
+            }
+
             memory_controller_parameters.push_back("REQUEST_PRIORITY_POLICY");
             if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BUFFER_HITS_FIRST") ==  0) {
                 this->memory_controller_array[i]->set_request_priority_policy(REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST);
@@ -812,7 +835,7 @@ void sinuca_engine_t::initialize_memory_controller() {
             this->memory_controller_array[i]->set_max_ports(1);
 
             /// ================================================================
-            /// Check if any MAIN_MEMORY non-required parameters exist
+            /// Check if any MEMORY_CONTROLLER non-required parameters exist
             for (int32_t j = 0 ; j < cfg_memory_controller.getLength(); j++) {
                 bool is_required = false;
                 for (uint32_t k = 0 ; k < memory_controller_parameters.size(); k++) {
@@ -821,15 +844,15 @@ void sinuca_engine_t::initialize_memory_controller() {
                         break;
                     }
                 }
-                ERROR_ASSERT_PRINTF(is_required, "MAIN_MEMORY %d has PARAMETER not required: \"%s\"\n", i, cfg_memory_controller[j].getName());
+                ERROR_ASSERT_PRINTF(is_required, "MEMORY_CONTROLLER %d has PARAMETER not required: \"%s\"\n", i, cfg_memory_controller[j].getName());
             }
 
         }
         catch(libconfig::SettingNotFoundException &nfex) {
-            ERROR_PRINTF(" MAIN_MEMORY %d has required PARAMETER missing: \"%s\"\n", i, memory_controller_parameters.back());
+            ERROR_PRINTF(" MEMORY_CONTROLLER %d has required PARAMETER missing: \"%s\"\n", i, memory_controller_parameters.back());
         }
         catch(libconfig::SettingTypeException &tex) {
-            ERROR_PRINTF(" MAIN_MEMORY %d has PARAMETER wrong type: \"%s\"\n", i, memory_controller_parameters.back());
+            ERROR_PRINTF(" MEMORY_CONTROLLER %d has PARAMETER wrong type: \"%s\"\n", i, memory_controller_parameters.back());
         }
     }
 };

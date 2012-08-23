@@ -132,7 +132,7 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define CACHE_DEBUG
     // ~ #define PREFETCHER_DEBUG
     #define LINE_USAGE_PREDICTOR_DEBUG
-    // ~ #define MAIN_MEMORY_DEBUG
+    // ~ #define MEMORY_CONTROLLER_DEBUG
     // ~ #define ROUTER_DEBUG
     // ~ #define INTERCONNECTION_CTRL_DEBUG
     #define DIRECTORY_CTRL_DEBUG
@@ -919,9 +919,9 @@ class interconnection_router_t : public interconnection_interface_t {
         void input_buffer_reinsert(uint32_t port);
 
         /// Selection strategies
-        uint32_t selectionRandom(uint32_t total_buffers);
-        uint32_t selectionRoundRobin(uint32_t total_buffers);
-        uint32_t selectionBufferLevel(memory_package_t **buffer, uint32_t total_buffers, uint32_t buffer_size);
+        uint32_t selection_random(uint32_t total_buffers);
+        uint32_t selection_round_robin(uint32_t total_buffers);
+        uint32_t selection_buffer_level(memory_package_t **buffer, uint32_t total_buffers, uint32_t buffer_size);
 
 
         INSTANTIATE_GET_SET(selection_t, selection_policy)
@@ -2482,6 +2482,10 @@ class memory_controller_t : public interconnection_interface_t {
         memory_controller_mask_t address_mask_type;
         uint32_t line_size;
 
+        uint32_t bus_width;
+        uint32_t bus_frequency;
+        uint32_t core_to_bus_clock_ratio;
+
         uint32_t controller_number;
         uint32_t total_controllers;
         uint32_t channels_per_controller;
@@ -2494,6 +2498,7 @@ class memory_controller_t : public interconnection_interface_t {
         write_priority_t write_priority_policy;
 
         selection_t bank_selection_policy;
+        selection_t channel_selection_policy;
 
         uint32_t RP_latency;
         uint32_t RCD_latency;
@@ -2525,9 +2530,11 @@ class memory_controller_t : public interconnection_interface_t {
         uint64_t *recv_read_ready_cycle;    /// Ready to receive new READ
         uint64_t *recv_write_ready_cycle;   /// Ready to receive new WRITE
 
-        uint32_t last_bank_selected;
+        uint32_t *last_bank_selected;
+        uint32_t last_channel_selected;
         memory_channel_t *channels;
 
+        memory_package_t *fill_buffer;
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
@@ -2588,9 +2595,11 @@ class memory_controller_t : public interconnection_interface_t {
         /// ====================================================================
 
         /// Selection strategies
-        uint32_t selectionRandom(uint32_t total_buffers);
-        uint32_t selectionRoundRobin(uint32_t total_buffers);
-        uint32_t selectionBufferLevel(memory_package_t **buffer, uint32_t total_buffers, uint32_t buffer_size);
+        uint32_t selection_bank_random(uint32_t total_buffers);
+        uint32_t selection_bank_round_robin(uint32_t channel, uint32_t total_buffers);
+
+        uint32_t selection_channel_random(uint32_t total_channels);
+        uint32_t selection_channel_round_robin(uint32_t total_channels);
 
         /// MASKS
         void set_masks();
@@ -2624,6 +2633,10 @@ class memory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(memory_controller_mask_t, address_mask_type)
         INSTANTIATE_GET_SET(uint32_t, line_size)
 
+        INSTANTIATE_GET_SET(uint32_t, bus_width)
+        INSTANTIATE_GET_SET(uint32_t, bus_frequency)
+        INSTANTIATE_GET_SET(uint32_t, core_to_bus_clock_ratio)
+
         INSTANTIATE_GET_SET(uint32_t, controller_number)
         INSTANTIATE_GET_SET(uint32_t, total_controllers)
         INSTANTIATE_GET_SET(uint32_t, channels_per_controller)
@@ -2633,6 +2646,8 @@ class memory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, row_buffer_size)
 
         INSTANTIATE_GET_SET(selection_t, bank_selection_policy)
+        INSTANTIATE_GET_SET(selection_t, channel_selection_policy)
+
         INSTANTIATE_GET_SET(request_priority_t, request_priority_policy)
         INSTANTIATE_GET_SET(write_priority_t, write_priority_policy)
 

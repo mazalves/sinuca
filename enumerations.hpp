@@ -95,7 +95,7 @@ const char *get_enum_protocol_status_char(protocol_status_t type);
 enum component_t {
     COMPONENT_PROCESSOR,
     COMPONENT_CACHE_MEMORY,
-    COMPONENT_MAIN_MEMORY,
+    COMPONENT_MEMORY_CONTROLLER,
     COMPONENT_INTERCONNECTION_ROUTER,
     COMPONENT_DIRECTORY_CONTROLLER,
     COMPONENT_INTERCONNECTION_CONTROLLER,
@@ -254,9 +254,9 @@ const char *get_enum_cache_mask_char(cache_mask_t type);
 /// ============================================================================
 /// How the main memory will create its address mask
 enum memory_controller_mask_t {
-    MAIN_MEMORY_MASK_ROW_BANK_COLUMN,
-    MAIN_MEMORY_MASK_ROW_BANK_CHANNEL_COLUMN,
-    MAIN_MEMORY_MASK_ROW_BANK_CHANNEL_CTRL_COLUMN
+    MEMORY_CONTROLLER_MASK_ROW_BANK_COLUMN,
+    MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLUMN,
+    MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLUMN
 };
 const char *get_enum_memory_controller_mask_char(memory_controller_mask_t type);
 
