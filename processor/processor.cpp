@@ -956,7 +956,7 @@ void processor_t::stage_execution() {
     /// READ_BUFFER(PACKAGE_STATE_TO_LOWER) =>  send_data_package()
     position_mem = memory_package_t::find_old_request_state_ready(this->read_buffer, this->read_buffer_size, PACKAGE_STATE_TRANSMIT);
     if (position_mem != POSITION_FAIL) {
-        int32_t transmission_latency = this->send_data_package(this->read_buffer+position_mem);
+        int32_t transmission_latency = this->send_data_package(&this->read_buffer[position_mem]);
         if (transmission_latency != POSITION_FAIL) {  /// Try to send to the DC.
             this->read_buffer[position_mem].package_wait(transmission_latency);
         }
@@ -974,9 +974,12 @@ void processor_t::stage_execution() {
     /// WRITE_BUFFER(PACKAGE_STATE_TO_LOWER) =>  send_data_package()
     position_mem = memory_package_t::find_old_request_state_ready(this->write_buffer, this->write_buffer_size, PACKAGE_STATE_TRANSMIT);
     if (position_mem != POSITION_FAIL) {
-        int32_t transmission_latency = this->send_data_package(this->write_buffer+position_mem);
+        int32_t transmission_latency = this->send_data_package(&this->write_buffer[position_mem]);
         if (transmission_latency != POSITION_FAIL) {  /// Try to send to the DC.
-            this->write_buffer[position_mem].package_wait(transmission_latency);
+            // ~ this->write_buffer[position_mem].package_wait(transmission_latency);
+            /// Never wait for answer after SEND a WRITE
+            this->write_buffer[position_mem].is_answer = true;
+            this->write_buffer[position_mem].package_ready(transmission_latency);
         }
     }
 
@@ -1364,6 +1367,7 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
             break;
 
             case MEMORY_OPERATION_WRITE:
+            /*
                 ERROR_ASSERT_PRINTF(input_port == PROCESSOR_PORT_DATA_CACHE, "Receiving write package from a wrong port.\n");
 
                 slot = memory_package_t::find_state_mem_address(this->write_buffer, this->write_buffer_size, PACKAGE_STATE_WAIT, package->memory_address);
@@ -1374,8 +1378,9 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
                 this->write_buffer[slot].package_ready(transmission_latency);
                 this->recv_ready_cycle[input_port] = sinuca_engine.get_global_cycle() + transmission_latency;
                 return OK;
-            break;
 
+            break;
+            */
             case MEMORY_OPERATION_COPYBACK:
             case MEMORY_OPERATION_PREFETCH:
                 ERROR_PRINTF("Processor receiving %s.\n", get_enum_memory_operation_char(package->memory_operation))

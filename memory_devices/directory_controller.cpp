@@ -335,17 +335,19 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                     /// Add Latency
                     if (package->memory_operation == MEMORY_OPERATION_WRITE) {
                         package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_write();
+                        /// Erase the package
+                        DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (WRITE Done)\n")
+                        return PACKAGE_STATE_FREE;
                     }
                     else {
                         package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read();
+                        /// Send ANSWER
+                        package->is_answer = true;
+                        package->id_dst = package->id_src;
+                        package->id_src = cache->get_id();
+                        DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT (Hit)\n")
+                        return PACKAGE_STATE_TRANSMIT;
                     }
-
-                    /// Send ANSWER
-                    package->is_answer = true;
-                    package->id_dst = package->id_src;
-                    package->id_src = cache->get_id();
-                    DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT (Hit)\n")
-                    return PACKAGE_STATE_TRANSMIT;
                 }
             }
             ///=================================================================
@@ -661,9 +663,17 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
             this->directory_lines->erase(this->directory_lines->begin() + directory_line_number);
             /// Update Coherence Status
             this->coherence_new_operation(cache, cache_line, package, false);
-            /// Send the package answer
-            DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT ANS (First Cache Requested)\n")
-            return PACKAGE_STATE_TRANSMIT;
+
+            if (package->memory_operation == MEMORY_OPERATION_WRITE) {
+                /// Erase the package
+                DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (WRITE Done)\n")
+                return PACKAGE_STATE_FREE;
+            }
+            else {
+                /// Send the package answer
+                DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT ANS (First Cache Requested)\n")
+                return PACKAGE_STATE_TRANSMIT;
+            }
         }
 
         /// ====================================================================
