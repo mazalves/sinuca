@@ -311,7 +311,6 @@ void memory_controller_t::clock(uint32_t subcycle) {
 
 
     for (uint32_t channel = 0; channel < this->get_channels_per_controller(); channel++) {
-
         uint32_t bank = 0;
         /// Select a port to be activated.
         switch (this->get_bank_selection_policy()) {
@@ -326,13 +325,11 @@ void memory_controller_t::clock(uint32_t subcycle) {
             case SELECTION_BUFFER_LEVEL:
                 ERROR_PRINTF("Selection Policy: SELECTION_BUFFER_LEVEL not implemented.\n");
             break;
-
         }
 
         bool signal_sent = false;
         /// From the selected channel find a non empty one.
         for (uint32_t i = 0; i < this->get_banks_per_channel(); i++) {
-
             /// ========================================================================
             /// Row Buffer States:
             ///     READY       ==> Row opened and ready
@@ -371,7 +368,6 @@ void memory_controller_t::clock(uint32_t subcycle) {
                         else {
                             this->channels[channel].drain_write[bank] = false;
                         }
-
                     break;
                 }
 
@@ -404,6 +400,26 @@ void memory_controller_t::clock(uint32_t subcycle) {
                             this->channels[channel].read_buffer_position_used[bank]--;
                             this->bus_ready_cycle[channel] = this->bus_latency + sinuca_engine.get_global_cycle();
                             signal_sent = true;
+
+                            /// Statistics
+                            this->add_stat_accesses();
+                            switch (this->fill_buffer[channel].memory_operation) {
+                                case MEMORY_OPERATION_READ:
+                                    this->add_stat_read_completed(this->fill_buffer[channel].born_cycle);
+                                break;
+            
+                                case MEMORY_OPERATION_INST:
+                                    this->add_stat_instruction_completed(this->fill_buffer[channel].born_cycle);
+                                break;
+            
+                                case MEMORY_OPERATION_PREFETCH:
+                                    this->add_stat_prefetch_completed(this->fill_buffer[channel].born_cycle);
+                                break;
+
+                                case MEMORY_OPERATION_WRITE:
+                                case MEMORY_OPERATION_COPYBACK:
+                                break;
+                            }
                         }
                         /// Have some WRITE CAS
                         else if (write_cas != POSITION_FAIL) {
@@ -415,12 +431,30 @@ void memory_controller_t::clock(uint32_t subcycle) {
                             this->channels[channel].row_buffer[bank].memory_size = 1;
                             this->channels[channel].row_buffer[bank].id_dst = this->channels[channel].row_buffer[bank].id_src;
                             this->channels[channel].row_buffer[bank].id_src = this->get_id();
-                            this->channels[channel].row_buffer[bank].package_transmit(this->get_CAS_latency());
+                            /// Never send WRITE ANSWER
+                            this->channels[channel].row_buffer[bank].package_ready(this->get_CAS_latency());
 
                             this->channels[channel].write_buffer[bank][write_cas].package_clean();
                             this->channels[channel].write_buffer_position_used[bank]--;
                             this->bus_ready_cycle[channel] = this->bus_latency + sinuca_engine.get_global_cycle();
                             signal_sent = true;
+
+                            /// Statistics
+                            this->add_stat_accesses();
+                            switch (this->fill_buffer[channel].memory_operation) {
+                                case MEMORY_OPERATION_WRITE:
+                                    this->add_stat_write_completed(this->fill_buffer[channel].born_cycle);
+                                break;
+
+                                case MEMORY_OPERATION_COPYBACK:
+                                    this->add_stat_copyback_completed(this->fill_buffer[channel].born_cycle);
+                                break;
+
+                                case MEMORY_OPERATION_READ:
+                                case MEMORY_OPERATION_INST:
+                                case MEMORY_OPERATION_PREFETCH:
+                                break;
+                            }
                         }
                     }
                 }
@@ -466,7 +500,6 @@ void memory_controller_t::clock(uint32_t subcycle) {
         }
     }
 
-
     /// ========================================================================
     /// RECEIVE DATA FROM CHANNEL => FILL_BUFFER
     for (uint32_t channel = 0; channel < this->get_channels_per_controller(); channel++) {
@@ -481,7 +514,6 @@ void memory_controller_t::clock(uint32_t subcycle) {
             }
         }
     }
-
 
     /// ========================================================================
     /// SEND DATA
@@ -499,17 +531,14 @@ void memory_controller_t::clock(uint32_t subcycle) {
         case SELECTION_BUFFER_LEVEL:
             ERROR_PRINTF("Selection Policy: SELECTION_BUFFER_LEVEL not implemented.\n");
         break;
-
     }
 
     /// From the selected channel find a non empty one.
     for (uint32_t i = 0; i < this->get_channels_per_controller(); i++) {
-
         /// If NOT UNTREATED or NOT READY package
         if (this->send_ready_cycle[channel] > sinuca_engine.get_global_cycle() ||
         this->fill_buffer[channel].state != PACKAGE_STATE_UNTREATED ||
         this->fill_buffer[channel].ready_cycle > sinuca_engine.get_global_cycle()) {
-
             channel++;
             if (channel >= this->get_channels_per_controller()) {
                 channel = 0;
@@ -523,30 +552,6 @@ void memory_controller_t::clock(uint32_t subcycle) {
             int32_t transmission_latency = this->send_package(&this->fill_buffer[channel]);
             if (transmission_latency != POSITION_FAIL) {
                 this->fill_buffer[channel].package_ready(transmission_latency);
-                this->add_stat_accesses();
-
-                /// Statistics
-                switch (this->fill_buffer[channel].memory_operation) {
-                    case MEMORY_OPERATION_READ:
-                        this->add_stat_read_completed(this->fill_buffer[channel].born_cycle);
-                    break;
-
-                    case MEMORY_OPERATION_INST:
-                        this->add_stat_instruction_completed(this->fill_buffer[channel].born_cycle);
-                    break;
-
-                    case MEMORY_OPERATION_WRITE:
-                        this->add_stat_write_completed(this->fill_buffer[channel].born_cycle);
-                    break;
-
-                    case MEMORY_OPERATION_PREFETCH:
-                        this->add_stat_prefetch_completed(this->fill_buffer[channel].born_cycle);
-                    break;
-
-                    case MEMORY_OPERATION_COPYBACK:
-                        this->add_stat_copyback_completed(this->fill_buffer[channel].born_cycle);
-                    break;
-                }
             }
             break;
         }
@@ -594,7 +599,8 @@ uint32_t memory_controller_t::selection_channel_round_robin(uint32_t total_chann
 //==============================================================================
 int32_t memory_controller_t::send_package(memory_package_t *package) {
     MEMORY_CONTROLLER_DEBUG_PRINTF("send_package() package:%s\n", package->memory_to_string().c_str());
-
+    ERROR_ASSERT_PRINTF(package->memory_operation != MEMORY_OPERATION_COPYBACK && package->memory_operation != MEMORY_OPERATION_WRITE, "Main memory must never send answer for WRITE.\n");
+    
     uint32_t channel = get_channel(package->memory_address);
 
     if (this->send_ready_cycle[channel] <= sinuca_engine.get_global_cycle()) {

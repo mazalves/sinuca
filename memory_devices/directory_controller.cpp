@@ -184,6 +184,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     /// Takes care about the LOCK
     /// ========================================================================
     directory_controller_line_t *directory_line = NULL;
+    int32_t directory_line_number = POSITION_FAIL;
     /// Find an existing directory line.
     for (uint32_t i = 0; i < this->directory_lines->size(); i++) {
         /// Transaction on the same address was found
@@ -196,6 +197,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             this->directory_lines[0][i]->opcode_number == package->opcode_number &&
             this->directory_lines[0][i]->uop_number == package->uop_number) {
                 directory_line = this->directory_lines[0][i];
+                directory_line_number = i;
                 DIRECTORY_CTRL_DEBUG_PRINTF("\t Found Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
                 break;
             }
@@ -562,15 +564,15 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             /// Add Latency
             package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_write();
 
-            // ~ /// COPYBACK never sends answer
-            // ~ return PACKAGE_STATE_FREE;
+            /// Erase the directory_entry
+            DIRECTORY_CTRL_DEBUG_PRINTF("\t Erasing Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
+            utils_t::template_delete_variable<directory_controller_line_t>(directory_line);
+            directory_line = NULL;
+            this->directory_lines->erase(this->directory_lines->begin() + directory_line_number);
 
-            /// Send ANSWER
-            package->is_answer = true;
-            package->id_dst = package->id_src;
-            package->id_src = cache->get_id();
-            DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT (Hit)\n")
-            return PACKAGE_STATE_TRANSMIT;
+            /// Erase the package
+            DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (WRITE Done)\n")
+            return PACKAGE_STATE_FREE;
         }
         break;
     }
@@ -704,11 +706,12 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
     return PACKAGE_STATE_FREE;
 };
 
-/*
+
 //==============================================================================
-bool directory_controller_t::send_cache_package(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way) {
-    /// ========================================================================
-    /// Takes care about the CACHE HIT/MISS
+package_state_t directory_controller_t::treat_cache_request_sent(uint32_t cache_id, memory_package_t *package) {
+    DIRECTORY_CTRL_DEBUG_PRINTF("new_cache_request() cache_id:%u, package:%s\n", cache_id, package->memory_to_string().c_str())
+    ERROR_ASSERT_PRINTF(cache_id < sinuca_engine.get_cache_memory_array_size(), "Wrong cache_id.\n")
+
     /// ========================================================================
     switch (package->memory_operation) {
         ///=====================================================================
@@ -720,55 +723,57 @@ bool directory_controller_t::send_cache_package(cache_memory_t *cache, cache_lin
             return PACKAGE_STATE_WAIT;
         break;
 
-
+        ///=====================================================================
+        /// COPYBACK
         case MEMORY_OPERATION_COPYBACK:
-
             /// Get CACHE pointer
             cache_memory_t *cache = sinuca_engine.cache_memory_array[cache_id];
 
-            directory_controller_line_t *directory_line = NULL;
-            int32_t directory_line_number = POSITION_FAIL;
-            /// Find the existing directory line.
-            for (uint32_t i = 0; i < this->directory_lines->size(); i++) {
-                /// Requested Address Found
-                if (this->directory_lines[0][i]->id_owner == package->id_owner &&
-                this->directory_lines[0][i]->opcode_number == package->opcode_number &&
-                this->directory_lines[0][i]->uop_number == package->uop_number &&
-                this->cmp_index_tag(directory_lines[0][i]->initial_memory_address, package->memory_address)) {
-                    directory_line = this->directory_lines[0][i];
-                    directory_line_number = i;
-                    break;
+            /// Check if request sent to main_memory (memory_controller)
+            container_ptr_cache_memory_t *lower_level_cache = cache->get_lower_level_cache();
+            if (lower_level_cache->size() == 0) {
+
+                directory_controller_line_t *directory_line = NULL;
+                int32_t directory_line_number = POSITION_FAIL;
+                /// Find the existing directory line.
+                for (uint32_t i = 0; i < this->directory_lines->size(); i++) {
+                    /// Requested Address Found
+                    if (this->directory_lines[0][i]->id_owner == package->id_owner &&
+                    this->directory_lines[0][i]->opcode_number == package->opcode_number &&
+                    this->directory_lines[0][i]->uop_number == package->uop_number &&
+                    this->cmp_index_tag(directory_lines[0][i]->initial_memory_address, package->memory_address)) {
+                        directory_line = this->directory_lines[0][i];
+                        directory_line_number = i;
+                        break;
+                    }
                 }
-            }
-            ERROR_ASSERT_PRINTF(directory_line != NULL, "Higher level REQUEST must have a directory_line\n")
-
-
-            /// ========================================================================
-            /// THIS cache level generated the request (PREFETCH / COPYBACK)
+                ERROR_ASSERT_PRINTF(directory_line != NULL, "Higher level REQUEST must have a directory_line\n")
 
                 /// Erase the directory_entry
                 DIRECTORY_CTRL_DEBUG_PRINTF("\t Erasing Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
                 utils_t::template_delete_variable<directory_controller_line_t>(directory_line);
                 directory_line = NULL;
                 this->directory_lines->erase(this->directory_lines->begin() + directory_line_number);
-                /// Update Coherence Status
-                this->coherence_new_operation(cache, cache_line, package, false);
                 /// Erase the package
                 DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (Requester = This)\n")
                 return PACKAGE_STATE_FREE;
             }
-            return PACKAGE_STATE_WAIT;
-
+            else {
+                return PACKAGE_STATE_FREE;
+            }
         break;
+    }
 
+    ERROR_PRINTF("Could not treat the cache answer\n")
+    return PACKAGE_STATE_FREE;
 };
-*/
+
+
 
 //==============================================================================
 /*! This method should be only called if there is no directory lock for the
  * cache line being copyback.
  */
-
 bool directory_controller_t::create_cache_copyback(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way) {
 
     /// Create the copyback package

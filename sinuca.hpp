@@ -1627,9 +1627,9 @@ class directory_controller_t : public interconnection_interface_t {
         void print_configuration();
 
         /// ====================================================================
-
         package_state_t treat_cache_request(uint32_t obj_id, memory_package_t *package);
         package_state_t treat_cache_answer(uint32_t obj_id, memory_package_t *package);
+        package_state_t treat_cache_request_sent(uint32_t obj_id, memory_package_t *package);
         bool create_cache_copyback(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
 
         uint32_t find_next_obj_id(cache_memory_t *cache_memory, uint64_t memory_address);
