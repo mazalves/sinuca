@@ -226,7 +226,15 @@ void cache_memory_t::clock(uint32_t subcycle) {
             CACHE_DEBUG_PRINTF("\t Send REQUEST MSHR_BORN_ORDERED[%d] %s\n", i, mshr_born_ordered[0][i]->memory_to_string().c_str());
             int32_t transmission_latency = send_package(mshr_born_ordered[0][i]);
             if (transmission_latency != POSITION_FAIL) {
-                mshr_born_ordered[0][i]->package_wait(transmission_latency);
+// ~
+                // ~ if (mshr_born_ordered[0][i]->memory_operation == MEMORY_OPERATION_COPYBACK) {
+                    // ~ /// Erase the package
+                    // ~ mshr_born_ordered[0][i]->package_clean();
+                    // ~ mshr_born_ordered->erase(this->mshr_born_ordered->begin() + i);
+                // ~ }
+                // ~ else {
+                    mshr_born_ordered[0][i]->package_wait(transmission_latency);
+                // ~ }
             }
             break;
         }
@@ -317,74 +325,6 @@ void cache_memory_t::clock(uint32_t subcycle) {
             }
         }
     }
-
-
-/*
-    // =================================================================
-    // PREFETCHER
-    // =================================================================
-    memory_package_t* memory_package = this->prefetcher.request_buffer_get_older();
-    if (memory_package != NULL) {
-        bool already_requested = false;
-        CACHE_DEBUG_PRINTF("\t Has New Prefetch.\n");
-
-        /// Check if the same address has been already requested
-        for (uint32_t i = 0 ; i < this->mshr_buffer_size; i++) {
-            if (this->cmp_tag_index_bank(this->mshr_buffer[i].memory_address, memory_package->memory_address)) {
-                already_requested = true;
-                CACHE_DEBUG_PRINTF("\t\t Dropping PREFETCH\n");
-                this->prefetcher.request_buffer_remove();
-                break;
-            }
-        }
-
-        if (already_requested == false) {
-            /// Check for free space into MSHR[PREFETCH]
-            int32_t position_pfetch = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size, this->mshr_buffer_prefetch_reserved_size);
-            if (position_pfetch != POSITION_FAIL) {
-                position_pfetch += this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size;
-                    CACHE_DEBUG_PRINTF("\t RECEIVED PREFETCH\n");
-                    this->mshr_buffer[position_pfetch] = *memory_package;
-                    this->mshr_buffer[position_pfetch].id_owner = get_id();
-                    this->mshr_buffer[position_pfetch].id_src = get_id();
-                    this->mshr_buffer[position_pfetch].id_dst = get_id();
-                    this->mshr_buffer[position_pfetch].package_untreated(0);
-                }
-            else {
-                add_stat_full_mshr_buffer_prefetch();
-            }
-        }
-    }
- * */
-
-};
-
-// =============================================================================
-int32_t cache_memory_t::send_package(memory_package_t *package) {
-    CACHE_DEBUG_PRINTF("send_package() package:%s\n", package->memory_to_string().c_str());
-
-    if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
-        sinuca_engine.interconnection_controller->find_package_route(package);
-        ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
-        uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
-        ERROR_ASSERT_PRINTF(output_port < this->get_max_ports(), "Output Port does not exist\n");
-        package->hop_count--;  /// Consume its own port
-
-        uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(package, this, this->get_interface_output_component(output_port));
-        bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port), transmission_latency);
-        if (sent) {
-            CACHE_DEBUG_PRINTF("\tSEND OK\n");
-            this->send_ready_cycle = sinuca_engine.get_global_cycle() + transmission_latency;
-            return transmission_latency;
-        }
-        else {
-            CACHE_DEBUG_PRINTF("\tSEND FAIL\n");
-            package->hop_count++;  /// Do not Consume its own port
-            return POSITION_FAIL;
-        }
-    }
-    CACHE_DEBUG_PRINTF("\tSEND FAIL (BUSY)\n");
-    return POSITION_FAIL;
 };
 
 
@@ -448,6 +388,34 @@ int32_t cache_memory_t::allocate_prefetch(memory_package_t* package){
         add_stat_full_mshr_buffer_copyback();
     }
     return slot;
+};
+
+// =============================================================================
+int32_t cache_memory_t::send_package(memory_package_t *package) {
+    CACHE_DEBUG_PRINTF("send_package() package:%s\n", package->memory_to_string().c_str());
+
+    if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
+        sinuca_engine.interconnection_controller->find_package_route(package);
+        ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
+        uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
+        ERROR_ASSERT_PRINTF(output_port < this->get_max_ports(), "Output Port does not exist\n");
+        package->hop_count--;  /// Consume its own port
+
+        uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(package, this, this->get_interface_output_component(output_port));
+        bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port), transmission_latency);
+        if (sent) {
+            CACHE_DEBUG_PRINTF("\tSEND OK\n");
+            this->send_ready_cycle = sinuca_engine.get_global_cycle() + transmission_latency;
+            return transmission_latency;
+        }
+        else {
+            CACHE_DEBUG_PRINTF("\tSEND FAIL\n");
+            package->hop_count++;  /// Do not Consume its own port
+            return POSITION_FAIL;
+        }
+    }
+    CACHE_DEBUG_PRINTF("\tSEND FAIL (BUSY)\n");
+    return POSITION_FAIL;
 };
 
 

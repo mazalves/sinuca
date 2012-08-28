@@ -1,6 +1,6 @@
 TODO list:
 
-1st. Beat Rustam's simulator: 200.000 instructions/second with 1 core.
+1st. Beat Rustam's simulator: 200.000 instructions/second with 1 core. => DONE !
 
 ################ Cosmetics
 -- Use default variable names

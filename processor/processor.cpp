@@ -976,7 +976,6 @@ void processor_t::stage_execution() {
     if (position_mem != POSITION_FAIL) {
         int32_t transmission_latency = this->send_data_package(&this->write_buffer[position_mem]);
         if (transmission_latency != POSITION_FAIL) {  /// Try to send to the DC.
-            // ~ this->write_buffer[position_mem].package_wait(transmission_latency);
             /// Never wait for answer after SEND a WRITE
             this->write_buffer[position_mem].is_answer = true;
             this->write_buffer[position_mem].package_ready(transmission_latency);
@@ -1367,20 +1366,6 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
             break;
 
             case MEMORY_OPERATION_WRITE:
-            /*
-                ERROR_ASSERT_PRINTF(input_port == PROCESSOR_PORT_DATA_CACHE, "Receiving write package from a wrong port.\n");
-
-                slot = memory_package_t::find_state_mem_address(this->write_buffer, this->write_buffer_size, PACKAGE_STATE_WAIT, package->memory_address);
-                ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read done, but it is not on the read-buffer anymore.\n")
-
-                PROCESSOR_DEBUG_PRINTF("\t WANTED WRITE.\n");
-                this->write_buffer[slot].is_answer = true;
-                this->write_buffer[slot].package_ready(transmission_latency);
-                this->recv_ready_cycle[input_port] = sinuca_engine.get_global_cycle() + transmission_latency;
-                return OK;
-
-            break;
-            */
             case MEMORY_OPERATION_COPYBACK:
             case MEMORY_OPERATION_PREFETCH:
                 ERROR_PRINTF("Processor receiving %s.\n", get_enum_memory_operation_char(package->memory_operation))

@@ -332,14 +332,16 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 else {
                     /// Update Coherence Status and Last Access Time
                     this->coherence_new_operation(cache, cache_line, package, true);
-                    /// Add Latency
+                    /// WRITES never sends answer
                     if (package->memory_operation == MEMORY_OPERATION_WRITE) {
+                        /// Add Latency
                         package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_write();
                         /// Erase the package
                         DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (WRITE Done)\n")
                         return PACKAGE_STATE_FREE;
                     }
                     else {
+                        /// Add Latency
                         package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read();
                         /// Send ANSWER
                         package->is_answer = true;
@@ -560,6 +562,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             /// Add Latency
             package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_write();
 
+            // ~ /// COPYBACK never sends answer
+            // ~ return PACKAGE_STATE_FREE;
+
             /// Send ANSWER
             package->is_answer = true;
             package->id_dst = package->id_src;
@@ -699,11 +704,71 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
     return PACKAGE_STATE_FREE;
 };
 
+/*
+//==============================================================================
+bool directory_controller_t::send_cache_package(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way) {
+    /// ========================================================================
+    /// Takes care about the CACHE HIT/MISS
+    /// ========================================================================
+    switch (package->memory_operation) {
+        ///=====================================================================
+        /// READ and WRITE
+        case MEMORY_OPERATION_READ:
+        case MEMORY_OPERATION_INST:
+        case MEMORY_OPERATION_PREFETCH:
+        case MEMORY_OPERATION_WRITE:
+            return PACKAGE_STATE_WAIT;
+        break;
+
+
+        case MEMORY_OPERATION_COPYBACK:
+
+            /// Get CACHE pointer
+            cache_memory_t *cache = sinuca_engine.cache_memory_array[cache_id];
+
+            directory_controller_line_t *directory_line = NULL;
+            int32_t directory_line_number = POSITION_FAIL;
+            /// Find the existing directory line.
+            for (uint32_t i = 0; i < this->directory_lines->size(); i++) {
+                /// Requested Address Found
+                if (this->directory_lines[0][i]->id_owner == package->id_owner &&
+                this->directory_lines[0][i]->opcode_number == package->opcode_number &&
+                this->directory_lines[0][i]->uop_number == package->uop_number &&
+                this->cmp_index_tag(directory_lines[0][i]->initial_memory_address, package->memory_address)) {
+                    directory_line = this->directory_lines[0][i];
+                    directory_line_number = i;
+                    break;
+                }
+            }
+            ERROR_ASSERT_PRINTF(directory_line != NULL, "Higher level REQUEST must have a directory_line\n")
+
+
+            /// ========================================================================
+            /// THIS cache level generated the request (PREFETCH / COPYBACK)
+
+                /// Erase the directory_entry
+                DIRECTORY_CTRL_DEBUG_PRINTF("\t Erasing Directory Line:%s\n", directory_line->directory_controller_line_to_string().c_str())
+                utils_t::template_delete_variable<directory_controller_line_t>(directory_line);
+                directory_line = NULL;
+                this->directory_lines->erase(this->directory_lines->begin() + directory_line_number);
+                /// Update Coherence Status
+                this->coherence_new_operation(cache, cache_line, package, false);
+                /// Erase the package
+                DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (Requester = This)\n")
+                return PACKAGE_STATE_FREE;
+            }
+            return PACKAGE_STATE_WAIT;
+
+        break;
+
+};
+*/
 
 //==============================================================================
 /*! This method should be only called if there is no directory lock for the
  * cache line being copyback.
  */
+
 bool directory_controller_t::create_cache_copyback(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way) {
 
     /// Create the copyback package
