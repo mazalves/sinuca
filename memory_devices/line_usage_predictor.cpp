@@ -992,7 +992,7 @@ void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, cac
             ERROR_ASSERT_PRINTF(way < this->DSBP_associativity, "Wrong way %d > associativity %d", way, this->DSBP_associativity);
             ERROR_ASSERT_PRINTF(cache_memory != NULL && cache_line != NULL, "Wrong Cache or Cache Line");
 
-/*
+
             // Installing the CopyBack in SAME tagged line
             if (cache_memory->cmp_tag_index_bank(cache_line->tag, package->memory_address)) {
                 // Clean the metadata entry
@@ -1027,7 +1027,7 @@ void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, cac
             }
             // Installing the CopyBack in DIFFERENT tagged line
             else {
-*/
+
                 this->line_eviction(index, way);
                 // Clean the metadata entry
                 this->DSBP_sets[index].ways[way].learn_mode = true;
@@ -1053,9 +1053,9 @@ void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, cac
                         this->DSBP_sets[index].ways[way].written_sub_blocks[i]++;
                     }
                 }
-/*
+
             }
-*/
+
             // Modify the package->sub_blocks (next level request)
             package->memory_size = 1;
         }

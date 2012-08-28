@@ -350,7 +350,7 @@ void memory_controller_t::clock(uint32_t subcycle) {
                     case WRITE_PRIORITY_DRAIN_WHEN_FULL:
                         /// If WRITE_BUFFER FULL or READ_BUFFER EMPTY => DRAIN WRITE
                         if (this->channels[channel].write_buffer_position_used[bank] == this->write_buffer_size - 1 ||
-                        this->channels[channel].read_buffer_position_used[bank] == 0) {
+                        (this->channels[channel].read_buffer_position_used[bank] == 0 && this->channels[channel].write_buffer_position_used[bank] >= this->write_buffer_size / 2)) {
                             this->channels[channel].drain_write[bank] = true;
                         }
                         /// Keep Drain until drain all
@@ -725,7 +725,7 @@ void memory_controller_t::periodic_check(){
 
     for (uint32_t i = 0; i < this->get_channels_per_controller(); i++) {
         ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->channels[i].read_buffer, this->get_banks_per_channel(), this->read_buffer_size) == OK, "Check_age failed.\n");
-        ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->channels[i].write_buffer, this->get_banks_per_channel(), this->write_buffer_size) == OK, "Check_age failed.\n");
+        // ~ ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->channels[i].write_buffer, this->get_banks_per_channel(), this->write_buffer_size) == OK, "Check_age failed.\n");
     }
 };
 
