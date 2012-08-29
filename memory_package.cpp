@@ -79,7 +79,15 @@ void memory_package_t::package_clean() {
     this->id_src = 0;
     this->id_dst = 0;
     this->hops = NULL;
-    this->hop_count = 0;
+    this->hop_count = POSITION_FAIL;
+};
+
+//==============================================================================
+void memory_package_t::package_set_src_dst(uint32_t id_src, uint32_t id_dst) {
+    this->id_src = id_src;
+    this->id_dst = id_dst;
+    this->hops = NULL;
+    this->hop_count = POSITION_FAIL;
 };
 
 //==============================================================================

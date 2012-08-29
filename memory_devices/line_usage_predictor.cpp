@@ -1,4 +1,4 @@
-//==============================================================================
+/// ============================================================================
 //
 // Copyright (C) 2010, 2011
 // Marco Antonio Zanata Alves
@@ -20,7 +20,7 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
-//==============================================================================
+/// ============================================================================
 #include "../sinuca.hpp"
 
 #ifdef LINE_USAGE_PREDICTOR_DEBUG
@@ -29,7 +29,7 @@
     #define LINE_USAGE_PREDICTOR_DEBUG_PRINTF(...)
 #endif
 
-//==============================================================================
+/// ============================================================================
 line_usage_predictor_t::line_usage_predictor_t() {
     this->line_usage_predictor_type = LINE_USAGE_PREDICTOR_POLICY_DISABLE;
 
@@ -54,14 +54,14 @@ line_usage_predictor_t::line_usage_predictor_t() {
     this->DSBP_PHT_total_sets = 0;
 };
 
-//==============================================================================
+/// ============================================================================
 line_usage_predictor_t::~line_usage_predictor_t() {
     /// De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<DSBP_metadata_sets_t>(DSBP_sets);
     utils_t::template_delete_array<DSBP_PHT_sets_t>(DSBP_PHT_sets);
 };
 
-//==============================================================================
+/// ============================================================================
 void line_usage_predictor_t::allocate() {
     switch (this->get_line_usage_predictor_type()) {
         case LINE_USAGE_PREDICTOR_POLICY_DSBP:
@@ -170,7 +170,7 @@ void line_usage_predictor_t::allocate() {
 
 };
 
-//==============================================================================
+/// ============================================================================
 void line_usage_predictor_t::clock(uint32_t subcycle) {
     if (subcycle != 0) return;
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("==================== ");
@@ -180,13 +180,13 @@ void line_usage_predictor_t::clock(uint32_t subcycle) {
 };
 
 
-//==============================================================================
+/// ============================================================================
 bool line_usage_predictor_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
     ERROR_PRINTF("Received package %s into the input_port %u, latency %u.\n", package->memory_to_string().c_str(), input_port, transmission_latency);
     return FAIL;
 };
 
-//==============================================================================
+/// ============================================================================
 void line_usage_predictor_t::print_structures() {
 };
 
@@ -195,7 +195,7 @@ void line_usage_predictor_t::panic() {
     this->print_structures();
 };
 
-//==============================================================================
+/// ============================================================================
 void line_usage_predictor_t::periodic_check(){
     #ifdef PREFETCHER_DEBUG
         this->print_structures();
@@ -705,6 +705,8 @@ void line_usage_predictor_t::line_miss(memory_package_t *package, uint32_t index
 
     switch (this->get_line_usage_predictor_type()) {
         case LINE_USAGE_PREDICTOR_POLICY_DSBP: {
+            this->line_eviction(index, way);
+
             ERROR_ASSERT_PRINTF(index < this->DSBP_total_sets, "Wrong index %d > total_sets %d", index, this->DSBP_total_sets);
             ERROR_ASSERT_PRINTF(way < this->DSBP_associativity, "Wrong way %d > associativity %d", way, this->DSBP_associativity);
 
@@ -823,6 +825,7 @@ void line_usage_predictor_t::line_miss(memory_package_t *package, uint32_t index
         break;
 
         case LINE_USAGE_PREDICTOR_POLICY_DSBP_DISABLE:
+            this->line_eviction(index, way);
             package->memory_size = sinuca_engine.get_global_line_size();
 
             // Clean the metadata entry
@@ -992,7 +995,7 @@ void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, cac
             ERROR_ASSERT_PRINTF(way < this->DSBP_associativity, "Wrong way %d > associativity %d", way, this->DSBP_associativity);
             ERROR_ASSERT_PRINTF(cache_memory != NULL && cache_line != NULL, "Wrong Cache or Cache Line");
 
-
+/*
             // Installing the CopyBack in SAME tagged line
             if (cache_memory->cmp_tag_index_bank(cache_line->tag, package->memory_address)) {
                 // Clean the metadata entry
@@ -1022,12 +1025,11 @@ void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, cac
                     if (this->DSBP_sets[index].ways[way].valid_sub_blocks[i] != LINE_SUB_BLOCK_DISABLE) {
                         this->DSBP_sets[index].ways[way].active_sub_blocks++;
                     }
-
                 }
             }
             // Installing the CopyBack in DIFFERENT tagged line
             else {
-
+*/
                 this->line_eviction(index, way);
                 // Clean the metadata entry
                 this->DSBP_sets[index].ways[way].learn_mode = true;
@@ -1053,15 +1055,17 @@ void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, cac
                         this->DSBP_sets[index].ways[way].written_sub_blocks[i]++;
                     }
                 }
-
+/*
             }
-
+*/
             // Modify the package->sub_blocks (next level request)
             package->memory_size = 1;
         }
         break;
 
         case LINE_USAGE_PREDICTOR_POLICY_DSBP_DISABLE:
+            this->line_eviction(index, way);
+
             // Clean the metadata entry
             this->DSBP_sets[index].ways[way].learn_mode = true;
             this->DSBP_sets[index].ways[way].is_dead = false;

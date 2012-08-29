@@ -552,8 +552,8 @@ int32_t processor_t::send_instruction_package(opcode_package_t *inst_package) {
             this->get_id(),                                                                 /// Src ID
             this->get_interface_output_component(PROCESSOR_PORT_INST_CACHE)->get_id(),      /// Dst ID
             NULL,                               /// *Hops
-            0                                   /// Hop Counter
-            );
+            POSITION_FAIL                       /// Hop Counter
+        );
 
         sinuca_engine.interconnection_controller->find_package_route(&package);
         ERROR_ASSERT_PRINTF(package.hop_count != POSITION_FAIL, "Achieved the end of the route\n");
@@ -1039,25 +1039,25 @@ void processor_t::stage_execution() {
                         }
 
                         this->read_buffer[position_mem].packager(
-                                this->get_id(),                                         /// Request Owner
-                                reorder_buffer_line->uop.opcode_number,      /// Opcode. Number
-                                reorder_buffer_line->uop.opcode_address,      /// Opcode. Address
-                                reorder_buffer_line->uop.uop_number,         /// Uop. Number
+                            this->get_id(),                                         /// Request Owner
+                            reorder_buffer_line->uop.opcode_number,      /// Opcode. Number
+                            reorder_buffer_line->uop.opcode_address,      /// Opcode. Address
+                            reorder_buffer_line->uop.uop_number,         /// Uop. Number
 
-                                reorder_buffer_line->uop.memory_address,     /// Mem. Address
-                                reorder_buffer_line->uop.memory_size,        /// Block Size
+                            reorder_buffer_line->uop.memory_address,     /// Mem. Address
+                            reorder_buffer_line->uop.memory_size,        /// Block Size
 
-                                PACKAGE_STATE_TRANSMIT,                                 /// Pack. State
-                                0,                                                      /// Ready Cycle
+                            PACKAGE_STATE_TRANSMIT,                                 /// Pack. State
+                            0,                                                      /// Ready Cycle
 
-                                MEMORY_OPERATION_READ,                                  /// Mem. Operation
-                                false,                                                  /// Is Answer
+                            MEMORY_OPERATION_READ,                                  /// Mem. Operation
+                            false,                                                  /// Is Answer
 
-                                this->get_id(),                                                                 /// Src ID
-                                this->get_interface_output_component(PROCESSOR_PORT_DATA_CACHE)->get_id(),      /// Dst ID
-                                NULL,                          /// *Hops
-                                0                              /// Hop Counter
-                                );
+                            this->get_id(),                                                                 /// Src ID
+                            this->get_interface_output_component(PROCESSOR_PORT_DATA_CACHE)->get_id(),      /// Dst ID
+                            NULL,                          /// *Hops
+                            POSITION_FAIL                  /// Hop Counter
+                        );
                         reorder_buffer_line->uop.state = PACKAGE_STATE_WAIT;
                         total_executed++;
                         /// Remove from the Functional Units
@@ -1078,25 +1078,25 @@ void processor_t::stage_execution() {
                         }
 
                         this->write_buffer[position_mem].packager(
-                                this->get_id(),                                         /// Request Owner
-                                reorder_buffer_line->uop.opcode_number,     /// Opcode. Number
-                                reorder_buffer_line->uop.opcode_address,     /// Opcode. Address
-                                reorder_buffer_line->uop.uop_number,        /// Uop. Number
+                            this->get_id(),                                         /// Request Owner
+                            reorder_buffer_line->uop.opcode_number,     /// Opcode. Number
+                            reorder_buffer_line->uop.opcode_address,     /// Opcode. Address
+                            reorder_buffer_line->uop.uop_number,        /// Uop. Number
 
-                                reorder_buffer_line->uop.memory_address,    /// Mem. Address
-                                reorder_buffer_line->uop.memory_size,       /// Block Size
+                            reorder_buffer_line->uop.memory_address,    /// Mem. Address
+                            reorder_buffer_line->uop.memory_size,       /// Block Size
 
-                                PACKAGE_STATE_TRANSMIT,                                 /// Pack. State
-                                0,                                                      /// Ready Cycle
+                            PACKAGE_STATE_TRANSMIT,                                 /// Pack. State
+                            0,                                                      /// Ready Cycle
 
-                                MEMORY_OPERATION_WRITE,                                 /// Mem. Operation
-                                false,                                                  /// Is Answer
+                            MEMORY_OPERATION_WRITE,                                 /// Mem. Operation
+                            false,                                                  /// Is Answer
 
-                                this->get_id(),                                                                 /// Src ID
-                                this->get_interface_output_component(PROCESSOR_PORT_DATA_CACHE)->get_id(),      /// Dst ID
-                                NULL,                           /// *Hops
-                                0                              /// Hop Counter
-                                );
+                            this->get_id(),                                                                 /// Src ID
+                            this->get_interface_output_component(PROCESSOR_PORT_DATA_CACHE)->get_id(),      /// Dst ID
+                            NULL,                           /// *Hops
+                            POSITION_FAIL                   /// Hop Counter
+                        );
 
                         // INSERTED ON WRITE_BUFFER - reorder_buffer => READY
                         PROCESSOR_DEBUG_PRINTF("\t Executing package:%s\n", reorder_buffer_line->uop.uop_to_string().c_str());

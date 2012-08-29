@@ -1,4 +1,4 @@
-//==============================================================================
+/// ============================================================================
 //
 // Copyright (C) 2010, 2011
 // Marco Antonio Zanata Alves
@@ -20,7 +20,7 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
-//==============================================================================
+/// ============================================================================
 #include "../sinuca.hpp"
 
 #ifdef PREFETCHER_DEBUG
@@ -30,7 +30,7 @@
 #endif
 
 
-//==============================================================================
+/// ============================================================================
 prefetch_t::prefetch_t() {
     this->prefetcher_type = PREFETCHER_DISABLE;
     this->stream_table_size = 0;
@@ -50,14 +50,14 @@ prefetch_t::prefetch_t() {
     this->not_offset_bits_mask = 0;
 };
 
-//==============================================================================
+/// ============================================================================
 prefetch_t::~prefetch_t() {
     /// De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<memory_package_t>(request_buffer);
     utils_t::template_delete_array<cache_prefetch_stream_table_t>(stream_table);
 };
 
-//==============================================================================
+/// ============================================================================
 void prefetch_t::allocate() {
     /// Global Request Buffer
     this->request_buffer = utils_t::template_allocate_array<memory_package_t>(this->get_request_buffer_size());
@@ -84,7 +84,7 @@ void prefetch_t::allocate() {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 void prefetch_t::clock(uint32_t subcycle) {
     if (subcycle != 0) return;
     PREFETCHER_DEBUG_PRINTF("==================== ");
@@ -157,7 +157,7 @@ void prefetch_t::clock(uint32_t subcycle) {
 };
 
 
-//==============================================================================
+/// ============================================================================
 bool prefetch_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
     ERROR_PRINTF("Received package %s into the input_port %u, latency %u.\n", package->memory_to_string().c_str(), input_port, transmission_latency);
     return FAIL;
@@ -230,7 +230,7 @@ void prefetch_t::treat_prefetch(memory_package_t *s) {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 void prefetch_t::print_structures() {
 
     switch (this->get_prefetcher_type()) {
@@ -249,12 +249,12 @@ void prefetch_t::print_structures() {
     }
 };
 
-// =============================================================================
+/// ============================================================================
 void prefetch_t::panic() {
     this->print_structures();
 };
 
-//==============================================================================
+/// ============================================================================
 void prefetch_t::periodic_check(){
     #ifdef PREFETCHER_DEBUG
         this->print_structures();
@@ -265,13 +265,13 @@ void prefetch_t::periodic_check(){
     // ~ ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->request_buffer, this->request_buffer_size) == OK, "Check_age failed.\n");
 };
 
-// =============================================================================
+/// ============================================================================
 // STATISTICS
-// =============================================================================
+/// ============================================================================
 void prefetch_t::reset_statistics() {
 };
 
-// =============================================================================
+/// ============================================================================
 void prefetch_t::print_statistics() {
      char title[100] = "";
     sprintf(title, "Statistics of %s", this->get_label());
@@ -280,7 +280,7 @@ void prefetch_t::print_statistics() {
     sinuca_engine.write_statistics_big_separator();
 };
 
-// =============================================================================
+/// ============================================================================
 void prefetch_t::print_configuration() {
     char title[100] = "";
     sprintf(title, "Configuration of %s", this->get_label());
@@ -301,9 +301,9 @@ void prefetch_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stream_wait_between_requests", stream_wait_between_requests);
 };
 
-//==============================================================================
+/// ============================================================================
 // Request Buffer Methods
-//==============================================================================
+/// ============================================================================
 /*! Should make all the verifications before call this method, because it will
  * update the position_end and position_used for the fetch_buffer
  */
@@ -340,7 +340,7 @@ int32_t prefetch_t::request_buffer_insert() {
     return valid_position;
 };
 
-// =============================================================================
+/// ============================================================================
 memory_package_t* prefetch_t::request_buffer_get_older() {
     if (this->request_buffer_position_used > 0) {
         return (&this->request_buffer[this->request_buffer_position_start]);
@@ -351,7 +351,7 @@ memory_package_t* prefetch_t::request_buffer_get_older() {
 };
 
 
-// =============================================================================
+/// ============================================================================
 /*! Make sure that you want to remove the first element before call this method
  * because it will remove the buffer[position_start] and update the controls
  */
@@ -368,9 +368,9 @@ void prefetch_t::request_buffer_remove() {
 };
 
 
-//==============================================================================
+/// ============================================================================
 // Stream Table Methods
-//==============================================================================
+/// ============================================================================
 void prefetch_t::stream_table_line_clean(uint32_t stream_buffer_line) {
     this->stream_table[stream_buffer_line].last_memory_address = 0;
     this->stream_table[stream_buffer_line].memory_address_difference = 0;
@@ -380,7 +380,7 @@ void prefetch_t::stream_table_line_clean(uint32_t stream_buffer_line) {
     this->stream_table[stream_buffer_line].cycle_last_request = 0;
 };
 
-// =============================================================================
+/// ============================================================================
 std::string prefetch_t::stream_table_line_to_string(uint32_t stream_buffer_line) {
     std::string PackageString;
     PackageString = "";
@@ -399,7 +399,7 @@ std::string prefetch_t::stream_table_line_to_string(uint32_t stream_buffer_line)
     return PackageString;
 };
 
-// =============================================================================
+/// ============================================================================
 std::string prefetch_t::stream_table_print_all() {
     std::string PackageString;
     std::string FinalString;

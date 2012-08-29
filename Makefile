@@ -88,12 +88,16 @@ OBJS = $(OBJS_CORE)
 all: sinuca
 	$(LD) $(LDFLAGS) -o $(BIN_NAME) $(OBJS) $(LIBRARY)
 	@echo SiNUCA linked!
+	@echo
 	@echo Enjoy!
 
 sinuca: $(OBJS_CORE)
 	@echo SiNUCA compiled!
+	@echo
 
 clean:
 	-$(RM) $(OBJS)
 	-$(RM) $(BIN_NAME)
+	@echo SiNUCA cleaned!
+	@echo
 

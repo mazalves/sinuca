@@ -231,7 +231,8 @@ const char *get_enum_coherence_protocol_char(coherence_protocol_t type) {
 const char *get_enum_inclusiveness_char(inclusiveness_t type) {
     switch (type) {
         case INCLUSIVENESS_NON_INCLUSIVE:   return "NON_INCLUSIVE"; break;
-        case INCLUSIVENESS_INCLUSIVE:       return "INCLUSIVE"; break;
+        case INCLUSIVENESS_INCLUSIVE_LLC:   return "INCLUSIVE_LLC"; break;
+        case INCLUSIVENESS_INCLUSIVE_ALL:   return "INCLUSIVE_ALL"; break;
     };
     ERROR_PRINTF("Wrong INCLUSIVENESS\n");
     return "FAIL";

@@ -1,4 +1,4 @@
-//==============================================================================
+/// ============================================================================
 //
 // Copyright (C) 2010, 2011, 2012
 // Marco Antonio Zanata Alves
@@ -20,7 +20,7 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
-//==============================================================================
+/// ============================================================================
 #include "../sinuca.hpp"
 
 #ifdef MEMORY_CONTROLLER_DEBUG
@@ -29,7 +29,7 @@
     #define MEMORY_CONTROLLER_DEBUG_PRINTF(...)
 #endif
 
-//==============================================================================
+/// ============================================================================
 memory_controller_t::memory_controller_t() {
     this->set_type_component(COMPONENT_MEMORY_CONTROLLER);
 
@@ -53,7 +53,7 @@ memory_controller_t::memory_controller_t() {
     this->RAS_latency = 0;
 };
 
-//==============================================================================
+/// ============================================================================
 memory_controller_t::~memory_controller_t() {
     // De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<memory_channel_t>(channels);
@@ -68,7 +68,7 @@ memory_controller_t::~memory_controller_t() {
     utils_t::template_delete_array<memory_package_t>(fill_buffer);
 };
 
-//==============================================================================
+/// ============================================================================
 void memory_controller_t::allocate() {
 
     this->bus_latency = (this->line_size / this->get_bus_width()) * (this->get_core_to_bus_clock_ratio() / 2); /// Divide by to to consider a DDR (Double Data Rate)
@@ -108,7 +108,7 @@ void memory_controller_t::allocate() {
     #endif
 };
 
-//==============================================================================
+/// ============================================================================
 void memory_controller_t::set_masks() {
     uint64_t i;
 
@@ -222,7 +222,7 @@ void memory_controller_t::set_masks() {
 };
 
 
-//==============================================================================
+/// ============================================================================
 // CAS = Use the open row
 // RAS = Open a new row
 void memory_controller_t::find_cas_and_ras(memory_package_t *input_buffer, uint32_t input_buffer_size, memory_package_t *row_buffer, int32_t& cas_position, int32_t& ras_position) {
@@ -302,7 +302,7 @@ void memory_controller_t::find_cas_and_ras(memory_package_t *input_buffer, uint3
     }
 };
 
-//==============================================================================
+/// ============================================================================
 void memory_controller_t::clock(uint32_t subcycle) {
     if (subcycle != 0) return;
     MEMORY_CONTROLLER_DEBUG_PRINTF("==================== ID(%u) ",this->get_id());
@@ -392,8 +392,7 @@ void memory_controller_t::clock(uint32_t subcycle) {
 
                             this->channels[channel].row_buffer[bank].is_answer = true;
                             this->channels[channel].row_buffer[bank].memory_size = this->get_line_size();
-                            this->channels[channel].row_buffer[bank].id_dst = this->channels[channel].row_buffer[bank].id_src;
-                            this->channels[channel].row_buffer[bank].id_src = this->get_id();
+                            this->channels[channel].row_buffer[bank].package_set_src_dst(this->get_id(), this->channels[channel].row_buffer[bank].id_src);
                             this->channels[channel].row_buffer[bank].package_transmit(this->get_CAS_latency());
 
                             this->channels[channel].read_buffer[bank][read_cas].package_clean();
@@ -407,11 +406,11 @@ void memory_controller_t::clock(uint32_t subcycle) {
                                 case MEMORY_OPERATION_READ:
                                     this->add_stat_read_completed(this->fill_buffer[channel].born_cycle);
                                 break;
-            
+
                                 case MEMORY_OPERATION_INST:
                                     this->add_stat_instruction_completed(this->fill_buffer[channel].born_cycle);
                                 break;
-            
+
                                 case MEMORY_OPERATION_PREFETCH:
                                     this->add_stat_prefetch_completed(this->fill_buffer[channel].born_cycle);
                                 break;
@@ -429,8 +428,7 @@ void memory_controller_t::clock(uint32_t subcycle) {
 
                             this->channels[channel].row_buffer[bank].is_answer = true;
                             this->channels[channel].row_buffer[bank].memory_size = 1;
-                            this->channels[channel].row_buffer[bank].id_dst = this->channels[channel].row_buffer[bank].id_src;
-                            this->channels[channel].row_buffer[bank].id_src = this->get_id();
+                            this->channels[channel].row_buffer[bank].package_set_src_dst(this->get_id(), this->channels[channel].row_buffer[bank].id_src);
                             /// Never send WRITE ANSWER
                             this->channels[channel].row_buffer[bank].package_ready(this->get_CAS_latency());
 
@@ -548,7 +546,7 @@ void memory_controller_t::clock(uint32_t subcycle) {
 
         /// Send the oldest UNTREATED package.
         else {
-            MEMORY_CONTROLLER_DEBUG_PRINTF("%s: State TO_HIGHER ROW_BUFFER[%d].\n", this->get_label(), position);
+            MEMORY_CONTROLLER_DEBUG_PRINTF("%s: State TO_HIGHER FILL_BUFFER[%d].\n", this->get_label(), channel);
             int32_t transmission_latency = this->send_package(&this->fill_buffer[channel]);
             if (transmission_latency != POSITION_FAIL) {
                 this->fill_buffer[channel].package_ready(transmission_latency);
@@ -558,9 +556,9 @@ void memory_controller_t::clock(uint32_t subcycle) {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 // Selection Strategies
-//==============================================================================
+/// ============================================================================
 /// Selection strategy: Random
 uint32_t memory_controller_t::selection_bank_random(uint32_t total_buffers) {
     unsigned int seed = sinuca_engine.get_global_cycle() % 1000;
@@ -568,7 +566,7 @@ uint32_t memory_controller_t::selection_bank_random(uint32_t total_buffers) {
     return selected;
 };
 
-//==============================================================================
+/// ============================================================================
 /// Selection strategy: Round Robin
 uint32_t memory_controller_t::selection_bank_round_robin(uint32_t channel, uint32_t total_buffers) {
     this->last_bank_selected[channel]++;
@@ -578,7 +576,7 @@ uint32_t memory_controller_t::selection_bank_round_robin(uint32_t channel, uint3
     return this->last_bank_selected[channel];
 };
 
-//==============================================================================
+/// ============================================================================
 /// Selection strategy: Random
 uint32_t memory_controller_t::selection_channel_random(uint32_t total_channels) {
     unsigned int seed = sinuca_engine.get_global_cycle() % 1000;
@@ -586,7 +584,7 @@ uint32_t memory_controller_t::selection_channel_random(uint32_t total_channels) 
     return selected;
 };
 
-//==============================================================================
+/// ============================================================================
 /// Selection strategy: Round Robin
 uint32_t memory_controller_t::selection_channel_round_robin(uint32_t total_channels) {
     this->last_channel_selected++;
@@ -596,11 +594,11 @@ uint32_t memory_controller_t::selection_channel_round_robin(uint32_t total_chann
     return this->last_channel_selected;
 };
 
-//==============================================================================
+/// ============================================================================
 int32_t memory_controller_t::send_package(memory_package_t *package) {
     MEMORY_CONTROLLER_DEBUG_PRINTF("send_package() package:%s\n", package->memory_to_string().c_str());
     ERROR_ASSERT_PRINTF(package->memory_operation != MEMORY_OPERATION_COPYBACK && package->memory_operation != MEMORY_OPERATION_WRITE, "Main memory must never send answer for WRITE.\n");
-    
+
     uint32_t channel = get_channel(package->memory_address);
 
     if (this->send_ready_cycle[channel] <= sinuca_engine.get_global_cycle()) {
@@ -627,9 +625,9 @@ int32_t memory_controller_t::send_package(memory_package_t *package) {
     return POSITION_FAIL;
 };
 
-//==============================================================================
+/// ============================================================================
 bool memory_controller_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
-    ERROR_ASSERT_PRINTF(package->id_dst == this->get_id(), "Received some package for a different id_dst.\n");
+    ERROR_ASSERT_PRINTF(package->id_dst == this->get_id() && package->hop_count == POSITION_FAIL, "Received some package for a different id_dst.\n");
     ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Received a wrong input_port\n");
     ERROR_ASSERT_PRINTF(get_controller(package->memory_address) == this->get_controller_number(), "Wrong channel.\n")
     ERROR_ASSERT_PRINTF(package->is_answer == false, "Only requests are expected.\n");
@@ -688,7 +686,7 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
     return FAIL;
 };
 
-//==============================================================================
+/// ============================================================================
 void memory_controller_t::print_structures() {
 
     for (uint32_t i = 0; i < this->get_channels_per_controller(); i++) {
@@ -717,7 +715,7 @@ void memory_controller_t::panic() {
     this->print_structures();
 };
 
-//==============================================================================
+/// ============================================================================
 void memory_controller_t::periodic_check(){
     #ifdef MEMORY_CONTROLLER_DEBUG
         this->print_structures();
@@ -729,9 +727,9 @@ void memory_controller_t::periodic_check(){
     }
 };
 
-//==============================================================================
+/// ============================================================================
 // STATISTICS
-//==============================================================================
+/// ============================================================================
 void memory_controller_t::reset_statistics() {
 
     this->stat_accesses = 0;
@@ -766,7 +764,7 @@ void memory_controller_t::reset_statistics() {
     this->stat_acumulated_copyback_wait_time = 0;
 };
 
-//==============================================================================
+/// ============================================================================
 void memory_controller_t::print_statistics() {
     char title[100] = "";
     sprintf(title, "Configuration of %s", this->get_label());
@@ -809,7 +807,7 @@ void memory_controller_t::print_statistics() {
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_copyback_wait_time",stat_acumulated_copyback_wait_time, stat_copyback_completed);
 };
 
-//==============================================================================
+/// ============================================================================
 void memory_controller_t::print_configuration() {
     char title[100] = "";
     sprintf(title, "Configuration of %s", this->get_label());

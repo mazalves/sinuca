@@ -193,7 +193,8 @@ const char *get_enum_coherence_protocol_char(coherence_protocol_t type);
 /// Directory coherence protocol
 enum inclusiveness_t {
     INCLUSIVENESS_NON_INCLUSIVE,
-    INCLUSIVENESS_INCLUSIVE
+    INCLUSIVENESS_INCLUSIVE_LLC,
+    INCLUSIVENESS_INCLUSIVE_ALL
 };
 const char *get_enum_inclusiveness_char(inclusiveness_t type);
 

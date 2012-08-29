@@ -964,6 +964,12 @@ void sinuca_engine_t::initialize_directory_controller() {
         if (strcasecmp(cfg_directory[ directory_parameters.back() ], "NON_INCLUSIVE") ==  0) {
             this->directory_controller->set_inclusiveness_type(INCLUSIVENESS_NON_INCLUSIVE);
         }
+        else if (strcasecmp(cfg_directory[ directory_parameters.back() ], "INCLUSIVE_ALL") ==  0) {
+            this->directory_controller->set_inclusiveness_type(INCLUSIVENESS_INCLUSIVE_ALL);
+        }
+        else if (strcasecmp(cfg_directory[ directory_parameters.back() ], "INCLUSIVE_LLC") ==  0) {
+            this->directory_controller->set_inclusiveness_type(INCLUSIVENESS_INCLUSIVE_LLC);
+        }
         else {
             ERROR_PRINTF("DIRECTORY found a strange VALUE %s for PARAMETER %s\n", cfg_directory[ directory_parameters.back() ].c_str(), directory_parameters.back());
         }

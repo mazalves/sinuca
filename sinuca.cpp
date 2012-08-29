@@ -32,14 +32,14 @@ static void display_use() {
     sprintf(usage_str, "%s Usage: sinuca CONFIGURATION TRACE [OPTION]\n", usage_str);
     sprintf(usage_str, "%s\t CONFIGURATION is a configuration file which specify the architectural parameters.\n", usage_str);
     sprintf(usage_str, "%s\t TRACE is the base name for the three (static instruction, dynamic instruction, dynamic memory) trace files.\n", usage_str);
-    sprintf(usage_str, "%s\t Example: ./sinuca -conf CONFIGURATION -trace TRACE.\n\n", usage_str);
+    sprintf(usage_str, "%s\t Example: ./sinuca -conf CONFIGURATION -trace TRACE\n\n", usage_str);
 
     sprintf(usage_str, "%s DESCRIPTION\n", usage_str);
     sprintf(usage_str, "%s\t -conf       \t FILE   \t Configuration file which describes the architecture.\n", usage_str);
     sprintf(usage_str, "%s\t -trace      \t FILE   \t Trace file name.\n", usage_str);
     sprintf(usage_str, "%s\t -result     \t FILE   \t Output result file name.\n", usage_str);
-    sprintf(usage_str, "%s\t -warmup     \t FILE   \t Warm-up cycles before start statistics.\n", usage_str);
-    sprintf(usage_str, "%s\t -compressed \t BOOL   \t force to use an uncompressed trace file.\n", usage_str);
+    sprintf(usage_str, "%s\t -warmup     \t NUMBER \t Warm-up instructions (opcodes) before start statistics.\n", usage_str);
+    sprintf(usage_str, "%s\t -compressed \t BOOL   \t Force to use an uncompressed trace file.\n", usage_str);
 
     SINUCA_PRINTF("%s\n", usage_str);
     exit(EXIT_FAILURE);

@@ -1,4 +1,4 @@
-// =============================================================================
+/// ============================================================================
 //
 // Copyright (C) 2010, 2011, 2012
 // Marco Antonio Zanata Alves
@@ -20,7 +20,7 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
-// =============================================================================
+/// ============================================================================
 #include "../sinuca.hpp"
 
 #ifdef CACHE_DEBUG
@@ -29,7 +29,7 @@
     #define CACHE_DEBUG_PRINTF(...)
 #endif
 
-// =============================================================================
+/// ============================================================================
 cache_memory_t::cache_memory_t() {
     this->set_type_component(COMPONENT_CACHE_MEMORY);
     this->lower_level_cache = new container_ptr_cache_memory_t;
@@ -43,7 +43,7 @@ cache_memory_t::cache_memory_t() {
     this->recv_rqst_write_ready_cycle = 0;
 };
 
-// =============================================================================
+/// ============================================================================
 cache_memory_t::~cache_memory_t() {
     /// De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<cache_set_t>(sets);
@@ -54,7 +54,7 @@ cache_memory_t::~cache_memory_t() {
     utils_t::template_delete_variable<container_ptr_memory_package_t>(mshr_born_ordered);
 };
 
-// =============================================================================
+/// ============================================================================
 void cache_memory_t::allocate() {
     ERROR_ASSERT_PRINTF(this->get_replacement_policy() != REPLACEMENT_LRU_DSBP || this->line_usage_predictor.get_line_usage_predictor_type() == LINE_USAGE_PREDICTOR_POLICY_DSBP, "Should only use LRU_DSBP if using the DSBP line_usage_predictor.\n" )
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_line_number() / this->get_associativity()), "Wrong line number(%u) or associativity(%u).\n", this->get_line_number(), this->get_associativity());
@@ -77,17 +77,17 @@ void cache_memory_t::allocate() {
 
     ERROR_ASSERT_PRINTF(this->get_total_banks() == 1 || this->prefetcher.get_prefetcher_type() == PREFETCHER_DISABLE, "Cannot use a multibanked cache with prefetch. (Some requests may be generated in the wrong bank)\n");
 
-    /// ========================================================================
+    /// ================================================================================
     /// PREFETCH
-    /// ========================================================================
+    /// ================================================================================
     char label[50] = "";
     sprintf(label, "Prefetch_%s", this->get_label());
     this->prefetcher.set_label(label);
     this->prefetcher.allocate();
 
-    /// ========================================================================
+    /// ================================================================================
     /// LINE_USAGE_PREDICTOR
-    /// ========================================================================
+    /// ================================================================================
     sprintf(label, "Line_Usage_Predictor_%s", this->get_label());
     this->line_usage_predictor.set_label(label);
     this->line_usage_predictor.allocate();
@@ -97,7 +97,7 @@ void cache_memory_t::allocate() {
     #endif
 };
 
-// =============================================================================
+/// ============================================================================
 void cache_memory_t::set_masks() {
     uint64_t i;
 
@@ -166,7 +166,7 @@ void cache_memory_t::set_masks() {
     }
 };
 
-// =============================================================================
+/// ============================================================================
 void cache_memory_t::check_mshr_size() {
     ERROR_ASSERT_PRINTF(mshr_buffer_request_reserved_size > 0, "mshr_buffer_request_reserved_size should be bigger than one.\n");
     ERROR_ASSERT_PRINTF(mshr_buffer_copyback_reserved_size > 0, "mshr_buffer_copyback_reserved_size should be bigger than one.\n");
@@ -192,7 +192,7 @@ void cache_memory_t::check_mshr_size() {
     }
 };
 
-// =============================================================================
+/// ============================================================================
 void cache_memory_t::clock(uint32_t subcycle) {
     if (subcycle != 0) return;
     CACHE_DEBUG_PRINTF("==================== ID(%u) ",this->get_id());
@@ -332,7 +332,7 @@ void cache_memory_t::clock(uint32_t subcycle) {
 };
 
 
-// =============================================================================
+/// ============================================================================
 void cache_memory_t::insert_mshr_born_ordered(memory_package_t* package){
     /// this->mshr_born_ordered            = [OLDER --------> NEWER]
     /// this->mshr_born_ordered.born_cycle = [SMALLER -----> BIGGER]
@@ -362,7 +362,7 @@ void cache_memory_t::insert_mshr_born_ordered(memory_package_t* package){
     #endif
 };
 
-// =============================================================================
+/// ============================================================================
 int32_t cache_memory_t::allocate_copyback(memory_package_t* package){
 
     int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size, this->mshr_buffer_copyback_reserved_size);
@@ -378,7 +378,7 @@ int32_t cache_memory_t::allocate_copyback(memory_package_t* package){
     return slot;
 };
 
-// =============================================================================
+/// ============================================================================
 int32_t cache_memory_t::allocate_prefetch(memory_package_t* package){
 
     int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size, this->mshr_buffer_prefetch_reserved_size);
@@ -394,11 +394,12 @@ int32_t cache_memory_t::allocate_prefetch(memory_package_t* package){
     return slot;
 };
 
-// =============================================================================
+/// ============================================================================
 int32_t cache_memory_t::send_package(memory_package_t *package) {
     CACHE_DEBUG_PRINTF("send_package() package:%s\n", package->memory_to_string().c_str());
 
     if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
+        /// If the package is NEW find the route, or it can be a COPYBACK going to MAIN MEMORY
         sinuca_engine.interconnection_controller->find_package_route(package);
         ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
         uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
@@ -423,13 +424,13 @@ int32_t cache_memory_t::send_package(memory_package_t *package) {
 };
 
 
-// =============================================================================
+/// ============================================================================
 bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
     CACHE_DEBUG_PRINTF("receive_package() port:%u, package:%s\n", input_port, package->memory_to_string().c_str());
 
-    ERROR_ASSERT_PRINTF(get_bank(package->memory_address) == this->get_bank_number(), "Wrong bank.\n")
-    ERROR_ASSERT_PRINTF(package->id_dst == this->get_id(), "Received some package for a different id_dst.\n");
-    ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Received a wrong input_port\n");
+    ERROR_ASSERT_PRINTF(get_bank(package->memory_address) == this->get_bank_number(), "Wrong bank.\n%s\n", package->memory_to_string().c_str());
+    ERROR_ASSERT_PRINTF(package->id_dst == this->get_id() && package->hop_count == POSITION_FAIL, "Received some package for a different id_dst.\n%s\n", package->memory_to_string().c_str());
+    ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Received a wrong input_port\n%s\n", package->memory_to_string().c_str());
 
     int32_t slot = POSITION_FAIL;
     /// NEW ANSWER
@@ -445,8 +446,7 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
                     CACHE_DEBUG_PRINTF("\t RECEIVED ANSWER package WANTED\n");
                     this->mshr_buffer[i].is_answer = package->is_answer;
                     this->mshr_buffer[i].memory_size = package->memory_size;
-                    this->mshr_buffer[i].id_src = package->id_src;
-                    this->mshr_buffer[i].id_dst = package->id_dst;
+                    this->mshr_buffer[i].package_set_src_dst(package->id_src, package->id_dst);
                     /// Consider The critical word (word originally requested by the processor) is requested first.
                     this->mshr_buffer[i].package_untreated(1);
                     this->recv_ans_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
@@ -514,9 +514,9 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
     return FAIL;
 };
 
-// =============================================================================
+/// ============================================================================
 /// Methods called by the directory to add statistics and others
-// =============================================================================
+/// ============================================================================
 void cache_memory_t::cache_hit(memory_package_t *package) {
     switch (package->memory_operation) {
         case MEMORY_OPERATION_READ:
@@ -543,7 +543,7 @@ void cache_memory_t::cache_hit(memory_package_t *package) {
         break;
     }
 };
-// =============================================================================
+/// ============================================================================
 void cache_memory_t::cache_miss(memory_package_t *package) {
     switch (package->memory_operation) {
         case MEMORY_OPERATION_READ:
@@ -570,7 +570,7 @@ void cache_memory_t::cache_miss(memory_package_t *package) {
         break;
     }
 };
-// =============================================================================
+/// ============================================================================
 void cache_memory_t::cache_invalidate(uint64_t memory_address, bool is_copyback) {
     ERROR_ASSERT_PRINTF(memory_address != 0, "Invalid memory_address.\n")
     if (is_copyback) {
@@ -580,7 +580,8 @@ void cache_memory_t::cache_invalidate(uint64_t memory_address, bool is_copyback)
         this->add_stat_invalidation();
     }
 };
-// =============================================================================
+
+/// ============================================================================
 void cache_memory_t::cache_evict(uint64_t memory_address, bool is_copyback) {
     ERROR_ASSERT_PRINTF(memory_address != 0, "Invalid memory_address.\n")
     if (is_copyback) {
@@ -591,19 +592,19 @@ void cache_memory_t::cache_evict(uint64_t memory_address, bool is_copyback) {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 void cache_memory_t::print_structures() {
     SINUCA_PRINTF("%s MSHR_BUFFER:\n%s", this->get_label(), memory_package_t::print_all(this->mshr_buffer, this->mshr_buffer_size).c_str())
 };
 
-// =============================================================================
+/// ============================================================================
 void cache_memory_t::panic() {
     this->print_structures();
     this->prefetcher.panic();
     this->line_usage_predictor.panic();
 };
 
-//==============================================================================
+/// ============================================================================
 void cache_memory_t::periodic_check(){
     #ifdef CACHE_DEBUG
         CACHE_DEBUG_PRINTF("\n");
@@ -615,9 +616,9 @@ void cache_memory_t::periodic_check(){
 };
 
 
-// =============================================================================
+/// ============================================================================
 // STATISTICS
-// =============================================================================
+/// ============================================================================
 void cache_memory_t::reset_statistics() {
     this->set_stat_accesses(0);
     this->set_stat_invalidation(0);
@@ -665,7 +666,7 @@ void cache_memory_t::reset_statistics() {
     this->line_usage_predictor.reset_statistics();
 };
 
-// =============================================================================
+/// ============================================================================
 void cache_memory_t::print_statistics() {
     char title[100] = "";
     sprintf(title, "Statistics of %s", this->get_label());
@@ -730,8 +731,8 @@ void cache_memory_t::print_statistics() {
     this->line_usage_predictor.print_statistics();
 };
 
-// =============================================================================
-// =============================================================================
+/// ============================================================================
+/// ============================================================================
 void cache_memory_t::print_configuration() {
     char title[100] = "";
     sprintf(title, "Configuration of %s", this->get_label());
@@ -775,7 +776,7 @@ void cache_memory_t::print_configuration() {
 };
 
 
-// =============================================================================//
+/// ============================================================================
 // Input: memory_address
 // Output: cache_line_t*, &index, &way
 cache_line_t* cache_memory_t::find_line(uint64_t memory_address, uint32_t& index, uint32_t& choosen_way) {
@@ -790,7 +791,7 @@ cache_line_t* cache_memory_t::find_line(uint64_t memory_address, uint32_t& index
     return NULL;
 }
 
-// =============================================================================
+/// ============================================================================
 // Input: memory_address
 // Output: cache_line_t*, &index, &way
 cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& index, uint32_t& choosen_way) {
@@ -896,7 +897,7 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& i
 };
 
 
-// =============================================================================//
+/// ============================================================================
 void cache_memory_t::change_address(cache_line_t *line, uint64_t new_memory_address) {
     ERROR_ASSERT_PRINTF(line != NULL, "Can not change the tag address of a NULL line.\n")
     line->tag = new_memory_address;
@@ -904,14 +905,14 @@ void cache_memory_t::change_address(cache_line_t *line, uint64_t new_memory_addr
 };
 
 
-// =============================================================================//
+/// ============================================================================
 void cache_memory_t::change_status(cache_line_t *line, protocol_status_t status) {
     ERROR_ASSERT_PRINTF(line != NULL, "Can not change the status of a NULL line.\n")
     line->status = status;
     return;
 };
 
-// =============================================================================//
+/// ============================================================================
 void cache_memory_t::update_last_access(cache_line_t *line) {
     ERROR_ASSERT_PRINTF(line != NULL, "Can not change the last_access of a NULL line.\n")
     line->last_access = sinuca_engine.get_global_cycle();

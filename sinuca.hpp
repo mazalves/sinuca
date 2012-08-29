@@ -126,14 +126,14 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define CONFIGURATOR_DEBUG
     // ~ #define TRACE_READER_DEBUG
     // ~ #define TRACE_GENERATOR_DEBUG
-    // ~ #define PROCESSOR_DEBUG
+    #define PROCESSOR_DEBUG
     // ~ #define SYNC_DEBUG
     // ~ #define BRANCH_PREDICTOR_DEBUG
-    // ~ #define CACHE_DEBUG
+    #define CACHE_DEBUG
     // ~ #define PREFETCHER_DEBUG
-    #define LINE_USAGE_PREDICTOR_DEBUG
-    // ~ #define MEMORY_CONTROLLER_DEBUG
-    // ~ #define ROUTER_DEBUG
+    // ~ #define LINE_USAGE_PREDICTOR_DEBUG
+    #define MEMORY_CONTROLLER_DEBUG
+    #define ROUTER_DEBUG
     // ~ #define INTERCONNECTION_CTRL_DEBUG
     #define DIRECTORY_CTRL_DEBUG
     // ~ #define SHOW_FREE_PACKAGE
@@ -630,11 +630,11 @@ class memory_package_t {
             if (this->sub_blocks) delete [] sub_blocks;
         };
 
-
         std::string memory_to_string();
 
         memory_package_t & operator=(const memory_package_t &package);
         void package_clean();
+        void package_set_src_dst(uint32_t id_src, uint32_t id_dst);
         void package_untreated(uint32_t wait_time);
         void package_wait(uint32_t wait_time);
         void package_ready(uint32_t wait_time);
@@ -1627,9 +1627,12 @@ class directory_controller_t : public interconnection_interface_t {
         void print_configuration();
 
         /// ====================================================================
+        int32_t find_directory_line(memory_package_t *package);
+
         package_state_t treat_cache_request(uint32_t obj_id, memory_package_t *package);
         package_state_t treat_cache_answer(uint32_t obj_id, memory_package_t *package);
         package_state_t treat_cache_request_sent(uint32_t obj_id, memory_package_t *package);
+
         bool create_cache_copyback(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
 
         uint32_t find_next_obj_id(cache_memory_t *cache_memory, uint64_t memory_address);
@@ -1639,7 +1642,10 @@ class directory_controller_t : public interconnection_interface_t {
         bool coherence_is_hit(cache_line_t *cache_line, memory_package_t *package);
         bool coherence_need_copyback(cache_line_t *cache_line);
         protocol_status_t look_higher_levels(cache_memory_t *cache_memory, memory_package_t *package, bool check_llc);
+
         void coherence_invalidate_all(cache_memory_t *cache_memory, uint64_t memory_address);
+        void coherence_invalidate_higher_levels(cache_memory_t *cache_memory, uint64_t memory_address);
+
         void coherence_new_operation(cache_memory_t *cache_memory, cache_line_t *cache_line,  memory_package_t *package, bool is_hit);
 
         inline uint32_t cmp_index_tag(uint64_t memory_addressA, uint64_t memory_addressB) {
