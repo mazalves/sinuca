@@ -54,9 +54,11 @@ done
 # Plots all the benchmarks
 reset;
 python power.py spec_cpu2000 Base base_200M_spec_cpu2000 ;
-python power.py spec_cpu2000 DSBP dsbp_200M_spec_cpu2000 ;
+python power.py spec_cpu2000 DSBP_Reinstall dsbp_200M_spec_cpu2000 ;
+python power.py spec_cpu2000 DSBP_NoReinstall dsbp_200M_spec_cpu2000 ;
 python power.py spec_cpu2006 Base base_200M_spec_cpu2006 ;
-python power.py spec_cpu2006 DSBP dsbp_200M_spec_cpu2006 ;
+python power.py spec_cpu2006 DSBP_Reinstall dsbp_200M_spec_cpu2006 ;
+python power.py spec_cpu2006 DSBP_NoReinstall dsbp_200M_spec_cpu2006 ;
 python plot.py parameters_spec2000.cfg ;
 python plot.py parameters_spec2006.cfg
 
@@ -105,9 +107,11 @@ done
 # Plots all the benchmarks
 reset;
 python power.py npb_omp Base base_200M_npb_omp ;
-python power.py npb_omp DSBP dsbp_200M_npb_omp ;
+python power.py npb_omp DSBP_Reinstall dsbp_200M_npb_omp ;
+python power.py npb_omp DSBP_NoReinstall dsbp_200M_npb_omp ;
 python power.py spec_omp2001 Base base_200M_spec_omp2001 ;
-python power.py spec_omp2001 DSBP dsbp_200M_spec_omp2001 ;
+python power.py spec_omp2001 DSBP_Reinstall dsbp_200M_spec_omp2001 ;
+python power.py spec_omp2001 DSBP_NoReinstall dsbp_200M_spec_omp2001 ;
 python plot.py parameters_npb_omp.cfg ;
 python plot.py parameters_spec_omp2001.cfg ;
 
