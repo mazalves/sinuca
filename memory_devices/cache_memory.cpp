@@ -378,7 +378,14 @@ int32_t cache_memory_t::send_package(memory_package_t *package) {
     CACHE_DEBUG_PRINTF("send_package() package:%s\n", package->memory_to_string().c_str());
 
     if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
-        /// If the package is NEW find the route, or it can be a COPYBACK going to MAIN MEMORY
+
+        /// Check if FINAL DESTINATION has FREE SPACE available.
+        if (package->is_answer == false &&
+            sinuca_engine.interconnection_interface_array[package->id_dst]->check_token_list(package) == false) {
+            CACHE_DEBUG_PRINTF("\tSEND FAIL (NO TOKENS)\n");
+            return POSITION_FAIL;
+        }
+
         sinuca_engine.interconnection_controller->find_package_route(package);
         ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
         uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
@@ -453,6 +460,7 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
                         this->recv_rqst_read_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
 
                         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
+                        this->remove_token_list(package);
                         return OK;
                     }
                     else {
@@ -477,6 +485,7 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
                         this->recv_rqst_write_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
 
                         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
+                        this->remove_token_list(package);
                         return OK;
                     }
                     else {
@@ -491,6 +500,75 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
         }
     }
     return FAIL;
+};
+
+/// ============================================================================
+/// Token Controller Methods
+/// ============================================================================
+void cache_memory_t::allocate_token_list() {
+    CACHE_DEBUG_PRINTF("allocate_token_list()\n");
+    this->set_token_list(new container_token_t);
+};
+
+/// ============================================================================
+bool cache_memory_t::check_token_list(memory_package_t *package) {
+    ERROR_ASSERT_PRINTF(package->is_answer == false, "check_token_list received a Answer.\n")
+    uint32_t token = 0;
+    /// Find any previous token
+    container_token_t *local_token_list = this->get_token_list();
+    for (token = 0; token < local_token_list[0].size(); token++) {
+        /// Requested Address Found
+        if (local_token_list[0][token].id_owner == package->id_owner &&
+        local_token_list[0][token].opcode_number == package->opcode_number &&
+        local_token_list[0][token].uop_number == package->uop_number &&
+        this->cmp_tag_index_bank(local_token_list[0][token].memory_address, package->memory_address)) {
+            break;
+        }
+    }
+
+    /// No token found
+    if (token == local_token_list[0].size()) {
+        /// Allocate the new token
+        token_t new_token;
+        new_token.id_owner = package->id_owner;
+        new_token.opcode_number = package->opcode_number;
+        new_token.uop_number = package->uop_number;
+        new_token.memory_address = package->memory_address;
+
+        local_token_list[0].push_back(new_token);
+    }
+
+    if (token < this->check_token_space(package)) {
+        return OK;
+    }
+    else {
+        return FAIL;
+    }
+};
+
+/// ============================================================================
+uint32_t cache_memory_t::check_token_space(memory_package_t *package) {
+    CACHE_DEBUG_PRINTF("check_token_space() %s\n", package->memory_to_string().c_str());
+    ERROR_ASSERT_PRINTF(get_bank(package->memory_address) == this->get_bank_number(), "Wrong bank.\n%s\n", package->memory_to_string().c_str());
+
+    uint32_t free_space = memory_package_t::count_free(this->mshr_buffer, this->mshr_buffer_request_reserved_size);
+    return free_space;
+};
+
+/// ============================================================================
+void cache_memory_t::remove_token_list(memory_package_t *package) {
+    container_token_t *local_token_list = this->get_token_list();
+    for (uint32_t token = 0; token < local_token_list[0].size(); token++) {
+        /// Requested Address Found
+        if (local_token_list[0][token].id_owner == package->id_owner &&
+        local_token_list[0][token].opcode_number == package->opcode_number &&
+        local_token_list[0][token].uop_number == package->uop_number &&
+        this->cmp_tag_index_bank(local_token_list[0][token].memory_address, package->memory_address)) {
+            local_token_list[0].erase(local_token_list[0].begin() + token);
+            return;
+        }
+    }
+    ERROR_PRINTF("Could not find the previous allocated token %s.\n", get_enum_memory_operation_char(package->memory_operation))
 };
 
 /// ============================================================================

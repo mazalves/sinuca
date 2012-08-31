@@ -649,6 +649,7 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
                     this->recv_read_ready_cycle[channel] = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
                     MEMORY_CONTROLLER_DEBUG_PRINTF("RECEIVED READ/INST from Port[%d]\n", input_port);
                     MEMORY_CONTROLLER_DEBUG_PRINTF("RECEIVED OK: %s\n", package->memory_to_string().c_str());
+                    this->remove_token_list(package);
                     return OK;
                 }
                 else {
@@ -671,6 +672,7 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
                     this->recv_write_ready_cycle[channel] = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
                     MEMORY_CONTROLLER_DEBUG_PRINTF("RECEIVED WRITE/COPYBACK from Port[%d]\n", input_port);
                     MEMORY_CONTROLLER_DEBUG_PRINTF("RECEIVED OK: %s\n", package->memory_to_string().c_str());
+                    this->remove_token_list(package);
                     return OK;
                 }
                 else {
@@ -685,6 +687,131 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
     ERROR_PRINTF("Memory receiving %s.\n", get_enum_memory_operation_char(package->memory_operation))
     return FAIL;
 };
+
+/// ============================================================================
+/// Token Controller Methods
+/// ============================================================================
+void memory_controller_t::allocate_token_list() {
+    MEMORY_CONTROLLER_DEBUG_PRINTF("allocate_token_list()\n");
+    uint32_t total_input_buffers = this->channels_per_controller * this->banks_per_channel * 2; /// 2 is due to read/write buffers
+    this->set_token_list(new container_token_t[total_input_buffers]);
+};
+
+/// ============================================================================
+bool memory_controller_t::check_token_list(memory_package_t *package) {
+    ERROR_ASSERT_PRINTF(package->is_answer == false, "check_token_list received a Answer.\n")
+
+    uint32_t channel = get_channel(package->memory_address);
+    uint32_t bank = get_bank(package->memory_address);
+    uint32_t buffer = 0;
+
+    switch (package->memory_operation) {
+        case MEMORY_OPERATION_READ:
+        case MEMORY_OPERATION_INST:
+        case MEMORY_OPERATION_PREFETCH:
+            buffer = (2 * channel * this->banks_per_channel) + bank;
+        break;
+
+        case MEMORY_OPERATION_WRITE:
+        case MEMORY_OPERATION_COPYBACK:
+            buffer = (2 * channel * this->banks_per_channel) + bank + 1;
+        break;
+    }
+
+
+    /// Find any previous token
+    uint32_t token = 0;
+    container_token_t *local_token_list = this->get_token_list();
+    for (token = 0; token < local_token_list[buffer].size(); token++) {
+        /// Requested Address Found
+        if (local_token_list[buffer][token].id_owner == package->id_owner &&
+        local_token_list[buffer][token].opcode_number == package->opcode_number &&
+        local_token_list[buffer][token].uop_number == package->uop_number &&
+        this->cmp_row_bank_channel(local_token_list[buffer][token].memory_address, package->memory_address)) {
+            break;
+        }
+    }
+
+    /// No token found
+    if (token == local_token_list[buffer].size()) {
+        /// Allocate the new token
+        token_t new_token;
+        new_token.id_owner = package->id_owner;
+        new_token.opcode_number = package->opcode_number;
+        new_token.uop_number = package->uop_number;
+        new_token.memory_address = package->memory_address;
+
+        local_token_list[buffer].push_back(new_token);
+    }
+
+    if (token < this->check_token_space(package)) {
+        return OK;
+    }
+    else {
+        return FAIL;
+    }
+
+};
+
+/// ============================================================================
+uint32_t memory_controller_t::check_token_space(memory_package_t *package) {
+    MEMORY_CONTROLLER_DEBUG_PRINTF("check_token_space() %s\n", package->memory_to_string().c_str());
+
+    uint32_t channel = get_channel(package->memory_address);
+    uint32_t bank = get_bank(package->memory_address);
+    uint32_t free_space = 0;
+
+    switch (package->memory_operation) {
+        case MEMORY_OPERATION_READ:
+        case MEMORY_OPERATION_INST:
+        case MEMORY_OPERATION_PREFETCH:
+            free_space = memory_package_t::count_free(this->channels[channel].read_buffer[bank], this->read_buffer_size);
+        break;
+
+        case MEMORY_OPERATION_WRITE:
+        case MEMORY_OPERATION_COPYBACK:
+            free_space = memory_package_t::count_free(this->channels[channel].write_buffer[bank], this->write_buffer_size);
+        break;
+    }
+
+    return free_space;
+};
+
+/// ============================================================================
+void memory_controller_t::remove_token_list(memory_package_t *package) {
+
+    uint32_t channel = get_channel(package->memory_address);
+    uint32_t bank = get_bank(package->memory_address);
+    uint32_t buffer = 0;
+
+    switch (package->memory_operation) {
+        case MEMORY_OPERATION_READ:
+        case MEMORY_OPERATION_INST:
+        case MEMORY_OPERATION_PREFETCH:
+            buffer = (2 * channel * this->banks_per_channel) + bank;
+        break;
+
+        case MEMORY_OPERATION_WRITE:
+        case MEMORY_OPERATION_COPYBACK:
+            buffer = (2 * channel * this->banks_per_channel) + bank + 1;
+        break;
+    }
+
+
+    container_token_t *local_token_list = this->get_token_list();
+    for (uint32_t token = 0; token < local_token_list[buffer].size(); token++) {
+        /// Requested Address Found
+        if (local_token_list[buffer][token].id_owner == package->id_owner &&
+        local_token_list[buffer][token].opcode_number == package->opcode_number &&
+        local_token_list[buffer][token].uop_number == package->uop_number &&
+        this->cmp_row_bank_channel(local_token_list[buffer][token].memory_address, package->memory_address)) {
+            local_token_list[buffer].erase(local_token_list[buffer].begin() + token);
+            return;
+        }
+    }
+    ERROR_PRINTF("Could not find the previous allocated token %s.\n", get_enum_memory_operation_char(package->memory_operation))
+};
+
 
 /// ============================================================================
 void memory_controller_t::print_structures() {

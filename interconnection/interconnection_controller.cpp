@@ -98,11 +98,44 @@ void interconnection_controller_t::clock(uint32_t subcycle) {
     INTERCONNECTION_CTRL_DEBUG_PRINTF("cycle() \n");
 };
 
+
+/// ============================================================================
+int32_t interconnection_controller_t::send_package(memory_package_t *package) {
+    ERROR_PRINTF("Send package %s.\n", package->memory_to_string().c_str());
+    return POSITION_FAIL;
+};
+
 /// ============================================================================
 bool interconnection_controller_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
     ERROR_PRINTF("Received package %s into the input_port %u, latency %u.\n", package->memory_to_string().c_str(), input_port, transmission_latency);
     return FAIL;
 };
+
+/// ============================================================================
+/// Token Controller Methods
+/// ============================================================================
+void interconnection_controller_t::allocate_token_list() {
+    INTERCONNECTION_CTRL_DEBUG_PRINTF("allocate_token_list()\n");
+};
+
+/// ============================================================================
+bool interconnection_controller_t::check_token_list(memory_package_t *package) {
+    ERROR_PRINTF("check_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
+    return FAIL;
+};
+
+/// ============================================================================
+uint32_t interconnection_controller_t::check_token_space(memory_package_t *package) {
+    ERROR_PRINTF("check_token_space %s.\n", get_enum_memory_operation_char(package->memory_operation))
+    return 0;
+};
+
+/// ============================================================================
+void interconnection_controller_t::remove_token_list(memory_package_t *package) {
+    ERROR_PRINTF("remove_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
+};
+
+
 
 /// ============================================================================
 /// Create a graph using the interconnection components as Cache, Cache Ports, Router

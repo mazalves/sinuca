@@ -179,11 +179,40 @@ void line_usage_predictor_t::clock(uint32_t subcycle) {
 
 };
 
+/// ============================================================================
+int32_t line_usage_predictor_t::send_package(memory_package_t *package) {
+    ERROR_PRINTF("Send package %s.\n", package->memory_to_string().c_str());
+    return POSITION_FAIL;
+};
 
 /// ============================================================================
 bool line_usage_predictor_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
     ERROR_PRINTF("Received package %s into the input_port %u, latency %u.\n", package->memory_to_string().c_str(), input_port, transmission_latency);
     return FAIL;
+};
+
+/// ============================================================================
+/// Token Controller Methods
+/// ============================================================================
+void line_usage_predictor_t::allocate_token_list() {
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("allocate_token_list()\n");
+};
+
+/// ============================================================================
+bool line_usage_predictor_t::check_token_list(memory_package_t *package) {
+    ERROR_PRINTF("check_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
+    return FAIL;
+};
+
+/// ============================================================================
+uint32_t line_usage_predictor_t::check_token_space(memory_package_t *package) {
+    ERROR_PRINTF("check_token_space %s.\n", get_enum_memory_operation_char(package->memory_operation))
+    return 0;
+};
+
+/// ============================================================================
+void line_usage_predictor_t::remove_token_list(memory_package_t *package) {
+    ERROR_PRINTF("remove_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
 };
 
 /// ============================================================================

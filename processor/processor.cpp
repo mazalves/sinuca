@@ -1,4 +1,4 @@
-//==============================================================================
+/// ============================================================================
 //
 // Copyright (C) 2010, 2011, 2012
 // Marco Antonio Zanata Alves
@@ -20,7 +20,7 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
-//==============================================================================
+/// ============================================================================
 #include "../sinuca.hpp"
 
 #ifdef PROCESSOR_DEBUG
@@ -35,7 +35,7 @@
     #define SYNC_DEBUG_PRINTF(...)
 #endif
 
-//==============================================================================
+/// ============================================================================
 processor_t::processor_t() {
     this->set_type_component(COMPONENT_PROCESSOR);
 
@@ -129,7 +129,7 @@ processor_t::processor_t() {
     this->inst_cache = NULL;
 };
 
-//==============================================================================
+/// ============================================================================
 processor_t::~processor_t() {
     // De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<uint64_t>(recv_ready_cycle);
@@ -145,7 +145,7 @@ processor_t::~processor_t() {
     utils_t::template_delete_array<memory_package_t>(write_buffer);
 };
 
-//==============================================================================
+/// ============================================================================
 void processor_t::allocate() {
     PROCESSOR_DEBUG_PRINTF("allocate()\n");
     this->trace_next_opcode.package_clean();
@@ -219,7 +219,7 @@ void processor_t::allocate() {
     #endif
 };
 
-//==============================================================================
+/// ============================================================================
 void processor_t::synchronize(sync_t new_sync) {
     processor_t** sinuca_processor = sinuca_engine.get_processor_array();
 
@@ -367,7 +367,7 @@ void processor_t::synchronize(sync_t new_sync) {
     SYNC_DEBUG_PRINTF("\n");
 };
 
-//==============================================================================
+/// ============================================================================
 void processor_t::solve_branch(uint64_t opcode_number, processor_stage_t processor_stage) {
     if (this->branch_solve_stage != PROCESSOR_STAGE_FETCH &&
         this->branch_opcode_number == opcode_number &&
@@ -376,7 +376,7 @@ void processor_t::solve_branch(uint64_t opcode_number, processor_stage_t process
     }
 };
 
-//==============================================================================
+/// ============================================================================
 void processor_t::stage_fetch() {
     PROCESSOR_DEBUG_PRINTF("stage_fetch()\n");
     int32_t position_buffer = -1;
@@ -497,7 +497,7 @@ void processor_t::stage_fetch() {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 /// Create a memory package
 /// Get the route
 /// Try to send
@@ -555,31 +555,13 @@ int32_t processor_t::send_instruction_package(opcode_package_t *inst_package) {
             POSITION_FAIL                       /// Hop Counter
         );
 
-        sinuca_engine.interconnection_controller->find_package_route(&package);
-        ERROR_ASSERT_PRINTF(package.hop_count != POSITION_FAIL, "Achieved the end of the route\n");
-        uint32_t output_port = package.hops[package.hop_count];  /// Where to send the package ?
-        ERROR_ASSERT_PRINTF(output_port < this->get_max_ports(), "Output Port does not exist\n");
-        package.hop_count--;  /// Consume its own port
 
-        uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(&package, this, this->get_interface_output_component(output_port));
-        bool sent = this->get_interface_output_component(output_port)->receive_package(&package, this->get_ports_output_component(output_port), transmission_latency);
-        if (sent) {
-            PROCESSOR_DEBUG_PRINTF("\tSEND DATA OK\n");
-            this->send_instruction_ready_cycle = sinuca_engine.get_global_cycle() + transmission_latency;
-            return transmission_latency;
-        }
-        else {
-            PROCESSOR_DEBUG_PRINTF("\tSEND DATA FAIL\n");
-            package.hop_count++;  /// Do not Consume its own port
-            return POSITION_FAIL;
-        }
+        return send_package(&package);
     }
-    PROCESSOR_DEBUG_PRINTF("\tSEND DATA FAIL (BUSY)\n");
     return POSITION_FAIL;
-
 };
 
-//==============================================================================
+/// ============================================================================
 /// Divide the opcode into
 ///  1st. uop READ MEM. + unaligned
 ///  2st. uop READ 2 MEM. + unaligned
@@ -671,7 +653,7 @@ void processor_t::stage_decode() {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 void processor_t::stage_rename() {
     PROCESSOR_DEBUG_PRINTF("stage_rename()\n");
     int32_t position_buffer;
@@ -780,7 +762,7 @@ void processor_t::stage_rename() {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 void processor_t::stage_dispatch() {
     PROCESSOR_DEBUG_PRINTF("stage_dispatch()\n");
 
@@ -935,7 +917,7 @@ void processor_t::stage_dispatch() {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 void processor_t::stage_execution() {
     PROCESSOR_DEBUG_PRINTF("stage_execution()\n");
     /// ========================================================================
@@ -1118,7 +1100,7 @@ void processor_t::stage_execution() {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 /// Get the route
 /// Try to send
 ///     If OK
@@ -1129,29 +1111,12 @@ int32_t processor_t::send_data_package(memory_package_t *package) {
     PROCESSOR_DEBUG_PRINTF("send_data_package() package:%s\n", package->memory_to_string().c_str());
 
     if (this->send_data_ready_cycle <= sinuca_engine.get_global_cycle()) {
-        sinuca_engine.interconnection_controller->find_package_route(package);
-        ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
-        uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
-        ERROR_ASSERT_PRINTF(output_port < this->get_max_ports(), "Output Port does not exist\n");
-        package->hop_count--;  /// Consume its own port
-
-        uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(package, this, this->get_interface_output_component(output_port));
-        bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port), transmission_latency);
-        if (sent) {
-            PROCESSOR_DEBUG_PRINTF("\tSEND DATA OK\n");
-            this->send_data_ready_cycle = sinuca_engine.get_global_cycle() + transmission_latency;
-            return transmission_latency;
-        }
-        else {
-            PROCESSOR_DEBUG_PRINTF("\tSEND DATA FAIL\n");
-            package->hop_count++;  /// Do not Consume its own port
-            return POSITION_FAIL;
-        }
+        return send_package(package);
     }
     return POSITION_FAIL;
 };
 
-//==============================================================================
+/// ============================================================================
 void processor_t::solve_data_forward(reorder_buffer_line_t *rob_line) {
 
     /// Remove pointer from Memory Map Table
@@ -1189,7 +1154,7 @@ void processor_t::solve_data_forward(reorder_buffer_line_t *rob_line) {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 void processor_t::stage_commit() {
     PROCESSOR_DEBUG_PRINTF("stage_commit()\n");
     int32_t position_buffer;
@@ -1272,7 +1237,7 @@ void processor_t::stage_commit() {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 void processor_t::clock(uint32_t subcycle) {
     if (subcycle != 0) return;
     PROCESSOR_DEBUG_PRINTF("==================== ID(%u) ",this->get_id());
@@ -1313,7 +1278,37 @@ void processor_t::clock(uint32_t subcycle) {
     this->stage_fetch();
 };
 
-//==============================================================================
+/// ============================================================================
+int32_t processor_t::send_package(memory_package_t *package) {
+
+    /// Check if FINAL DESTINATION has FREE SPACE available.
+    if (package->is_answer == false &&
+        sinuca_engine.interconnection_interface_array[package->id_dst]->check_token_list(package) == false) {
+        PROCESSOR_DEBUG_PRINTF("\tSEND FAIL (NO TOKENS)\n");
+        return POSITION_FAIL;
+    }
+
+    sinuca_engine.interconnection_controller->find_package_route(package);
+    ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
+    uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
+    ERROR_ASSERT_PRINTF(output_port < this->get_max_ports(), "Output Port does not exist\n");
+    package->hop_count--;  /// Consume its own port
+
+    uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(package, this, this->get_interface_output_component(output_port));
+    bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port), transmission_latency);
+    if (sent) {
+        PROCESSOR_DEBUG_PRINTF("\tSEND PACKAGE OK\n");
+        this->send_data_ready_cycle = sinuca_engine.get_global_cycle() + transmission_latency;
+        return transmission_latency;
+    }
+    else {
+        PROCESSOR_DEBUG_PRINTF("\tSEND PACKAGE FAIL\n");
+        package->hop_count++;  /// Do not Consume its own port
+        return POSITION_FAIL;
+    }
+};
+
+/// ============================================================================
 bool processor_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
 
     if (this->recv_ready_cycle[input_port] <= sinuca_engine.get_global_cycle()) {
@@ -1378,10 +1373,33 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
     return FAIL;
 };
 
-//==============================================================================
+/// ============================================================================
+/// Token Controller Methods
+/// ============================================================================
+void processor_t::allocate_token_list() {
+    PROCESSOR_DEBUG_PRINTF("allocate_token_list()\n");
+};
+
+/// ============================================================================
+bool processor_t::check_token_list(memory_package_t *package) {
+    ERROR_PRINTF("check_token_list %s.\n", package->memory_to_string().c_str())
+    return FAIL;
+};
+
+/// ============================================================================
+uint32_t processor_t::check_token_space(memory_package_t *package) {
+    ERROR_PRINTF("check_token_space %s.\n", package->memory_to_string().c_str())
+    return 0;
+};
+
+/// ============================================================================
+void processor_t::remove_token_list(memory_package_t *package) {
+    ERROR_PRINTF("remove_token_list %s.\n", package->memory_to_string().c_str())
+};
+
+
+/// ============================================================================
 void processor_t::print_structures() {
-
-
     SINUCA_PRINTF("%s BRANCH_SOLVE_STAGE:%s  BRANCH_OPCODE_NUMBER:%"PRIu64"\n", this->get_label(), get_enum_processor_stage_char(this->branch_solve_stage), this->branch_opcode_number);
     SINUCA_PRINTF("%s SYNC_STATUS:%s\n", this->get_label(), get_enum_sync_char(this->sync_status));
 
@@ -1416,7 +1434,7 @@ void processor_t::panic() {
     this->branch_predictor.panic();
 };
 
-//==============================================================================
+/// ============================================================================
 void processor_t::periodic_check(){
     #ifdef PROCESSOR_DEBUG
         PROCESSOR_DEBUG_PRINTF("\n");
@@ -1431,9 +1449,9 @@ void processor_t::periodic_check(){
     this->branch_predictor.periodic_check();
 };
 
-//==============================================================================
+/// ============================================================================
 // STATISTICS
-//==============================================================================
+/// ============================================================================
 void processor_t::reset_statistics() {
 
     this->set_stat_reset_fetch_opcode_counter(this->fetch_opcode_counter);
@@ -1488,7 +1506,7 @@ void processor_t::reset_statistics() {
     return;
 };
 
-//==============================================================================
+/// ============================================================================
 void processor_t::print_statistics() {
     char title[100] = "";
     sprintf(title, "Statistics of %s", this->get_label());
@@ -1596,7 +1614,7 @@ void processor_t::print_statistics() {
     this->branch_predictor.print_statistics();
 };
 
-//==============================================================================
+/// ============================================================================
 void processor_t::print_configuration() {
     char title[100] = "";
     sprintf(title, "Configuration of %s", this->get_label());
@@ -1678,9 +1696,9 @@ void processor_t::print_configuration() {
     this->branch_predictor.print_configuration();
 };
 
-//==============================================================================
+/// ============================================================================
 // Fetch Buffer Methods
-//==============================================================================
+/// ============================================================================
 /*! Should make all the verifications before call this method, because it will
  * update the position_end and position_used for the fetch_buffer
  */
@@ -1698,7 +1716,7 @@ int32_t processor_t::fetch_buffer_insert() {
     return valid_position;
 };
 
-//==============================================================================
+/// ============================================================================
 /*! Make sure that you want to remove the first element before call this method
  * because it will remove the buffer[position_start] and update the controls
  */
@@ -1714,7 +1732,7 @@ void processor_t::fetch_buffer_remove() {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 int32_t processor_t::fetch_buffer_find_opcode_number(uint64_t opcode_number) {
     uint32_t start_position;
     for (uint32_t i = 0; i < this->fetch_buffer_position_used; i++) {
@@ -1730,9 +1748,9 @@ int32_t processor_t::fetch_buffer_find_opcode_number(uint64_t opcode_number) {
     return POSITION_FAIL;
 };
 
-//==============================================================================
+/// ============================================================================
 // Decode Buffer Methods
-//==============================================================================
+/// ============================================================================
 /*! Should make all the verifications before call this method, because it will
  * update the position_end and position_used for the decode_buffer
  */
@@ -1750,7 +1768,7 @@ int32_t processor_t::decode_buffer_insert() {
     return valid_position;
 };
 
-//==============================================================================
+/// ============================================================================
 /*! Make sure that you want to remove the first element before call this method
  * because it will remove the buffer[position_start] and update the controls
  */
@@ -1767,9 +1785,9 @@ void processor_t::decode_buffer_remove() {
 };
 
 
-//==============================================================================
+/// ============================================================================
 // Reorder Buffer Methods
-//==============================================================================
+/// ============================================================================
 std::string processor_t::rob_line_to_string(uint32_t reorder_buffer_line) {
     std::string PackageString;
     PackageString = "";
@@ -1787,7 +1805,7 @@ std::string processor_t::rob_line_to_string(uint32_t reorder_buffer_line) {
     return PackageString;
 };
 
-//==============================================================================
+/// ============================================================================
 std::string processor_t::rob_print_all() {
     std::string PackageString;
     std::string FinalString;
@@ -1803,7 +1821,7 @@ std::string processor_t::rob_print_all() {
     return FinalString;
 };
 
-//==============================================================================
+/// ============================================================================
 int32_t processor_t::rob_insert() {
     int32_t valid_position = POSITION_FAIL;
     /// There is free space.
@@ -1818,7 +1836,7 @@ int32_t processor_t::rob_insert() {
     return valid_position;
 };
 
-//==============================================================================
+/// ============================================================================
 void processor_t::rob_remove() {
     ERROR_ASSERT_PRINTF(this->reorder_buffer_position_used > 0, "Trying to remove from ROB with no used position.\n");
     ERROR_ASSERT_PRINTF(this->reorder_buffer[this->reorder_buffer_position_start].deps_ptr_array[0] == NULL, "Removing from ROB without solve the dependencies.\n");
@@ -1834,7 +1852,7 @@ void processor_t::rob_remove() {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 int32_t processor_t::rob_find_uop_number(uint64_t uop_number) {
     uint32_t start_position;
     for (uint32_t i = 0; i < this->reorder_buffer_position_used; i++) {
@@ -1850,7 +1868,7 @@ int32_t processor_t::rob_find_uop_number(uint64_t uop_number) {
     return POSITION_FAIL;
 };
 
-//==============================================================================
+/// ============================================================================
 bool processor_t::rob_check_age() {
     uint64_t min_cycle = 0;
     if (sinuca_engine.get_global_cycle() > MAX_ALIVE_TIME) {

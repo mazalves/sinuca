@@ -207,33 +207,13 @@ int32_t memory_package_t::find_free(memory_package_t *input_array, uint32_t size
     return POSITION_FAIL;
 };
 
-
-//==============================================================================
-void memory_package_t::find_old_rqst_ans_state_ready(memory_package_t *input_array, uint32_t size_array, package_state_t state, int32_t &position_rqst, int32_t &position_ans) {
-    position_rqst = POSITION_FAIL;
-    position_ans = POSITION_FAIL;
-
-    uint64_t old_rqst_cycle = sinuca_engine.get_global_cycle() + 1;
-    uint64_t old_ans_cycle = sinuca_engine.get_global_cycle() + 1;
-
+uint32_t memory_package_t::count_free(memory_package_t *input_array, uint32_t size_array) {
+    uint32_t count = 0;
     for (uint32_t i = 0; i < size_array ; i++) {
-        if (input_array[i].state == state &&
-        input_array[i].ready_cycle <= sinuca_engine.get_global_cycle()) {
-
-            if (input_array[i].is_answer == false) {
-                if (old_rqst_cycle > input_array[i].born_cycle) {
-                    old_rqst_cycle = input_array[i].born_cycle;
-                    position_rqst = i;
-                }
-            }
-            else {
-                if (old_ans_cycle > input_array[i].born_cycle) {
-                    old_ans_cycle = input_array[i].born_cycle;
-                    position_ans = i;
-                }
-            }
-        }
+        if (input_array[i].state == PACKAGE_STATE_FREE)
+            count++;
     }
+    return count;
 };
 
 
@@ -274,6 +254,7 @@ int32_t memory_package_t::find_old_answer_state_ready(memory_package_t *input_ar
 
 //==============================================================================
 int32_t memory_package_t::find_state_mem_address(memory_package_t *input_array, uint32_t size_array, package_state_t state, uint64_t address) {
+
     for (uint32_t i = 0; i < size_array ; i++) {
         if (input_array[i].state == state &&
         input_array[i].ready_cycle <= sinuca_engine.get_global_cycle() &&

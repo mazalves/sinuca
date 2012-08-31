@@ -162,11 +162,43 @@ void directory_controller_t::clock(uint32_t subcycle) {
     DIRECTORY_CTRL_DEBUG_PRINTF("cycle() \n");
 };
 
+
+/// ============================================================================
+int32_t directory_controller_t::send_package(memory_package_t *package) {
+    ERROR_PRINTF("Send package %s.\n", package->memory_to_string().c_str());
+    return POSITION_FAIL;
+};
+
 /// ============================================================================
 bool directory_controller_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
     ERROR_PRINTF("Received package %s into the input_port %u, latency %u.\n", package->memory_to_string().c_str(), input_port, transmission_latency);
     return FAIL;
 };
+
+/// ============================================================================
+/// Token Controller Methods
+/// ============================================================================
+void directory_controller_t::allocate_token_list() {
+    DIRECTORY_CTRL_DEBUG_PRINTF("allocate_token_list()\n");
+};
+
+/// ============================================================================
+bool directory_controller_t::check_token_list(memory_package_t *package) {
+    ERROR_PRINTF("check_token_list %s.\n", package->memory_to_string().c_str())
+    return FAIL;
+};
+
+/// ============================================================================
+uint32_t directory_controller_t::check_token_space(memory_package_t *package) {
+    ERROR_PRINTF("check_token_space %s.\n", package->memory_to_string().c_str())
+    return 0;
+};
+
+/// ============================================================================
+void directory_controller_t::remove_token_list(memory_package_t *package) {
+    ERROR_PRINTF("remove_token_list %s.\n", package->memory_to_string().c_str())
+};
+
 
 /// ====================================================================================
 // Remember: The package latency is defined as 1 automatically by the interconnection_controller if the package is_answer

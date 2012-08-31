@@ -1,4 +1,4 @@
-//==============================================================================
+/// ============================================================================
 //
 // Copyright (C) 2010, 2011, 2012
 // Marco Antonio Zanata Alves
@@ -20,7 +20,7 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
-//==============================================================================
+/// ============================================================================
 #include "../sinuca.hpp"
 
 #ifdef BRANCH_PREDICTOR_DEBUG
@@ -29,7 +29,7 @@
     #define BRANCH_PREDICTOR_DEBUG_PRINTF(...)
 #endif
 
-//==============================================================================
+/// ============================================================================
 branch_predictor_t::branch_predictor_t() {
     this->btb = NULL;
     this->branch_predictor_type = BRANCH_PREDICTOR_DISABLE;
@@ -52,14 +52,14 @@ branch_predictor_t::branch_predictor_t() {
     this->bht_fsm_bits_mask = 0;
 };
 
-//==============================================================================
+/// ============================================================================
 branch_predictor_t::~branch_predictor_t() {
     /// De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<branch_target_buffer_set_t>(btb);
     utils_t::template_delete_array<uint32_t>(bht);
 };
 
-//==============================================================================
+/// ============================================================================
 void branch_predictor_t::allocate() {
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_btb_line_number() / this->get_btb_associativity()), "Wrong line number(%u) or associativity(%u).\n", this->get_btb_line_number(), this->get_btb_associativity());
     uint32_t i;
@@ -106,7 +106,7 @@ void branch_predictor_t::allocate() {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 void branch_predictor_t::clock(uint32_t subcycle) {
     if (subcycle != 0) return;
     BRANCH_PREDICTOR_DEBUG_PRINTF("==================== ");
@@ -114,13 +114,45 @@ void branch_predictor_t::clock(uint32_t subcycle) {
     BRANCH_PREDICTOR_DEBUG_PRINTF("cycle() \n");
 };
 
-//==============================================================================
+/// ============================================================================
+int32_t branch_predictor_t::send_package(memory_package_t *package) {
+    ERROR_PRINTF("Send package %s.\n", package->memory_to_string().c_str());
+    return POSITION_FAIL;
+};
+
+/// ============================================================================
 bool branch_predictor_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
     ERROR_PRINTF("Received package %s into the input_port %u, latency %u.\n", package->memory_to_string().c_str(), input_port, transmission_latency);
     return FAIL;
 };
 
-//==============================================================================
+/// ============================================================================
+/// Token Controller Methods
+/// ============================================================================
+void branch_predictor_t::allocate_token_list() {
+    BRANCH_PREDICTOR_DEBUG_PRINTF("allocate_token_list()\n");
+};
+
+/// ============================================================================
+bool branch_predictor_t::check_token_list(memory_package_t *package) {
+    ERROR_PRINTF("check_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
+    return FAIL;
+};
+
+/// ============================================================================
+uint32_t branch_predictor_t::check_token_space(memory_package_t *package) {
+    ERROR_PRINTF("check_token_space %s.\n", get_enum_memory_operation_char(package->memory_operation))
+    return 0;
+};
+
+/// ============================================================================
+void branch_predictor_t::remove_token_list(memory_package_t *package) {
+    ERROR_PRINTF("remove_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
+};
+
+
+
+/// ============================================================================
 uint32_t branch_predictor_t::btb_evict_address(uint64_t opcode_address) {
     uint64_t index = btb_get_index(opcode_address);
     uint32_t way = 0;
@@ -168,7 +200,7 @@ uint32_t branch_predictor_t::btb_evict_address(uint64_t opcode_address) {
 };
 
 
-//==============================================================================
+/// ============================================================================
 bool branch_predictor_t::btb_find_update_address(uint64_t opcode_address) {
     uint64_t index = btb_get_index(opcode_address);
     uint64_t tag = btb_get_tag(opcode_address);
@@ -196,7 +228,7 @@ bool branch_predictor_t::btb_find_update_address(uint64_t opcode_address) {
     return FAIL;
 };
 
-//==============================================================================
+/// ============================================================================
 bool branch_predictor_t::bht_find_update_prediction(opcode_package_t actual_opcode, opcode_package_t next_opcode) {
     uint64_t next_sequential_address = actual_opcode.opcode_address + actual_opcode.opcode_size;
     bool is_taken = (next_sequential_address != next_opcode.opcode_address);
@@ -228,7 +260,7 @@ bool branch_predictor_t::bht_find_update_prediction(opcode_package_t actual_opco
     return bht_taken;
 };
 
-//==============================================================================
+/// ============================================================================
 /// 1st. Predict if it is a branch or normal instruction
 /// 2nd. Predict the target address
 ///=================================
@@ -324,25 +356,25 @@ processor_stage_t branch_predictor_t::predict_branch(opcode_package_t actual_opc
     return solve_stage;
 };
 
-//==============================================================================
+/// ============================================================================
 void branch_predictor_t::print_structures() {
 };
 
-// =============================================================================
+/// ============================================================================
 void branch_predictor_t::panic() {
     this->print_structures();
 };
 
-//==============================================================================
+/// ============================================================================
 void branch_predictor_t::periodic_check(){
     #ifdef BRANCH_PREDICTOR_DEBUG
         this->print_structures();
     #endif
 };
 
-//==============================================================================
+/// ============================================================================
 // STATISTICS
-//==============================================================================
+/// ============================================================================
 void branch_predictor_t::reset_statistics() {
     this->set_stat_btb_accesses(0);
     this->set_stat_btb_hit(0);
@@ -355,7 +387,7 @@ void branch_predictor_t::reset_statistics() {
     return;
 };
 
-//==============================================================================
+/// ============================================================================
 void branch_predictor_t::print_statistics() {
     char title[100] = "";
     sprintf(title, "Statistics of %s", this->get_label());
@@ -375,8 +407,8 @@ void branch_predictor_t::print_statistics() {
     sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_branch_predictor_miss_ratio", stat_branch_predictor_miss, stat_branch_predictor_hit + stat_branch_predictor_miss);
 };
 
-//==============================================================================
-//==============================================================================
+/// ============================================================================
+/// ============================================================================
 void branch_predictor_t::print_configuration() {
     char title[100] = "";
     sprintf(title, "Configuration of %s", this->get_label());

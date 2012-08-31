@@ -69,8 +69,10 @@ class sinuca_engine_t;
 class opcode_package_t;
 class uop_package_t;
 class memory_package_t;
-/// Interconnection
+/// Internal for (almost) all components
+class token_t;
 class interconnection_interface_t;
+/// Interconnection
 class interconnection_controller_t;
 class interconnection_router_t;
 /// Processor
@@ -218,6 +220,7 @@ extern sinuca_engine_t sinuca_engine;
 /// Structures
 /// ============================================================================
 typedef std::vector <uint32_t>                      container_register_t;
+typedef std::vector <token_t>                       container_token_t;
 typedef std::vector <opcode_package_t>              container_opcode_package_t;
 typedef std::vector <container_opcode_package_t>    container_static_dictionary_t;
 
@@ -225,7 +228,7 @@ typedef std::vector <memory_package_t*>             container_ptr_memory_package
 typedef std::vector <reorder_buffer_line_t*>        container_ptr_reorder_buffer_line_t;
 typedef std::vector <directory_controller_line_t*>  container_ptr_directory_controller_line_t;
 typedef std::vector <cache_memory_t*>               container_ptr_cache_memory_t;
-typedef std::vector <memory_controller_t*>                container_ptr_memory_controller_t;
+typedef std::vector <memory_controller_t*>          container_ptr_memory_controller_t;
 /// ============================================================================
 /// Trace Reader
 /// ============================================================================
@@ -524,6 +527,7 @@ class opcode_package_t {
 
         static int32_t find_free(opcode_package_t *input_array, uint32_t size_array);
         static int32_t find_opcode_number(opcode_package_t *input_array, uint32_t size_array, uint64_t opcode_number);
+
         static bool check_age(opcode_package_t *input_array, uint32_t size_array);
         static bool check_age(opcode_package_t **input_matrix, uint32_t size_x_matrix, uint32_t size_y_matrix);
         static std::string print_all(opcode_package_t *input_array, uint32_t size_array);
@@ -646,6 +650,8 @@ class memory_package_t {
                     uint32_t id_src, uint32_t id_dst, uint32_t *hops, uint32_t hop_count);
 
         static int32_t find_free(memory_package_t *input_array, uint32_t size_array);
+        static uint32_t count_free(memory_package_t *input_array, uint32_t size_array);
+
         static void find_old_rqst_ans_state_ready(memory_package_t *input_array, uint32_t size_array, package_state_t state, int32_t &position_rqst, int32_t &position_ans);
         static int32_t find_old_request_state_ready(memory_package_t *input_array, uint32_t size_array, package_state_t state);
         static int32_t find_old_answer_state_ready(memory_package_t *input_array, uint32_t size_array, package_state_t state);
@@ -661,49 +667,24 @@ class memory_package_t {
 
 
 /// ============================================================================
-/// Statistics
+/// Token for Token Controller (Inside interconnection_interface_t)
 /// ============================================================================
- /*! Statistics methods to be implemented on every component
-  */
-class statistics_t {
+class token_t {
     public:
-        /// ====================================================================
-        /// Inheritance
-        /// ====================================================================
-        virtual void reset_statistics()=0;      /// Reset all internal statistics variables
-        virtual void print_statistics()=0;      /// Print out the internal statistics variables
-        virtual void print_configuration()=0;   /// Print out the internal configuration variables
-};
-
-/*
-
-class wait_list_line_t {
-    private:
         uint32_t id_owner;
         uint64_t opcode_number;
         uint64_t opcode_address;
         uint64_t uop_number;
+        uint64_t memory_address;
+
+        token_t(){
+            this->id_owner = 0;
+            this->opcode_number = 0;
+            this->opcode_address = 0;
+            this->uop_number = 0;
+            this->memory_address = 0;
+        };
 };
-
-class wait_list {
-    wait_list_line_t *package_wait_list;
-
-    uint32_t package_wait_list_buffer_size;
-    uint32_t package_wait_list_bank_size;
-
-    // BANK MASK
-    uint64_t package_bank_mask;
-
-    void allocate();
-
-    /// Check if name not in wait list, add it
-    /// Check if package can be sent (name position < buffer_size)
-    bool check_package_wait_list(memory_package_t *package);
-    /// After arrive the package remove from wait list
-    void remove_package_wait_list(memory_package_t *package);
-};
-
-*/
 
 /// ============================================================================
 /// Interconnection Interface
@@ -712,7 +693,7 @@ class wait_list {
   * Network Routers to Processors, Cache Memories, and Main Memory.
   * The II will exist on almost every component in order to interface the components
   */
-class interconnection_interface_t : public statistics_t {
+class interconnection_interface_t {
     private:
         /// ====================================================================
         /// Set by sinuca_configurator
@@ -724,6 +705,11 @@ class interconnection_interface_t : public statistics_t {
         uint32_t used_ports;
         uint32_t interconnection_width;
         uint32_t interconnection_latency;
+
+        /// ====================================================================
+        /// Set by allocate_token_list
+        /// ====================================================================
+        container_token_t *token_list;
 
         /// ====================================================================
         /// Set by this->set_higher_lower_level_component()
@@ -770,16 +756,33 @@ class interconnection_interface_t : public statistics_t {
         INSTANTIATE_GET_SET(uint32_t, interconnection_width)
         INSTANTIATE_GET_SET(uint32_t, interconnection_latency)
 
+        INSTANTIATE_GET_SET(container_token_t*, token_list)
+
 
         /// ====================================================================
         /// Inheritance
         /// ====================================================================
-        virtual void allocate()=0;  /// Called after all the parameters are set
-        virtual void clock(uint32_t sub_cycle)=0;   /// Called every cycle
-        virtual bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency)=0; /// Only Sender calculate the latency and pass to the receiver.
-        virtual void periodic_check()=0;    /// Check all the internal structures
-        virtual void print_structures()=0;  /// Print the internal structures
-        virtual void panic()=0;             /// Called when some ERROR happens
+        /// Basic Methods
+        virtual void allocate() = 0;  /// Called after all the parameters are set
+        virtual void clock(uint32_t sub_cycle) = 0;   /// Called every cycle
+        virtual int32_t send_package(memory_package_t *package) = 0;    /// Find the route between Sender and Receiver and return -1 (fail) or lantency (sent)
+        virtual bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) = 0; /// Only Sender calculate the latency and pass to the receiver.
+
+        /// Token Controller Methods
+        virtual void allocate_token_list() = 0;
+        virtual bool check_token_list(memory_package_t *package) = 0;       /// Check for available position to receive a package and allocate a token
+        virtual uint32_t check_token_space(memory_package_t *package) = 0;  /// Should check the internal structure of the component to see if there is space for more tokens
+        virtual void remove_token_list(memory_package_t *package) = 0;      /// After arrive the package remove from token list
+
+        /// Debug Methods
+        virtual void periodic_check() = 0;    /// Check all the internal structures
+        virtual void print_structures() = 0;  /// Print the internal structures
+        virtual void panic() = 0;             /// Called when some ERROR happens
+
+        /// Statistics Methods
+        virtual void reset_statistics()=0;      /// Reset all internal statistics variables
+        virtual void print_statistics()=0;      /// Print out the internal statistics variables
+        virtual void print_configuration()=0;   /// Print out the internal configuration variables
 };
 
 /// ============================================================================
@@ -848,19 +851,25 @@ class interconnection_controller_t : public interconnection_interface_t {
         inline const char* get_type_component_label() {
             return "INTERCONNECTION_CTRL";
         };
+
         /// ====================================================================
-        /// Inheritance
+        /// Inheritance from interconnection_interface_t
         /// ====================================================================
-        /// interconnection_interface_t
+        /// Basic Methods
         void allocate();
         void clock(uint32_t sub_cycle);
         int32_t send_package(memory_package_t *package);
-        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_lantecy);
+        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
+        /// Token Controller Methods
+        void allocate_token_list();
+        bool check_token_list(memory_package_t *package);
+        uint32_t check_token_space(memory_package_t *package);
+        void remove_token_list(memory_package_t *package);
+        /// Debug Methods
+        void periodic_check();
         void print_structures();
         void panic();
-        void periodic_check();
-        /// ====================================================================
-        /// statistics_t
+        /// Statistics Methods
         void reset_statistics();
         void print_statistics();
         void print_configuration();
@@ -925,18 +934,23 @@ class interconnection_router_t : public interconnection_interface_t {
         ~interconnection_router_t();
 
         /// ====================================================================
-        /// Inheritance
+        /// Inheritance from interconnection_interface_t
         /// ====================================================================
-        /// interconnection_interface_t
+        /// Basic Methods
         void allocate();
         void clock(uint32_t sub_cycle);
         int32_t send_package(memory_package_t *package);
         bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
+        /// Token Controller Methods
+        void allocate_token_list();
+        bool check_token_list(memory_package_t *package);
+        uint32_t check_token_space(memory_package_t *package);
+        void remove_token_list(memory_package_t *package);
+        /// Debug Methods
+        void periodic_check();
         void print_structures();
         void panic();
-        void periodic_check();
-        /// ====================================================================
-        /// statistics_t
+        /// Statistics Methods
         void reset_statistics();
         void print_statistics();
         void print_configuration();
@@ -1061,18 +1075,23 @@ class branch_predictor_t : public interconnection_interface_t {
         };
 
         /// ====================================================================
-        /// Inheritance
+        /// Inheritance from interconnection_interface_t
         /// ====================================================================
-        /// interconnection_interface_t
+        /// Basic Methods
         void allocate();
         void clock(uint32_t sub_cycle);
         int32_t send_package(memory_package_t *package);
         bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
+        /// Token Controller Methods
+        void allocate_token_list();
+        bool check_token_list(memory_package_t *package);
+        uint32_t check_token_space(memory_package_t *package);
+        void remove_token_list(memory_package_t *package);
+        /// Debug Methods
+        void periodic_check();
         void print_structures();
         void panic();
-        void periodic_check();
-        /// ====================================================================
-        /// statistics_t
+        /// Statistics Methods
         void reset_statistics();
         void print_statistics();
         void print_configuration();
@@ -1354,18 +1373,23 @@ class processor_t : public interconnection_interface_t {
         int32_t send_data_package(memory_package_t *ms);
 
         /// ====================================================================
-        /// Inheritance
+        /// Inheritance from interconnection_interface_t
         /// ====================================================================
-        /// interconnection_interface_t
+        /// Basic Methods
         void allocate();
         void clock(uint32_t sub_cycle);
         int32_t send_package(memory_package_t *package);
-        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_lantecy);
+        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
+        /// Token Controller Methods
+        void allocate_token_list();
+        bool check_token_list(memory_package_t *package);
+        uint32_t check_token_space(memory_package_t *package);
+        void remove_token_list(memory_package_t *package);
+        /// Debug Methods
+        void periodic_check();
         void print_structures();
         void panic();
-        void periodic_check();
-        /// ====================================================================
-        /// statistics_t
+        /// Statistics Methods
         void reset_statistics();
         void print_statistics();
         void print_configuration();
@@ -1640,23 +1664,28 @@ class directory_controller_t : public interconnection_interface_t {
         };
 
         /// ====================================================================
-        /// Inheritance
+        /// Inheritance from interconnection_interface_t
         /// ====================================================================
-        /// interconnection_interface_t
+        /// Basic Methods
         void allocate();
         void clock(uint32_t sub_cycle);
         int32_t send_package(memory_package_t *package);
-        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_lantecy);
+        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
+        /// Token Controller Methods
+        void allocate_token_list();
+        bool check_token_list(memory_package_t *package);
+        uint32_t check_token_space(memory_package_t *package);
+        void remove_token_list(memory_package_t *package);
+        /// Debug Methods
+        void periodic_check();
         void print_structures();
         void panic();
-        void periodic_check();
-        /// ====================================================================
-        /// statistics_t
+        /// Statistics Methods
         void reset_statistics();
         void print_statistics();
         void print_configuration();
-
         /// ====================================================================
+
         int32_t find_directory_line(memory_package_t *package);
 
         package_state_t treat_cache_request(uint32_t obj_id, memory_package_t *package);
@@ -1816,16 +1845,27 @@ class prefetch_t : public interconnection_interface_t {
         };
 
         /// ====================================================================
-        /// Inheritance
+        /// Inheritance from interconnection_interface_t
         /// ====================================================================
-        /// interconnection_interface_t
+        /// Basic Methods
         void allocate();
         void clock(uint32_t sub_cycle);
         int32_t send_package(memory_package_t *package);
-        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_lantecy);
+        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
+        /// Token Controller Methods
+        void allocate_token_list();
+        bool check_token_list(memory_package_t *package);
+        uint32_t check_token_space(memory_package_t *package);
+        void remove_token_list(memory_package_t *package);
+        /// Debug Methods
+        void periodic_check();
         void print_structures();
         void panic();
-        void periodic_check();
+        /// Statistics Methods
+        void reset_statistics();
+        void print_statistics();
+        void print_configuration();
+        /// ====================================================================
 
         /// REQUEST_BUFFER =====================================================
         int32_t request_buffer_insert();
@@ -1836,13 +1876,6 @@ class prefetch_t : public interconnection_interface_t {
         void stream_table_line_clean(uint32_t stream_buffer_line);
         std::string stream_table_line_to_string(uint32_t stream_buffer_line);
         std::string stream_table_print_all();
-        /// ====================================================================
-
-        /// ====================================================================
-        /// statistics_t
-        void reset_statistics();
-        void print_statistics();
-        void print_configuration();
         /// ====================================================================
 
         void treat_prefetch(memory_package_t *package);
@@ -2054,19 +2087,23 @@ class line_usage_predictor_t : public interconnection_interface_t {
         };
 
         /// ====================================================================
-        /// Inheritance
+        /// Inheritance from interconnection_interface_t
         /// ====================================================================
-        /// interconnection_interface_t
+        /// Basic Methods
         void allocate();
         void clock(uint32_t sub_cycle);
         int32_t send_package(memory_package_t *package);
-        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_lantecy);
+        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
+        /// Token Controller Methods
+        void allocate_token_list();
+        bool check_token_list(memory_package_t *package);
+        uint32_t check_token_space(memory_package_t *package);
+        void remove_token_list(memory_package_t *package);
+        /// Debug Methods
+        void periodic_check();
         void print_structures();
         void panic();
-        void periodic_check();
-
-        /// ====================================================================
-        /// statistics_t
+        /// Statistics Methods
         void reset_statistics();
         void print_statistics();
         void print_configuration();
@@ -2310,18 +2347,23 @@ class cache_memory_t : public interconnection_interface_t {
         ~cache_memory_t();
 
         /// ====================================================================
-        /// Inheritance
+        /// Inheritance from interconnection_interface_t
         /// ====================================================================
-        /// interconnection_interface_t
+        /// Basic Methods
         void allocate();
         void clock(uint32_t sub_cycle);
         int32_t send_package(memory_package_t *package);
-        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_lantecy);
+        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
+        /// Token Controller Methods
+        void allocate_token_list();
+        bool check_token_list(memory_package_t *package);
+        uint32_t check_token_space(memory_package_t *package);
+        void remove_token_list(memory_package_t *package);
+        /// Debug Methods
+        void periodic_check();
         void print_structures();
         void panic();
-        void periodic_check();
-        /// ====================================================================
-        /// statistics_t
+        /// Statistics Methods
         void reset_statistics();
         void print_statistics();
         void print_configuration();
@@ -2351,7 +2393,6 @@ class cache_memory_t : public interconnection_interface_t {
         inline uint32_t cmp_tag_index_bank(uint64_t memory_addressA, uint64_t memory_addressB) {
             return (memory_addressA & this->not_offset_bits_mask) == (memory_addressB & this->not_offset_bits_mask);
         }
-
 
         inline void add_higher_level_cache(cache_memory_t *cache_memory) {
             this->higher_level_cache->push_back(cache_memory);
@@ -2613,18 +2654,23 @@ class memory_controller_t : public interconnection_interface_t {
         ~memory_controller_t();
 
         /// ====================================================================
-        /// Inheritance
+        /// Inheritance from interconnection_interface_t
         /// ====================================================================
-        /// interconnection_interface_t
+        /// Basic Methods
         void allocate();
         void clock(uint32_t sub_cycle);
         int32_t send_package(memory_package_t *package);
-        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_lantecy);
+        bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
+        /// Token Controller Methods
+        void allocate_token_list();
+        bool check_token_list(memory_package_t *package);
+        uint32_t check_token_space(memory_package_t *package);
+        void remove_token_list(memory_package_t *package);
+        /// Debug Methods
+        void periodic_check();
         void print_structures();
         void panic();
-        void periodic_check();
-        /// ====================================================================
-        /// statistics_t
+        /// Statistics Methods
         void reset_statistics();
         void print_statistics();
         void print_configuration();
