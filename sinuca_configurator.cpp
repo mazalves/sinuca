@@ -1143,11 +1143,6 @@ void sinuca_engine_t::make_connections() {
             ERROR_ASSERT_PRINTF(found_component == true, "CACHE_MEMORY has a not found LOWER_LEVEL_CACHE:\"%s\"\n", cache_label);
         }
     }
-    /// Check the if the MSHR support higher level MSHRs
-    for (uint32_t component = 0; component < this->get_cache_memory_array_size(); component++) {
-        this->cache_memory_array[component]->check_mshr_size();
-    }
-
 
     /// ========================================================================
     /// INTERCONNECTION_ROUTER => CONNECTED_COMPONENTS

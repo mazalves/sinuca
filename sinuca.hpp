@@ -109,7 +109,7 @@ extern sinuca_engine_t sinuca_engine;
 /// Class specific definitions
 #define INFINITE (std::numeric_limits<uint32_t>::max())             /// interconnection_controller_t
 #define UNDESIRABLE (sinuca_engine.get_processor_array_size() * 10) /// interconnection_controller_t
-#define TRACE_LINE_SIZE 200     /// trace_reader_t (should not be smaller than on trace line)
+#define TRACE_LINE_SIZE 512     /// trace_reader_t (should not be smaller than on trace line)
 #define MAX_UOP_DECODED 5       /// processor_t (Max number of uops from one opcode)
 
 #define POSITION_FAIL -1        /// FAIL when return is int32_t
@@ -674,6 +674,36 @@ class statistics_t {
         virtual void print_statistics()=0;      /// Print out the internal statistics variables
         virtual void print_configuration()=0;   /// Print out the internal configuration variables
 };
+
+/*
+
+class wait_list_line_t {
+    private:
+        uint32_t id_owner;
+        uint64_t opcode_number;
+        uint64_t opcode_address;
+        uint64_t uop_number;
+};
+
+class wait_list {
+    wait_list_line_t *package_wait_list;
+
+    uint32_t package_wait_list_buffer_size;
+    uint32_t package_wait_list_bank_size;
+
+    // BANK MASK
+    uint64_t package_bank_mask;
+
+    void allocate();
+
+    /// Check if name not in wait list, add it
+    /// Check if package can be sent (name position < buffer_size)
+    bool check_package_wait_list(memory_package_t *package);
+    /// After arrive the package remove from wait list
+    void remove_package_wait_list(memory_package_t *package);
+};
+
+*/
 
 /// ============================================================================
 /// Interconnection Interface

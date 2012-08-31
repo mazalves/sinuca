@@ -94,7 +94,7 @@ std::string directory_controller_line_t::directory_controller_line_to_string() {
 
     PackageString = PackageString + " | RQST:" + utils_t::uint32_to_char(this->cache_requested);
     for (uint32_t i = 0; i < sinuca_engine.get_cache_memory_array_size(); i++) {
-        PackageString = PackageString + " [" + utils_t::uint32_to_char(this->cache_request_order[i]) + "]";
+        PackageString = PackageString + "[" + utils_t::uint32_to_char(this->cache_request_order[i]) + "]";
     }
     return PackageString;
 };

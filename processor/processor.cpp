@@ -1422,9 +1422,9 @@ void processor_t::periodic_check(){
         PROCESSOR_DEBUG_PRINTF("\n");
         this->print_structures();
     #endif
-    ERROR_ASSERT_PRINTF(opcode_package_t::check_age(this->fetch_buffer, this->fetch_buffer_size) == OK, "Check_age failed.\n");
-    ERROR_ASSERT_PRINTF(uop_package_t::check_age(this->decode_buffer, this->decode_buffer_size) == OK, "Check_age failed.\n");
     ERROR_ASSERT_PRINTF(this->rob_check_age() == OK, "Check_age failed.\n");
+    ERROR_ASSERT_PRINTF(uop_package_t::check_age(this->decode_buffer, this->decode_buffer_size) == OK, "Check_age failed.\n");
+    ERROR_ASSERT_PRINTF(opcode_package_t::check_age(this->fetch_buffer, this->fetch_buffer_size) == OK, "Check_age failed.\n");
 
     ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->read_buffer, this->read_buffer_size) == OK, "Check_age failed.\n");
     ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->write_buffer, this->write_buffer_size) == OK, "Check_age failed.\n");

@@ -18,16 +18,13 @@ TRACE_READER -- Multiple single threaded applications
 TRACE_READER -- Fast check on the trace / fast get trace size
 PREFETCHER -- Check increment/decrement into a real machine / simulator
 PROCESSOR -- One instruction can be between two instruction cache lines.
-PROCESSOR -- Split requests when the load/store are unaligned.
+PROCESSOR -- Split requests when the load/store are unaligned (between two cache lines).
 PROCESSOR -- Add field NEW_DATA into MEMORY_PACKAGE, always true after write, and propagate false for others. Processor may receive only NEW_DATA==true
 PROCESSOR -- TLB - Add processor bit, when multiple applications, to change the physical address
-DIRECTORY -- Write don't send answer
 DIRECTORY -- Deadlock if Associativity < Directory Line from the same set.
 DIRECTORY -- Deadlock if MSHR's smaller than higher level MSHR's
 
 ################ Short Term
-DIRECTORY -- Time to copyback from the higher level (Directory average)
-
 STATISTICS -- Average Instruction Size and Number of cache lines
 STATISTICS -- Average Memory Size and Number of cache lines
 STATISTICS -- Average Fetched Uops
