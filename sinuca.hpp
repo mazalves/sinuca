@@ -758,7 +758,6 @@ class interconnection_interface_t {
 
         INSTANTIATE_GET_SET(container_token_t*, token_list)
 
-
         /// ====================================================================
         /// Inheritance
         /// ====================================================================
@@ -2817,7 +2816,7 @@ class utils_t {
         template <class TYPE>
         static void template_delete_array(TYPE *array) {
             /// Deallocate
-            if (array) {
+            if (array != NULL) {
                 delete[] array;
             }
         };

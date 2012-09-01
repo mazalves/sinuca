@@ -693,8 +693,9 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
 /// ============================================================================
 void memory_controller_t::allocate_token_list() {
     MEMORY_CONTROLLER_DEBUG_PRINTF("allocate_token_list()\n");
+
     uint32_t total_input_buffers = this->channels_per_controller * this->banks_per_channel * 2; /// 2 is due to read/write buffers
-    this->set_token_list(new container_token_t[total_input_buffers]);
+    this->set_token_list(utils_t::template_allocate_array<container_token_t>(total_input_buffers));
 };
 
 /// ============================================================================
@@ -709,12 +710,12 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
         case MEMORY_OPERATION_READ:
         case MEMORY_OPERATION_INST:
         case MEMORY_OPERATION_PREFETCH:
-            buffer = (2 * channel * this->banks_per_channel) + bank;
+            buffer = (2 * channel * this->banks_per_channel) + bank + (0 * this->banks_per_channel);
         break;
 
         case MEMORY_OPERATION_WRITE:
         case MEMORY_OPERATION_COPYBACK:
-            buffer = (2 * channel * this->banks_per_channel) + bank + 1;
+            buffer = (2 * channel * this->banks_per_channel) + bank + (1 * this->banks_per_channel);
         break;
     }
 
@@ -727,7 +728,7 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
         if (local_token_list[buffer][token].id_owner == package->id_owner &&
         local_token_list[buffer][token].opcode_number == package->opcode_number &&
         local_token_list[buffer][token].uop_number == package->uop_number &&
-        this->cmp_row_bank_channel(local_token_list[buffer][token].memory_address, package->memory_address)) {
+        local_token_list[buffer][token].memory_address == package->memory_address) {
             break;
         }
     }
@@ -788,12 +789,12 @@ void memory_controller_t::remove_token_list(memory_package_t *package) {
         case MEMORY_OPERATION_READ:
         case MEMORY_OPERATION_INST:
         case MEMORY_OPERATION_PREFETCH:
-            buffer = (2 * channel * this->banks_per_channel) + bank;
+            buffer = (2 * channel * this->banks_per_channel) + bank + (0 * this->banks_per_channel);
         break;
 
         case MEMORY_OPERATION_WRITE:
         case MEMORY_OPERATION_COPYBACK:
-            buffer = (2 * channel * this->banks_per_channel) + bank + 1;
+            buffer = (2 * channel * this->banks_per_channel) + bank + (1 * this->banks_per_channel);
         break;
     }
 
@@ -804,7 +805,7 @@ void memory_controller_t::remove_token_list(memory_package_t *package) {
         if (local_token_list[buffer][token].id_owner == package->id_owner &&
         local_token_list[buffer][token].opcode_number == package->opcode_number &&
         local_token_list[buffer][token].uop_number == package->uop_number &&
-        this->cmp_row_bank_channel(local_token_list[buffer][token].memory_address, package->memory_address)) {
+        local_token_list[buffer][token].memory_address == package->memory_address) {
             local_token_list[buffer].erase(local_token_list[buffer].begin() + token);
             return;
         }

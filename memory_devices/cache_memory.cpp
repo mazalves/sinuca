@@ -507,7 +507,8 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
 /// ============================================================================
 void cache_memory_t::allocate_token_list() {
     CACHE_DEBUG_PRINTF("allocate_token_list()\n");
-    this->set_token_list(new container_token_t);
+    
+    this->set_token_list(utils_t::template_allocate_array<container_token_t>(1));
 };
 
 /// ============================================================================
@@ -521,7 +522,7 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
         if (local_token_list[0][token].id_owner == package->id_owner &&
         local_token_list[0][token].opcode_number == package->opcode_number &&
         local_token_list[0][token].uop_number == package->uop_number &&
-        this->cmp_tag_index_bank(local_token_list[0][token].memory_address, package->memory_address)) {
+        local_token_list[0][token].memory_address == package->memory_address) {
             break;
         }
     }
@@ -563,7 +564,7 @@ void cache_memory_t::remove_token_list(memory_package_t *package) {
         if (local_token_list[0][token].id_owner == package->id_owner &&
         local_token_list[0][token].opcode_number == package->opcode_number &&
         local_token_list[0][token].uop_number == package->uop_number &&
-        this->cmp_tag_index_bank(local_token_list[0][token].memory_address, package->memory_address)) {
+        local_token_list[0][token].memory_address == package->memory_address) {
             local_token_list[0].erase(local_token_list[0].begin() + token);
             return;
         }

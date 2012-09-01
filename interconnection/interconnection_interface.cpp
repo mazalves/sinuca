@@ -38,12 +38,14 @@ interconnection_interface_t::interconnection_interface_t(){
     this->interconnection_latency = 0;
     this->ports_output_components = NULL;
     this->interface_output_components = NULL;
+    this->token_list = NULL;
 };
 
 //==============================================================================
 interconnection_interface_t::~interconnection_interface_t(){
     utils_t::template_delete_array<uint32_t>(this->ports_output_components);
     utils_t::template_delete_array<interconnection_interface_t*>(this->interface_output_components);
+    utils_t::template_delete_array<container_token_t>(this->token_list);
 };
 
 
