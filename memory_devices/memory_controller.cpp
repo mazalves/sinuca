@@ -728,7 +728,8 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
         if (local_token_list[buffer][token].id_owner == package->id_owner &&
         local_token_list[buffer][token].opcode_number == package->opcode_number &&
         local_token_list[buffer][token].uop_number == package->uop_number &&
-        local_token_list[buffer][token].memory_address == package->memory_address) {
+        local_token_list[buffer][token].memory_address == package->memory_address &&
+        local_token_list[buffer][token].memory_operation == package->memory_operation) {
             break;
         }
     }
@@ -741,6 +742,7 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
         new_token.opcode_number = package->opcode_number;
         new_token.uop_number = package->uop_number;
         new_token.memory_address = package->memory_address;
+        new_token.memory_operation = package->memory_operation;
 
         local_token_list[buffer].push_back(new_token);
     }
@@ -805,7 +807,9 @@ void memory_controller_t::remove_token_list(memory_package_t *package) {
         if (local_token_list[buffer][token].id_owner == package->id_owner &&
         local_token_list[buffer][token].opcode_number == package->opcode_number &&
         local_token_list[buffer][token].uop_number == package->uop_number &&
-        local_token_list[buffer][token].memory_address == package->memory_address) {
+        local_token_list[buffer][token].memory_address == package->memory_address &&
+        local_token_list[buffer][token].memory_operation == package->memory_operation) {
+            
             local_token_list[buffer].erase(local_token_list[buffer].begin() + token);
             return;
         }

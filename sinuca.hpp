@@ -676,6 +676,7 @@ class token_t {
         uint64_t opcode_address;
         uint64_t uop_number;
         uint64_t memory_address;
+        memory_operation_t memory_operation;
 
         token_t(){
             this->id_owner = 0;
@@ -683,6 +684,7 @@ class token_t {
             this->opcode_address = 0;
             this->uop_number = 0;
             this->memory_address = 0;
+            this->memory_operation = MEMORY_OPERATION_INST;
         };
 };
 

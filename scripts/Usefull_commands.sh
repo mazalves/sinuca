@@ -45,8 +45,8 @@ for i in *8t.tid0.stat.out.gz; do
     mv cmp_jnz.txt $k.pause.txt
 done
 
-
-
+## Shows the benchmarks which failed.
+for i in `ls *.log | sed 's/log//g'`; do ls $i*result | grep "No such"; done
 
 ########################################################################
 ## SPEC CPU 2000 and 2006
