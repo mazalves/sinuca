@@ -1701,7 +1701,7 @@ class directory_controller_t : public interconnection_interface_t {
         bool coherence_is_read(memory_operation_t memory_operation);
         bool coherence_is_hit(cache_line_t *cache_line, memory_package_t *package);
         bool coherence_need_copyback(cache_line_t *cache_line);
-        
+
         protocol_status_t find_copyback_higher_levels(cache_memory_t *cache_memory, uint64_t memory_address);
         protocol_status_t find_cache_line_higher_levels(cache_memory_t *cache_memory, memory_package_t *package, bool check_llc);
 
@@ -1837,6 +1837,19 @@ class prefetch_t : public interconnection_interface_t {
         uint64_t not_offset_bits_mask;
 
         cache_prefetch_stream_table_t *stream_table;
+
+
+        /// ====================================================================
+        /// Statistics related
+        /// ====================================================================
+        uint64_t stat_created_prefetches;
+        uint64_t stat_deleted_prefetches;
+
+        uint64_t stat_upstream_prefetches;
+        uint64_t stat_downstream_prefetches;
+
+        uint64_t stat_correct_prefetches;
+
     public:
         /// ====================================================================
         /// Methods
@@ -1902,6 +1915,15 @@ class prefetch_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, stream_threshold_activate)
         INSTANTIATE_GET_SET(uint32_t, stream_prefetch_degree)
         INSTANTIATE_GET_SET(uint32_t, stream_wait_between_requests)
+
+        /// ====================================================================
+        /// Statistics related
+        /// ====================================================================
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_created_prefetches);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_deleted_prefetches);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_upstream_prefetches);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_downstream_prefetches);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_correct_prefetches);
 };
 
 /// ============================================================================

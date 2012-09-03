@@ -46,7 +46,23 @@ for i in *8t.tid0.stat.out.gz; do
 done
 
 ## Shows the benchmarks which failed.
-for i in `ls *.log | sed 's/log//g'`; do ls $i*result | grep "No such"; done
+for i in `ls Experiment/benchmarks/results/*/*.log | sed 's/log//g'`; do ls $i*result | grep "No such"; done
+
+########################################################################
+## VALIDATION x86_64 - SPEC CPU 2000 and 2006
+########################################################################
+cd ~/Experiment/SiNUCA/scripts ;
+python plot.py parameters_validation.cfg
+
+# Run the Base and DSBP for all SPEC2000 and SPEC2006
+for i in `seq 1 29` ; do
+    byobu -p$i -X stuff "reset ; \
+    cd ~/Experiment/SiNUCA/scripts ; \
+    python execute.py ~/Experiment/SiNUCA/configurations/validation/Core2Duo_1core.cfg spec_cpu2000 Validation_x86_64 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/configurations/validation/Core2Duo_1core.cfg spec_cpu2006 Validation_x86_64 0 1 $i $i ; \
+    $(echo -ne '\r')";
+done
+
 
 ########################################################################
 ## SPEC CPU 2000 and 2006

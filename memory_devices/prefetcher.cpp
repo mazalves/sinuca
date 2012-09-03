@@ -118,6 +118,15 @@ void prefetch_t::clock(uint32_t subcycle) {
                             this->stream_table[slot].prefetch_ahead++;
                             this->stream_table[slot].cycle_last_request = sinuca_engine.get_global_cycle();
 
+                            /// Statistics
+                            this->add_stat_created_prefetches();
+                            if (this->stream_table[slot].memory_address_difference > 0) {
+                                this->add_stat_upstream_prefetches();
+                            }
+                            else {
+                                this->add_stat_downstream_prefetches();
+                            }
+
                             uint64_t memory_address = this->stream_table[slot].last_memory_address +
                                                     ( this->stream_table[slot].prefetch_ahead * this->stream_table[slot].memory_address_difference);
                             memory_address &= this->not_offset_bits_mask;
@@ -198,7 +207,7 @@ void prefetch_t::remove_token_list(memory_package_t *package) {
 void prefetch_t::treat_prefetch(memory_package_t *s) {
     uint32_t slot;
 
-    if (s->memory_operation != MEMORY_OPERATION_READ || s->is_answer == true) {
+    if (s->memory_operation == MEMORY_OPERATION_COPYBACK) {
         return;
     }
     else {
@@ -221,6 +230,10 @@ void prefetch_t::treat_prefetch(memory_package_t *s) {
                         this->stream_table[slot].last_memory_address = s->memory_address;
                         this->stream_table[slot].relevance_count++;
                         this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
+
+                        /// Statistics
+                        this->add_stat_correct_prefetches();
+
                         if (this->stream_table[slot].prefetch_ahead > 0) {
                             this->stream_table[slot].prefetch_ahead--;
                         }
@@ -300,6 +313,12 @@ void prefetch_t::periodic_check(){
 // STATISTICS
 /// ============================================================================
 void prefetch_t::reset_statistics() {
+
+    this->stat_created_prefetches = 0;
+    this->stat_deleted_prefetches = 0;
+    this->stat_upstream_prefetches = 0;
+    this->stat_downstream_prefetches = 0;
+    this->stat_correct_prefetches = 0;
 };
 
 /// ============================================================================
@@ -309,6 +328,17 @@ void prefetch_t::print_statistics() {
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);
     sinuca_engine.write_statistics_big_separator();
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_created_prefetches", stat_created_prefetches);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_deleted_prefetches", stat_deleted_prefetches);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_upstream_prefetches", stat_upstream_prefetches);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_downstream_prefetches", stat_downstream_prefetches);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_correct_prefetches", stat_correct_prefetches);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_correct_prefetches_ratio", stat_created_prefetches, stat_correct_prefetches);
 };
 
 /// ============================================================================
@@ -361,6 +391,8 @@ int32_t prefetch_t::request_buffer_insert() {
                 if (this->request_buffer_position_start >= this->request_buffer_size) {
                     this->request_buffer_position_start = 0;
                 }
+                /// Statistics
+                this->add_stat_deleted_prefetches();
             break;
 
             case FULL_BUFFER_STOP:
