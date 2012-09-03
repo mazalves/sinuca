@@ -409,7 +409,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 }
 
                 /// Check if some HIGHER LEVEL has the cache line Modified
-                cache->change_status(cache_line, this->look_higher_levels(cache, package, true));
+                cache->change_status(cache_line, this->find_cache_line_higher_levels(cache, package, true));
 
                 /// Higher Level Hit
                 if (cache_line->status != PROTOCOL_STATUS_I) {
@@ -475,16 +475,18 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                                 case INCLUSIVENESS_INCLUSIVE_LLC: {
                                     container_ptr_cache_memory_t *lower_level_cache = cache->get_lower_level_cache();
                                     if (lower_level_cache->size() == 0) {
-                                        /// Check if some HIGHER LEVEL has the cache line Modified (Don't check on others LLC)
-                                        cache->change_status(cache_line, this->look_higher_levels(cache, package, false));
+                                        // Should copyback only valid/active subblocks
+                                        /// Check if some HIGHER LEVEL has the cache line Modified
+                                        cache->change_status(cache_line, this->find_copyback_higher_levels(cache, cache_line->tag));
                                     }
                                 }
                                 break;
 
                                 /// If this is Any Level => INVALIDATE Higher levels
                                 case INCLUSIVENESS_INCLUSIVE_ALL: {
-                                    /// Check if some HIGHER LEVEL has the cache line Modified (Don't check on others LLC)
-                                    cache->change_status(cache_line, this->look_higher_levels(cache, package, false));
+                                    // Should copyback only valid/active subblocks
+                                    /// Check if some HIGHER LEVEL has the cache line Modified
+                                    cache->change_status(cache_line, this->find_copyback_higher_levels(cache, cache_line->tag));
                                 }
                                 break;
                             }
@@ -568,8 +570,8 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                     package->memory_operation = MEMORY_OPERATION_READ;
                 }
 
-                /// Check if some HIGHER LEVEL has the cache line Modified
-                cache->change_status(cache_line, this->look_higher_levels(cache, package, true));
+                /// Check if some HIGHER LEVEL has the cache line
+                cache->change_status(cache_line, this->find_cache_line_higher_levels(cache, package, true));
 
                 /// Higher Level Hit
                 if (cache_line->status != PROTOCOL_STATUS_I) {
@@ -642,16 +644,18 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                             case INCLUSIVENESS_INCLUSIVE_LLC: {
                                 container_ptr_cache_memory_t *lower_level_cache = cache->get_lower_level_cache();
                                 if (lower_level_cache->size() == 0) {
-                                    /// Check if some HIGHER LEVEL has the cache line Modified (Don't check on others LLC)
-                                    cache->change_status(cache_line, this->look_higher_levels(cache, package, false));
+                                    // Should copyback only valid/active subblocks
+                                    /// Check if some HIGHER LEVEL has the cache line Modified
+                                    cache->change_status(cache_line, this->find_copyback_higher_levels(cache, cache_line->tag));
                                 }
                             }
                             break;
 
                             /// If this is Any Level => INVALIDATE Higher levels
                             case INCLUSIVENESS_INCLUSIVE_ALL: {
-                                /// Check if some HIGHER LEVEL has the cache line Modified (Don't check on others LLC)
-                                cache->change_status(cache_line, this->look_higher_levels(cache, package, false));
+                                // Should copyback only valid/active subblocks
+                                /// Check if some HIGHER LEVEL has the cache line Modified
+                                cache->change_status(cache_line, this->find_copyback_higher_levels(cache, cache_line->tag));
                             }
                             break;
                         }
@@ -1033,9 +1037,95 @@ bool directory_controller_t::is_locked(uint64_t memory_address) {
     return FAIL;
 };
 
+/// ============================================================================
+protocol_status_t directory_controller_t::find_copyback_higher_levels(cache_memory_t *cache_memory, uint64_t memory_address) {
+    ERROR_ASSERT_PRINTF(cache_memory != NULL, "Received a NULL cache_memory\n");
+
+    /// ================================================================================
+    /// Check this level
+    uint32_t index, way;
+    cache_line_t *this_cache_line = cache_memory->find_line(memory_address, index, way);
+    if (this_cache_line != NULL) {
+        switch (this->get_coherence_protocol_type()) {
+            case COHERENCE_PROTOCOL_MOESI:
+                switch (this_cache_line->status) {
+                    case PROTOCOL_STATUS_M:
+                    case PROTOCOL_STATUS_O: {
+                        // =============================================================
+                        // Line Usage Prediction
+                        // ~ bool is_sub_block_hit = cache_memory->line_usage_predictor.check_sub_block_is_hit(package, index, way);
+                        // ~ if (is_sub_block_hit) {
+                            /// This Level stays with a normal copy
+                            cache_memory->change_status(this_cache_line, PROTOCOL_STATUS_S);
+                            /// Lower level becomes the owner
+                            return PROTOCOL_STATUS_O;
+                        // ~ }
+                    }
+                    break;
+
+                    case PROTOCOL_STATUS_E:
+                    case PROTOCOL_STATUS_S: {
+                        // =============================================================
+                        // Line Usage Prediction
+                        // ~ bool is_sub_block_hit = cache_memory->line_usage_predictor.check_sub_block_is_hit(package, index, way);
+                        // ~ if (is_sub_block_hit) {
+                            return PROTOCOL_STATUS_S;
+                        // ~ }
+                    }
+                    break;
+
+                    case PROTOCOL_STATUS_I:
+                    break;
+                }
+            break;
+        }
+    }
+
+    /// ================================================================================
+    /// Check on the higher levels
+    container_ptr_cache_memory_t *higher_level_cache = cache_memory->get_higher_level_cache();
+    for (uint32_t i = 0; i < higher_level_cache->size(); i++) {
+        cache_memory_t *higher_cache = higher_level_cache[0][i];
+        protocol_status_t return_type = this->find_copyback_higher_levels(higher_cache, memory_address);
+
+        switch (this->get_coherence_protocol_type()) {
+            case COHERENCE_PROTOCOL_MOESI:
+                switch (return_type) {
+                    case PROTOCOL_STATUS_M:
+                    case PROTOCOL_STATUS_O:
+                        switch (this->inclusiveness_type) {
+                            case INCLUSIVENESS_NON_INCLUSIVE:
+                            case INCLUSIVENESS_INCLUSIVE_LLC:
+                            case INCLUSIVENESS_INCLUSIVE_ALL:
+                                /// Allocate in this level only if line already exist
+                                if (this_cache_line != NULL) {
+                                    cache_memory->change_status(this_cache_line, PROTOCOL_STATUS_S);
+                                }
+                                return PROTOCOL_STATUS_O;
+                            break;
+                        }
+                    break;
+
+                    case PROTOCOL_STATUS_E:
+                    case PROTOCOL_STATUS_S:
+                        return PROTOCOL_STATUS_S;
+                    break;
+
+                    case PROTOCOL_STATUS_I:
+                    break;
+                }
+            break;
+        }
+    }
+
+    /// No Higher Level Valid Status Found
+    return PROTOCOL_STATUS_I;
+};
+
+
 
 /// ============================================================================
-protocol_status_t directory_controller_t::look_higher_levels(cache_memory_t *cache_memory, memory_package_t *package, bool check_llc) {
+protocol_status_t directory_controller_t::find_cache_line_higher_levels(cache_memory_t *cache_memory, memory_package_t *package, bool check_llc) {
     ERROR_ASSERT_PRINTF(cache_memory != NULL, "Received a NULL cache_memory\n");
 
     /// ================================================================================
@@ -1052,7 +1142,7 @@ protocol_status_t directory_controller_t::look_higher_levels(cache_memory_t *cac
             }
 
             /// Propagate Higher
-            protocol_status_t return_type = this->look_higher_levels(llc, package, false);
+            protocol_status_t return_type = this->find_cache_line_higher_levels(llc, package, false);
 
             switch (this->get_coherence_protocol_type()) {
                 case COHERENCE_PROTOCOL_MOESI:
@@ -1123,7 +1213,7 @@ protocol_status_t directory_controller_t::look_higher_levels(cache_memory_t *cac
         container_ptr_cache_memory_t *higher_level_cache = cache_memory->get_higher_level_cache();
         for (uint32_t i = 0; i < higher_level_cache->size(); i++) {
             cache_memory_t *higher_cache = higher_level_cache[0][i];
-            protocol_status_t return_type = this->look_higher_levels(higher_cache, package, check_llc);
+            protocol_status_t return_type = this->find_cache_line_higher_levels(higher_cache, package, check_llc);
 
             switch (this->get_coherence_protocol_type()) {
                 case COHERENCE_PROTOCOL_MOESI:

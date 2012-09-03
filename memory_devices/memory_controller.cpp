@@ -597,6 +597,7 @@ uint32_t memory_controller_t::selection_channel_round_robin(uint32_t total_chann
 /// ============================================================================
 int32_t memory_controller_t::send_package(memory_package_t *package) {
     MEMORY_CONTROLLER_DEBUG_PRINTF("send_package() package:%s\n", package->memory_to_string().c_str());
+    ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->memory_to_string().c_str());
     ERROR_ASSERT_PRINTF(package->memory_operation != MEMORY_OPERATION_COPYBACK && package->memory_operation != MEMORY_OPERATION_WRITE, "Main memory must never send answer for WRITE.\n");
 
     uint32_t channel = get_channel(package->memory_address);
@@ -627,6 +628,7 @@ int32_t memory_controller_t::send_package(memory_package_t *package) {
 
 /// ============================================================================
 bool memory_controller_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
+    ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->memory_to_string().c_str());
     ERROR_ASSERT_PRINTF(package->id_dst == this->get_id() && package->hop_count == POSITION_FAIL, "Received some package for a different id_dst.\n");
     ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Received a wrong input_port\n");
     ERROR_ASSERT_PRINTF(get_controller(package->memory_address) == this->get_controller_number(), "Wrong channel.\n")
@@ -809,12 +811,11 @@ void memory_controller_t::remove_token_list(memory_package_t *package) {
         local_token_list[buffer][token].uop_number == package->uop_number &&
         local_token_list[buffer][token].memory_address == package->memory_address &&
         local_token_list[buffer][token].memory_operation == package->memory_operation) {
-            
             local_token_list[buffer].erase(local_token_list[buffer].begin() + token);
             return;
         }
     }
-    ERROR_PRINTF("Could not find the previous allocated token %s.\n", get_enum_memory_operation_char(package->memory_operation))
+    ERROR_PRINTF("Could not find the previous allocated token.\n%s\n", package->memory_to_string().c_str())
 };
 
 

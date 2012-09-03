@@ -376,9 +376,9 @@ int32_t cache_memory_t::allocate_prefetch(memory_package_t* package){
 /// ============================================================================
 int32_t cache_memory_t::send_package(memory_package_t *package) {
     CACHE_DEBUG_PRINTF("send_package() package:%s\n", package->memory_to_string().c_str());
+    ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->memory_to_string().c_str());
 
     if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
-
         /// Check if FINAL DESTINATION has FREE SPACE available.
         if (package->is_answer == false &&
             sinuca_engine.interconnection_interface_array[package->id_dst]->check_token_list(package) == false) {
@@ -414,6 +414,7 @@ int32_t cache_memory_t::send_package(memory_package_t *package) {
 bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
     CACHE_DEBUG_PRINTF("receive_package() port:%u, package:%s\n", input_port, package->memory_to_string().c_str());
 
+    ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->memory_to_string().c_str());
     ERROR_ASSERT_PRINTF(get_bank(package->memory_address) == this->get_bank_number(), "Wrong bank.\n%s\n", package->memory_to_string().c_str());
     ERROR_ASSERT_PRINTF(package->id_dst == this->get_id() && package->hop_count == POSITION_FAIL, "Received some package for a different id_dst.\n%s\n", package->memory_to_string().c_str());
     ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Received a wrong input_port\n%s\n", package->memory_to_string().c_str());
@@ -572,7 +573,7 @@ void cache_memory_t::remove_token_list(memory_package_t *package) {
             return;
         }
     }
-    ERROR_PRINTF("Could not find the previous allocated token %s.\n", get_enum_memory_operation_char(package->memory_operation))
+    ERROR_PRINTF("Could not find the previous allocated token.\n%s\n", package->memory_to_string().c_str())
 };
 
 /// ============================================================================

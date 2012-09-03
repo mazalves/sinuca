@@ -1701,7 +1701,9 @@ class directory_controller_t : public interconnection_interface_t {
         bool coherence_is_read(memory_operation_t memory_operation);
         bool coherence_is_hit(cache_line_t *cache_line, memory_package_t *package);
         bool coherence_need_copyback(cache_line_t *cache_line);
-        protocol_status_t look_higher_levels(cache_memory_t *cache_memory, memory_package_t *package, bool check_llc);
+        
+        protocol_status_t find_copyback_higher_levels(cache_memory_t *cache_memory, uint64_t memory_address);
+        protocol_status_t find_cache_line_higher_levels(cache_memory_t *cache_memory, memory_package_t *package, bool check_llc);
 
         void coherence_invalidate_all(cache_memory_t *cache_memory, uint64_t memory_address);
         void coherence_invalidate_higher_levels(cache_memory_t *cache_memory, uint64_t memory_address);
