@@ -128,14 +128,14 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define CONFIGURATOR_DEBUG
     // ~ #define TRACE_READER_DEBUG
     // ~ #define TRACE_GENERATOR_DEBUG
-    #define PROCESSOR_DEBUG
+    // ~ #define PROCESSOR_DEBUG
     // ~ #define SYNC_DEBUG
     // ~ #define BRANCH_PREDICTOR_DEBUG
-    #define CACHE_DEBUG
+    // ~ #define CACHE_DEBUG
     // ~ #define PREFETCHER_DEBUG
     // ~ #define LINE_USAGE_PREDICTOR_DEBUG
-    #define MEMORY_CONTROLLER_DEBUG
-    #define ROUTER_DEBUG
+    // ~ #define MEMORY_CONTROLLER_DEBUG
+    // ~ #define ROUTER_DEBUG
     // ~ #define INTERCONNECTION_CTRL_DEBUG
     #define DIRECTORY_CTRL_DEBUG
     // ~ #define SHOW_FREE_PACKAGE
@@ -1406,7 +1406,7 @@ class processor_t : public interconnection_interface_t {
         void solve_data_forward(reorder_buffer_line_t *rob_line);
         void stage_commit();
 
-        inline uint32_t cmp_index_tag(uint64_t memory_addressA, uint64_t memory_addressB) {
+        inline bool cmp_index_tag(uint64_t memory_addressA, uint64_t memory_addressB) {
             return (memory_addressA & this->not_offset_bits_mask) == (memory_addressB & this->not_offset_bits_mask);
         }
 
@@ -1710,7 +1710,7 @@ class directory_controller_t : public interconnection_interface_t {
 
         void coherence_new_operation(cache_memory_t *cache_memory, cache_line_t *cache_line,  memory_package_t *package, bool is_hit);
 
-        inline uint32_t cmp_index_tag(uint64_t memory_addressA, uint64_t memory_addressB) {
+        inline bool cmp_index_tag(uint64_t memory_addressA, uint64_t memory_addressB) {
             return (memory_addressA & not_offset_bits_mask) == (memory_addressB & not_offset_bits_mask);
         };
 
@@ -1843,12 +1843,13 @@ class prefetch_t : public interconnection_interface_t {
         /// Statistics related
         /// ====================================================================
         uint64_t stat_created_prefetches;
+        uint64_t stat_dropped_prefetches;
         uint64_t stat_deleted_prefetches;
 
         uint64_t stat_upstream_prefetches;
         uint64_t stat_downstream_prefetches;
 
-        uint64_t stat_correct_prefetches;
+        uint64_t stat_request_matches_stream;
 
     public:
         /// ====================================================================
@@ -1897,6 +1898,10 @@ class prefetch_t : public interconnection_interface_t {
         void treat_prefetch(memory_package_t *package);
         memory_package_t* next_prefetch();
 
+        inline bool cmp_index_tag(uint64_t memory_addressA, uint64_t memory_addressB) {
+            return (memory_addressA & this->not_offset_bits_mask) == (memory_addressB & this->not_offset_bits_mask);
+        }
+
         INSTANTIATE_GET_SET(prefetch_policy_t, prefetcher_type)
         INSTANTIATE_GET_SET(full_buffer_t, full_buffer_type)
 
@@ -1920,10 +1925,11 @@ class prefetch_t : public interconnection_interface_t {
         /// Statistics related
         /// ====================================================================
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_created_prefetches);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dropped_prefetches);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_deleted_prefetches);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_upstream_prefetches);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_downstream_prefetches);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_correct_prefetches);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_request_matches_stream);
 };
 
 /// ============================================================================
@@ -2415,7 +2421,7 @@ class cache_memory_t : public interconnection_interface_t {
             return (addr & this->offset_bits_mask) >> this->offset_bits_shift;
         }
 
-        inline uint32_t cmp_tag_index_bank(uint64_t memory_addressA, uint64_t memory_addressB) {
+        inline bool cmp_tag_index_bank(uint64_t memory_addressA, uint64_t memory_addressB) {
             return (memory_addressA & this->not_offset_bits_mask) == (memory_addressB & this->not_offset_bits_mask);
         }
 
@@ -2731,7 +2737,7 @@ class memory_controller_t : public interconnection_interface_t {
             return (addr & this->column_bits_mask) >> this->column_bits_shift;
         }
 
-        inline uint32_t cmp_row_bank_channel(uint64_t memory_addressA, uint64_t memory_addressB) {
+        inline bool cmp_row_bank_channel(uint64_t memory_addressA, uint64_t memory_addressB) {
             return (memory_addressA & this->not_column_bits_mask) == (memory_addressB & this->not_column_bits_mask);
         }
 

@@ -91,6 +91,92 @@ void prefetch_t::clock(uint32_t subcycle) {
     PREFETCHER_DEBUG_PRINTF("====================\n");
     PREFETCHER_DEBUG_PRINTF("cycle() \n");
 
+
+    switch (this->get_prefetcher_type()) {
+        case PREFETCHER_STREAM:
+            for (uint32_t slot = 0 ; slot < this->stream_table_size ; slot++) {
+                /// Useful Stream, but Long time since last activation
+                if (this->stream_table[slot].relevance_count > 0 &&
+                this->stream_table[slot].cycle_last_activation <= sinuca_engine.get_global_cycle() - this->stream_window) {
+                    /// FREE the position
+                    this->stream_table_line_clean(slot);
+                }
+
+                /// Something interesting to be requested. Check if can do a new request
+                else if (this->stream_table[slot].relevance_count > this->stream_threshold_activate &&
+                this->stream_table[slot].prefetch_ahead < this->stream_prefetch_degree &&
+                this->stream_table[slot].cycle_last_request <= sinuca_engine.get_global_cycle() - this->stream_wait_between_requests) {
+
+                    uint64_t last_memory_address = this->stream_table[slot].last_memory_address +
+                                            ( this->stream_table[slot].prefetch_ahead * this->stream_table[slot].memory_address_difference);
+                    // ~ last_memory_address &= this->not_offset_bits_mask;
+
+                    uint64_t memory_address = this->stream_table[slot].last_memory_address +
+                                            ( (this->stream_table[slot].prefetch_ahead + 1) * this->stream_table[slot].memory_address_difference);
+                    // ~ memory_address &= this->not_offset_bits_mask;
+
+                    PREFETCHER_DEBUG_PRINTF("New Prefetch found STREAM_BUFFER[%u] %s\n", slot, this->stream_table_line_to_string(slot).c_str());
+                    if (!this->cmp_index_tag(last_memory_address, memory_address)) {
+                        int32_t position = this->request_buffer_insert();
+                        if (position != POSITION_FAIL) {
+
+                            this->stream_table[slot].prefetch_ahead++;
+                            this->stream_table[slot].cycle_last_request = sinuca_engine.get_global_cycle();
+
+                            /// Statistics
+                            this->add_stat_created_prefetches();
+                            if (this->stream_table[slot].memory_address_difference > 0) {
+                                this->add_stat_upstream_prefetches();
+                            }
+                            else {
+                                this->add_stat_downstream_prefetches();
+                            }
+
+                            this->request_buffer[position].packager(
+                                                                0,                                          /// Request Owner
+                                                                0,                                          /// Opcode. Number
+                                                                0,                                          /// Opcode. Address
+                                                                0,                                          /// Uop. Number
+
+                                                                memory_address,                             /// Mem. Address
+                                                                sinuca_engine.get_global_line_size(),       /// Block Size
+
+                                                                PACKAGE_STATE_UNTREATED,                    /// Pack. State
+                                                                0,                                          /// Ready Cycle
+
+                                                                MEMORY_OPERATION_PREFETCH,                  /// Mem. Operation
+                                                                false,                                      /// Is Answer
+
+                                                                0,                                          /// Src ID
+                                                                0,                                          /// Dst ID
+                                                                NULL,                                       /// *Hops
+                                                                0                                           /// Hop Counter
+                                                                );
+                            PREFETCHER_DEBUG_PRINTF("\t INSERTED on PREFETCHER_BUFFER[%d]\n", position);
+                            PREFETCHER_DEBUG_PRINTF("\t %s", this->request_buffer[position].memory_to_string().c_str());
+                            break;
+                        }
+                    }
+                    else {
+                        this->stream_table[slot].prefetch_ahead++;
+                        this->stream_table[slot].cycle_last_request = sinuca_engine.get_global_cycle();
+
+                        /// Statistics
+                        this->add_stat_dropped_prefetches();
+                        PREFETCHER_DEBUG_PRINTF("\t DROPPED PREFETCH\n");
+                        break;
+                    }
+                }
+            }
+        break;
+
+        case PREFETCHER_DISABLE:
+        break;
+    }
+
+
+
+/*
     switch (this->get_prefetcher_type()) {
         case PREFETCHER_STREAM:
             for (uint32_t slot = 0 ; slot < this->stream_table_size ; slot++) {
@@ -112,47 +198,63 @@ void prefetch_t::clock(uint32_t subcycle) {
                     this->stream_table[slot].prefetch_ahead < this->stream_prefetch_degree &&
                     this->stream_table[slot].cycle_last_request <= sinuca_engine.get_global_cycle() - this->stream_wait_between_requests)) {
 
+                        uint64_t last_memory_address = this->stream_table[slot].last_memory_address +
+                                                ( this->stream_table[slot].prefetch_ahead * this->stream_table[slot].memory_address_difference);
+                        last_memory_address &= this->not_offset_bits_mask;
+
+                        uint64_t memory_address = this->stream_table[slot].last_memory_address +
+                                                ( (this->stream_table[slot].prefetch_ahead + 1) * this->stream_table[slot].memory_address_difference);
+                        memory_address &= this->not_offset_bits_mask;
+
                         PREFETCHER_DEBUG_PRINTF("New Prefetch found STREAM_BUFFER[%u] %s\n", slot, this->stream_table_line_to_string(slot).c_str());
-                        int32_t position = this->request_buffer_insert();
-                        if (position != POSITION_FAIL) {
+                        if (last_memory_address != memory_address) {
+                            int32_t position = this->request_buffer_insert();
+                            if (position != POSITION_FAIL) {
+
+                                this->stream_table[slot].prefetch_ahead++;
+                                this->stream_table[slot].cycle_last_request = sinuca_engine.get_global_cycle();
+
+                                /// Statistics
+                                this->add_stat_created_prefetches();
+                                if (this->stream_table[slot].memory_address_difference > 0) {
+                                    this->add_stat_upstream_prefetches();
+                                }
+                                else {
+                                    this->add_stat_downstream_prefetches();
+                                }
+
+                                this->request_buffer[position].packager(
+                                                                    0,                                          /// Request Owner
+                                                                    0,                                          /// Opcode. Number
+                                                                    0,                                          /// Opcode. Address
+                                                                    0,                                          /// Uop. Number
+
+                                                                    memory_address,                             /// Mem. Address
+                                                                    sinuca_engine.get_global_line_size(),       /// Block Size
+
+                                                                    PACKAGE_STATE_UNTREATED,                    /// Pack. State
+                                                                    0,                                          /// Ready Cycle
+
+                                                                    MEMORY_OPERATION_PREFETCH,                  /// Mem. Operation
+                                                                    false,                                      /// Is Answer
+
+                                                                    0,                                          /// Src ID
+                                                                    0,                                          /// Dst ID
+                                                                    NULL,                                       /// *Hops
+                                                                    0                                           /// Hop Counter
+                                                                    );
+                                PREFETCHER_DEBUG_PRINTF("\t INSERTED on PREFETCHER_BUFFER[%d]\n", position);
+                                PREFETCHER_DEBUG_PRINTF("\t %s", this->request_buffer[position].memory_to_string().c_str());
+                                break;
+                            }
+                        }
+                        else {
                             this->stream_table[slot].prefetch_ahead++;
                             this->stream_table[slot].cycle_last_request = sinuca_engine.get_global_cycle();
 
                             /// Statistics
-                            this->add_stat_created_prefetches();
-                            if (this->stream_table[slot].memory_address_difference > 0) {
-                                this->add_stat_upstream_prefetches();
-                            }
-                            else {
-                                this->add_stat_downstream_prefetches();
-                            }
-
-                            uint64_t memory_address = this->stream_table[slot].last_memory_address +
-                                                    ( this->stream_table[slot].prefetch_ahead * this->stream_table[slot].memory_address_difference);
-                            memory_address &= this->not_offset_bits_mask;
-                            this->request_buffer[position].packager(
-                                                                0,                                          /// Request Owner
-                                                                0,                                          /// Opcode. Number
-                                                                0,                                          /// Opcode. Address
-                                                                0,                                          /// Uop. Number
-
-                                                                memory_address,                             /// Mem. Address
-                                                                sinuca_engine.get_global_line_size(),       /// Block Size
-
-                                                                PACKAGE_STATE_UNTREATED,                    /// Pack. State
-                                                                0,                                          /// Ready Cycle
-
-                                                                MEMORY_OPERATION_PREFETCH,                  /// Mem. Operation
-                                                                false,                                      /// Is Answer
-
-                                                                0,                                          /// Src ID
-                                                                0,                                          /// Dst ID
-                                                                NULL,                                       /// *Hops
-                                                                0                                           /// Hop Counter
-                                                                );
-
-                            PREFETCHER_DEBUG_PRINTF("INSERTED on PREFETCHER_BUFFER[%d]", position);
-                            PREFETCHER_DEBUG_PRINTF("%s", this->request_buffer[position].memory_to_string().c_str());
+                            this->add_stat_dropped_prefetches();
+                            PREFETCHER_DEBUG_PRINTF("\t DROPPED PREFETCH\n");
                             break;
                         }
                     }
@@ -163,6 +265,8 @@ void prefetch_t::clock(uint32_t subcycle) {
         case PREFETCHER_DISABLE:
         break;
     }
+*/
+
 };
 
 /// ============================================================================
@@ -204,73 +308,68 @@ void prefetch_t::remove_token_list(memory_package_t *package) {
 
 
 //======================================================================
-void prefetch_t::treat_prefetch(memory_package_t *s) {
+void prefetch_t::treat_prefetch(memory_package_t *package) {
     uint32_t slot;
 
-    if (s->memory_operation == MEMORY_OPERATION_COPYBACK) {
-        return;
-    }
-    else {
-        switch (this->get_prefetcher_type()) {
-            case PREFETCHER_STREAM:
-                /// Try to match the request with some Stream
-                for (slot = 0; slot < this->stream_table_size; slot++) {
-                    if (this->stream_table[slot].last_memory_address == s->memory_address) {
-                        PREFETCHER_DEBUG_PRINTF("Prefetcher: Found one stream... No Difference on Address - Ignoring.\n");
-                        break;
+    switch (this->get_prefetcher_type()) {
+        case PREFETCHER_STREAM:
+            /// Try to match the request with some Stream
+            for (slot = 0; slot < this->stream_table_size; slot++) {
+                if (this->stream_table[slot].last_memory_address == package->memory_address) {
+                    PREFETCHER_DEBUG_PRINTF("Prefetcher: Found one stream... No Difference on Address - Ignoring.\n");
+                    break;
+                }
+
+                /// Compute once the address diference, reused multiple times.
+                int64_t address_difference = package->memory_address - this->stream_table[slot].last_memory_address;
+
+                if ((this->stream_table[slot].memory_address_difference == address_difference || this->stream_table[slot].memory_address_difference == 0) &&
+                abs(address_difference) <= stream_address_distance) {
+                    PREFETCHER_DEBUG_PRINTF("Prefetcher: Found one Stream ... %s\n", address_difference > 0 ? "Increasing" : "Decreasing");
+                    this->stream_table[slot].memory_address_difference = address_difference;
+                    this->stream_table[slot].last_memory_address = package->memory_address;
+                    this->stream_table[slot].relevance_count++;
+                    this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
+
+                    /// Statistics
+                    this->add_stat_request_matches_stream();
+
+                    if (this->stream_table[slot].prefetch_ahead > 0) {
+                        this->stream_table[slot].prefetch_ahead--;
                     }
+                    break;
+                }
+            }
 
-                    /// Compute once the address diference, reused multiple times.
-                    int64_t address_difference = s->memory_address - this->stream_table[slot].last_memory_address;
-
-                    if ((this->stream_table[slot].memory_address_difference == address_difference || this->stream_table[slot].memory_address_difference == 0) &&
-                    abs(address_difference) < stream_address_distance) {
-                        PREFETCHER_DEBUG_PRINTF("Prefetcher: Found one Stream ... %s\n", address_difference > 0 ? "Increasing" : "Decreasing");
-                        this->stream_table[slot].memory_address_difference = address_difference;
-                        this->stream_table[slot].last_memory_address = s->memory_address;
-                        this->stream_table[slot].relevance_count++;
+            /// Could not find a STREAM, Create a new
+            if (slot == this->stream_table_size) {
+                for (slot = 0 ; slot < this->stream_table_size ; slot++) {
+                    /// Free slot
+                    if (this->stream_table[slot].relevance_count == 0) {
+                        PREFETCHER_DEBUG_PRINTF("Prefetcher: No stream found... Allocating it.\n");
+                        this->stream_table[slot].memory_address_difference = 0;
+                        this->stream_table[slot].last_memory_address = package->memory_address;
+                        this->stream_table[slot].relevance_count = 1;
+                        this->stream_table[slot].prefetch_ahead = 0;
                         this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
-
-                        /// Statistics
-                        this->add_stat_correct_prefetches();
-
-                        if (this->stream_table[slot].prefetch_ahead > 0) {
-                            this->stream_table[slot].prefetch_ahead--;
-                        }
+                        this->stream_table[slot].cycle_last_request = sinuca_engine.get_global_cycle();
                         break;
                     }
                 }
+            }
 
-                /// Could not find a STREAM, Create a new
-                if (slot == this->stream_table_size) {
-                    for (slot = 0 ; slot < this->stream_table_size ; slot++) {
-                        /// Free slot
-                        if (this->stream_table[slot].relevance_count == 0) {
-                            PREFETCHER_DEBUG_PRINTF("Prefetcher: No stream found... Allocating it.\n");
-                            this->stream_table[slot].memory_address_difference = 0;
-                            this->stream_table[slot].last_memory_address = s->memory_address;
-                            this->stream_table[slot].relevance_count = 1;
-                            this->stream_table[slot].prefetch_ahead = 0;
-                            this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
-                            this->stream_table[slot].cycle_last_request = sinuca_engine.get_global_cycle();
-                            break;
-                        }
-                    }
-                }
+            /// Could not insert the STREAM
+            if (slot == this->stream_table_size) {
+                PREFETCHER_DEBUG_PRINTF("Prefetcher: Cannot insert this stream on the stream_table.\n");
+            }
+        break;
 
-                /// Could not insert the STREAM
-                if (slot == this->stream_table_size) {
-                    PREFETCHER_DEBUG_PRINTF("Prefetcher: Cannot insert this stream on the stream_table.\n");
-                }
-            break;
+        case PREFETCHER_DISABLE:
+        break;
 
-            case PREFETCHER_DISABLE:
-            break;
-
-            default:
-                ERROR_PRINTF("Invalid prefetch strategy %u.\n", this->get_prefetcher_type());
-            break;
-        }
+        default:
+            ERROR_PRINTF("Invalid prefetch strategy %u.\n", this->get_prefetcher_type());
+        break;
     }
 };
 
@@ -315,10 +414,11 @@ void prefetch_t::periodic_check(){
 void prefetch_t::reset_statistics() {
 
     this->stat_created_prefetches = 0;
+    this->stat_dropped_prefetches = 0;
     this->stat_deleted_prefetches = 0;
     this->stat_upstream_prefetches = 0;
     this->stat_downstream_prefetches = 0;
-    this->stat_correct_prefetches = 0;
+    this->stat_request_matches_stream = 0;
 };
 
 /// ============================================================================
@@ -330,6 +430,7 @@ void prefetch_t::print_statistics() {
     sinuca_engine.write_statistics_big_separator();
 
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_created_prefetches", stat_created_prefetches);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dropped_prefetches", stat_dropped_prefetches);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_deleted_prefetches", stat_deleted_prefetches);
 
     sinuca_engine.write_statistics_small_separator();
@@ -337,8 +438,7 @@ void prefetch_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_downstream_prefetches", stat_downstream_prefetches);
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_correct_prefetches", stat_correct_prefetches);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_correct_prefetches_ratio", stat_created_prefetches, stat_correct_prefetches);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_request_matches_stream", stat_request_matches_stream);
 };
 
 /// ============================================================================

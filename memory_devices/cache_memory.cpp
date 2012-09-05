@@ -229,8 +229,6 @@ void cache_memory_t::clock(uint32_t subcycle) {
         this->mshr_born_ordered[0][i]->is_answer == true &&
         this->mshr_born_ordered[0][i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
 
-            CACHE_DEBUG_PRINTF("\t Treat REQUEST this->mshr_born_ordered[%d] %s\n", i, this->mshr_born_ordered[0][i]->memory_to_string().c_str());
-            this->prefetcher.treat_prefetch(this->mshr_born_ordered[0][i]);
             this->mshr_born_ordered[0][i]->state = sinuca_engine.directory_controller->treat_cache_answer(this->get_cache_id(), this->mshr_born_ordered[0][i]);
             /// Could not treat, then restart born_cycle (change priority)
             if (this->mshr_born_ordered[0][i]->state == PACKAGE_STATE_UNTREATED) {
@@ -253,8 +251,13 @@ void cache_memory_t::clock(uint32_t subcycle) {
         this->mshr_born_ordered[0][i]->is_answer == false &&
         this->mshr_born_ordered[0][i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
 
+            /// PREFETCH
             CACHE_DEBUG_PRINTF("\t Treat REQUEST this->mshr_born_ordered[%d] %s\n", i, this->mshr_born_ordered[0][i]->memory_to_string().c_str());
-            this->prefetcher.treat_prefetch(this->mshr_born_ordered[0][i]);
+            if (this->mshr_born_ordered[0][i]->id_owner != this->get_id() &&
+            this->mshr_born_ordered[0][i]->memory_operation != MEMORY_OPERATION_COPYBACK) {
+                this->prefetcher.treat_prefetch(this->mshr_born_ordered[0][i]);
+            }
+
             this->mshr_born_ordered[0][i]->state = sinuca_engine.directory_controller->treat_cache_request(this->get_cache_id(), this->mshr_born_ordered[0][i]);
             /// Could not treat, then restart born_cycle (change priority)
             if (this->mshr_born_ordered[0][i]->state == PACKAGE_STATE_UNTREATED) {
@@ -296,9 +299,9 @@ void cache_memory_t::clock(uint32_t subcycle) {
         /// Not requested => Allocate the Resquest
         else {
             /// Identity information
-            memory_package->id_owner = get_id();
-            memory_package->id_src = get_id();
-            memory_package->id_dst = get_id();
+            memory_package->id_owner = this->get_id();
+            memory_package->id_src = this->get_id();
+            memory_package->id_dst = this->get_id();
             memory_package->package_untreated(0);
 
             int32_t slot = this->allocate_prefetch(memory_package);
@@ -508,7 +511,7 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
 /// ============================================================================
 void cache_memory_t::allocate_token_list() {
     CACHE_DEBUG_PRINTF("allocate_token_list()\n");
-    
+
     this->set_token_list(utils_t::template_allocate_array<container_token_t>(1));
 };
 
