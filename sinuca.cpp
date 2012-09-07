@@ -27,19 +27,19 @@ sinuca_engine_t sinuca_engine;
 //==============================================================================
 static void display_use() {
     char usage_str[100000];
-    sprintf(usage_str, " Simulates multi-core architectures with non-uniform cache architectures.\n\n");
+    strcpy(usage_str, "Simulates multi-core architectures with non-uniform cache architectures.\n\n");
 
-    sprintf(usage_str, "%s Usage: sinuca CONFIGURATION TRACE [OPTIONS] \n", usage_str);
-    sprintf(usage_str, "%s\t CONFIGURATION is a configuration file which specify the architectural parameters.\n", usage_str);
-    sprintf(usage_str, "%s\t TRACE is the base name for the three (static instruction, dynamic instruction, dynamic memory) trace files.\n", usage_str);
-    sprintf(usage_str, "%s\t Example: ./sinuca -conf CONFIGURATION -trace TRACE\n\n", usage_str);
+    strcat(usage_str, "Usage: sinuca CONFIGURATION TRACE [OPTIONS] \n");
+    strcat(usage_str, "\t CONFIGURATION is a configuration file which specify the architectural parameters.\n");
+    strcat(usage_str, "\t TRACE is the base name for the three (static instruction, dynamic instruction, dynamic memory) trace files.\n");
+    strcat(usage_str, "\t Example: ./sinuca -conf CONFIGURATION -trace TRACE\n\n");
 
-    sprintf(usage_str, "%s DESCRIPTION\n", usage_str);
-    sprintf(usage_str, "%s\t -conf       \t FILE          \t Configuration file which describes the architecture.\n", usage_str);
-    sprintf(usage_str, "%s\t -trace      \t FILE          \t Trace file name.\n", usage_str);
-    sprintf(usage_str, "%s\t -result     \t FILE          \t Output result file name. Default is \"stdout\".\n", usage_str);
-    sprintf(usage_str, "%s\t -warmup     \t INSTRUCTIONS  \t Warm-up instructions (opcodes) before start statistics. Default is 0.\n", usage_str);
-    sprintf(usage_str, "%s\t -compressed \t BOOL          \t Set between the compressed (true) and uncompressed (false) trace file. Default is true.\n", usage_str);
+    strcat(usage_str, " DESCRIPTION\n");
+    strcat(usage_str, "\t -conf       \t FILE          \t Configuration file which describes the architecture.\n");
+    strcat(usage_str, "\t -trace      \t FILE          \t Trace file name.\n");
+    strcat(usage_str, "\t -result     \t FILE          \t Output result file name. Default is \"stdout\".\n");
+    strcat(usage_str, "\t -warmup     \t INSTRUCTIONS  \t Warm-up instructions (opcodes) before start statistics. Default is 0.\n");
+    strcat(usage_str, "\t -compressed \t BOOL          \t Set between the compressed (true) and uncompressed (false) trace file. Default is true.\n");
 
     SINUCA_PRINTF("%s\n", usage_str);
     exit(EXIT_FAILURE);
@@ -167,16 +167,29 @@ int main(int argc, char **argv) {
         if ((sinuca_engine.get_global_cycle() % HEART_BEAT) == 0) {
             SINUCA_PRINTF("HEART-BEAT - CYCLE: %"PRIu64"\n", sinuca_engine.get_global_cycle() );
             char processor_report[1000];
+            char tmp_char[1000];
             for (uint32_t cpu = 0 ; cpu < sinuca_engine.get_processor_array_size() ; cpu++) {
                 uint64_t ActualLength = sinuca_engine.trace_reader->get_trace_opcode_counter(cpu);
                 uint64_t FullLength = sinuca_engine.trace_reader->get_trace_opcode_max(cpu);
-                sprintf(processor_report, "\t -- CPU %d", cpu);
-                sprintf(processor_report, "%s - Opcode[%10"PRIu64"/%10"PRIu64"]", processor_report, ActualLength, FullLength);
-                sprintf(processor_report, "%s - (%7.3lf%%)", processor_report, 100.0 * ((double)ActualLength / (double)FullLength));
-                sprintf(processor_report, "%s - %s", processor_report, utils_t::progress_pretty(ActualLength, FullLength).c_str());
-                sprintf(processor_report, "%s - IPC(%5.3lf)", processor_report, (double)ActualLength / (double)sinuca_engine.get_global_cycle() );
-                sprintf(processor_report, "%s - [%s]", processor_report, sinuca_engine.is_processor_trace_eof[cpu] ? "OFF-LINE" : "ON-LINE");
-                SINUCA_PRINTF("%s\n",processor_report);
+                sprintf(tmp_char, "\t -- CPU %d", cpu);
+                strcpy(processor_report, tmp_char);
+
+                sprintf(tmp_char, " - Opcode[%10"PRIu64"/%10"PRIu64"]", ActualLength, FullLength);
+                strcat(processor_report, tmp_char);
+
+                sprintf(tmp_char, " - (%7.3lf%%)", 100.0 * ((double)ActualLength / (double)FullLength));
+                strcat(processor_report, tmp_char);
+                
+                sprintf(tmp_char, " - %s", utils_t::progress_pretty(ActualLength, FullLength).c_str());
+                strcat(processor_report, tmp_char);
+                
+                sprintf(tmp_char, " - IPC(%5.3lf)", (double)ActualLength / (double)sinuca_engine.get_global_cycle() );
+                strcat(processor_report, tmp_char);
+                
+                sprintf(tmp_char, " - [%s]", sinuca_engine.is_processor_trace_eof[cpu] ? "OFF-LINE" : "ON-LINE");
+                strcat(processor_report, tmp_char);
+                
+                SINUCA_PRINTF("%s\n", processor_report);
             }
             SINUCA_PRINTF("\n");
         }

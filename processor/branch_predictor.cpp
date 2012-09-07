@@ -36,6 +36,7 @@ branch_predictor_t::branch_predictor_t() {
     this->btb_line_number = 0;
     this->btb_associativity = 0;
     this->btb_total_sets = 0;
+    this->btb_replacement_policy = REPLACEMENT_LRU;
 
     this->btb_index_bits_shift = 0;
     this->btb_index_bits_mask = 0;

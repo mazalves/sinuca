@@ -23,7 +23,7 @@
 //==============================================================================
 #include "./sinuca.hpp"
 
-#if defined(CONFIGURATOR_DEBUG)
+#ifdef CONFIGURATOR_DEBUG
     #define CONFIGURATOR_DEBUG_PRINTF(...) SINUCA_PRINTF(__VA_ARGS__);
 #else
     #define CONFIGURATOR_DEBUG_PRINTF(...)
@@ -126,15 +126,17 @@ void sinuca_engine_t::initialize() {
     }
 
     /// Print the Cache connections IF DEBUG MODE
-    std::string tree = "";
-    for (uint32_t i = 0; i < get_cache_memory_array_size(); i++) {
-        cache_memory_t *cache_memory = cache_memory_array[i];
-        container_ptr_cache_memory_t *lower_level_cache = cache_memory->get_lower_level_cache();
-        /// Found the Lowest Level Cache (Closest to the Main Memory)
-        if (lower_level_cache->size() == 0) {
-            tree += utils_t::connections_pretty(cache_memory, 0);
+    #ifdef CONFIGURATOR_DEBUG
+        std::string tree = "";
+        for (uint32_t i = 0; i < get_cache_memory_array_size(); i++) {
+            cache_memory_t *cache_memory = cache_memory_array[i];
+            container_ptr_cache_memory_t *lower_level_cache = cache_memory->get_lower_level_cache();
+            /// Found the Lowest Level Cache (Closest to the Main Memory)
+            if (lower_level_cache->empty()) {
+                tree += utils_t::connections_pretty(cache_memory, 0);
+            }
         }
-    }
+    #endif
     CONFIGURATOR_DEBUG_PRINTF("CONNECTIONS:\n%s\n", tree.c_str())
 
     this->directory_controller->allocate();
@@ -384,10 +386,10 @@ void sinuca_engine_t::initialize_processor() {
             }
         }
         catch(libconfig::SettingNotFoundException &nfex) {
-            ERROR_PRINTF(" PROCESSOR %d %s has required PARAMETER missing: \"%s\" \"%s\"\n", i, this->processor_array[i]->get_label(), processor_parameters.back(), branch_predictor_parameters.size() != 0 ? branch_predictor_parameters.back() : "");
+            ERROR_PRINTF(" PROCESSOR %d %s has required PARAMETER missing: \"%s\" \"%s\"\n", i, this->processor_array[i]->get_label(), processor_parameters.back(), branch_predictor_parameters.empty() ? "": branch_predictor_parameters.back());
         }
         catch(libconfig::SettingTypeException &tex) {
-            ERROR_PRINTF(" PROCESSOR %d %s has PARAMETER wrong type: \"%s\" \"%s\"\n", i, this->processor_array[i]->get_label(), processor_parameters.back(), branch_predictor_parameters.size() != 0 ? branch_predictor_parameters.back() : "");
+            ERROR_PRINTF(" PROCESSOR %d %s has PARAMETER wrong type: \"%s\" \"%s\"\n", i, this->processor_array[i]->get_label(), processor_parameters.back(), branch_predictor_parameters.empty() ? "": branch_predictor_parameters.back());
         }
     }
 };
@@ -659,11 +661,11 @@ void sinuca_engine_t::initialize_cache_memory() {
         }
         catch(libconfig::SettingNotFoundException &nfex) {
             /// Cache Memory Parameter
-            if (prefetcher_parameters.size() == 0 && line_usage_predictor_parameters.size() == 0) {
+            if (prefetcher_parameters.empty() && line_usage_predictor_parameters.empty()) {
                 ERROR_PRINTF(" CACHE_MEMORY %d %s has required PARAMETER missing: \"%s\"\n", i, this->cache_memory_array[i]->get_label(), cache_memory_parameters.back());
             }
             /// Prefetcher Parameter
-            else if (prefetcher_parameters.size() != 0 && line_usage_predictor_parameters.size() == 0) {
+            else if (prefetcher_parameters.empty() == false && line_usage_predictor_parameters.empty()) {
                 ERROR_PRINTF(" CACHE_MEMORY %d %s has required PARAMETER missing: \"%s\" \"%s\" \n", i, this->cache_memory_array[i]->get_label(), cache_memory_parameters.back(), prefetcher_parameters.back());
             }
             /// Line_Usage_Predictor Parameter
@@ -673,11 +675,11 @@ void sinuca_engine_t::initialize_cache_memory() {
         }
         catch(libconfig::SettingTypeException &tex) {
             /// Cache Memory Parameter
-            if (prefetcher_parameters.size() == 0 && line_usage_predictor_parameters.size() == 0) {
+            if (prefetcher_parameters.empty() && line_usage_predictor_parameters.empty()) {
                 ERROR_PRINTF(" CACHE_MEMORY %d %s has required PARAMETER wrong type: \"%s\"\n", i, this->cache_memory_array[i]->get_label(), cache_memory_parameters.back());
             }
             /// Prefetcher Parameter
-            else if (prefetcher_parameters.size() != 0 && line_usage_predictor_parameters.size() == 0) {
+            else if (prefetcher_parameters.empty() == false && line_usage_predictor_parameters.empty()) {
                 ERROR_PRINTF(" CACHE_MEMORY %d %s has required PARAMETER wrong type: \"%s\" \"%s\" \n", i, this->cache_memory_array[i]->get_label(), cache_memory_parameters.back(), prefetcher_parameters.back());
             }
             /// Line_Usage_Predictor Parameter

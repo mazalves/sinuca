@@ -120,8 +120,15 @@ bool directory_controller_line_t::check_age(container_ptr_directory_controller_l
 // directory_controller_t
 /// ============================================================================
 directory_controller_t::directory_controller_t() {
+    this->set_type_component(COMPONENT_DIRECTORY_CONTROLLER);
+
+    this->coherence_protocol_type = COHERENCE_PROTOCOL_MOESI;
+    this->inclusiveness_type = INCLUSIVENESS_NON_INCLUSIVE;
+
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(sinuca_engine.get_global_line_size()), "Wrong line_size.\n");
     this->not_offset_bits_mask = ~utils_t::fill_bit(0, utils_t::get_power_of_two(sinuca_engine.get_global_line_size()) - 1);
+
+    this->llc_caches = NULL;
     this->directory_lines = new container_ptr_directory_controller_line_t;
 };
 
@@ -148,7 +155,7 @@ void directory_controller_t::allocate() {
         cache_memory_t *cache_memory = sinuca_engine.cache_memory_array[i];
         container_ptr_cache_memory_t *lower_level_cache = cache_memory->get_lower_level_cache();
         /// Found LLC
-        if (lower_level_cache->size() == 0) {
+        if (lower_level_cache->empty()) {
             this->llc_caches->push_back(cache_memory);
         }
     }
@@ -474,7 +481,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                                 /// If this is LLC => INVALIDATE Higher levels
                                 case INCLUSIVENESS_INCLUSIVE_LLC: {
                                     container_ptr_cache_memory_t *lower_level_cache = cache->get_lower_level_cache();
-                                    if (lower_level_cache->size() == 0) {
+                                    if (lower_level_cache->empty()) {
                                         // Should copyback only valid/active subblocks
                                         /// Check if some HIGHER LEVEL has the cache line Modified
                                         cache->change_status(cache_line, this->find_copyback_higher_levels(cache, cache_line->tag));
@@ -519,7 +526,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                             /// If this is LLC => INVALIDATE Higher levels
                             case INCLUSIVENESS_INCLUSIVE_LLC: {
                                 container_ptr_cache_memory_t *lower_level_cache = cache->get_lower_level_cache();
-                                if (lower_level_cache->size() == 0) {
+                                if (lower_level_cache->empty()) {
                                     this->coherence_invalidate_higher_levels(cache, package->memory_address);
                                 }
                             }
@@ -643,7 +650,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                             /// If this is LLC => INVALIDATE Higher levels
                             case INCLUSIVENESS_INCLUSIVE_LLC: {
                                 container_ptr_cache_memory_t *lower_level_cache = cache->get_lower_level_cache();
-                                if (lower_level_cache->size() == 0) {
+                                if (lower_level_cache->empty()) {
                                     // Should copyback only valid/active subblocks
                                     /// Check if some HIGHER LEVEL has the cache line Modified
                                     cache->change_status(cache_line, this->find_copyback_higher_levels(cache, cache_line->tag));
@@ -688,7 +695,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                         /// If this is LLC => INVALIDATE Higher levels
                         case INCLUSIVENESS_INCLUSIVE_LLC: {
                             container_ptr_cache_memory_t *lower_level_cache = cache->get_lower_level_cache();
-                            if (lower_level_cache->size() == 0) {
+                            if (lower_level_cache->empty()) {
                                 this->coherence_invalidate_higher_levels(cache, package->memory_address);
                             }
                         }
@@ -878,7 +885,7 @@ package_state_t directory_controller_t::treat_cache_request_sent(uint32_t cache_
 
             /// Check if request sent to main_memory (memory_controller)
             container_ptr_cache_memory_t *lower_level_cache = cache->get_lower_level_cache();
-            if (lower_level_cache->size() == 0) {
+            if (lower_level_cache->empty()) {
 
                 directory_controller_line_t *directory_line = NULL;
                 int32_t directory_line_number = POSITION_FAIL;
@@ -1011,7 +1018,7 @@ uint32_t directory_controller_t::find_next_obj_id(cache_memory_t *cache_memory, 
             return lower_cache->get_id();
         }
     }
-    ERROR_ASSERT_PRINTF(lower_level_cache->size() == 0, "Could not find a valid lower_level_cache but size != 0.\n")
+    ERROR_ASSERT_PRINTF(lower_level_cache->empty(), "Could not find a valid lower_level_cache but size != 0.\n")
     /// Find Next Main Memory
     for (uint32_t i = 0; i < sinuca_engine.memory_controller_array_size; i++) {
         if (sinuca_engine.memory_controller_array[i]->get_controller(memory_address) == sinuca_engine.memory_controller_array[i]->get_controller_number()) {
@@ -1131,7 +1138,7 @@ protocol_status_t directory_controller_t::find_cache_line_higher_levels(cache_me
     /// ================================================================================
     /// IF this is the LAST LEVEL CACHE && Want to inspect others LLC
     container_ptr_cache_memory_t *lower_level_cache = cache_memory->get_lower_level_cache();
-    if (lower_level_cache->size() == 0 && check_llc == true) {
+    if (lower_level_cache->empty() && check_llc == true) {
         /// Iterate over all LLC
         for (uint32_t i = 0; i < this->llc_caches->size(); i++) {
             cache_memory_t *llc = this->llc_caches[0][i];

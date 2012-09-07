@@ -47,6 +47,10 @@ processor_t::processor_t() {
     this->send_instruction_ready_cycle = 0;
     this->send_data_ready_cycle = 0;
 
+    /// Branch Prediction Control Variables
+    this->branch_solve_stage = PROCESSOR_STAGE_FETCH;
+    this->branch_opcode_number = 0;
+
     /// Stages Control Variables
     this->trace_next_opcode.package_clean();
     this->fetch_pc = 0;                     /// Last PC requested to IC
@@ -120,8 +124,17 @@ processor_t::processor_t() {
     this->number_fu_mem_store = 0;
     this->latency_fu_mem_store = 0;
 
+    this->recv_ready_cycle = NULL;
+
     this->read_buffer_size = 0;
+    this->read_buffer = NULL;
     this->write_buffer_size = 0;
+    this->write_buffer = NULL;
+
+    this->register_alias_table_size = 0;
+    this->register_alias_table = NULL;
+
+    this->memory_map_table = NULL;
 
     this->branch_per_fetch = 0;
 
@@ -183,8 +196,7 @@ void processor_t::allocate() {
 
     /// Propagate the allocate()
     this->branch_predictor.allocate();
-    this->branch_solve_stage = PROCESSOR_STAGE_FETCH;
-    this->branch_opcode_number = 0;
+
 
     ERROR_ASSERT_PRINTF(this->branch_per_fetch > 0, "Maximum number of branches per fetch must be greater than 0.\n")
 
@@ -212,7 +224,6 @@ void processor_t::allocate() {
     sprintf(label, "Branch_Predictor_%s", this->get_label());
     this->branch_predictor.set_label(label);
     this->branch_predictor.allocate();
-
 
     #ifdef PROCESSOR_DEBUG
         this->print_configuration();

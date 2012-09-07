@@ -47,6 +47,11 @@ routing_table_element_t::~routing_table_element_t(){
 /// interconnection_controller_t
 /// ============================================================================
 interconnection_controller_t::interconnection_controller_t() {
+    this->routing_algorithm = ROUTING_ALGORITHM_FLOYD_WARSHALL;
+
+    this->predecessor = NULL;
+    this->adjacency_matrix = NULL;
+    this->route_matrix = NULL;
 };
 
 /// ============================================================================
@@ -54,7 +59,7 @@ interconnection_controller_t::~interconnection_controller_t() {
     // De-Allocate memory to prevent memory leak
     utils_t::template_delete_matrix<routing_table_element_t>(route_matrix, sinuca_engine.get_interconnection_interface_array_size());
     utils_t::template_delete_matrix<edge_t>(adjacency_matrix, sinuca_engine.get_interconnection_interface_array_size());
-    utils_t::template_delete_matrix<interconnection_interface_t*>(pred, sinuca_engine.get_interconnection_interface_array_size());
+    utils_t::template_delete_matrix<interconnection_interface_t*>(predecessor, sinuca_engine.get_interconnection_interface_array_size());
 };
 
 /// ============================================================================
@@ -205,14 +210,14 @@ void interconnection_controller_t::routing_algorithm_floyd_warshall() {
     INTERCONNECTION_CTRL_DEBUG_PRINTF("routing_algorithm_floyd_warshall()\n");
     uint32_t i, j, k;
 
-    this->pred = utils_t::template_allocate_initialize_matrix<interconnection_interface_t*>(sinuca_engine.get_interconnection_interface_array_size(), sinuca_engine.get_interconnection_interface_array_size(), NULL);
+    this->predecessor = utils_t::template_allocate_initialize_matrix<interconnection_interface_t*>(sinuca_engine.get_interconnection_interface_array_size(), sinuca_engine.get_interconnection_interface_array_size(), NULL);
     for (i = 0; i < sinuca_engine.get_interconnection_interface_array_size(); i++) {
         for (j = 0; j < sinuca_engine.get_interconnection_interface_array_size(); j++) {
             if (adjacency_matrix[i][j].weight != INFINITE && i != j) {
-                pred[i][j] = sinuca_engine.interconnection_interface_array[i];
+                predecessor[i][j] = sinuca_engine.interconnection_interface_array[i];
             }
             else {
-                pred[i][j] = NULL;
+                predecessor[i][j] = NULL;
             }
         }
     }
@@ -222,7 +227,7 @@ void interconnection_controller_t::routing_algorithm_floyd_warshall() {
             for (j = 0; j < sinuca_engine.get_interconnection_interface_array_size(); j++) {
                 if (adjacency_matrix[i][j].weight > adjacency_matrix[i][k].weight + adjacency_matrix[k][j].weight) {
                     adjacency_matrix[i][j].weight = adjacency_matrix[i][k].weight + adjacency_matrix[k][j].weight;
-                    pred[i][j] = pred[k][j];
+                    predecessor[i][j] = predecessor[k][j];
                 }
             }
         }
@@ -274,10 +279,10 @@ void interconnection_controller_t::create_route(interconnection_interface_t *src
 
     do {
         count++;
-        if (pred[src->get_id()][dst->get_id()] == src) {
+        if (predecessor[src->get_id()][dst->get_id()] == src) {
             found = 1;
         }
-        dst = pred[src->get_id()][dst->get_id()];
+        dst = predecessor[src->get_id()][dst->get_id()];
     } while (!found);
 
     INTERCONNECTION_CTRL_DEBUG_PRINTF("\tHops=%d\n", count);
@@ -293,11 +298,11 @@ void interconnection_controller_t::create_route(interconnection_interface_t *src
 
     do {
         count--;
-        if (pred[src->get_id()][dst->get_id()] == src) {
+        if (predecessor[src->get_id()][dst->get_id()] == src) {
             found = 1;
         }
             old_dst = dst;
-            dst = pred[src->get_id()][dst->get_id()];
+            dst = predecessor[src->get_id()][dst->get_id()];
 
 
         INTERCONNECTION_CTRL_DEBUG_PRINTF("\t\t%s[%u]<->%s[%u]\n", old_dst->get_label(), adjacency_matrix[old_dst->get_id()][dst->get_id()].src_port, dst->get_label(),  adjacency_matrix[old_dst->get_id()][dst->get_id()].dst_port);

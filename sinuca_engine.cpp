@@ -24,6 +24,18 @@
 #include "./sinuca.hpp"
 //==============================================================================
 sinuca_engine_t::sinuca_engine_t() {
+    this->arg_configuration_file_name = NULL;
+    this->arg_trace_file_name = NULL;
+    this->arg_result_file_name = NULL;
+    this->arg_warmup_instructions = 0;
+    this->arg_is_compressed = true;
+
+    this->interconnection_interface_array = NULL;
+    this->processor_array = NULL;
+    this->cache_memory_array = NULL;
+    this->memory_controller_array = NULL;
+    this->interconnection_router_array = NULL;
+
     this->stat_vm_start = 0.0;
     this->stat_rss_start = 0.0;
 
@@ -50,11 +62,15 @@ sinuca_engine_t::sinuca_engine_t() {
     this->global_line_size = 0;
 
     this->is_simulation_allocated = false;
+    this->is_processor_trace_eof = NULL;
     this->is_simulation_eof = false;
     this->is_runtime_debug = true;
     this->is_warm_up = false;
 
     this->trace_reader = new trace_reader_t;
+    this->directory_controller = NULL;
+    this->interconnection_controller = NULL;
+
     utils_t::process_mem_usage(stat_vm_start, stat_rss_start);
 };
 

@@ -32,6 +32,31 @@
 /// ============================================================================
 cache_memory_t::cache_memory_t() {
     this->set_type_component(COMPONENT_CACHE_MEMORY);
+
+    this->cache_id = 0;
+    this->bank_number = 0;
+    this->total_banks = 0;
+    this->address_mask_type = CACHE_MASK_TAG_INDEX_OFFSET;
+
+    this->hierarchy_level = 0;
+    this->line_size = 0;
+    this->line_number = 0;
+    this->associativity = 0;
+    this->replacement_policy = REPLACEMENT_LRU;
+
+    this->penalty_read = 0;
+    this->penalty_write = 0;
+
+    this->mshr_buffer_request_reserved_size = 0;
+    this->mshr_buffer_copyback_reserved_size = 0;
+    this->mshr_buffer_prefetch_reserved_size = 0;
+
+    this->total_sets = 0;
+    this->sets = NULL;
+
+    this->mshr_buffer = NULL;  /// Buffer of Missed Requests
+    this->mshr_buffer_size = 0;
+
     this->lower_level_cache = new container_ptr_cache_memory_t;
     this->higher_level_cache = new container_ptr_cache_memory_t;
 
@@ -422,7 +447,6 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
     ERROR_ASSERT_PRINTF(package->id_dst == this->get_id() && package->hop_count == POSITION_FAIL, "Received some package for a different id_dst.\n%s\n", package->memory_to_string().c_str());
     ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Received a wrong input_port\n%s\n", package->memory_to_string().c_str());
 
-    int32_t slot = POSITION_FAIL;
     /// NEW ANSWER
     if (package->is_answer) {
         if (this->recv_ans_ready_cycle <= sinuca_engine.get_global_cycle()) {
@@ -450,6 +474,7 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
     }
     /// NEW REQUEST
     else {
+        int32_t slot = POSITION_FAIL;
         switch (package->memory_operation) {
             case MEMORY_OPERATION_READ:
             case MEMORY_OPERATION_INST:

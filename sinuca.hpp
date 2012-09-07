@@ -1,25 +1,25 @@
 /// ============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
+///
+/// Copyright (C) 2010, 2011, 2012
+/// Marco Antonio Zanata Alves
+///
+/// GPPD - Parallel and Distributed Processing Group
+/// Universidade Federal do Rio Grande do Sul
+///
+/// This program is free software; you can redistribute it and/or modify it
+/// under the terms of the GNU General Public License as published by the
+/// Free Software Foundation; either version 2 of the License, or (at your
+/// option) any later version.
+///
+/// This program is distributed in the hope that it will be useful, but
+/// WITHOUT ANY WARRANTY; without even the implied warranty of
+/// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+/// General Public License for more details.
+///
+/// You should have received a copy of the GNU General Public License along
+/// with this program; if not, write to the Free Software Foundation, Inc.,
+/// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+///
 /// ============================================================================
 /// Main header file: sinuca.h
 /// This is the main header file, it contains all the prototypes and
@@ -52,7 +52,6 @@
 #include <deque>
 #include <vector>
 #include <string>
-
 
 /// Embedded Libraries
 #include "./libs/include/zlib.h"
@@ -255,7 +254,7 @@ class trace_reader_t {
         container_static_dictionary_t static_dictionary;
         uint32_t *actual_bbl;
         uint32_t *actual_bbl_opcode;
-        bool compressed_trace_file_on;
+        bool is_compressed_trace_file;
 
     public:
         /// ====================================================================
@@ -836,7 +835,7 @@ class interconnection_controller_t : public interconnection_interface_t {
         /// Set by this->allocate()
         /// ====================================================================
         /// Routing table sized[max_id][max_id] of white packages, with *hops and hop_count only;
-        interconnection_interface_t ***pred;
+        interconnection_interface_t ***predecessor;
         edge_t **adjacency_matrix;
         routing_table_element_t **route_matrix;
 
@@ -1015,6 +1014,7 @@ class branch_target_buffer_set_t {
         /// Methods
         /// ====================================================================
         branch_target_buffer_set_t() {
+            this->ways = NULL;
         };
         ~branch_target_buffer_set_t() {
             if (this->ways) delete [] ways;
@@ -1990,6 +1990,7 @@ class DSBP_metadata_line_t {
 
         DSBP_metadata_line_t() {
             this->valid_sub_blocks = NULL;
+            this->real_usage_counter = NULL;
             this->usage_counter = NULL;
             this->overflow = NULL;
             this->learn_mode = 0;
@@ -2257,6 +2258,7 @@ class cache_set_t {
         /// Methods
         /// ====================================================================
         cache_set_t() {
+            this->ways = NULL;
         };
         ~cache_set_t() {
             /// De-Allocate memory to prevent memory leak
@@ -2561,6 +2563,16 @@ class memory_channel_t {
         /// Methods
         /// ====================================================================
         memory_channel_t() {
+            this->read_buffer = NULL;
+            this->write_buffer = NULL;
+
+            this->row_buffer = NULL;
+            this->cas_ready_cycle = NULL;
+
+            this->read_buffer_position_used = NULL;
+            this->write_buffer_position_used = NULL;
+
+            this->drain_write = NULL;
         };
         ~memory_channel_t() {
             /// De-Allocate memory to prevent memory leak

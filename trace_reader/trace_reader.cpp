@@ -39,6 +39,15 @@ trace_reader_t::trace_reader_t() {
     this->gzMemoryTraceFile = NULL;
 
     this->trace_opcode_total = 0;
+
+    this->insideBBL = NULL;
+    this->trace_opcode_counter = NULL;
+    this->trace_opcode_max = NULL;
+
+    this->actual_bbl = NULL;
+    this->actual_bbl_opcode = NULL;
+
+    this->is_compressed_trace_file = true;
 };
 
 // =============================================================================
@@ -63,7 +72,7 @@ trace_reader_t::~trace_reader_t() {
 // =============================================================================
 void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t ncpus) {
     uint32_t i;
-    compressed_trace_file_on = is_compact;
+    this->is_compressed_trace_file = is_compact;
     // =======================================================================
     // Static Trace File
     // =======================================================================
@@ -72,7 +81,7 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t ncpus) {
 
     TRACE_READER_DEBUG_PRINTF("Inserted Output File Name = %s\n", in_file);
 
-    if (compressed_trace_file_on) {
+    if (this->is_compressed_trace_file) {
         sprintf(stat_file_name , "%s.tid0.stat.out.gz", in_file);
         gzStaticTraceFile = gzopen(stat_file_name, "ro");   /// Open the .gz file
         ERROR_ASSERT_PRINTF(gzStaticTraceFile != NULL, "Could not open the file.\n");
@@ -93,7 +102,7 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t ncpus) {
     // =======================================================================
     char dyn_file_name[500];
 
-    if (compressed_trace_file_on) {
+    if (this->is_compressed_trace_file) {
         gzDynamicTraceFile = new gzFile[ncpus];
         for (i = 0; i < ncpus; i++) {
             dyn_file_name[0] = '\0';
@@ -130,7 +139,7 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t ncpus) {
     // =======================================================================
     char mem_file_name[500];
 
-    if (compressed_trace_file_on) {
+    if (this->is_compressed_trace_file) {
         gzMemoryTraceFile = new gzFile[ncpus];
         for (i = 0; i < ncpus; i++) {
             mem_file_name[0] = '\0';
@@ -163,13 +172,14 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t ncpus) {
     }
 
     this->insideBBL = utils_t::template_allocate_initialize_array<bool>(ncpus, false);
-    this->actual_bbl = utils_t::template_allocate_initialize_array<uint32_t>(ncpus, 0);
-    this->actual_bbl_opcode = utils_t::template_allocate_initialize_array<uint32_t>(ncpus, 0);
     this->trace_opcode_counter = utils_t::template_allocate_initialize_array<uint64_t>(ncpus, 1);
     this->trace_opcode_max = utils_t::template_allocate_array<uint64_t>(ncpus);
     for (i = 0; i < ncpus; i++) {
         this->trace_opcode_max[i] = this->trace_size(i);
     }
+
+    this->actual_bbl = utils_t::template_allocate_initialize_array<uint32_t>(ncpus, 0);
+    this->actual_bbl_opcode = utils_t::template_allocate_initialize_array<uint32_t>(ncpus, 0);
 };
 
 // =============================================================================
@@ -181,7 +191,7 @@ uint64_t trace_reader_t::trace_size(uint32_t cpuid) {
     bool trace_status = OK;
 
     while (trace_status) {
-        if (compressed_trace_file_on) {
+        if (is_compressed_trace_file) {
             if (gzeof(this->gzDynamicTraceFile[cpuid])) {
                 trace_status = FAIL;
             }
@@ -206,7 +216,7 @@ uint64_t trace_reader_t::trace_size(uint32_t cpuid) {
     }
 
     /// Reset the Dynamic / Memory file positions
-    if (compressed_trace_file_on) {
+    if (is_compressed_trace_file) {
         gzseek(this->gzDynamicTraceFile[cpuid], 0, SEEK_SET);
         gzclearerr(this->gzDynamicTraceFile[cpuid]);
 
@@ -240,7 +250,7 @@ uint32_t trace_reader_t::trace_next_dynamic(uint32_t cpuid, sync_t *new_sync) {
     sync_t &sync_found = *new_sync;
 
     while (!valid_dynamic) {
-        if (compressed_trace_file_on) {
+        if (is_compressed_trace_file) {
             if (gzeof(this->gzDynamicTraceFile[cpuid])) {
                 sinuca_engine.set_is_processor_trace_eof(cpuid);
                 return FAIL;
@@ -286,7 +296,7 @@ std::string trace_reader_t::trace_next_memory(uint32_t cpuid) {
     bool valid_memory = false;
 
     while (!valid_memory) {
-        if (compressed_trace_file_on) {
+        if (is_compressed_trace_file) {
             ERROR_ASSERT_PRINTF(!gzeof(this->gzDynamicTraceFile[cpuid]), "MemoryTraceFile EOF- cpu id %d\n", cpuid);
             gzgetline(this->gzMemoryTraceFile[cpuid], line_memory);
         }
@@ -304,7 +314,7 @@ std::string trace_reader_t::trace_next_memory(uint32_t cpuid) {
 
 // =============================================================================
 bool trace_reader_t::trace_fetch(uint32_t cpuid, opcode_package_t *m) {
-    std::string line_dynamic, line_memory;
+    std::string line_memory;
     opcode_package_t NewOpcode;
     sync_t sync_found = SYNC_FREE;
 
@@ -409,7 +419,7 @@ void trace_reader_t::genenate_static_dictionary() {
     NewOpcode.package_clean();
     std::string line_static;                    /// Actual String Line
 
-    if (compressed_trace_file_on) {
+    if (is_compressed_trace_file) {
         gzclearerr(this->gzStaticTraceFile);
         gzseek(this->gzStaticTraceFile, 0, SEEK_SET);  /// Go to the Begin of the File
         file_eof = gzeof(this->gzStaticTraceFile);      /// Check is file not EOF
@@ -423,7 +433,7 @@ void trace_reader_t::genenate_static_dictionary() {
     }
 
     while (!file_eof) {
-        if (compressed_trace_file_on) {
+        if (is_compressed_trace_file) {
             gzgetline(this->gzStaticTraceFile, line_static);
             file_eof = gzeof(this->gzStaticTraceFile);
         }
@@ -468,7 +478,7 @@ void trace_reader_t::check_static_dictionary() {
     std::string line_static;                  /// Actual String Line
     line_static.clear();
 
-    if (compressed_trace_file_on) {
+    if (is_compressed_trace_file) {
         gzclearerr(this->gzStaticTraceFile);
         gzseek(this->gzStaticTraceFile, 0, SEEK_SET);   /// Go to the Begin of the File
         file_eof = gzeof(this->gzStaticTraceFile);      /// Check is file not EOF
@@ -492,7 +502,7 @@ void trace_reader_t::check_static_dictionary() {
             DicOpcode = this->static_dictionary[i][j];
             valid = false;
             while (!valid) {
-                if (compressed_trace_file_on) {
+                if (is_compressed_trace_file) {
                     gzgetline(this->gzStaticTraceFile, line_static);    /// Get Line
                     file_eof = gzeof(this->gzStaticTraceFile);
                 }
@@ -512,7 +522,7 @@ void trace_reader_t::check_static_dictionary() {
         }
     }
 
-    if (compressed_trace_file_on) {
+    if (is_compressed_trace_file) {
         file_eof = gzeof(this->gzStaticTraceFile);
     }
     else {
@@ -522,7 +532,7 @@ void trace_reader_t::check_static_dictionary() {
     valid = false;
     while (!valid) {
         if (file_eof) {
-            if (compressed_trace_file_on) {
+            if (is_compressed_trace_file) {
                 gzgetline(this->gzStaticTraceFile, line_static);    /// Get Line
                 file_eof = gzeof(this->gzStaticTraceFile);
             }

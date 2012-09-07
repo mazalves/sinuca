@@ -32,10 +32,21 @@
 
 //==============================================================================
 interconnection_router_t::interconnection_router_t() {
+    this->set_type_component(COMPONENT_INTERCONNECTION_ROUTER);
+
+    this->selection_policy = SELECTION_ROUND_ROBIN;
+
+    this->input_buffer = NULL;
+    this->input_buffer_position_start = NULL;
+    this->input_buffer_position_end = NULL;
+    this->input_buffer_position_used = NULL;
+
     this->send_ready_cycle = 0;
+    this->recv_ready_cycle = NULL;
 
     this->last_selected = 0;
-    this->set_type_component(COMPONENT_INTERCONNECTION_ROUTER);
+
+    this->stat_transmitted_package_size = NULL;
 };
 
 // =============================================================================
@@ -60,7 +71,7 @@ void interconnection_router_t::allocate() {
     this->input_buffer_position_end = utils_t::template_allocate_initialize_array<uint32_t>(this->get_max_ports(), 0);
     this->input_buffer_position_used = utils_t::template_allocate_initialize_array<uint32_t>(this->get_max_ports(), 0);
 
-    this->stat_transmitted_package_size = utils_t::template_allocate_initialize_array<uint64_t>(sinuca_engine.get_global_line_size(), 0);
+    this->stat_transmitted_package_size = utils_t::template_allocate_initialize_array<uint64_t>(sinuca_engine.get_global_line_size() + 1, 0);
 };
 
 //==============================================================================

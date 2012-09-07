@@ -52,6 +52,13 @@ line_usage_predictor_t::line_usage_predictor_t() {
     this->DSBP_PHT_line_number = 0;
     this->DSBP_PHT_associativity = 0;
     this->DSBP_PHT_total_sets = 0;
+    this->DSBP_PHT_replacement_policy = REPLACEMENT_LRU;
+
+    /// STATISTICS
+    this->stat_accessed_sub_block = NULL;
+    this->stat_active_sub_block_per_access = NULL;
+    this->stat_active_sub_block_per_cycle = NULL;
+    this->stat_written_sub_blocks_per_line = NULL;
 };
 
 /// ============================================================================
@@ -59,6 +66,11 @@ line_usage_predictor_t::~line_usage_predictor_t() {
     /// De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<DSBP_metadata_sets_t>(DSBP_sets);
     utils_t::template_delete_array<DSBP_PHT_sets_t>(DSBP_PHT_sets);
+
+    utils_t::template_delete_array<uint64_t>(stat_accessed_sub_block);
+    utils_t::template_delete_array<uint64_t>(stat_active_sub_block_per_access);
+    utils_t::template_delete_array<uint64_t>(stat_active_sub_block_per_cycle);            
+    utils_t::template_delete_array<uint64_t>(stat_written_sub_blocks_per_line);            
 };
 
 /// ============================================================================
@@ -219,7 +231,7 @@ void line_usage_predictor_t::remove_token_list(memory_package_t *package) {
 void line_usage_predictor_t::print_structures() {
 };
 
-// =============================================================================
+/// ============================================================================
 void line_usage_predictor_t::panic() {
     this->print_structures();
 };
@@ -231,9 +243,9 @@ void line_usage_predictor_t::periodic_check(){
     #endif
 };
 
-// =============================================================================
+/// ============================================================================
 // STATISTICS
-// =============================================================================
+/// ============================================================================
 void line_usage_predictor_t::reset_statistics() {
     this->stat_DSBP_line_sub_block_disable_always = 0;
     this->stat_DSBP_line_sub_block_disable_turnoff = 0;
@@ -284,7 +296,7 @@ void line_usage_predictor_t::reset_statistics() {
     this->stat_writes_per_sub_blocks_bigger = 0;
 };
 
-// =============================================================================
+/// ============================================================================
 void line_usage_predictor_t::print_statistics() {
     char title[100] = "";
     sprintf(title, "Statistics of %s", this->get_label());
@@ -294,15 +306,11 @@ void line_usage_predictor_t::print_statistics() {
 
     uint64_t stat_average_dead_cycles = 0;
     for (uint32_t index = 0; index < this->get_DSBP_total_sets(); index++) {
-        // ~ uint64_t stat_average_dead_cycles_per_way = 0;
         for (uint32_t way = 0; way < this->get_DSBP_associativity(); way++) {
             this->line_eviction(index, way);
-            // ~ stat_average_dead_cycles_per_way += this->DSBP_sets[index].ways[way].stat_total_dead_cycles / sinuca_engine.get_global_line_size();
             stat_average_dead_cycles += this->DSBP_sets[index].ways[way].stat_total_dead_cycles / sinuca_engine.get_global_line_size();
         }
-        // ~ stat_average_dead_cycles += stat_average_dead_cycles_per_way / this->get_DSBP_associativity();
     }
-    // ~ stat_average_dead_cycles /= this->get_DSBP_total_sets();
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_average_dead_cycles", stat_average_dead_cycles);
@@ -379,7 +387,7 @@ void line_usage_predictor_t::print_statistics() {
     }
 };
 
-// =============================================================================
+/// ============================================================================
 void line_usage_predictor_t::print_configuration() {
     char title[100] = "";
     sprintf(title, "Configuration of %s", this->get_label());
@@ -414,7 +422,7 @@ void line_usage_predictor_t::print_configuration() {
 };
 
 
-// =============================================================================
+/// ============================================================================
 // Input:   base_address, size
 // Output:  start_sub_block, end_Sub_block
 void line_usage_predictor_t::get_start_end_sub_blocks(uint64_t base_address, uint32_t size, uint32_t& sub_block_ini, uint32_t& sub_block_end) {
@@ -430,7 +438,7 @@ void line_usage_predictor_t::get_start_end_sub_blocks(uint64_t base_address, uin
                                         uint32_t((address_size % this->DSBP_sub_block_size) != 0) ) * this->DSBP_sub_block_size;
 }
 
-// =============================================================================
+/// ============================================================================
 void line_usage_predictor_t::fill_package_sub_blocks(memory_package_t *package) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("fill_package_sub_blocks() package:%s\n", package->memory_to_string().c_str())
 
@@ -469,7 +477,7 @@ void line_usage_predictor_t::fill_package_sub_blocks(memory_package_t *package) 
     }
 };
 
-// =============================================================================
+/// ============================================================================
 bool line_usage_predictor_t::check_sub_block_is_hit(memory_package_t *package, uint64_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_sub_block_is_hit() package:%s\n", package->memory_to_string().c_str())
 
@@ -512,9 +520,9 @@ bool line_usage_predictor_t::check_sub_block_is_hit(memory_package_t *package, u
     return true;
 };
 
-// =============================================================================
+/// ============================================================================
 // Mechanism Operations
-// =============================================================================
+/// ============================================================================
 void line_usage_predictor_t::line_hit(memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_hit() package:%s\n", package->memory_to_string().c_str())
 
@@ -658,7 +666,7 @@ void line_usage_predictor_t::line_hit(memory_package_t *package, uint32_t index,
 };
 
 
-// =============================================================================
+/// ============================================================================
 void line_usage_predictor_t::compute_static_energy(uint32_t index, uint32_t way) {
 
     // Statistics for Static Energy
@@ -726,7 +734,7 @@ void line_usage_predictor_t::compute_static_energy(uint32_t index, uint32_t way)
     this->stat_active_sub_block_per_cycle[0] += time_of_life;
 };
 
-// =============================================================================
+/// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_t::line_miss(memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->memory_to_string().c_str())
@@ -892,7 +900,7 @@ void line_usage_predictor_t::line_miss(memory_package_t *package, uint32_t index
 };
 
 
-// =============================================================================
+/// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_t::sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("sub_block_miss() package:%s\n", package->memory_to_string().c_str())
@@ -1012,7 +1020,7 @@ void line_usage_predictor_t::sub_block_miss(memory_package_t *package, uint32_t 
     }
 };
 
-// =============================================================================
+/// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, cache_memory_t *cache_memory, cache_line_t *cache_line, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->memory_to_string().c_str())
@@ -1023,8 +1031,8 @@ void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, cac
             ERROR_ASSERT_PRINTF(index < this->DSBP_total_sets, "Wrong index %d > total_sets %d", index, this->DSBP_total_sets);
             ERROR_ASSERT_PRINTF(way < this->DSBP_associativity, "Wrong way %d > associativity %d", way, this->DSBP_associativity);
             ERROR_ASSERT_PRINTF(cache_memory != NULL && cache_line != NULL, "Wrong Cache or Cache Line");
-
-// Comment here
+/*
+// Comment starts here
             // Installing the CopyBack in SAME tagged line
             if (cache_memory->cmp_tag_index_bank(cache_line->tag, package->memory_address)) {
                 // Clean the metadata entry
@@ -1058,8 +1066,8 @@ void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, cac
             }
             // Installing the CopyBack in DIFFERENT tagged line
             else {
-// Comment here
-
+// Comment end here
+*/
                 this->line_eviction(index, way);
                 // Clean the metadata entry
                 this->DSBP_sets[index].ways[way].learn_mode = true;
@@ -1085,9 +1093,11 @@ void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, cac
                         this->DSBP_sets[index].ways[way].written_sub_blocks[i]++;
                     }
                 }
-// Comment here
+/*
+// Comment starts here
             }
-// Comment here
+// Comment end here
+*/
             // Modify the package->sub_blocks (next level request)
             package->memory_size = 1;
         }
@@ -1130,7 +1140,7 @@ void line_usage_predictor_t::line_insert_copyback(memory_package_t *package, cac
 };
 
 
-// =============================================================================
+/// ============================================================================
 void line_usage_predictor_t::line_get_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->memory_to_string().c_str())
 
@@ -1169,7 +1179,7 @@ void line_usage_predictor_t::line_get_copyback(memory_package_t *package, uint32
     }
 };
 
-// =============================================================================
+/// ============================================================================
 void line_usage_predictor_t::line_eviction(uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_eviction()\n")
 
@@ -1349,7 +1359,7 @@ void line_usage_predictor_t::line_eviction(uint32_t index, uint32_t way) {
 };
 
 
-// =============================================================================
+/// ============================================================================
 std::string line_usage_predictor_t::DSBP_metadata_line_to_string(DSBP_metadata_line_t *DSBP_metadata_line) {
     std::string PackageString;
     PackageString = "";
@@ -1399,9 +1409,9 @@ std::string line_usage_predictor_t::DSBP_metadata_line_to_string(DSBP_metadata_l
 
 
 
-// =============================================================================
+/// ============================================================================
 // DSBP - PHT
-// =============================================================================
+/// ============================================================================
 DSBP_PHT_line_t* line_usage_predictor_t::DSBP_PHT_find_line(uint64_t pc, uint64_t memory_address) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("DSBP_PHT_find_line()\n")
     uint32_t PHT_offset = memory_address & sinuca_engine.get_global_offset_bits_mask();
@@ -1422,7 +1432,7 @@ DSBP_PHT_line_t* line_usage_predictor_t::DSBP_PHT_find_line(uint64_t pc, uint64_
     return NULL;
 }
 
-// =============================================================================
+/// ============================================================================
 DSBP_PHT_line_t* line_usage_predictor_t::DSBP_PHT_evict_address(uint64_t pc, uint64_t memory_address) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("DSBP_PHT_evict_address()\n")
     uint32_t PHT_offset = memory_address & sinuca_engine.get_global_offset_bits_mask();
@@ -1479,7 +1489,7 @@ DSBP_PHT_line_t* line_usage_predictor_t::DSBP_PHT_evict_address(uint64_t pc, uin
     return choosen_line;
 };
 
-// =============================================================================
+/// ============================================================================
 std::string line_usage_predictor_t::DSBP_PHT_line_to_string(DSBP_PHT_line_t *PHT_line) {
     std::string PackageString;
     PackageString = "";

@@ -33,6 +33,7 @@
 memory_controller_t::memory_controller_t() {
     this->set_type_component(COMPONENT_MEMORY_CONTROLLER);
 
+    this->address_mask_type = MEMORY_CONTROLLER_MASK_ROW_BANK_COLUMN;
     this->line_size = 0;
 
     this->bus_width = 0;
@@ -47,10 +48,27 @@ memory_controller_t::memory_controller_t() {
     this->write_buffer_size = 0;
     this->row_buffer_size = 0;
 
+    this->request_priority_policy = REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST;
+    this->write_priority_policy = WRITE_PRIORITY_DRAIN_WHEN_FULL;
+
+    this->bank_selection_policy = SELECTION_ROUND_ROBIN;
+    this->channel_selection_policy = SELECTION_ROUND_ROBIN;
+
     this->RP_latency = 0;
     this->RCD_latency = 0;
     this->CAS_latency = 0;
     this->RAS_latency = 0;
+
+    this->bus_ready_cycle = NULL;
+    this->send_ready_cycle = NULL;
+    this->recv_read_ready_cycle = NULL;
+    this->recv_write_ready_cycle = NULL;
+
+    this->last_bank_selected = NULL;
+    this->last_channel_selected = 0;
+    this->channels = NULL;
+
+    this->fill_buffer = NULL;
 };
 
 /// ============================================================================

@@ -33,6 +33,8 @@
 /// ============================================================================
 prefetch_t::prefetch_t() {
     this->prefetcher_type = PREFETCHER_DISABLE;
+    this->full_buffer_type = FULL_BUFFER_STOP;
+    
     this->stream_table_size = 0;
     this->stream_address_distance = 0;  /// double of line size
     this->stream_window = 0;

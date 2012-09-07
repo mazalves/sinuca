@@ -282,54 +282,65 @@ std::string opcode_package_t::opcode_to_trace_string() {
 // Convert Instruction variables into char
 void opcode_package_t::opcode_to_trace_char(char *trace_line) {
     std::size_t i;
+    char tmp_str[64];
 
-    sprintf(trace_line,  "%s", this->opcode_assembly);
-    sprintf(trace_line,  "%s %u", trace_line, this->opcode_operation);
-    sprintf(trace_line,  "%s 0x%"PRIu64"", trace_line, this->opcode_address);
-    sprintf(trace_line,  "%s %u", trace_line, this->opcode_size);
+    strcpy(trace_line, this->opcode_assembly);
+    
+    sprintf(tmp_str, " %u", this->opcode_operation);
+    strcat(trace_line, tmp_str);
+    
+    sprintf(tmp_str, " 0x%"PRIu64"", this->opcode_address);
+    strcat(trace_line, tmp_str);
+    
+    sprintf(tmp_str, " %u", this->opcode_size);
+    strcat(trace_line, tmp_str);
 
-    sprintf(trace_line,  "%s %u", trace_line, uint32_t(this->read_regs.size()));
+    sprintf(tmp_str, " %u", uint32_t(this->read_regs.size()));
+    strcat(trace_line, tmp_str);
     for (i = 0; i < this->read_regs.size(); i++) {
-        sprintf(trace_line,  "%s %u", trace_line, this->read_regs[i]);
+        sprintf(tmp_str, " %u", this->read_regs[i]);
+        strcat(trace_line, tmp_str);
     }
 
-    sprintf(trace_line,  "%s %u", trace_line, uint32_t(this->write_regs.size()));
+    sprintf(tmp_str, " %u", uint32_t(this->write_regs.size()));
+    strcat(trace_line, tmp_str);
     for (i = 0; i < this->write_regs.size(); i++) {
-        sprintf(trace_line,  "%s %u", trace_line, this->write_regs[i]);
+        sprintf(tmp_str, " %u", this->write_regs[i]);
+        strcat(trace_line, tmp_str);
     }
 
     if (this->is_read == true)
-        sprintf(trace_line,  "%s 1", trace_line);
+        strcat(trace_line, " 1");
     else
-        sprintf(trace_line,  "%s 0", trace_line);
+        strcat(trace_line, " 0");
 
     if (this->is_read2 == true)
-        sprintf(trace_line,  "%s 1", trace_line);
+        strcat(trace_line, " 1");
     else
-        sprintf(trace_line,  "%s 0", trace_line);
+        strcat(trace_line,  " 0");
 
     if (this->is_write == true)
-        sprintf(trace_line,  "%s 1", trace_line);
+        strcat(trace_line,  " 1");
     else
-        sprintf(trace_line,  "%s 0", trace_line);
+        strcat(trace_line,  " 0");
 
 
     if (this->is_branch == true)
-        sprintf(trace_line,  "%s 1", trace_line);
+        strcat(trace_line,  " 1");
     else
-        sprintf(trace_line,  "%s 0", trace_line);
+        strcat(trace_line,  " 0");
 
     if (this->is_predicated == true)
-        sprintf(trace_line,  "%s 1", trace_line);
+        strcat(trace_line,  " 1");
     else
-        sprintf(trace_line,  "%s 0", trace_line);
+        strcat(trace_line,  " 0");
 
     if (this->is_prefetch == true)
-        sprintf(trace_line,  "%s 1", trace_line);
+        strcat(trace_line,  " 1");
     else
-        sprintf(trace_line,  "%s 0", trace_line);
+        strcat(trace_line,  " 0");
 
-    sprintf(trace_line,  "%s\n", trace_line);
+    strcat(trace_line,  "\n");
 };
 
 //==============================================================================
