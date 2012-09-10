@@ -49,7 +49,10 @@ for i in *8t.tid0.stat.out.gz; do
 done
 
 ## Shows the benchmarks which failed.
-for i in `ls Experiment/benchmarks/results/*/*.log | sed 's/log//g'`; do ls $i*result | grep "No such"; done
+for i in `ls ~/Experiment/benchmarks/results/*/*.log | sed 's/log//g'`; do ls $i*result | grep "No such"; done
+
+## Crop the pdf figures to insert into paper
+for i in *pdf ; do echo $i ; pdfcrop $i $i; done
 
 ########################################################################
 ## VALIDATION x86_64 - SPEC CPU 2000 and 2006
@@ -72,12 +75,13 @@ done
 ########################################################################
 # Plots all the benchmarks
 reset;
-python power.py spec_cpu2000 Base base_200M_spec_cpu2000 ;
-python power.py spec_cpu2000 DSBP_Reinstall dsbp_200M_spec_cpu2000 ;
-python power.py spec_cpu2000 DSBP_NoReinstall dsbp_200M_spec_cpu2000 ;
-python power.py spec_cpu2006 Base base_200M_spec_cpu2006 ;
-python power.py spec_cpu2006 DSBP_Reinstall dsbp_200M_spec_cpu2006 ;
-python power.py spec_cpu2006 DSBP_NoReinstall dsbp_200M_spec_cpu2006 ;
+cd ~/Experiment/SiNUCA/scripts ;
+python power.py spec_cpu2000 IncALL_Base base_200M_spec_cpu2000 ;
+python power.py spec_cpu2000 IncALL_DSBP_Reinstall dsbp_200M_spec_cpu2000 ;
+python power.py spec_cpu2000 IncALL_DSBP_NoReinstall dsbp_200M_spec_cpu2000 ;
+python power.py spec_cpu2006 IncALL_Base base_200M_spec_cpu2006 ;
+python power.py spec_cpu2006 IncALL_DSBP_Reinstall dsbp_200M_spec_cpu2006 ;
+python power.py spec_cpu2006 IncALL_DSBP_NoReinstall dsbp_200M_spec_cpu2006 ;
 python plot.py parameters_spec2000.cfg ;
 python plot.py parameters_spec2006.cfg
 
@@ -138,17 +142,18 @@ done
 
 # Plots all the benchmarks
 reset;
-python power.py npb_omp Base base_200M_npb_omp ;
-python power.py npb_omp DSBP_Reinstall dsbp_200M_npb_omp ;
-python power.py npb_omp DSBP_NoReinstall dsbp_200M_npb_omp ;
-python power.py spec_omp2001 Base base_200M_spec_omp2001 ;
-python power.py spec_omp2001 DSBP_Reinstall dsbp_200M_spec_omp2001 ;
-python power.py spec_omp2001 DSBP_NoReinstall dsbp_200M_spec_omp2001 ;
+cd ~/Experiment/SiNUCA/scripts ;
+python power.py npb_omp IncALL_Base base_200M_npb_omp ;
+python power.py npb_omp IncALL_DSBP_Reinstall dsbp_200M_npb_omp ;
+python power.py npb_omp IncALL_DSBP_NoReinstall dsbp_200M_npb_omp ;
+python power.py spec_omp2001 IncALL_Base base_200M_spec_omp2001 ;
+python power.py spec_omp2001 IncALL_DSBP_Reinstall dsbp_200M_spec_omp2001 ;
+python power.py spec_omp2001 IncALL_DSBP_NoReinstall dsbp_200M_spec_omp2001 ;
 python plot.py parameters_npb_omp.cfg ;
 python plot.py parameters_spec_omp2001.cfg ;
 
 
-for i in *pdf ; do echo $i ; pdfcrop $i $i; done
+
 
 
 # Run the Base and DSBP for all SPEC_OMP2001
