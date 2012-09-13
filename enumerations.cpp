@@ -206,8 +206,8 @@ const char *get_enum_routing_algorithm_char(routing_algorithm_t type) {
 const char *get_enum_replacement_char(replacement_t type) {
     switch (type) {
         case REPLACEMENT_LRU:           return "LRU"; break;
-        case REPLACEMENT_LRU_INVALID:   return "LRU_INVALID"; break;
-        case REPLACEMENT_LRU_DSBP:      return "LRU_DSBP"; break;
+        case REPLACEMENT_INVALID_OR_LRU:   return "LRU_INVALID"; break;
+        case REPLACEMENT_DEAD_OR_LRU:      return "LRU_DSBP"; break;
         case REPLACEMENT_RANDOM:        return "RANDOM"; break;
         case REPLACEMENT_FIFO:          return "FIFO"; break;
         case REPLACEMENT_LRF:           return "LRF"; break;

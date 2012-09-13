@@ -68,7 +68,12 @@ SRC_PREFETCH =		prefetch/prefetcher.cpp \
 					prefetch/prefetcher_stride.cpp \
 					prefetch/prefetcher_disable.cpp
 
-SRC_LINE_USAGE_PREDICTOR =	line_usage_predictor/line_usage_predictor.cpp
+SRC_LINE_USAGE_PREDICTOR =	line_usage_predictor/line_usage_predictor.cpp \
+							line_usage_predictor/line_usage_predictor_dsbp.cpp \
+							line_usage_predictor/line_usage_predictor_dlec.cpp \
+							line_usage_predictor/line_usage_predictor_lwp.cpp \
+							line_usage_predictor/line_usage_predictor_statistics.cpp \
+							line_usage_predictor/line_usage_predictor_disable.cpp
 
 SRC_CACHE_MEMORY =	cache_memory/cache_memory.cpp
 

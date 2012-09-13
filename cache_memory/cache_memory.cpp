@@ -33,6 +33,9 @@
 cache_memory_t::cache_memory_t() {
     this->set_type_component(COMPONENT_CACHE_MEMORY);
 
+    this->prefetcher = NULL;
+    this->line_usage_predictor = NULL;
+
     this->cache_id = 0;
     this->bank_number = 0;
     this->total_banks = 0;
@@ -81,7 +84,6 @@ cache_memory_t::~cache_memory_t() {
 
 /// ============================================================================
 void cache_memory_t::allocate() {
-    ERROR_ASSERT_PRINTF(this->get_replacement_policy() != REPLACEMENT_LRU_DSBP || this->line_usage_predictor.get_line_usage_predictor_type() == LINE_USAGE_PREDICTOR_POLICY_DSBP, "Should only use LRU_DSBP if using the DSBP line_usage_predictor.\n" )
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_line_number() / this->get_associativity()), "Wrong line number(%u) or associativity(%u).\n", this->get_line_number(), this->get_associativity());
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_line_size()), "Wrong line size.\n");
 
@@ -119,8 +121,8 @@ void cache_memory_t::allocate() {
     /// LINE_USAGE_PREDICTOR
     /// ================================================================================
     sprintf(label, "Line_Usage_Predictor_%s", this->get_label());
-    this->line_usage_predictor.set_label(label);
-    this->line_usage_predictor.allocate();
+    this->line_usage_predictor->set_label(label);
+    this->line_usage_predictor->allocate();
 
     #ifdef CACHE_DEBUG
         this->print_configuration();
@@ -708,7 +710,26 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& i
     index = get_index(memory_address);
 
     switch (this->replacement_policy) {
-        case REPLACEMENT_LRU_INVALID: {
+        case REPLACEMENT_LRU: {
+            uint64_t last_access = sinuca_engine.get_global_cycle() + 1;
+            for (uint32_t way = 0; way < this->get_associativity(); way++) {
+                /// The line is not locked by directory
+                if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[way].tag) == FAIL) {
+                    /// If the line is LRU && the line is not locked by directory
+                    if (this->sets[index].ways[way].last_access <= last_access) {
+                        choosen_line = &this->sets[index].ways[way];
+                        last_access = this->sets[index].ways[way].last_access;
+                        choosen_way = way;
+                    }
+                }
+                else {
+                    ERROR_ASSERT_PRINTF(cmp_tag_index_bank(memory_address, this->sets[index].ways[way].tag) == FAIL, "Trying to find one line to evict, but tag == address\n")
+                }
+            }
+        }
+        break;
+
+        case REPLACEMENT_INVALID_OR_LRU: {
             uint64_t last_access = sinuca_engine.get_global_cycle() + 1;
             for (uint32_t way = 0; way < this->get_associativity(); way++) {
                 /// The line is not locked by directory
@@ -733,34 +754,13 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& i
         }
         break;
 
-
-        case REPLACEMENT_LRU: {
+        case REPLACEMENT_DEAD_OR_LRU: {
             uint64_t last_access = sinuca_engine.get_global_cycle() + 1;
-            for (uint32_t way = 0; way < this->get_associativity(); way++) {
-                /// The line is not locked by directory
-                if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[way].tag) == FAIL) {
-                    /// If the line is LRU && the line is not locked by directory
-                    if (this->sets[index].ways[way].last_access <= last_access) {
-                        choosen_line = &this->sets[index].ways[way];
-                        last_access = this->sets[index].ways[way].last_access;
-                        choosen_way = way;
-                    }
-                }
-                else {
-                    ERROR_ASSERT_PRINTF(cmp_tag_index_bank(memory_address, this->sets[index].ways[way].tag) == FAIL, "Trying to find one line to evict, but tag == address\n")
-                }
-            }
-        }
-        break;
-
-        case REPLACEMENT_LRU_DSBP: {
-            uint64_t last_access = sinuca_engine.get_global_cycle() + 1;
-            dsbp_metadata_set_t *dsbp_metadata = this->line_usage_predictor.get_dsbp_sets();
             for (uint32_t way = 0; way < this->get_associativity(); way++) {
                 /// The line is not locked by directory
                 if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[way].tag) == FAIL) {
                     /// If is_dead
-                    if (dsbp_metadata[index].ways[way].is_dead == true) {
+                    if (this->line_usage_predictor->check_line_is_dead(index, way) == true) {
                         choosen_line = &this->sets[index].ways[way];
                         choosen_way = way;
                         break;
@@ -839,7 +839,7 @@ void cache_memory_t::print_structures() {
 void cache_memory_t::panic() {
     this->print_structures();
     this->prefetcher->panic();
-    this->line_usage_predictor.panic();
+    this->line_usage_predictor->panic();
 };
 
 /// ============================================================================
@@ -850,7 +850,7 @@ void cache_memory_t::periodic_check(){
     #endif
     ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->mshr_buffer, this->mshr_buffer_size) == OK, "Check_age failed.\n");
     this->prefetcher->periodic_check();
-    this->line_usage_predictor.periodic_check();
+    this->line_usage_predictor->periodic_check();
 };
 
 
@@ -901,7 +901,7 @@ void cache_memory_t::reset_statistics() {
     this->stat_full_mshr_buffer_prefetch = 0;
 
     this->prefetcher->reset_statistics();
-    this->line_usage_predictor.reset_statistics();
+    this->line_usage_predictor->reset_statistics();
 };
 
 /// ============================================================================
@@ -966,7 +966,7 @@ void cache_memory_t::print_statistics() {
 
 
     this->prefetcher->print_statistics();
-    this->line_usage_predictor.print_statistics();
+    this->line_usage_predictor->print_statistics();
 };
 
 /// ============================================================================
@@ -1010,5 +1010,5 @@ void cache_memory_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "offset_bits_mask", utils_t::address_to_binary(this->offset_bits_mask).c_str());
 
     this->prefetcher->print_configuration();
-    this->line_usage_predictor.print_configuration();
+    this->line_usage_predictor->print_configuration();
 };

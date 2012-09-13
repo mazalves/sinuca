@@ -174,8 +174,8 @@ const char *get_enum_routing_algorithm_char(routing_algorithm_t type);
 /// Cache replacement policy
 enum replacement_t {
     REPLACEMENT_LRU,            /// way list order: MRU -> LRU
-    REPLACEMENT_LRU_INVALID,    /// way list order: MRU -> LRU with priority to Invalid Lines
-    REPLACEMENT_LRU_DSBP,       /// way list order: MRU -> LRU with DSBP line_usage_predictor
+    REPLACEMENT_INVALID_OR_LRU,    /// way list order: MRU -> LRU with priority to Invalid Lines
+    REPLACEMENT_DEAD_OR_LRU,       /// way list order: MRU -> LRU with DSBP line_usage_predictor
     REPLACEMENT_RANDOM,         /// way list order: arbitrary
     REPLACEMENT_FIFO,           /// way list order: oldest block -> newest block
     REPLACEMENT_LRF             /// way list order: Least recently filled

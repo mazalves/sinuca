@@ -93,6 +93,11 @@ class pht_set_t;
 class dsbp_metadata_line_t;
 class dsbp_metadata_set_t;
 class line_usage_predictor_t;
+class line_usage_predictor_dsbp_t;
+class line_usage_predictor_dlec_t;
+class line_usage_predictor_lwp_t;
+class line_usage_predictor_statistics_t;
+class line_usage_predictor_disable_t;
 /// Cache Memory
 class cache_line_t;
 class cache_set_t;
@@ -285,7 +290,13 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 #include "./line_usage_predictor/pht_set.hpp"
 #include "./line_usage_predictor/dsbp_metadata_line.hpp"
 #include "./line_usage_predictor/dsbp_metadata_set.hpp"
+
 #include "./line_usage_predictor/line_usage_predictor.hpp"
+#include "./line_usage_predictor/line_usage_predictor_dsbp.hpp"
+#include "./line_usage_predictor/line_usage_predictor_dlec.hpp"
+#include "./line_usage_predictor/line_usage_predictor_lwp.hpp"
+#include "./line_usage_predictor/line_usage_predictor_statistics.hpp"
+#include "./line_usage_predictor/line_usage_predictor_disable.hpp"
 
 /// ============================================================================
 /// Memory Devices

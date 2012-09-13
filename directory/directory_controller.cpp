@@ -177,7 +177,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     /// If L1 or create on this cache
     if (cache->get_hierarchy_level() == 1 || cache->get_id() == package->id_owner) {
         /// Fill the Sub-Blocks into the package
-        cache->line_usage_predictor.fill_package_sub_blocks(package);
+        cache->line_usage_predictor->fill_package_sub_blocks(package);
         ERROR_ASSERT_PRINTF(directory_line == NULL, "This level REQUEST must not have a directory_line.\n cache_id:%u, package:%s\n", cache->get_id(), package->memory_to_string().c_str())
     }
     else {
@@ -202,14 +202,14 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             // =============================================================
             // Line Usage Prediction
             if (is_line_hit) {
-                is_sub_block_hit = cache->line_usage_predictor.check_sub_block_is_hit(package, index, way);
+                is_sub_block_hit = cache->line_usage_predictor->check_sub_block_is_hit(package, index, way);
             }
             ///=================================================================
             /// Cache Line Hit
             if (is_line_hit && is_sub_block_hit) {
                 // =============================================================
                 // Line Usage Prediction
-                cache->line_usage_predictor.line_hit(package, index, way);
+                cache->line_usage_predictor->line_hit(package, index, way);
 
                 /// No Directory_line yet => create
                 if (directory_line == NULL) {
@@ -254,14 +254,14 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             // =============================================================
             // Line Usage Prediction
             if (is_line_hit) {
-                is_sub_block_hit = cache->line_usage_predictor.check_sub_block_is_hit(package, index, way);
+                is_sub_block_hit = cache->line_usage_predictor->check_sub_block_is_hit(package, index, way);
             }
             ///=================================================================
             /// Cache Line Hit
             if (is_line_hit && is_sub_block_hit) {
                 // =============================================================
                 // Line Usage Prediction
-                cache->line_usage_predictor.line_hit(package, index, way);
+                cache->line_usage_predictor->line_hit(package, index, way);
 
                 /// THIS cache level started the request (PREFETCH)
                 if (package->id_owner == cache->get_id()) {
@@ -301,7 +301,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             else if (is_line_hit) {
                 // =============================================================
                 // Line Usage Prediction
-                cache->line_usage_predictor.sub_block_miss(package, index, way);
+                cache->line_usage_predictor->sub_block_miss(package, index, way);
 
 
                 /// The request can be treated now !
@@ -459,8 +459,8 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
                 // =============================================================
                 // Line Usage Prediction
-                // ~ cache->line_usage_predictor.line_eviction(index, way);
-                cache->line_usage_predictor.line_miss(package, index, way);
+                // ~ cache->line_usage_predictor->line_eviction(index, way);
+                cache->line_usage_predictor->line_miss(package, index, way);
 
                 /// Reserve the evicted line for the new address
                 cache->change_address(cache_line, package->memory_address);
@@ -627,8 +627,8 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             ///=================================================================
             // =============================================================
             // Line Usage Prediction
-            // ~ cache->line_usage_predictor.line_eviction(index, way);
-            cache->line_usage_predictor.line_insert_copyback(package, cache, cache_line, index, way);
+            // ~ cache->line_usage_predictor->line_eviction(index, way);
+            cache->line_usage_predictor->line_insert_copyback(package, cache, cache_line, index, way);
 
             /// Reserve the evicted line for the new address
             cache->change_address(cache_line, package->memory_address);
@@ -909,7 +909,7 @@ bool directory_controller_t::create_cache_copyback(cache_memory_t *cache, cache_
 
     // =============================================================
     // Line Usage Prediction
-    cache->line_usage_predictor.line_get_copyback(package, index, way);
+    cache->line_usage_predictor->line_get_copyback(package, index, way);
 
     /// Higher Level Copy Back
     package->package_set_src_dst(cache->get_id(), this->find_next_obj_id(cache, package->memory_address));
@@ -972,7 +972,7 @@ protocol_status_t directory_controller_t::find_copyback_higher_levels(cache_memo
                     case PROTOCOL_STATUS_O: {
                         // =============================================================
                         // Line Usage Prediction
-                        // ~ bool is_sub_block_hit = cache_memory->line_usage_predictor.check_sub_block_is_hit(package, index, way);
+                        // ~ bool is_sub_block_hit = cache_memory->line_usage_predictor->check_sub_block_is_hit(package, index, way);
                         // ~ if (is_sub_block_hit) {
                             /// This Level stays with a normal copy
                             cache_memory->change_status(this_cache_line, PROTOCOL_STATUS_S);
@@ -986,7 +986,7 @@ protocol_status_t directory_controller_t::find_copyback_higher_levels(cache_memo
                     case PROTOCOL_STATUS_S: {
                         // =============================================================
                         // Line Usage Prediction
-                        // ~ bool is_sub_block_hit = cache_memory->line_usage_predictor.check_sub_block_is_hit(package, index, way);
+                        // ~ bool is_sub_block_hit = cache_memory->line_usage_predictor->check_sub_block_is_hit(package, index, way);
                         // ~ if (is_sub_block_hit) {
                             return PROTOCOL_STATUS_S;
                         // ~ }
@@ -1099,7 +1099,7 @@ protocol_status_t directory_controller_t::find_cache_line_higher_levels(cache_me
                         case PROTOCOL_STATUS_O: {
                             // =============================================================
                             // Line Usage Prediction
-                            bool is_sub_block_hit = cache_memory->line_usage_predictor.check_sub_block_is_hit(package, index, way);
+                            bool is_sub_block_hit = cache_memory->line_usage_predictor->check_sub_block_is_hit(package, index, way);
                             if (is_sub_block_hit) {
                                 /// This Level stays with a normal copy
                                 cache_memory->change_status(this_cache_line, PROTOCOL_STATUS_S);
@@ -1113,7 +1113,7 @@ protocol_status_t directory_controller_t::find_cache_line_higher_levels(cache_me
                         case PROTOCOL_STATUS_S: {
                             // =============================================================
                             // Line Usage Prediction
-                            bool is_sub_block_hit = cache_memory->line_usage_predictor.check_sub_block_is_hit(package, index, way);
+                            bool is_sub_block_hit = cache_memory->line_usage_predictor->check_sub_block_is_hit(package, index, way);
                             if (is_sub_block_hit) {
                                 return PROTOCOL_STATUS_S;
                             }

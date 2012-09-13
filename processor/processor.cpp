@@ -39,6 +39,7 @@
 processor_t::processor_t() {
     this->set_type_component(COMPONENT_PROCESSOR);
 
+    this->branch_predictor = NULL;
     /// Synchronization Control Variables
     this->sync_status = SYNC_FREE;          /// Used to sync or request sync
     this->sync_status_time = 0;             /// Last time the sync changed

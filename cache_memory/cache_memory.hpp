@@ -26,7 +26,7 @@
 class cache_memory_t : public interconnection_interface_t {
     public:
         prefetch_t *prefetcher;                          /// Prefetcher
-        line_usage_predictor_t line_usage_predictor;    /// Line_Usage_Predictor
+        line_usage_predictor_t *line_usage_predictor;    /// Line_Usage_Predictor
 
     private:
         /// ====================================================================
