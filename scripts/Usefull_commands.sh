@@ -9,7 +9,7 @@ for i in `seq 1 30` ; do
 done
 
 ## Run the CPPCHECK on all the source code with all flags enabled
-cppcheck  --enable=all -f  *.hpp *.cpp */*.cpp 2> err.txt
+cppcheck  --enable=all -f  *.hpp *.cpp */*.cpp */*.hpp 2> err.txt
 
 ## This is how we can find the length of the longest line in a file.
 $ awk ' { if ( length > L ) { L=length} }END{ print L}' file.txt

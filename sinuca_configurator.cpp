@@ -622,40 +622,40 @@ void sinuca_engine_t::initialize_cache_memory() {
 
             /// DSBP Metadata
             line_usage_predictor_parameters.push_back("DSBP_LINE_NUMBER");
-            this->cache_memory_array[i]->line_usage_predictor.set_DSBP_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
-            ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_line_number() == this->cache_memory_array[i]->line_usage_predictor.get_DSBP_line_number(),
+            this->cache_memory_array[i]->line_usage_predictor.set_dsbp_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+            ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_line_number() == this->cache_memory_array[i]->line_usage_predictor.get_dsbp_line_number(),
                                 "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
 
             line_usage_predictor_parameters.push_back("DSBP_ASSOCIATIVITY");
-            this->cache_memory_array[i]->line_usage_predictor.set_DSBP_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
-            ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_associativity() == this->cache_memory_array[i]->line_usage_predictor.get_DSBP_associativity(),
+            this->cache_memory_array[i]->line_usage_predictor.set_dsbp_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+            ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_associativity() == this->cache_memory_array[i]->line_usage_predictor.get_dsbp_associativity(),
                                 "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
 
             line_usage_predictor_parameters.push_back("DSBP_SUB_BLOCK_SIZE");
-            this->cache_memory_array[i]->line_usage_predictor.set_DSBP_sub_block_size( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+            this->cache_memory_array[i]->line_usage_predictor.set_dsbp_sub_block_size( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
 
             line_usage_predictor_parameters.push_back("DSBP_USAGE_COUNTER_BITS");
-            this->cache_memory_array[i]->line_usage_predictor.set_DSBP_usage_counter_bits( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+            this->cache_memory_array[i]->line_usage_predictor.set_dsbp_usage_counter_bits( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
 
             /// PHT
             line_usage_predictor_parameters.push_back("DSBP_PHT_LINE_NUMBER");
-            this->cache_memory_array[i]->line_usage_predictor.set_DSBP_PHT_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+            this->cache_memory_array[i]->line_usage_predictor.set_dsbp_pht_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
 
             line_usage_predictor_parameters.push_back("DSBP_PHT_ASSOCIATIVITY");
-            this->cache_memory_array[i]->line_usage_predictor.set_DSBP_PHT_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+            this->cache_memory_array[i]->line_usage_predictor.set_dsbp_pht_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
 
             line_usage_predictor_parameters.push_back("DSBP_PHT_REPLACEMENT_POLICY");
             if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "FIFO") ==  0) {
-                this->cache_memory_array[i]->line_usage_predictor.set_DSBP_PHT_replacement_policy(REPLACEMENT_FIFO);
+                this->cache_memory_array[i]->line_usage_predictor.set_dsbp_pht_replacement_policy(REPLACEMENT_FIFO);
             }
             else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "LRF") ==  0) {
-                this->cache_memory_array[i]->line_usage_predictor.set_DSBP_PHT_replacement_policy(REPLACEMENT_LRF);
+                this->cache_memory_array[i]->line_usage_predictor.set_dsbp_pht_replacement_policy(REPLACEMENT_LRF);
             }
             else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "LRU") ==  0) {
-                this->cache_memory_array[i]->line_usage_predictor.set_DSBP_PHT_replacement_policy(REPLACEMENT_LRU);
+                this->cache_memory_array[i]->line_usage_predictor.set_dsbp_pht_replacement_policy(REPLACEMENT_LRU);
             }
             else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "RANDOM") ==  0) {
-                this->cache_memory_array[i]->line_usage_predictor.set_DSBP_PHT_replacement_policy(REPLACEMENT_RANDOM);
+                this->cache_memory_array[i]->line_usage_predictor.set_dsbp_pht_replacement_policy(REPLACEMENT_RANDOM);
             }
             else {
                 ERROR_PRINTF("CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());

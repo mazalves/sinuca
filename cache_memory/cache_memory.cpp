@@ -755,12 +755,12 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& i
 
         case REPLACEMENT_LRU_DSBP: {
             uint64_t last_access = sinuca_engine.get_global_cycle() + 1;
-            DSBP_metadata_sets_t *DSBP_metada = this->line_usage_predictor.get_DSBP_sets();
+            dsbp_metadata_set_t *dsbp_metadata = this->line_usage_predictor.get_dsbp_sets();
             for (uint32_t way = 0; way < this->get_associativity(); way++) {
                 /// The line is not locked by directory
                 if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[way].tag) == FAIL) {
                     /// If is_dead
-                    if (DSBP_metada[index].ways[way].is_dead == true) {
+                    if (dsbp_metadata[index].ways[way].is_dead == true) {
                         choosen_line = &this->sets[index].ways[way];
                         choosen_way = way;
                         break;
