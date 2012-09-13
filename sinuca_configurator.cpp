@@ -1,26 +1,26 @@
-//==============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-//==============================================================================
+/// ============================================================================
+///
+/// Copyright (C) 2010, 2011, 2012
+/// Marco Antonio Zanata Alves
+///
+/// GPPD - Parallel and Distributed Processing Group
+/// Universidade Federal do Rio Grande do Sul
+///
+/// This program is free software; you can redistribute it and/or modify it
+/// under the terms of the GNU General Public License as published by the
+/// Free Software Foundation; either version 2 of the License, or (at your
+/// option) any later version.
+///
+/// This program is distributed in the hope that it will be useful, but
+/// WITHOUT ANY WARRANTY; without even the implied warranty of
+/// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+/// General Public License for more details.
+///
+/// You should have received a copy of the GNU General Public License along
+/// with this program; if not, write to the Free Software Foundation, Inc.,
+/// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+///
+/// ============================================================================
 #include "./sinuca.hpp"
 
 #ifdef CONFIGURATOR_DEBUG
@@ -28,9 +28,9 @@
 #else
     #define CONFIGURATOR_DEBUG_PRINTF(...)
 #endif
-//==============================================================================
+/// ============================================================================
 
-//==============================================================================
+/// ============================================================================
 void sinuca_engine_t::initialize() {
     // =========================================================================
     // Read the file. If there is an error, report it and exit.
@@ -143,7 +143,7 @@ void sinuca_engine_t::initialize() {
     this->interconnection_controller->allocate();
 };
 
-//==============================================================================
+/// ============================================================================
 void sinuca_engine_t::initialize_processor() {
     libconfig::Config cfg;
     cfg.readFile(this->arg_configuration_file_name);
@@ -161,8 +161,8 @@ void sinuca_engine_t::initialize_processor() {
     for (int32_t i = 0; i < cfg_processor_list.getLength(); i++) {
         this->processor_array[i] = new processor_t;
 
-        std::deque<const char*> processor_parameters;
-        std::deque<const char*> branch_predictor_parameters;
+        container_ptr_const_char_t processor_parameters;
+        container_ptr_const_char_t branch_predictor_parameters;
 
         libconfig::Setting &cfg_processor = cfg_processor_list[i];
         /// ====================================================================
@@ -395,7 +395,7 @@ void sinuca_engine_t::initialize_processor() {
 };
 
 
-//==============================================================================
+/// ============================================================================
 void sinuca_engine_t::initialize_cache_memory() {
     libconfig::Config cfg;
     cfg.readFile(this->arg_configuration_file_name);
@@ -413,9 +413,9 @@ void sinuca_engine_t::initialize_cache_memory() {
     for (int32_t i = 0; i < cfg_cache_memory_list.getLength(); i++) {
         this->cache_memory_array[i] = new cache_memory_t;
 
-        std::deque<const char*> cache_memory_parameters;
-        std::deque<const char*> prefetcher_parameters;
-        std::deque<const char*> line_usage_predictor_parameters;
+        container_ptr_const_char_t cache_memory_parameters;
+        container_ptr_const_char_t prefetcher_parameters;
+        container_ptr_const_char_t line_usage_predictor_parameters;
 
         libconfig::Setting &cfg_cache_memory = cfg_cache_memory_list[i];
 
@@ -512,11 +512,35 @@ void sinuca_engine_t::initialize_cache_memory() {
 
 
             prefetcher_parameters.push_back("TYPE");
-            if (strcasecmp(cfg_prefetcher[ prefetcher_parameters.back() ], "STREAM") ==  0) {
-                this->cache_memory_array[i]->prefetcher.set_prefetcher_type(PREFETCHER_STREAM);
+            if (strcasecmp(cfg_prefetcher[ prefetcher_parameters.back() ], "STRIDE") ==  0) {
+                this->cache_memory_array[i]->prefetcher = new prefetch_stride_t;
+                prefetch_stride_t *prefetcher_ptr = (prefetch_stride_t*) this->cache_memory_array[i]->prefetcher;
+
+                prefetcher_ptr->set_prefetcher_type(PREFETCHER_STRIDE);
+
+                prefetcher_parameters.push_back("STRIDE_TABLE_SIZE");
+                prefetcher_ptr->set_reference_prediction_table_size( cfg_prefetcher[ prefetcher_parameters.back() ] );
+
+                prefetcher_parameters.push_back("STRIDE_ADDRESS_DISTANCE");
+                prefetcher_ptr->set_stride_address_distance( cfg_prefetcher[ prefetcher_parameters.back() ] );
+
+                prefetcher_parameters.push_back("STRIDE_WINDOW");
+                prefetcher_ptr->set_stride_window( cfg_prefetcher[ prefetcher_parameters.back() ] );
+
+                prefetcher_parameters.push_back("STRIDE_THRESHOLD_ACTIVATE");
+                prefetcher_ptr->set_stride_threshold_activate( cfg_prefetcher[ prefetcher_parameters.back() ] );
+
+                prefetcher_parameters.push_back("STRIDE_PREFETCH_DEGREE");
+                prefetcher_ptr->set_stride_prefetch_degree( cfg_prefetcher[ prefetcher_parameters.back() ] );
+
+                prefetcher_parameters.push_back("STRIDE_WAIT_BETWEEN_REQUESTS");
+                prefetcher_ptr->set_stride_wait_between_requests( cfg_prefetcher[ prefetcher_parameters.back() ] );
             }
             else if (strcasecmp(cfg_prefetcher[ prefetcher_parameters.back() ], "DISABLE") ==  0) {
-                this->cache_memory_array[i]->prefetcher.set_prefetcher_type(PREFETCHER_DISABLE);
+                this->cache_memory_array[i]->prefetcher = new prefetch_disable_t;
+                prefetch_disable_t *prefetcher_ptr = (prefetch_disable_t*) this->cache_memory_array[i]->prefetcher;
+
+                prefetcher_ptr->set_prefetcher_type(PREFETCHER_DISABLE);
             }
             else {
                 ERROR_PRINTF("CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ prefetcher_parameters.back() ].c_str(), prefetcher_parameters.back());
@@ -524,36 +548,17 @@ void sinuca_engine_t::initialize_cache_memory() {
 
             prefetcher_parameters.push_back("FULL_BUFFER");
             if (strcasecmp(cfg_prefetcher[ prefetcher_parameters.back() ], "OVERRIDE") ==  0) {
-                this->cache_memory_array[i]->prefetcher.set_full_buffer_type(FULL_BUFFER_OVERRIDE);
+                this->cache_memory_array[i]->prefetcher->set_full_buffer_type(FULL_BUFFER_OVERRIDE);
             }
             else if (strcasecmp(cfg_prefetcher[ prefetcher_parameters.back() ], "STOP") ==  0) {
-                this->cache_memory_array[i]->prefetcher.set_full_buffer_type(FULL_BUFFER_STOP);
+                this->cache_memory_array[i]->prefetcher->set_full_buffer_type(FULL_BUFFER_STOP);
             }
             else {
                 ERROR_PRINTF("CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ prefetcher_parameters.back() ].c_str(), prefetcher_parameters.back());
             }
 
             prefetcher_parameters.push_back("REQUEST_BUFFER_SIZE");
-            this->cache_memory_array[i]->prefetcher.set_request_buffer_size( cfg_prefetcher[ prefetcher_parameters.back() ] );
-
-            prefetcher_parameters.push_back("STREAM_TABLE_SIZE");
-            this->cache_memory_array[i]->prefetcher.set_stream_table_size( cfg_prefetcher[ prefetcher_parameters.back() ] );
-
-            prefetcher_parameters.push_back("STREAM_ADDRESS_DISTANCE");
-            this->cache_memory_array[i]->prefetcher.set_stream_address_distance( cfg_prefetcher[ prefetcher_parameters.back() ] );
-
-            prefetcher_parameters.push_back("STREAM_WINDOW");
-            this->cache_memory_array[i]->prefetcher.set_stream_window( cfg_prefetcher[ prefetcher_parameters.back() ] );
-
-            prefetcher_parameters.push_back("STREAM_THRESHOLD_ACTIVATE");
-            this->cache_memory_array[i]->prefetcher.set_stream_threshold_activate( cfg_prefetcher[ prefetcher_parameters.back() ] );
-
-            prefetcher_parameters.push_back("STREAM_PREFETCH_DEGREE");
-            this->cache_memory_array[i]->prefetcher.set_stream_prefetch_degree( cfg_prefetcher[ prefetcher_parameters.back() ] );
-
-            prefetcher_parameters.push_back("STREAM_WAIT_BETWEEN_REQUESTS");
-            this->cache_memory_array[i]->prefetcher.set_stream_wait_between_requests( cfg_prefetcher[ prefetcher_parameters.back() ] );
-
+            this->cache_memory_array[i]->prefetcher->set_request_buffer_size( cfg_prefetcher[ prefetcher_parameters.back() ] );
 
             /// ================================================================
             /// Required LINE_USAGE_PREDICTOR Parameters
@@ -565,11 +570,14 @@ void sinuca_engine_t::initialize_cache_memory() {
             if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "DSBP") ==  0) {
                 this->cache_memory_array[i]->line_usage_predictor.set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_DSBP);
             }
-            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "DSBP_DISABLE") ==  0) {
-                this->cache_memory_array[i]->line_usage_predictor.set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_DSBP_DISABLE);
+            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "DLEC") ==  0) {
+                this->cache_memory_array[i]->line_usage_predictor.set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_DLEC);
             }
-            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "SPP") ==  0) {
-                this->cache_memory_array[i]->line_usage_predictor.set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_SPP);
+            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "LWP") ==  0) {
+                this->cache_memory_array[i]->line_usage_predictor.set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_LWP);
+            }
+            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "STATISTICS") ==  0) {
+                this->cache_memory_array[i]->line_usage_predictor.set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_STATISTICS);
             }
             else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "DISABLE") ==  0) {
                 this->cache_memory_array[i]->line_usage_predictor.set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_DISABLE);
@@ -691,7 +699,7 @@ void sinuca_engine_t::initialize_cache_memory() {
 };
 
 
-//==============================================================================
+/// ============================================================================
 void sinuca_engine_t::initialize_memory_controller() {
     libconfig::Config cfg;
     cfg.readFile(this->arg_configuration_file_name);
@@ -709,7 +717,7 @@ void sinuca_engine_t::initialize_memory_controller() {
     for (int32_t i = 0; i < cfg_memory_controller_list.getLength(); i++) {
         this->memory_controller_array[i] = new memory_controller_t;
 
-        std::deque<const char*> memory_controller_parameters;
+        container_ptr_const_char_t memory_controller_parameters;
         libconfig::Setting &cfg_memory_controller = cfg_memory_controller_list[i];
 
         /// ====================================================================
@@ -860,7 +868,7 @@ void sinuca_engine_t::initialize_memory_controller() {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 void sinuca_engine_t::initialize_interconnection_router() {
     libconfig::Config cfg;
     cfg.readFile(this->arg_configuration_file_name);
@@ -878,7 +886,7 @@ void sinuca_engine_t::initialize_interconnection_router() {
     for (int32_t i = 0; i < cfg_interconnection_router_list.getLength(); i++) {
         this->interconnection_router_array[i] = new interconnection_router_t;
 
-        std::deque<const char*> interconnection_router_parameters;
+        container_ptr_const_char_t interconnection_router_parameters;
         libconfig::Setting &cfg_interconnection_router = cfg_interconnection_router_list[i];
 
         /// ====================================================================
@@ -937,7 +945,7 @@ void sinuca_engine_t::initialize_interconnection_router() {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 void sinuca_engine_t::initialize_directory_controller() {
     libconfig::Config cfg;
     cfg.readFile(this->arg_configuration_file_name);
@@ -950,7 +958,7 @@ void sinuca_engine_t::initialize_directory_controller() {
     /// Required DIRECTORY Parameters
     /// ========================================================================
     this->directory_controller = new directory_controller_t;
-    std::deque<const char*> directory_parameters;
+    container_ptr_const_char_t directory_parameters;
     /// ====================================================================
     /// DIRECTORY PARAMETERS
     /// ====================================================================
@@ -999,7 +1007,7 @@ void sinuca_engine_t::initialize_directory_controller() {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 void sinuca_engine_t::initialize_interconnection_controller() {
     libconfig::Config cfg;
     cfg.readFile(this->arg_configuration_file_name);
@@ -1012,7 +1020,7 @@ void sinuca_engine_t::initialize_interconnection_controller() {
     /// Required INTERCONNECTION_CONTROLLER Parameters
     /// ========================================================================
     this->interconnection_controller = new interconnection_controller_t;
-    std::deque<const char*> interconnection_controller_parameters;
+    container_ptr_const_char_t interconnection_controller_parameters;
 
     /// ====================================================================
     /// INTERCONNECTION_CONTROLLER PARAMETERS
@@ -1056,7 +1064,7 @@ void sinuca_engine_t::initialize_interconnection_controller() {
 };
 
 
-//==============================================================================
+/// ============================================================================
 void sinuca_engine_t::make_connections() {
     libconfig::Config cfg;
     cfg.readFile(this->arg_configuration_file_name);
