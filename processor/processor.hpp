@@ -27,7 +27,7 @@
 class processor_t : public interconnection_interface_t {
     public:
         /// Branch Predictor
-        branch_predictor_t branch_predictor;    /// Branch Predictor
+        branch_predictor_t *branch_predictor;    /// Branch Predictor
         uint64_t branch_opcode_number;          /// Opcode which will solve the branch
         processor_stage_t branch_solve_stage;   /// Stage which will solve the branch
 

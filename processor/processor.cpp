@@ -195,7 +195,7 @@ void processor_t::allocate() {
     this->memory_map_table = utils_t::template_allocate_initialize_array<reorder_buffer_line_t*>(this->reorder_buffer_size, NULL);
 
     /// Propagate the allocate()
-    this->branch_predictor.allocate();
+    this->branch_predictor->allocate();
 
 
     ERROR_ASSERT_PRINTF(this->branch_per_fetch > 0, "Maximum number of branches per fetch must be greater than 0.\n")
@@ -222,8 +222,8 @@ void processor_t::allocate() {
 
     char label[50] = "";
     sprintf(label, "Branch_Predictor_%s", this->get_label());
-    this->branch_predictor.set_label(label);
-    this->branch_predictor.allocate();
+    this->branch_predictor->set_label(label);
+    this->branch_predictor->allocate();
 
     #ifdef PROCESSOR_DEBUG
         this->print_configuration();
@@ -451,7 +451,7 @@ void processor_t::stage_fetch() {
 
         /// If return different from PROCESSOR_STAGE_FETCH the fetch will stall,
         /// until the branch be solved (DECODE or EXECUTION stages)
-        this->branch_solve_stage = this->branch_predictor.predict_branch(this->fetch_buffer[position_buffer], this->trace_next_opcode);
+        this->branch_solve_stage = this->branch_predictor->predict_branch(this->fetch_buffer[position_buffer], this->trace_next_opcode);
         this->branch_opcode_number = this->fetch_buffer[position_buffer].opcode_number;
         if (this->branch_solve_stage != PROCESSOR_STAGE_FETCH) {
             PROCESSOR_DEBUG_PRINTF("\t Stalling fetch due to a miss prediction on package:%s\n", this->fetch_buffer[position_buffer].opcode_to_string().c_str());
@@ -1255,7 +1255,7 @@ void processor_t::clock(uint32_t subcycle) {
     PROCESSOR_DEBUG_PRINTF("====================\n");
     PROCESSOR_DEBUG_PRINTF("cycle() \n");
 
-    this->branch_predictor.clock(subcycle);
+    this->branch_predictor->clock(subcycle);
 
     /// Read from FU
     /// Mark ROB instructions as DONE
@@ -1442,7 +1442,7 @@ void processor_t::print_structures() {
 // =============================================================================
 void processor_t::panic() {
     this->print_structures();
-    this->branch_predictor.panic();
+    this->branch_predictor->panic();
 };
 
 /// ============================================================================
@@ -1457,7 +1457,7 @@ void processor_t::periodic_check(){
 
     ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->read_buffer, this->read_buffer_size) == OK, "Check_age failed.\n");
     ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->write_buffer, this->write_buffer_size) == OK, "Check_age failed.\n");
-    this->branch_predictor.periodic_check();
+    this->branch_predictor->periodic_check();
 };
 
 /// ============================================================================
@@ -1513,7 +1513,7 @@ void processor_t::reset_statistics() {
     this->stat_max_memory_write_wait_time = 0;
     this->stat_acumulated_memory_write_wait_time = 0;
 
-    this->branch_predictor.reset_statistics();
+    this->branch_predictor->reset_statistics();
     return;
 };
 
@@ -1622,7 +1622,7 @@ void processor_t::print_statistics() {
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_memory_read_wait_time_ratio",stat_acumulated_memory_read_wait_time, stat_memory_read_completed);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_memory_write_wait_time_ratio",stat_acumulated_memory_write_wait_time, stat_memory_write_completed);
 
-    this->branch_predictor.print_statistics();
+    this->branch_predictor->print_statistics();
 };
 
 /// ============================================================================
@@ -1704,7 +1704,7 @@ void processor_t::print_configuration() {
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "branch_per_fetch", branch_per_fetch);
 
-    this->branch_predictor.print_configuration();
+    this->branch_predictor->print_configuration();
 };
 
 /// ============================================================================

@@ -70,23 +70,28 @@ class interconnection_interface_t;
 /// Interconnection
 class interconnection_controller_t;
 class interconnection_router_t;
-/// Processor
+/// Branch Predictor
 class branch_predictor_t;
+class branch_predictor_two_level_t;
+class branch_predictor_static_taken_t;
+class branch_predictor_disable_t;
+/// Processor
 class reorder_buffer_line_t;
 class processor_t;
 /// Directory
 class directory_line_t;
 class directory_controller_t;
-/// Cache and Main Memory
+/// Prefetch
 class prefetch_t;
 class prefetch_stride_t;
 class prefetch_disable_t;
-
+/// Line Usage Predictor
 class line_usage_predictor_t;
+/// Cache Memory
 class cache_line_t;
 class cache_set_t;
 class cache_memory_t;
-
+/// Main Memory
 class memory_channel_t;
 class memory_controller_t;
 /// Useful static methods
@@ -258,7 +263,11 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 /// ============================================================================
 #include "./branch_predictor/branch_target_buffer_line.hpp"
 #include "./branch_predictor/branch_target_buffer_set.hpp"
+
 #include "./branch_predictor/branch_predictor.hpp"
+#include "./branch_predictor/branch_predictor_two_level.hpp"
+#include "./branch_predictor/branch_predictor_static_taken.hpp"
+#include "./branch_predictor/branch_predictor_disable.hpp"
 
 #include "./processor/reorder_buffer_line.hpp"
 #include "./processor/processor.hpp"

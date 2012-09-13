@@ -23,43 +23,19 @@
 /// ============================================================================
 /// Class for Branch Predictor
 class branch_predictor_t : public interconnection_interface_t {
-    private:
+    protected:
         /// ====================================================================
         /// Set by sinuca_configurator
         /// ====================================================================
         branch_predictor_policy_t branch_predictor_type;   /// Prefetch policy choosen by the user
-        uint32_t btb_line_number;                   /// Branch Target Buffer Size
-        uint32_t btb_associativity;                 /// Branch Target Buffer Associativity
-        replacement_t btb_replacement_policy;       /// Branch Target Buffer Replacement Policy
-
-        uint32_t bht_signature_bits;                /// Signature size
-        hash_function_t bht_signature_hash;         /// Signature hash function (SIGNATURE xor PC)
-        uint32_t bht_fsm_bits;                      /// Finite State Machine size
 
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
-        branch_target_buffer_set_t *btb;    /// Branch Target Buffer
-        uint32_t btb_total_sets;            /// Branch Target Buffer Associativity
-
-        uint64_t btb_index_bits_mask;       /// Index mask
-        uint64_t btb_index_bits_shift;
-
-        uint64_t btb_tag_bits_mask;         /// Tag mask
-        uint64_t btb_tag_bits_shift;
-
-        uint32_t *bht;                      /// Branch History Table (2Level predictor)
-        uint32_t bht_signature;             /// Branch History signature (2Level predictor)
-        uint32_t bht_signature_bits_mask;   /// Branch History signature mask (2Level predictor)
-        uint32_t bht_fsm_bits_mask;         /// Branch History fsm mask (2Level predictor)
 
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
-        uint64_t stat_btb_accesses;
-        uint64_t stat_btb_hit;
-        uint64_t stat_btb_miss;
-
         uint64_t stat_branch_predictor_operation;
         uint64_t stat_branch_predictor_hit;
         uint64_t stat_branch_predictor_miss;
@@ -97,40 +73,13 @@ class branch_predictor_t : public interconnection_interface_t {
         void print_configuration();
         /// ====================================================================
 
-        uint32_t btb_evict_address(uint64_t opcode_address);
-        bool btb_find_update_address(uint64_t opcode_address);
-
-        inline uint64_t btb_get_tag(uint64_t addr) {
-            return (addr & this->btb_tag_bits_mask) >> this->btb_tag_bits_shift;
-        }
-
-        inline uint64_t btb_get_index(uint64_t addr) {
-            return (addr & this->btb_index_bits_mask) >> this->btb_index_bits_shift;
-        }
-
-        bool bht_find_update_prediction(opcode_package_t actual_opcode, opcode_package_t next_opcode);
-        processor_stage_t predict_branch(opcode_package_t actual_opcode, opcode_package_t next_opcode);
-
+        virtual processor_stage_t predict_branch(opcode_package_t actual_opcode, opcode_package_t next_opcode)=0;
 
         INSTANTIATE_GET_SET(branch_predictor_policy_t, branch_predictor_type)
-        INSTANTIATE_GET_SET(uint32_t, btb_line_number)
-        INSTANTIATE_GET_SET(uint32_t, btb_associativity)
-        INSTANTIATE_GET_SET(uint32_t, btb_total_sets)
-        INSTANTIATE_GET_SET(replacement_t, btb_replacement_policy)
-
-        INSTANTIATE_GET_SET(uint32_t, bht_signature_bits)
-        INSTANTIATE_GET_SET(uint32_t, bht_signature_bits_mask)
-        INSTANTIATE_GET_SET(hash_function_t, bht_signature_hash)
-        INSTANTIATE_GET_SET(uint32_t, bht_fsm_bits)
-        INSTANTIATE_GET_SET(uint32_t, bht_fsm_bits_mask)
 
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_btb_accesses)
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_btb_hit)
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_btb_miss)
-
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_branch_predictor_operation)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_branch_predictor_hit)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_branch_predictor_miss)

@@ -305,60 +305,93 @@ void sinuca_engine_t::initialize_processor() {
 
             branch_predictor_parameters.push_back("TYPE");
             if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "TWO_LEVEL") ==  0) {
-                this->processor_array[i]->branch_predictor.set_branch_predictor_type(BRANCH_PREDICTOR_TWO_LEVEL);
+                this->processor_array[i]->branch_predictor = new branch_predictor_two_level_t;
+                branch_predictor_two_level_t *branch_predictor_ptr = (branch_predictor_two_level_t*) this->processor_array[i]->branch_predictor;
+
+                branch_predictor_ptr->set_branch_predictor_type(BRANCH_PREDICTOR_TWO_LEVEL);
+    
+                branch_predictor_parameters.push_back("BTB_LINE_NUMBER");
+                branch_predictor_ptr->set_btb_line_number(cfg_branch_predictor[ branch_predictor_parameters.back() ]);
+    
+                branch_predictor_parameters.push_back("BTB_ASSOCIATIVITY");
+                branch_predictor_ptr->set_btb_associativity(cfg_branch_predictor[ branch_predictor_parameters.back() ]);
+    
+                branch_predictor_parameters.push_back("BTB_REPLACEMENT_POLICY");
+                if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "FIFO") ==  0) {
+                    branch_predictor_ptr->set_btb_replacement_policy(REPLACEMENT_FIFO);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "LRF") ==  0) {
+                    branch_predictor_ptr->set_btb_replacement_policy(REPLACEMENT_LRF);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "LRU") ==  0) {
+                    branch_predictor_ptr->set_btb_replacement_policy(REPLACEMENT_LRU);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "RANDOM") ==  0) {
+                    branch_predictor_ptr->set_btb_replacement_policy(REPLACEMENT_RANDOM);
+                }
+                else {
+                    ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_branch_predictor[ branch_predictor_parameters.back() ].c_str(), branch_predictor_parameters.back());
+                }
+    
+                branch_predictor_parameters.push_back("BHT_SIGNATURE_BITS");
+                branch_predictor_ptr->set_bht_signature_bits(cfg_branch_predictor[ branch_predictor_parameters.back() ]);
+    
+                branch_predictor_parameters.push_back("BHT_SIGNATURE_HASH");
+                if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_ONLY") ==  0) {
+                    branch_predictor_ptr->set_bht_signature_hash(HASH_FUNCTION_INPUT1_ONLY);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT2_ONLY") ==  0) {
+                    branch_predictor_ptr->set_bht_signature_hash(HASH_FUNCTION_INPUT2_ONLY);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "XOR_SIMPLE") ==  0) {
+                    branch_predictor_ptr->set_bht_signature_hash(HASH_FUNCTION_XOR_SIMPLE);
+                }
+                else {
+                    ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_branch_predictor[ branch_predictor_parameters.back() ].c_str(), branch_predictor_parameters.back());
+                }
+    
+                branch_predictor_parameters.push_back("BHT_FSM_BITS");
+                branch_predictor_ptr->set_bht_fsm_bits(cfg_branch_predictor[ branch_predictor_parameters.back() ]);
             }
             else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "STATIC_TAKEN") ==  0) {
-                this->processor_array[i]->branch_predictor.set_branch_predictor_type(BRANCH_PREDICTOR_STATIC_TAKEN);
+                this->processor_array[i]->branch_predictor = new branch_predictor_static_taken_t;
+                branch_predictor_static_taken_t *branch_predictor_ptr = (branch_predictor_static_taken_t*) this->processor_array[i]->branch_predictor;
+
+                branch_predictor_ptr->set_branch_predictor_type(BRANCH_PREDICTOR_STATIC_TAKEN);
+    
+                branch_predictor_parameters.push_back("BTB_LINE_NUMBER");
+                branch_predictor_ptr->set_btb_line_number(cfg_branch_predictor[ branch_predictor_parameters.back() ]);
+    
+                branch_predictor_parameters.push_back("BTB_ASSOCIATIVITY");
+                branch_predictor_ptr->set_btb_associativity(cfg_branch_predictor[ branch_predictor_parameters.back() ]);
+    
+                branch_predictor_parameters.push_back("BTB_REPLACEMENT_POLICY");
+                if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "FIFO") ==  0) {
+                    branch_predictor_ptr->set_btb_replacement_policy(REPLACEMENT_FIFO);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "LRF") ==  0) {
+                    branch_predictor_ptr->set_btb_replacement_policy(REPLACEMENT_LRF);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "LRU") ==  0) {
+                    branch_predictor_ptr->set_btb_replacement_policy(REPLACEMENT_LRU);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "RANDOM") ==  0) {
+                    branch_predictor_ptr->set_btb_replacement_policy(REPLACEMENT_RANDOM);
+                }
+                else {
+                    ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_branch_predictor[ branch_predictor_parameters.back() ].c_str(), branch_predictor_parameters.back());
+                }
             }
             else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "DISABLE") ==  0) {
-                this->processor_array[i]->branch_predictor.set_branch_predictor_type(BRANCH_PREDICTOR_DISABLE);
+                this->processor_array[i]->branch_predictor = new branch_predictor_disable_t;
+                branch_predictor_disable_t *branch_predictor_ptr = (branch_predictor_disable_t*) this->processor_array[i]->branch_predictor;
+
+                branch_predictor_ptr->set_branch_predictor_type(BRANCH_PREDICTOR_DISABLE);
+
             }
             else {
                 ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_branch_predictor[ branch_predictor_parameters.back() ].c_str(), branch_predictor_parameters.back());
             }
-
-            branch_predictor_parameters.push_back("BTB_LINE_NUMBER");
-            this->processor_array[i]->branch_predictor.set_btb_line_number(cfg_branch_predictor[ branch_predictor_parameters.back() ]);
-
-            branch_predictor_parameters.push_back("BTB_ASSOCIATIVITY");
-            this->processor_array[i]->branch_predictor.set_btb_associativity(cfg_branch_predictor[ branch_predictor_parameters.back() ]);
-
-            branch_predictor_parameters.push_back("BTB_REPLACEMENT_POLICY");
-            if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "FIFO") ==  0) {
-                this->processor_array[i]->branch_predictor.set_btb_replacement_policy(REPLACEMENT_FIFO);
-            }
-            else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "LRF") ==  0) {
-                this->processor_array[i]->branch_predictor.set_btb_replacement_policy(REPLACEMENT_LRF);
-            }
-            else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "LRU") ==  0) {
-                this->processor_array[i]->branch_predictor.set_btb_replacement_policy(REPLACEMENT_LRU);
-            }
-            else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "RANDOM") ==  0) {
-                this->processor_array[i]->branch_predictor.set_btb_replacement_policy(REPLACEMENT_RANDOM);
-            }
-            else {
-                ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_branch_predictor[ branch_predictor_parameters.back() ].c_str(), branch_predictor_parameters.back());
-            }
-
-            branch_predictor_parameters.push_back("BHT_SIGNATURE_BITS");
-            this->processor_array[i]->branch_predictor.set_bht_signature_bits(cfg_branch_predictor[ branch_predictor_parameters.back() ]);
-
-            branch_predictor_parameters.push_back("BHT_SIGNATURE_HASH");
-            if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_ONLY") ==  0) {
-                this->processor_array[i]->branch_predictor.set_bht_signature_hash(HASH_FUNCTION_INPUT1_ONLY);
-            }
-            else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT2_ONLY") ==  0) {
-                this->processor_array[i]->branch_predictor.set_bht_signature_hash(HASH_FUNCTION_INPUT2_ONLY);
-            }
-            else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "XOR_SIMPLE") ==  0) {
-                this->processor_array[i]->branch_predictor.set_bht_signature_hash(HASH_FUNCTION_XOR_SIMPLE);
-            }
-            else {
-                ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_branch_predictor[ branch_predictor_parameters.back() ].c_str(), branch_predictor_parameters.back());
-            }
-
-            branch_predictor_parameters.push_back("BHT_FSM_BITS");
-            this->processor_array[i]->branch_predictor.set_bht_fsm_bits(cfg_branch_predictor[ branch_predictor_parameters.back() ]);
 
             /// ================================================================
             /// Check if any PROCESSOR non-required parameters exist

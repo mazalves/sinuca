@@ -50,7 +50,10 @@ SRC_PACKAGE = 		packages/opcode_package.cpp \
 
 SRC_TRACE_READER = 	trace_reader/trace_reader.cpp
 
-SRC_BRANCH_PREDICTOR =	 	branch_predictor/branch_predictor.cpp
+SRC_BRANCH_PREDICTOR =	 	branch_predictor/branch_predictor.cpp \
+							branch_predictor/branch_predictor_two_level.cpp \
+							branch_predictor/branch_predictor_static_taken.cpp \
+							branch_predictor/branch_predictor_disable.cpp
 
 SRC_PROCESSOR =	 	processor/processor.cpp \
 
