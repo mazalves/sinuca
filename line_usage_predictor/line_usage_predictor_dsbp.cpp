@@ -316,10 +316,6 @@ void line_usage_predictor_dsbp_t::print_statistics() {
 void line_usage_predictor_dsbp_t::print_configuration() {
     line_usage_predictor_t::print_configuration();
 
-
-    /// ====================================================================
-    /// dsbp
-    /// ====================================================================
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "usage_counter_bits", usage_counter_bits);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "usage_counter_max", usage_counter_max);
@@ -328,6 +324,7 @@ void line_usage_predictor_dsbp_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "sub_block_size", sub_block_size);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "sub_block_total", sub_block_total);
 
+    /// metadata
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "metadata_line_number", metadata_line_number);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "metadata_associativity", metadata_associativity);
@@ -1229,7 +1226,7 @@ pht_line_t* line_usage_predictor_dsbp_t::pht_evict_address(uint64_t opcode_addre
         break;
 
         case REPLACEMENT_DEAD_OR_LRU:
-            ERROR_PRINTF("Replacement Policy: REPLACEMENT_POLICY_LRU_DSBP should not use for line_usage_predictor.\n");
+            ERROR_PRINTF("Replacement Policy: REPLACEMENT_POLICY_DEAD_OR_LRU should not use for line_usage_predictor.\n");
         break;
     }
 

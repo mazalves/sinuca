@@ -27,13 +27,50 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         /// Set by sinuca_configurator
         /// ====================================================================
         uint32_t usage_counter_bits;
+
+        /// metadata
+        uint32_t metadata_line_number;          /// Cache Metadata
+        uint32_t metadata_associativity;        /// Cache Metadata
+
+        /// aht - misses
+        uint32_t ahtm_line_number;
+        uint32_t ahtm_associativity;
+        replacement_t ahtm_replacement_policy;
+
+        /// aht - cpyback
+        uint32_t ahtc_line_number;
+        uint32_t ahtc_associativity;
+        replacement_t ahtc_replacement_policy;
+
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
         uint32_t usage_counter_max;
-        /// ====================================================================
+
+        /// metadata
+        dlec_metadata_set_t *metadata_sets;
+        uint32_t metadata_total_sets;
+
+        /// aht - misses
+        aht_set_t *ahtm_sets;
+        uint32_t ahtm_total_sets;
+        uint64_t ahtm_index_bits_mask;
+
+        /// aht - copyback
+        aht_set_t *ahtc_sets;
+        uint32_t ahtc_total_sets;
+        uint64_t ahtc_index_bits_mask;
+
+         /// ====================================================================
         /// Statistics related
         /// ====================================================================
+        uint64_t stat_ahtm_access;
+        uint64_t stat_ahtm_hit;
+        uint64_t stat_ahtm_miss;
+
+        uint64_t stat_ahtc_access;
+        uint64_t stat_ahtc_hit;
+        uint64_t stat_ahtc_miss;
 
     public:
         /// ====================================================================
@@ -83,7 +120,36 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         void line_invalidation(uint32_t index, uint32_t way);
         /// ====================================================================
 
+        INSTANTIATE_GET_SET(uint32_t, usage_counter_bits);
+        INSTANTIATE_GET_SET(uint32_t, usage_counter_max);
+
+        /// metadata
+        INSTANTIATE_GET_SET(dlec_metadata_set_t*, metadata_sets);
+        INSTANTIATE_GET_SET(uint32_t, metadata_line_number);
+        INSTANTIATE_GET_SET(uint32_t, metadata_associativity);
+        INSTANTIATE_GET_SET(uint32_t, metadata_total_sets);
+
+        /// pht
+        INSTANTIATE_GET_SET(uint32_t, ahtm_line_number);
+        INSTANTIATE_GET_SET(uint32_t, ahtm_associativity);
+        INSTANTIATE_GET_SET(replacement_t, ahtm_replacement_policy);
+        INSTANTIATE_GET_SET(uint32_t, ahtm_total_sets);
+
+        INSTANTIATE_GET_SET(uint32_t, ahtc_line_number);
+        INSTANTIATE_GET_SET(uint32_t, ahtc_associativity);
+        INSTANTIATE_GET_SET(replacement_t, ahtc_replacement_policy);
+        INSTANTIATE_GET_SET(uint32_t, ahtc_total_sets);
+
+
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_ahtm_access);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_ahtm_hit);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_ahtm_miss);
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_ahtc_access);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_ahtc_hit);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_ahtc_miss);
 };

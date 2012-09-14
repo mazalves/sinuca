@@ -159,6 +159,7 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET(uint32_t, sub_block_size);
         INSTANTIATE_GET_SET(uint32_t, sub_block_total);
         INSTANTIATE_GET_SET(uint32_t, usage_counter_bits);
+        INSTANTIATE_GET_SET(uint32_t, usage_counter_max);
 
         /// metadata
         std::string dsbp_metadata_line_to_string(dsbp_metadata_line_t *dsbp_metadata_line);
