@@ -330,7 +330,7 @@ void interconnection_router_t::periodic_check(){
 };
 
 //==============================================================================
-// STATISTICS
+/// STATISTICS
 //==============================================================================
 void interconnection_router_t::reset_statistics() {
     this->set_stat_transmissions(0);

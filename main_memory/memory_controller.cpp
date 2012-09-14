@@ -879,7 +879,7 @@ void memory_controller_t::periodic_check(){
 };
 
 /// ============================================================================
-// STATISTICS
+/// STATISTICS
 /// ============================================================================
 void memory_controller_t::reset_statistics() {
 

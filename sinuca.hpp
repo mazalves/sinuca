@@ -98,6 +98,8 @@ class line_usage_predictor_dsbp_t;
 /// === DLEC
 class aht_line_t;
 class aht_set_t;
+class dlec_metadata_line_t;
+class dlec_metadata_set_t;
 class line_usage_predictor_dlec_t;
 /// === LWP
 class line_usage_predictor_lwp_t;
@@ -302,6 +304,8 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 
 #include "./line_usage_predictor/aht_line.hpp"
 #include "./line_usage_predictor/aht_set.hpp"
+#include "./line_usage_predictor/dlec_metadata_line.hpp"
+#include "./line_usage_predictor/dlec_metadata_set.hpp"
 #include "./line_usage_predictor/line_usage_predictor_dlec.hpp"
 
 #include "./line_usage_predictor/line_usage_predictor_lwp.hpp"

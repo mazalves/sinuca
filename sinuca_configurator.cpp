@@ -625,23 +625,23 @@ void sinuca_engine_t::initialize_cache_memory() {
 
                 /// PHT
                 line_usage_predictor_parameters.push_back("DSBP_PHT_LINE_NUMBER");
-                line_usage_predictor_ptr->set_dsbp_pht_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+                line_usage_predictor_ptr->set_pht_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
 
                 line_usage_predictor_parameters.push_back("DSBP_PHT_ASSOCIATIVITY");
-                line_usage_predictor_ptr->set_dsbp_pht_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+                line_usage_predictor_ptr->set_pht_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
 
                 line_usage_predictor_parameters.push_back("DSBP_PHT_REPLACEMENT_POLICY");
                 if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "FIFO") ==  0) {
-                    line_usage_predictor_ptr->set_dsbp_pht_replacement_policy(REPLACEMENT_FIFO);
+                    line_usage_predictor_ptr->set_pht_replacement_policy(REPLACEMENT_FIFO);
                 }
                 else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "LRF") ==  0) {
-                    line_usage_predictor_ptr->set_dsbp_pht_replacement_policy(REPLACEMENT_LRF);
+                    line_usage_predictor_ptr->set_pht_replacement_policy(REPLACEMENT_LRF);
                 }
                 else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "LRU") ==  0) {
-                    line_usage_predictor_ptr->set_dsbp_pht_replacement_policy(REPLACEMENT_LRU);
+                    line_usage_predictor_ptr->set_pht_replacement_policy(REPLACEMENT_LRU);
                 }
                 else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "RANDOM") ==  0) {
-                    line_usage_predictor_ptr->set_dsbp_pht_replacement_policy(REPLACEMENT_RANDOM);
+                    line_usage_predictor_ptr->set_pht_replacement_policy(REPLACEMENT_RANDOM);
                 }
                 else {
                     ERROR_PRINTF("CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());

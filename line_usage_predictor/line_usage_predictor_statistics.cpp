@@ -141,7 +141,7 @@ void line_usage_predictor_statistics_t::periodic_check(){
 };
 
 /// ============================================================================
-// STATISTICS
+/// STATISTICS
 /// ============================================================================
 void line_usage_predictor_statistics_t::reset_statistics() {
     line_usage_predictor_t::reset_statistics();

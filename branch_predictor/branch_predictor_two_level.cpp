@@ -292,7 +292,7 @@ void branch_predictor_two_level_t::periodic_check(){
 };
 
 /// ============================================================================
-// STATISTICS
+/// STATISTICS
 /// ============================================================================
 void branch_predictor_two_level_t::reset_statistics() {
     branch_predictor_t::reset_statistics();

@@ -855,7 +855,7 @@ void cache_memory_t::periodic_check(){
 
 
 /// ============================================================================
-// STATISTICS
+/// STATISTICS
 /// ============================================================================
 void cache_memory_t::reset_statistics() {
     this->set_stat_accesses(0);

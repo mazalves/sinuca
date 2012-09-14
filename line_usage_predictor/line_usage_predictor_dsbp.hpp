@@ -35,9 +35,9 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         uint32_t metadata_associativity;        /// Cache Metadata
 
         /// pht
-        uint32_t dsbp_pht_line_number;
-        uint32_t dsbp_pht_associativity;
-        replacement_t dsbp_pht_replacement_policy;
+        uint32_t pht_line_number;
+        uint32_t pht_associativity;
+        replacement_t pht_replacement_policy;
 
         /// ====================================================================
         /// Set by this->allocate()
@@ -51,9 +51,9 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         uint32_t metadata_total_sets;
 
         /// pht
-        pht_set_t *dsbp_pht_sets;
-        uint32_t dsbp_pht_total_sets;
-        uint64_t dsbp_pht_index_bits_mask;
+        pht_set_t *pht_sets;
+        uint32_t pht_total_sets;
+        uint64_t pht_index_bits_mask;
 
 
         /// ====================================================================
@@ -72,9 +72,9 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         uint64_t stat_copyback;
         uint64_t stat_eviction;
 
-        uint64_t stat_dsbp_pht_access;
-        uint64_t stat_dsbp_pht_hit;
-        uint64_t stat_dsbp_pht_miss;
+        uint64_t stat_pht_access;
+        uint64_t stat_pht_hit;
+        uint64_t stat_pht_miss;
 
         uint64_t *stat_accessed_sub_block;
         uint64_t *stat_active_sub_block_per_access;     /// Number of active sub_blocks on the line during one access
@@ -169,14 +169,14 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET(uint32_t, metadata_total_sets);
 
         /// pht
-        pht_line_t* dsbp_pht_find_line(uint64_t opcode_address, uint64_t memory_address);
-        pht_line_t* dsbp_pht_evict_address(uint64_t opcode_address, uint64_t memory_address);
+        pht_line_t* pht_find_line(uint64_t opcode_address, uint64_t memory_address);
+        pht_line_t* pht_evict_address(uint64_t opcode_address, uint64_t memory_address);
         std::string pht_line_to_string(pht_line_t *pht_line);
 
-        INSTANTIATE_GET_SET(uint32_t, dsbp_pht_line_number);
-        INSTANTIATE_GET_SET(uint32_t, dsbp_pht_associativity);
-        INSTANTIATE_GET_SET(replacement_t, dsbp_pht_replacement_policy);
-        INSTANTIATE_GET_SET(uint32_t, dsbp_pht_total_sets);
+        INSTANTIATE_GET_SET(uint32_t, pht_line_number);
+        INSTANTIATE_GET_SET(uint32_t, pht_associativity);
+        INSTANTIATE_GET_SET(replacement_t, pht_replacement_policy);
+        INSTANTIATE_GET_SET(uint32_t, pht_total_sets);
 
         /// ====================================================================
         /// Statistics related
@@ -194,9 +194,9 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_copyback);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction);
 
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dsbp_pht_access);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dsbp_pht_hit);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dsbp_pht_miss);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_pht_access);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_pht_hit);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_pht_miss);
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_touch_0);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_touch_1);

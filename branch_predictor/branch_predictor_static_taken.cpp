@@ -234,7 +234,7 @@ void branch_predictor_static_taken_t::periodic_check(){
 };
 
 /// ============================================================================
-// STATISTICS
+/// STATISTICS
 /// ============================================================================
 void branch_predictor_static_taken_t::reset_statistics() {
     branch_predictor_t::reset_statistics();

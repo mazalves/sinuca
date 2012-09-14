@@ -235,7 +235,7 @@ void prefetch_stride_t::periodic_check(){
 };
 
 /// ============================================================================
-// STATISTICS
+/// STATISTICS
 /// ============================================================================
 void prefetch_stride_t::reset_statistics() {
     prefetch_t::reset_statistics();

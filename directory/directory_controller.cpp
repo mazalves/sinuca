@@ -1428,7 +1428,7 @@ void directory_controller_t::periodic_check(){
 };
 
 /// ============================================================================
-// STATISTICS
+/// STATISTICS
 /// ============================================================================
 void directory_controller_t::reset_statistics() {
 

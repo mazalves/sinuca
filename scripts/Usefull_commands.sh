@@ -275,16 +275,38 @@ python create_pin_points_trace.py parallel_trace spec_omp2001 8 1 11 ; \
 $(echo -ne '\r')";
 
 
-
+# Create pin_point traces for all NPB_OMP and SPEC_OMP2001 - 1,2,4,8 Threads
 byobu -p0 -X stuff \
 "reset ; \
 cd ~/Experiment/SiNUCA/trace_generator/source/tools/sinuca_tracer/scripts ; \
+python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
+python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
+python create_pin_points_trace.py parallel_trace npb_omp 1 1 11 ; \
+python create_pin_points_trace.py clean spec_omp2001 1 0 0 ; \
+python create_pin_points_trace.py prepare spec_omp2001 1 0 0 ; \
+python create_pin_points_trace.py parallel_trace spec_omp2001 1 1 11 ; \
+reset;
+python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
+python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
+python create_pin_points_trace.py parallel_trace npb_omp 2 1 11 ; \
+python create_pin_points_trace.py clean spec_omp2001 1 0 0 ; \
+python create_pin_points_trace.py prepare spec_omp2001 1 0 0 ; \
+python create_pin_points_trace.py parallel_trace spec_omp2001 2 1 11 ; \
+reset;
 python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
 python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
 python create_pin_points_trace.py parallel_trace npb_omp 4 1 11 ; \
 python create_pin_points_trace.py clean spec_omp2001 1 0 0 ; \
 python create_pin_points_trace.py prepare spec_omp2001 1 0 0 ; \
 python create_pin_points_trace.py parallel_trace spec_omp2001 4 1 11 ; \
+reset;
+python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
+python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
+python create_pin_points_trace.py parallel_trace npb_omp 8 1 11 ; \
+python create_pin_points_trace.py clean spec_omp2001 1 0 0 ; \
+python create_pin_points_trace.py prepare spec_omp2001 1 0 0 ; \
+python create_pin_points_trace.py parallel_trace spec_omp2001 8 1 11 ; \
+reset;
 python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
 python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
 python create_pin_points_trace.py parallel_trace npb_omp 16 1 11 ; \

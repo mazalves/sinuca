@@ -42,7 +42,7 @@ prefetch_disable_t::~prefetch_disable_t() {
 
 /// ============================================================================
 void prefetch_disable_t::allocate() {
-    prefetch_t::allocate();    
+    prefetch_t::allocate();
 };
 
 /// ============================================================================
@@ -68,21 +68,21 @@ void prefetch_disable_t::print_structures() {
 /// ============================================================================
 void prefetch_disable_t::panic() {
     prefetch_t::panic();
-    
+
     this->print_structures();
 };
 
 /// ============================================================================
 void prefetch_disable_t::periodic_check(){
     prefetch_t::periodic_check();
-    
+
     #ifdef PREFETCHER_DEBUG
         this->print_structures();
     #endif
 };
 
 /// ============================================================================
-// STATISTICS
+/// STATISTICS
 /// ============================================================================
 void prefetch_disable_t::reset_statistics() {
     prefetch_t::reset_statistics();

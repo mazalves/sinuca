@@ -76,7 +76,7 @@ void line_usage_predictor_dlec_t::periodic_check(){
 };
 
 /// ============================================================================
-// STATISTICS
+/// STATISTICS
 /// ============================================================================
 void line_usage_predictor_dlec_t::reset_statistics() {
     line_usage_predictor_t::allocate();

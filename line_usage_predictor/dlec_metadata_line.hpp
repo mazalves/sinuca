@@ -21,26 +21,39 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
 /// ============================================================================
-class aht_line_t {
+class dlec_metadata_line_t {
     public:
-        uint64_t opcode_address;
-        uint64_t offset;
-        uint64_t last_access;
-        bool pointer;
+        line_sub_block_t valid_sub_blocks;
+        uint64_t real_usage_counter;
         uint64_t usage_counter;
         bool overflow;
+        bool learn_mode;
+        aht_line_t *aht_pointer;
 
-        bool is_last_write;
+        /// Static Energy
+        uint64_t clock_become_alive;
+        uint64_t clock_become_dead;
 
-        aht_line_t() {
-            this->opcode_address = 0;
-            this->offset = 0;
-            this->last_access = 0;
-            this->pointer = 0;
+        /// Copyback Flag
+        bool is_dirty;
+
+        /// Dead Flag
+        bool is_dead;
+
+        dlec_metadata_line_t() {
+            this->valid_sub_blocks = LINE_SUB_BLOCK_DISABLE;
+            this->real_usage_counter = 0;
             this->usage_counter = 0;
             this->overflow = 0;
-            this->is_last_write = false;
+            this->learn_mode = false;
+            this->aht_pointer = NULL;
+            this->clock_become_alive = 0;
+            this->clock_become_dead = 0;
+            this->is_dirty = false;
+            this->is_dead = true;
         };
-        ~aht_line_t() {
+        ~dlec_metadata_line_t() {
         };
+
+
 };
