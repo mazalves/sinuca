@@ -26,20 +26,20 @@ class line_usage_predictor_statistics_t : public line_usage_predictor_t {
         /// ====================================================================
         /// Set by sinuca_configurator
         /// ====================================================================
-        uint32_t dsbp_sub_block_size;
-        uint32_t dsbp_usage_counter_bits;
+        uint32_t sub_block_size;
+        uint32_t usage_counter_bits;
 
-        uint32_t dsbp_line_number;          /// Cache Metadata
-        uint32_t dsbp_associativity;        /// Cache Metadata
+        uint32_t metadata_line_number;          /// Cache Metadata
+        uint32_t metadata_associativity;        /// Cache Metadata
 
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
 
-        dsbp_metadata_set_t *dsbp_sets;
-        uint32_t dsbp_total_sets;
-        uint32_t dsbp_sub_block_total;
-        uint32_t dsbp_usage_counter_max;
+        dsbp_metadata_set_t *metadata_sets;
+        uint32_t metadata_total_sets;
+        uint32_t sub_block_total;
+        uint32_t usage_counter_max;
 
         /// ====================================================================
         /// Statistics related
@@ -130,16 +130,16 @@ class line_usage_predictor_statistics_t : public line_usage_predictor_t {
 
         void get_start_end_sub_blocks(uint64_t base_address, uint32_t size, uint32_t& sub_block_ini, uint32_t& sub_block_end);
 
-        INSTANTIATE_GET_SET(uint32_t, dsbp_sub_block_size);
-        INSTANTIATE_GET_SET(uint32_t, dsbp_sub_block_total);
-        INSTANTIATE_GET_SET(uint32_t, dsbp_usage_counter_bits);
+        INSTANTIATE_GET_SET(uint32_t, sub_block_size);
+        INSTANTIATE_GET_SET(uint32_t, sub_block_total);
+        INSTANTIATE_GET_SET(uint32_t, usage_counter_bits);
 
         /// metadata
         std::string dsbp_metadata_line_to_string(dsbp_metadata_line_t *dsbp_metadata_line);
-        INSTANTIATE_GET_SET(dsbp_metadata_set_t*, dsbp_sets);
-        INSTANTIATE_GET_SET(uint32_t, dsbp_line_number);
-        INSTANTIATE_GET_SET(uint32_t, dsbp_associativity);
-        INSTANTIATE_GET_SET(uint32_t, dsbp_total_sets);
+        INSTANTIATE_GET_SET(dsbp_metadata_set_t*, metadata_sets);
+        INSTANTIATE_GET_SET(uint32_t, metadata_line_number);
+        INSTANTIATE_GET_SET(uint32_t, metadata_associativity);
+        INSTANTIATE_GET_SET(uint32_t, metadata_total_sets);
 
 
         /// ====================================================================

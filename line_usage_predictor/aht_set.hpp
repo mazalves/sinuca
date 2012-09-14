@@ -21,25 +21,7 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
 /// ============================================================================
-class pht_line_t {
+class aht_set_t {
     public:
-        uint64_t opcode_address;
-        uint64_t offset;
-        uint64_t last_access;
-        bool pointer;
-        uint64_t *usage_counter;
-        bool *overflow;
-
-        pht_line_t() {
-            this->opcode_address = 0;
-            this->offset = 0;
-            this->last_access = 0;
-            this->pointer = 0;
-            this->usage_counter = NULL;
-            this->overflow = NULL;
-        };
-        ~pht_line_t() {
-            if (this->usage_counter) delete [] usage_counter;
-            if (this->overflow) delete [] overflow;
-        };
+        aht_line_t *ways;
 };

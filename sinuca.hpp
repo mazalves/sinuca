@@ -88,14 +88,20 @@ class prefetch_t;
 class prefetch_stride_t;
 class prefetch_disable_t;
 /// Line Usage Predictor
+class line_usage_predictor_t;
+/// === DSBP
 class pht_line_t;
 class pht_set_t;
 class dsbp_metadata_line_t;
 class dsbp_metadata_set_t;
-class line_usage_predictor_t;
 class line_usage_predictor_dsbp_t;
+/// === DLEC
+class aht_line_t;
+class aht_set_t;
 class line_usage_predictor_dlec_t;
+/// === LWP
 class line_usage_predictor_lwp_t;
+
 class line_usage_predictor_statistics_t;
 class line_usage_predictor_disable_t;
 /// Cache Memory
@@ -286,14 +292,18 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 /// ============================================================================
 /// Line Usage Predictor
 /// ============================================================================
+#include "./line_usage_predictor/line_usage_predictor.hpp"
+
 #include "./line_usage_predictor/pht_line.hpp"
 #include "./line_usage_predictor/pht_set.hpp"
 #include "./line_usage_predictor/dsbp_metadata_line.hpp"
 #include "./line_usage_predictor/dsbp_metadata_set.hpp"
-
-#include "./line_usage_predictor/line_usage_predictor.hpp"
 #include "./line_usage_predictor/line_usage_predictor_dsbp.hpp"
+
+#include "./line_usage_predictor/aht_line.hpp"
+#include "./line_usage_predictor/aht_set.hpp"
 #include "./line_usage_predictor/line_usage_predictor_dlec.hpp"
+
 #include "./line_usage_predictor/line_usage_predictor_lwp.hpp"
 #include "./line_usage_predictor/line_usage_predictor_statistics.hpp"
 #include "./line_usage_predictor/line_usage_predictor_disable.hpp"

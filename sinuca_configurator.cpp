@@ -551,23 +551,23 @@ void sinuca_engine_t::initialize_cache_memory() {
 
                 prefetcher_ptr->set_prefetcher_type(PREFETCHER_STRIDE);
 
-                prefetcher_parameters.push_back("STRIDE_TABLE_SIZE");
+                prefetcher_parameters.push_back("REFERENCE_PREDICTION_TABLE_SIZE");
                 prefetcher_ptr->set_reference_prediction_table_size( cfg_prefetcher[ prefetcher_parameters.back() ] );
 
-                prefetcher_parameters.push_back("STRIDE_ADDRESS_DISTANCE");
-                prefetcher_ptr->set_stride_address_distance( cfg_prefetcher[ prefetcher_parameters.back() ] );
+                prefetcher_parameters.push_back("ADDRESS_DISTANCE");
+                prefetcher_ptr->set_address_distance( cfg_prefetcher[ prefetcher_parameters.back() ] );
 
-                prefetcher_parameters.push_back("STRIDE_WINDOW");
+                prefetcher_parameters.push_back("WINDOW");
                 prefetcher_ptr->set_stride_window( cfg_prefetcher[ prefetcher_parameters.back() ] );
 
-                prefetcher_parameters.push_back("STRIDE_THRESHOLD_ACTIVATE");
-                prefetcher_ptr->set_stride_threshold_activate( cfg_prefetcher[ prefetcher_parameters.back() ] );
+                prefetcher_parameters.push_back("THRESHOLD_ACTIVATE");
+                prefetcher_ptr->set_threshold_activate( cfg_prefetcher[ prefetcher_parameters.back() ] );
 
-                prefetcher_parameters.push_back("STRIDE_PREFETCH_DEGREE");
-                prefetcher_ptr->set_stride_prefetch_degree( cfg_prefetcher[ prefetcher_parameters.back() ] );
+                prefetcher_parameters.push_back("PREFETCH_DEGREE");
+                prefetcher_ptr->set_prefetch_degree( cfg_prefetcher[ prefetcher_parameters.back() ] );
 
-                prefetcher_parameters.push_back("STRIDE_WAIT_BETWEEN_REQUESTS");
-                prefetcher_ptr->set_stride_wait_between_requests( cfg_prefetcher[ prefetcher_parameters.back() ] );
+                prefetcher_parameters.push_back("WAIT_BETWEEN_REQUESTS");
+                prefetcher_ptr->set_wait_between_requests( cfg_prefetcher[ prefetcher_parameters.back() ] );
             }
             else if (strcasecmp(cfg_prefetcher[ prefetcher_parameters.back() ], "DISABLE") ==  0) {
                 this->cache_memory_array[i]->prefetcher = new prefetch_disable_t;
@@ -607,21 +607,21 @@ void sinuca_engine_t::initialize_cache_memory() {
                 line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_DSBP);
 
                 /// DSBP Metadata
-                line_usage_predictor_parameters.push_back("DSBP_LINE_NUMBER");
-                line_usage_predictor_ptr->set_dsbp_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
-                ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_line_number() == line_usage_predictor_ptr->get_dsbp_line_number(),
+                line_usage_predictor_parameters.push_back("METADATA_LINE_NUMBER");
+                line_usage_predictor_ptr->set_metadata_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+                ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_line_number() == line_usage_predictor_ptr->get_metadata_line_number(),
                                     "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
 
-                line_usage_predictor_parameters.push_back("DSBP_ASSOCIATIVITY");
-                line_usage_predictor_ptr->set_dsbp_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
-                ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_associativity() == line_usage_predictor_ptr->get_dsbp_associativity(),
+                line_usage_predictor_parameters.push_back("METADATA_ASSOCIATIVITY");
+                line_usage_predictor_ptr->set_metadata_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+                ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_associativity() == line_usage_predictor_ptr->get_metadata_associativity(),
                                     "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
 
-                line_usage_predictor_parameters.push_back("DSBP_SUB_BLOCK_SIZE");
-                line_usage_predictor_ptr->set_dsbp_sub_block_size( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+                line_usage_predictor_parameters.push_back("SUB_BLOCK_SIZE");
+                line_usage_predictor_ptr->set_sub_block_size( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
 
-                line_usage_predictor_parameters.push_back("DSBP_USAGE_COUNTER_BITS");
-                line_usage_predictor_ptr->set_dsbp_usage_counter_bits( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+                line_usage_predictor_parameters.push_back("USAGE_COUNTER_BITS");
+                line_usage_predictor_ptr->set_usage_counter_bits( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
 
                 /// PHT
                 line_usage_predictor_parameters.push_back("DSBP_PHT_LINE_NUMBER");
@@ -667,6 +667,24 @@ void sinuca_engine_t::initialize_cache_memory() {
                 line_usage_predictor_statistics_t *line_usage_predictor_ptr = static_cast<line_usage_predictor_statistics_t*>(this->cache_memory_array[i]->line_usage_predictor);
 
                 line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_STATISTICS);
+
+                /// DSBP Metadata
+                line_usage_predictor_parameters.push_back("METADATA_LINE_NUMBER");
+                line_usage_predictor_ptr->set_metadata_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+                ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_line_number() == line_usage_predictor_ptr->get_metadata_line_number(),
+                                    "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
+
+                line_usage_predictor_parameters.push_back("METADATA_ASSOCIATIVITY");
+                line_usage_predictor_ptr->set_metadata_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+                ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_associativity() == line_usage_predictor_ptr->get_metadata_associativity(),
+                                    "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
+
+                line_usage_predictor_parameters.push_back("SUB_BLOCK_SIZE");
+                line_usage_predictor_ptr->set_sub_block_size( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+                line_usage_predictor_parameters.push_back("USAGE_COUNTER_BITS");
+                line_usage_predictor_ptr->set_usage_counter_bits( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
             }
             else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "DISABLE") ==  0) {
                 this->cache_memory_array[i]->line_usage_predictor = new line_usage_predictor_disable_t;

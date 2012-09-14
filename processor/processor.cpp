@@ -54,8 +54,8 @@ processor_t::processor_t() {
 
     /// Stages Control Variables
     this->trace_next_opcode.package_clean();
-    this->fetch_pc = 0;                     /// Last PC requested to IC
-    this->fetch_pc_line_buffer = 0;         /// Last PC answered by IC
+    this->fetch_opcode_address = 0;                     /// Last PC requested to IC
+    this->fetch_opcode_address_line_buffer = 0;         /// Last PC answered by IC
 
     this->fetch_opcode_counter = 1;         /// Last opcode fetched
     this->decode_opcode_counter = 1;        /// Last opcode decoded
@@ -492,7 +492,7 @@ void processor_t::stage_fetch() {
             fetch_buffer[position_buffer].package_wait(1);
         }
         /// Line Buffer
-        else if (this->cmp_index_tag(this->fetch_buffer[position_buffer].opcode_address, this->fetch_pc_line_buffer)) {
+        else if (this->cmp_index_tag(this->fetch_buffer[position_buffer].opcode_address, this->fetch_opcode_address_line_buffer)) {
             PROCESSOR_DEBUG_PRINTF("\t FOUND INTO FETCH BUFFER (READY)\n");
             fetch_buffer[position_buffer].package_ready(1);
         }
@@ -1337,7 +1337,7 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
                 ERROR_ASSERT_PRINTF(input_port == PROCESSOR_PORT_INST_CACHE, "Receiving instruction package from a wrong port.\n");
 
                 /// Add to the buffer the whole line fetched
-                this->fetch_pc_line_buffer = package->memory_address;
+                this->fetch_opcode_address_line_buffer = package->memory_address;
 
                 /// Find packages WAITING
                 for (uint32_t k = 0; k < this->fetch_buffer_position_used; k++) {

@@ -107,8 +107,8 @@ class processor_t : public interconnection_interface_t {
 
         /// Stages Control Variables
         opcode_package_t trace_next_opcode;
-        uint64_t fetch_pc;
-        uint64_t fetch_pc_line_buffer;
+        uint64_t fetch_opcode_address;
+        uint64_t fetch_opcode_address_line_buffer;
 
         uint64_t fetch_opcode_counter;
         uint64_t decode_opcode_counter;

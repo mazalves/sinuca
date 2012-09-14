@@ -35,11 +35,11 @@ prefetch_stride_t::prefetch_stride_t() {
     this->set_prefetcher_type(PREFETCHER_STRIDE);
 
     this->reference_prediction_table_size = 0;
-    this->stride_address_distance = 0;  /// double of line size
+    this->address_distance = 0;  /// double of line size
     this->stride_window = 0;
-    this->stride_threshold_activate = 0;
-    this->stride_prefetch_degree = 0;
-    this->stride_wait_between_requests = 0;
+    this->threshold_activate = 0;
+    this->prefetch_degree = 0;
+    this->wait_between_requests = 0;
     this->reference_prediction_table = NULL;
 };
 
@@ -73,9 +73,9 @@ void prefetch_stride_t::clock(uint32_t subcycle) {
         }
 
         /// Something interesting to be requested. Check if can do a new request
-        else if (this->reference_prediction_table[slot].relevance_count > this->stride_threshold_activate &&
-        this->reference_prediction_table[slot].prefetch_ahead < this->stride_prefetch_degree &&
-        this->reference_prediction_table[slot].cycle_last_request <= sinuca_engine.get_global_cycle() - this->stride_wait_between_requests) {
+        else if (this->reference_prediction_table[slot].relevance_count > this->threshold_activate &&
+        this->reference_prediction_table[slot].prefetch_ahead < this->prefetch_degree &&
+        this->reference_prediction_table[slot].cycle_last_request <= sinuca_engine.get_global_cycle() - this->wait_between_requests) {
 
             uint64_t last_memory_address = this->reference_prediction_table[slot].last_memory_address +
                                     ( this->reference_prediction_table[slot].prefetch_ahead * this->reference_prediction_table[slot].memory_address_difference);
@@ -83,7 +83,7 @@ void prefetch_stride_t::clock(uint32_t subcycle) {
             uint64_t memory_address = this->reference_prediction_table[slot].last_memory_address +
                                     ( (this->reference_prediction_table[slot].prefetch_ahead + 1) * this->reference_prediction_table[slot].memory_address_difference);
 
-            PREFETCHER_DEBUG_PRINTF("New Prefetch found STRIDE_BUFFER[%u] %s\n", slot, this->reference_prediction_table[slot].content_to_string().c_str());
+            PREFETCHER_DEBUG_PRINTF("New Prefetch found BUFFER[%u] %s\n", slot, this->reference_prediction_table[slot].content_to_string().c_str());
             if (!this->cmp_index_tag(last_memory_address, memory_address)) {
                 int32_t position = this->request_buffer_insert();
                 if (position != POSITION_FAIL) {
@@ -159,7 +159,7 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
 
                 /// Found one stride with same MemoryAddressDifference - Match
                 if ((this->reference_prediction_table[slot].memory_address_difference == address_difference || this->reference_prediction_table[slot].memory_address_difference == 0) &&
-                abs(address_difference) <= stride_address_distance) {
+                abs(address_difference) <= address_distance) {
                     PREFETCHER_DEBUG_PRINTF("Prefetcher: Found one Stream ... %s\n", address_difference > 0 ? "Increasing" : "Decreasing");
                     this->reference_prediction_table[slot].memory_address_difference = address_difference;
                     this->reference_prediction_table[slot].last_opcode_address = package->opcode_address;
@@ -215,7 +215,7 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
 void prefetch_stride_t::print_structures() {
     prefetch_t::print_structures();
 
-    SINUCA_PRINTF("%s STRIDE_TABLE:\n%s", this->get_label(), reference_prediction_line_t::print_all(this->reference_prediction_table, this->reference_prediction_table_size).c_str())
+    SINUCA_PRINTF("%s TABLE:\n%s", this->get_label(), reference_prediction_line_t::print_all(this->reference_prediction_table, this->reference_prediction_table_size).c_str())
 };
 
 /// ============================================================================
@@ -252,9 +252,9 @@ void prefetch_stride_t::print_configuration() {
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "reference_prediction_table_size", reference_prediction_table_size);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stride_address_distance", stride_address_distance);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "address_distance", address_distance);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stride_window", stride_window);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stride_threshold_activate", stride_threshold_activate);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stride_prefetch_degree", stride_prefetch_degree);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stride_wait_between_requests", stride_wait_between_requests);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "threshold_activate", threshold_activate);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "prefetch_degree", prefetch_degree);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "wait_between_requests", wait_between_requests);
 };

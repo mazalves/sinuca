@@ -27,12 +27,12 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         /// Set by sinuca_configurator
         /// ====================================================================
 
-        uint32_t dsbp_sub_block_size;
-        uint32_t dsbp_usage_counter_bits;
+        uint32_t sub_block_size;
+        uint32_t usage_counter_bits;
 
         /// metadata
-        uint32_t dsbp_line_number;          /// Cache Metadata
-        uint32_t dsbp_associativity;        /// Cache Metadata
+        uint32_t metadata_line_number;          /// Cache Metadata
+        uint32_t metadata_associativity;        /// Cache Metadata
 
         /// pht
         uint32_t dsbp_pht_line_number;
@@ -43,11 +43,12 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         /// Set by this->allocate()
         /// ====================================================================
 
+        uint32_t sub_block_total;
+        uint32_t usage_counter_max;
+
         /// metadata
-        dsbp_metadata_set_t *dsbp_sets;
-        uint32_t dsbp_total_sets;
-        uint32_t dsbp_sub_block_total;
-        uint32_t dsbp_usage_counter_max;
+        dsbp_metadata_set_t *metadata_sets;
+        uint32_t metadata_total_sets;
 
         /// pht
         pht_set_t *dsbp_pht_sets;
@@ -155,21 +156,21 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         void compute_static_energy(uint32_t index, uint32_t way);
         void get_start_end_sub_blocks(uint64_t base_address, uint32_t size, uint32_t& sub_block_ini, uint32_t& sub_block_end);
 
-        INSTANTIATE_GET_SET(uint32_t, dsbp_sub_block_size);
-        INSTANTIATE_GET_SET(uint32_t, dsbp_sub_block_total);
-        INSTANTIATE_GET_SET(uint32_t, dsbp_usage_counter_bits);
+        INSTANTIATE_GET_SET(uint32_t, sub_block_size);
+        INSTANTIATE_GET_SET(uint32_t, sub_block_total);
+        INSTANTIATE_GET_SET(uint32_t, usage_counter_bits);
 
         /// metadata
         std::string dsbp_metadata_line_to_string(dsbp_metadata_line_t *dsbp_metadata_line);
 
-        INSTANTIATE_GET_SET(dsbp_metadata_set_t*, dsbp_sets);
-        INSTANTIATE_GET_SET(uint32_t, dsbp_line_number);
-        INSTANTIATE_GET_SET(uint32_t, dsbp_associativity);
-        INSTANTIATE_GET_SET(uint32_t, dsbp_total_sets);
+        INSTANTIATE_GET_SET(dsbp_metadata_set_t*, metadata_sets);
+        INSTANTIATE_GET_SET(uint32_t, metadata_line_number);
+        INSTANTIATE_GET_SET(uint32_t, metadata_associativity);
+        INSTANTIATE_GET_SET(uint32_t, metadata_total_sets);
 
         /// pht
-        pht_line_t* dsbp_pht_find_line(uint64_t pc, uint64_t memory_address);
-        pht_line_t* dsbp_pht_evict_address(uint64_t pc, uint64_t memory_address);
+        pht_line_t* dsbp_pht_find_line(uint64_t opcode_address, uint64_t memory_address);
+        pht_line_t* dsbp_pht_evict_address(uint64_t opcode_address, uint64_t memory_address);
         std::string pht_line_to_string(pht_line_t *pht_line);
 
         INSTANTIATE_GET_SET(uint32_t, dsbp_pht_line_number);

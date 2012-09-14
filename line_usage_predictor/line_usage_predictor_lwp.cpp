@@ -31,7 +31,7 @@
 
 /// ============================================================================
 line_usage_predictor_lwp_t::line_usage_predictor_lwp_t() {
-    this->line_usage_predictor_type = LINE_USAGE_PREDICTOR_POLICY_DISABLE;
+    this->line_usage_predictor_type = LINE_USAGE_PREDICTOR_POLICY_LWP;
 };
 
 /// ============================================================================
