@@ -614,8 +614,8 @@ uint32_t memory_controller_t::selection_channel_round_robin(uint32_t total_chann
 
 /// ============================================================================
 int32_t memory_controller_t::send_package(memory_package_t *package) {
-    MEMORY_CONTROLLER_DEBUG_PRINTF("send_package() package:%s\n", package->memory_to_string().c_str());
-    ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->memory_to_string().c_str());
+    MEMORY_CONTROLLER_DEBUG_PRINTF("send_package() package:%s\n", package->content_to_string().c_str());
+    ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(package->memory_operation != MEMORY_OPERATION_COPYBACK && package->memory_operation != MEMORY_OPERATION_WRITE, "Main memory must never send answer for WRITE.\n");
 
     uint32_t channel = get_channel(package->memory_address);
@@ -646,7 +646,7 @@ int32_t memory_controller_t::send_package(memory_package_t *package) {
 
 /// ============================================================================
 bool memory_controller_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
-    ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->memory_to_string().c_str());
+    ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(package->id_dst == this->get_id() && package->hop_count == POSITION_FAIL, "Received some package for a different id_dst.\n");
     ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Received a wrong input_port\n");
     ERROR_ASSERT_PRINTF(get_controller(package->memory_address) == this->get_controller_number(), "Wrong channel.\n")
@@ -668,7 +668,7 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
                     this->channels[channel].read_buffer[bank][slot].package_untreated(transmission_latency);
                     this->recv_read_ready_cycle[channel] = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
                     MEMORY_CONTROLLER_DEBUG_PRINTF("RECEIVED READ/INST from Port[%d]\n", input_port);
-                    MEMORY_CONTROLLER_DEBUG_PRINTF("RECEIVED OK: %s\n", package->memory_to_string().c_str());
+                    MEMORY_CONTROLLER_DEBUG_PRINTF("RECEIVED OK: %s\n", package->content_to_string().c_str());
                     this->remove_token_list(package);
                     return OK;
                 }
@@ -691,7 +691,7 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
                     this->channels[channel].write_buffer[bank][slot].package_untreated(transmission_latency);
                     this->recv_write_ready_cycle[channel] = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
                     MEMORY_CONTROLLER_DEBUG_PRINTF("RECEIVED WRITE/COPYBACK from Port[%d]\n", input_port);
-                    MEMORY_CONTROLLER_DEBUG_PRINTF("RECEIVED OK: %s\n", package->memory_to_string().c_str());
+                    MEMORY_CONTROLLER_DEBUG_PRINTF("RECEIVED OK: %s\n", package->content_to_string().c_str());
                     this->remove_token_list(package);
                     return OK;
                 }
@@ -778,7 +778,7 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
 
 /// ============================================================================
 uint32_t memory_controller_t::check_token_space(memory_package_t *package) {
-    MEMORY_CONTROLLER_DEBUG_PRINTF("check_token_space() %s\n", package->memory_to_string().c_str());
+    MEMORY_CONTROLLER_DEBUG_PRINTF("check_token_space() %s\n", package->content_to_string().c_str());
 
     uint32_t channel = get_channel(package->memory_address);
     uint32_t bank = get_bank(package->memory_address);
@@ -833,7 +833,7 @@ void memory_controller_t::remove_token_list(memory_package_t *package) {
             return;
         }
     }
-    ERROR_PRINTF("Could not find the previous allocated token.\n%s\n", package->memory_to_string().c_str())
+    ERROR_PRINTF("Could not find the previous allocated token.\n%s\n", package->content_to_string().c_str())
 };
 
 

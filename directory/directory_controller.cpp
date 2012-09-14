@@ -84,13 +84,13 @@ void directory_controller_t::clock(uint32_t subcycle) {
 
 /// ============================================================================
 int32_t directory_controller_t::send_package(memory_package_t *package) {
-    ERROR_PRINTF("Send package %s.\n", package->memory_to_string().c_str());
+    ERROR_PRINTF("Send package %s.\n", package->content_to_string().c_str());
     return POSITION_FAIL;
 };
 
 /// ============================================================================
 bool directory_controller_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
-    ERROR_PRINTF("Received package %s into the input_port %u, latency %u.\n", package->memory_to_string().c_str(), input_port, transmission_latency);
+    ERROR_PRINTF("Received package %s into the input_port %u, latency %u.\n", package->content_to_string().c_str(), input_port, transmission_latency);
     return FAIL;
 };
 
@@ -103,26 +103,26 @@ void directory_controller_t::allocate_token_list() {
 
 /// ============================================================================
 bool directory_controller_t::check_token_list(memory_package_t *package) {
-    ERROR_PRINTF("check_token_list %s.\n", package->memory_to_string().c_str())
+    ERROR_PRINTF("check_token_list %s.\n", package->content_to_string().c_str())
     return FAIL;
 };
 
 /// ============================================================================
 uint32_t directory_controller_t::check_token_space(memory_package_t *package) {
-    ERROR_PRINTF("check_token_space %s.\n", package->memory_to_string().c_str())
+    ERROR_PRINTF("check_token_space %s.\n", package->content_to_string().c_str())
     return 0;
 };
 
 /// ============================================================================
 void directory_controller_t::remove_token_list(memory_package_t *package) {
-    ERROR_PRINTF("remove_token_list %s.\n", package->memory_to_string().c_str())
+    ERROR_PRINTF("remove_token_list %s.\n", package->content_to_string().c_str())
 };
 
 
 /// ====================================================================================
 // Remember: The package latency is defined as 1 automatically by the interconnection_controller if the package is_answer
 package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, memory_package_t *package) {
-    DIRECTORY_CTRL_DEBUG_PRINTF("new_cache_request() cache_id:%u, package:%s\n", cache_id, package->memory_to_string().c_str())
+    DIRECTORY_CTRL_DEBUG_PRINTF("new_cache_request() cache_id:%u, package:%s\n", cache_id, package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(cache_id < sinuca_engine.get_cache_memory_array_size(), "Wrong cache_id.\n")
 
     /// Get CACHE pointer
@@ -178,10 +178,10 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     if (cache->get_hierarchy_level() == 1 || cache->get_id() == package->id_owner) {
         /// Fill the Sub-Blocks into the package
         cache->line_usage_predictor->fill_package_sub_blocks(package);
-        ERROR_ASSERT_PRINTF(directory_line == NULL, "This level REQUEST must not have a directory_line.\n cache_id:%u, package:%s\n", cache->get_id(), package->memory_to_string().c_str())
+        ERROR_ASSERT_PRINTF(directory_line == NULL, "This level REQUEST must not have a directory_line.\n cache_id:%u, package:%s\n", cache->get_id(), package->content_to_string().c_str())
     }
     else {
-        ERROR_ASSERT_PRINTF(directory_line != NULL, "Higher level REQUEST must have a directory_line.\n. cache_id:%u, package:%s\n", cache->get_id(), package->memory_to_string().c_str())
+        ERROR_ASSERT_PRINTF(directory_line != NULL, "Higher level REQUEST must have a directory_line.\n. cache_id:%u, package:%s\n", cache->get_id(), package->content_to_string().c_str())
     }
 
     /// Get CACHE_LINE
@@ -659,7 +659,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
 /// ============================================================================
 package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, memory_package_t *package) {
-    DIRECTORY_CTRL_DEBUG_PRINTF("new_cache_request() cache_id:%u, package:%s\n", cache_id, package->memory_to_string().c_str())
+    DIRECTORY_CTRL_DEBUG_PRINTF("new_cache_request() cache_id:%u, package:%s\n", cache_id, package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(cache_id < sinuca_engine.get_cache_memory_array_size(), "Wrong cache_id.\n")
 
     /// Get CACHE pointer
@@ -774,7 +774,7 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
 
 /// ============================================================================
 package_state_t directory_controller_t::treat_cache_request_sent(uint32_t cache_id, memory_package_t *package) {
-    DIRECTORY_CTRL_DEBUG_PRINTF("new_cache_request() cache_id:%u, package:%s\n", cache_id, package->memory_to_string().c_str())
+    DIRECTORY_CTRL_DEBUG_PRINTF("new_cache_request() cache_id:%u, package:%s\n", cache_id, package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(cache_id < sinuca_engine.get_cache_memory_array_size(), "Wrong cache_id.\n")
 
     switch (package->memory_operation) {

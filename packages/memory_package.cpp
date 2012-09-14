@@ -160,46 +160,46 @@ void memory_package_t::packager(uint32_t id_owner, uint64_t opcode_number, uint6
 };
 
 /// ============================================================================
-std::string memory_package_t::memory_to_string() {
-    std::string PackageString;
-    PackageString = "";
+std::string memory_package_t::content_to_string() {
+    std::string content_string;
+    content_string = "";
 
     #ifndef SHOW_FREE_PACKAGE
         if (this->state == PACKAGE_STATE_FREE) {
-            return PackageString;
+            return content_string;
         }
     #endif
-    PackageString = PackageString + " MEM: Owner:" + utils_t::uint32_to_char(this->id_owner);
-    PackageString = PackageString + " OPCode#" + utils_t::uint64_to_char(this->opcode_number);
-    PackageString = PackageString + " 0x" + utils_t::uint64_to_char(this->opcode_address);
-    PackageString = PackageString + " UOP#" + utils_t::uint64_to_char(this->uop_number);
+    content_string = content_string + " MEM: Owner:" + utils_t::uint32_to_char(this->id_owner);
+    content_string = content_string + " OPCode#" + utils_t::uint64_to_char(this->opcode_number);
+    content_string = content_string + " 0x" + utils_t::uint64_to_char(this->opcode_address);
+    content_string = content_string + " UOP#" + utils_t::uint64_to_char(this->uop_number);
 
-    PackageString = PackageString + " | " + get_enum_memory_operation_char(this->memory_operation);
+    content_string = content_string + " | " + get_enum_memory_operation_char(this->memory_operation);
     if (this->is_answer) {
-        PackageString = PackageString + " ANS ";
+        content_string = content_string + " ANS ";
     }
     else {
-        PackageString = PackageString + " RQST";
+        content_string = content_string + " RQST";
     }
 
-    PackageString = PackageString + " 0x" + utils_t::uint64_to_char(this->memory_address);
-    PackageString = PackageString + " Size:" + utils_t::uint32_to_char(this->memory_size);
+    content_string = content_string + " 0x" + utils_t::uint64_to_char(this->memory_address);
+    content_string = content_string + " Size:" + utils_t::uint32_to_char(this->memory_size);
 
-    PackageString = PackageString + " | " + get_enum_package_state_char(this->state);
-    PackageString = PackageString + " Ready:" + utils_t::uint64_to_char(this->ready_cycle);
-    PackageString = PackageString + " Born:" + utils_t::uint64_to_char(this->born_cycle);
+    content_string = content_string + " | " + get_enum_package_state_char(this->state);
+    content_string = content_string + " Ready:" + utils_t::uint64_to_char(this->ready_cycle);
+    content_string = content_string + " Born:" + utils_t::uint64_to_char(this->born_cycle);
 
 
-    PackageString = PackageString + " | SRC:" + utils_t::uint32_to_char(this->id_src);
-    PackageString = PackageString + " => DST:" + utils_t::uint32_to_char(this->id_dst);
-    PackageString = PackageString + " HOPS:" + utils_t::int32_to_char(this->hop_count);
+    content_string = content_string + " | SRC:" + utils_t::uint32_to_char(this->id_src);
+    content_string = content_string + " => DST:" + utils_t::uint32_to_char(this->id_dst);
+    content_string = content_string + " HOPS:" + utils_t::int32_to_char(this->hop_count);
 
     if (this->hops != NULL) {
         for (int32_t i = 0; i <= this->hop_count; i++) {
-            PackageString = PackageString + " [" + utils_t::uint32_to_char(this->hops[i]) + "]";
+            content_string = content_string + " [" + utils_t::uint32_to_char(this->hops[i]) + "]";
         }
     }
-    return PackageString;
+    return content_string;
 };
 
 /// ============================================================================
@@ -272,43 +272,43 @@ int32_t memory_package_t::find_state_mem_address(memory_package_t *input_array, 
 
 /// ============================================================================
 std::string memory_package_t::print_all(memory_package_t *input_array, uint32_t size_array) {
-    std::string PackageString;
-    std::string FinalString;
+    std::string content_string;
+    std::string final_string;
 
-    FinalString = "";
+    final_string = "";
     for (uint32_t i = 0; i < size_array ; i++) {
-        PackageString = "";
-        PackageString = input_array[i].memory_to_string();
-        if (PackageString.size() > 1) {
-            FinalString = FinalString + "[" + utils_t::uint32_to_string(i) + "] " + PackageString + "\n";
+        content_string = "";
+        content_string = input_array[i].content_to_string();
+        if (content_string.size() > 1) {
+            final_string = final_string + "[" + utils_t::uint32_to_string(i) + "] " + content_string + "\n";
         }
     }
-    return FinalString;
+    return final_string;
 };
 
 /// ============================================================================
 std::string memory_package_t::print_all(memory_package_t **input_matrix, uint32_t size_x_matrix, uint32_t size_y_matrix) {
-    std::string PackageString;
+    std::string content_string;
     std::string ColumnString;
-    std::string FinalString;
+    std::string final_string;
 
-    FinalString = "";
+    final_string = "";
     for (uint32_t i = 0; i < size_x_matrix ; i++) {
         ColumnString = "";
         for (uint32_t j = 0; j < size_y_matrix ; j++) {
-            PackageString = "";
-            PackageString = input_matrix[i][j].memory_to_string();
-            if (PackageString.size() > 1) {
+            content_string = "";
+            content_string = input_matrix[i][j].content_to_string();
+            if (content_string.size() > 1) {
                 ColumnString = ColumnString +
                                 "[" + utils_t::uint32_to_string(i) + "]" +
-                                "[" + utils_t::uint32_to_string(j) + "] " + PackageString + "\n";
+                                "[" + utils_t::uint32_to_string(j) + "] " + content_string + "\n";
             }
         }
         if (ColumnString.size() > 1) {
-            FinalString = FinalString + ColumnString + "\n";
+            final_string = final_string + ColumnString + "\n";
         }
     }
-    return FinalString;
+    return final_string;
 };
 
 
@@ -322,7 +322,7 @@ bool memory_package_t::check_age(memory_package_t *input_array, uint32_t size_ar
     for (uint32_t i = 0; i < size_array ; i++) {
         if (input_array[i].state != PACKAGE_STATE_FREE) {
             if (input_array[i].born_cycle < min_cycle) {
-                WARNING_PRINTF("CHECK AGE FAIL: %s\n", input_array[i].memory_to_string().c_str())
+                WARNING_PRINTF("CHECK AGE FAIL: %s\n", input_array[i].content_to_string().c_str())
                 return FAIL;
             }
             /// Statistics of the oldest memory package
@@ -345,7 +345,7 @@ bool memory_package_t::check_age(memory_package_t **input_matrix, uint32_t size_
         for (uint32_t j = 0; j < size_y_matrix ; j++) {
             if (input_matrix[i][j].state != PACKAGE_STATE_FREE) {
                 if (input_matrix[i][j].born_cycle < min_cycle) {
-                    WARNING_PRINTF("CHECK AGE FAIL: %s\n", input_matrix[i][j].memory_to_string().c_str())
+                    WARNING_PRINTF("CHECK AGE FAIL: %s\n", input_matrix[i][j].content_to_string().c_str())
                     return FAIL;
                 }
                 /// Statistics of the oldest memory package

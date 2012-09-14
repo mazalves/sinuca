@@ -81,7 +81,7 @@ def PRINT( str ):
    return
 
 ################################################################################
-BENCHMARK_LIST = ["spec_cpu2000", "spec_cpu2006", "spec_omp2001", "npb_omp"]
+BENCHMARK_LIST = ["spec_cpu2000", "spec_cpu2000_x86_32", "spec_cpu2006", "spec_cpu2006_x86_32", "spec_omp2001", "npb_omp"]
 PLOT_LIST = ["lines", "bars", "stacked_bars", "lines_normalized", "bars_normalized", "stacked_bars_normalized"]
 
 if (len(sys.argv) < 2):
@@ -201,9 +201,15 @@ for cfg_line in cfg_file:
         if arg_benchmark == 'spec_cpu2000':
             app_list_filename   = SINUCA_HOME + "/scripts/command_to_run_spec_cpu2000.txt"
             results_directory       = PROJECT_HOME + "/benchmarks/results/spec_cpu2000/"
+        elif arg_benchmark == 'spec_cpu2000_x86_32':
+            app_list_filename   = SINUCA_HOME + "/scripts/command_to_run_spec_cpu2000.txt"
+            results_directory       = PROJECT_HOME + "/benchmarks/results/spec_cpu2000_x86_32/"
         elif arg_benchmark == 'spec_cpu2006':
             app_list_filename   = SINUCA_HOME + "/scripts/command_to_run_spec_cpu2006.txt"
             results_directory       = PROJECT_HOME + "/benchmarks/results/spec_cpu2006/"
+        elif arg_benchmark == 'spec_cpu2006_x86_32':
+            app_list_filename   = SINUCA_HOME + "/scripts/command_to_run_spec_cpu2006.txt"
+            results_directory       = PROJECT_HOME + "/benchmarks/results/spec_cpu2006_x86_32/"
         elif arg_benchmark == 'spec_omp2001':
             app_list_filename   = SINUCA_HOME + "/scripts/command_to_run_spec_omp2001.txt"
             results_directory       = PROJECT_HOME + "/benchmarks/results/spec_omp2001/"

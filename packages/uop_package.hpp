@@ -53,7 +53,7 @@ class uop_package_t {
         uop_package_t();
         ~uop_package_t();
 
-        std::string uop_to_string();
+        std::string content_to_string();
 
         uop_package_t & operator=(const uop_package_t &package);
         bool operator==(const uop_package_t &package);

@@ -297,7 +297,7 @@ void line_usage_predictor_statistics_t::get_start_end_sub_blocks(uint64_t base_a
 
 /// ============================================================================
 void line_usage_predictor_statistics_t::fill_package_sub_blocks(memory_package_t *package) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("fill_package_sub_blocks() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("fill_package_sub_blocks() package:%s\n", package->content_to_string().c_str())
 
     /// Compute the START and END sub_blocks
     uint32_t sub_block_ini, sub_block_end;
@@ -322,7 +322,7 @@ void line_usage_predictor_statistics_t::fill_package_sub_blocks(memory_package_t
 
 /// ============================================================================
 bool line_usage_predictor_statistics_t::check_sub_block_is_hit(memory_package_t *package, uint64_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_sub_block_is_hit() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_sub_block_is_hit() package:%s\n", package->content_to_string().c_str())
 
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t sub_blocks HIT\n")
 
@@ -348,7 +348,7 @@ bool line_usage_predictor_statistics_t::check_line_is_dead(uint32_t index, uint3
 // Mechanism Operations
 /// ============================================================================
 void line_usage_predictor_statistics_t::line_hit(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_hit() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_hit() package:%s\n", package->content_to_string().c_str())
 
     // Update the METADATA real_usage_counter
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
@@ -432,7 +432,7 @@ void line_usage_predictor_statistics_t::compute_static_energy(uint32_t index, ui
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_statistics_t::line_miss(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     this->add_stat_line_miss();
 
     this->line_eviction(index, way);
@@ -468,7 +468,7 @@ void line_usage_predictor_statistics_t::line_miss(memory_package_t *package, uin
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_statistics_t::sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("sub_block_miss() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("sub_block_miss() package:%s\n", package->content_to_string().c_str())
     this->add_stat_sub_block_miss();
 
     (void)package;
@@ -479,7 +479,7 @@ void line_usage_predictor_statistics_t::sub_block_miss(memory_package_t *package
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_statistics_t::line_insert_copyback(memory_package_t *package, cache_memory_t *cache_memory, cache_line_t *cache_line, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     (void)cache_memory;
     (void)cache_line;
 
@@ -513,7 +513,7 @@ void line_usage_predictor_statistics_t::line_insert_copyback(memory_package_t *p
 
 /// ============================================================================
 void line_usage_predictor_statistics_t::line_get_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->content_to_string().c_str())
 
     (void)package;
     (void)index;

@@ -57,17 +57,27 @@ for i in *pdf ; do echo $i ; pdfcrop $i $i; done
 ########################################################################
 ## VALIDATION x86_64 - SPEC CPU 2000 and 2006
 ########################################################################
-cd ~/Experiment/SiNUCA/scripts ;
-python plot.py parameters_validation.cfg
 
 # Run the Base and DSBP for all SPEC2000 and SPEC2006
+rm ~/Experiment/benchmarks/results/spec_cpu2000/*Validation*
+rm ~/Experiment/benchmarks/results/spec_cpu2006/*Validation*
+rm ~/Experiment/benchmarks/results/spec_cpu2000_x86_32/*Validation*
+rm ~/Experiment/benchmarks/results/spec_cpu2006_x86_32/*Validation*
 for i in `seq 1 29` ; do
     byobu -p$i -X stuff "reset ; \
     cd ~/Experiment/SiNUCA/scripts ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/validation/Core2Duo_1core.cfg spec_cpu2000 Validation_x86_64 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/validation/Core2Duo_1core.cfg spec_cpu2006 Validation_x86_64 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1core.cfg spec_cpu2000 Validation_x86_64 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1core.cfg spec_cpu2006 Validation_x86_64 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1core.cfg spec_cpu2006_x86_32 Validation_x86_32 0 1 $i $i ; \
     $(echo -ne '\r')";
 done
+
+cd ~/Experiment/SiNUCA/scripts
+rm ~/Experiment/benchmarks/plots/*
+python plot.py parameters_validation.cfg
+python plot.py parameters_validation_x86_32.cfg
+
+
 
 
 ########################################################################

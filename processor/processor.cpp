@@ -440,7 +440,7 @@ void processor_t::stage_fetch() {
             break;
         }
 
-        PROCESSOR_DEBUG_PRINTF("\t Inserting on fetch_buffer[%d] package:%s\n", position_buffer, trace_next_opcode.opcode_to_string().c_str());
+        PROCESSOR_DEBUG_PRINTF("\t Inserting on fetch_buffer[%d] package:%s\n", position_buffer, trace_next_opcode.content_to_string().c_str());
         this->fetch_buffer[position_buffer] = this->trace_next_opcode;
         this->fetch_buffer[position_buffer].package_untreated(this->stage_fetch_cycles);
         trace_next_opcode.package_clean();
@@ -455,7 +455,7 @@ void processor_t::stage_fetch() {
         this->branch_solve_stage = this->branch_predictor->predict_branch(this->fetch_buffer[position_buffer], this->trace_next_opcode);
         this->branch_opcode_number = this->fetch_buffer[position_buffer].opcode_number;
         if (this->branch_solve_stage != PROCESSOR_STAGE_FETCH) {
-            PROCESSOR_DEBUG_PRINTF("\t Stalling fetch due to a miss prediction on package:%s\n", this->fetch_buffer[position_buffer].opcode_to_string().c_str());
+            PROCESSOR_DEBUG_PRINTF("\t Stalling fetch due to a miss prediction on package:%s\n", this->fetch_buffer[position_buffer].content_to_string().c_str());
         }
     }
 
@@ -468,7 +468,7 @@ void processor_t::stage_fetch() {
             this->fetch_buffer[position_buffer].ready_cycle > sinuca_engine.get_global_cycle()) {
                 break;
         }
-        PROCESSOR_DEBUG_PRINTF("\t Sending INST package:%s\n", this->fetch_buffer[position_buffer].opcode_to_string().c_str());
+        PROCESSOR_DEBUG_PRINTF("\t Sending INST package:%s\n", this->fetch_buffer[position_buffer].content_to_string().c_str());
 
         bool waiting = false;
         /// Check if the package still WAITING
@@ -541,7 +541,7 @@ void processor_t::stage_fetch() {
 */
 
 int32_t processor_t::send_instruction_package(opcode_package_t *inst_package) {
-    PROCESSOR_DEBUG_PRINTF("send_instruction_package() package:%s\n", inst_package->opcode_to_string().c_str());
+    PROCESSOR_DEBUG_PRINTF("send_instruction_package() package:%s\n", inst_package->content_to_string().c_str());
 
     if (this->send_instruction_ready_cycle <= sinuca_engine.get_global_cycle()) {
         memory_package_t package;
@@ -609,7 +609,7 @@ void processor_t::stage_decode() {
                                                                         this->fetch_buffer[fetch_buffer_position_start].write_address, this->fetch_buffer[fetch_buffer_position_start].write_size,
                                                                         this->fetch_buffer[fetch_buffer_position_start]);
             this->decode_buffer[position_buffer].package_ready(this->stage_decode_cycles);
-            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, this->decode_buffer[position_buffer].uop_to_string().c_str());
+            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, this->decode_buffer[position_buffer].content_to_string().c_str());
         }
 
         /// DECODE ALU =====================================================
@@ -622,7 +622,7 @@ void processor_t::stage_decode() {
                                                                         0, 0,
                                                                         this->fetch_buffer[fetch_buffer_position_start]);
             this->decode_buffer[position_buffer].package_ready(this->stage_decode_cycles);
-            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, this->decode_buffer[position_buffer].uop_to_string().c_str());
+            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, this->decode_buffer[position_buffer].content_to_string().c_str());
         }
 
         /// DECODE BRANCH ==================================================
@@ -633,7 +633,7 @@ void processor_t::stage_decode() {
                                                                         0, 0,
                                                                         this->fetch_buffer[fetch_buffer_position_start]);
             this->decode_buffer[position_buffer].package_ready(this->stage_decode_cycles);
-            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, this->decode_buffer[position_buffer].uop_to_string().c_str());
+            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, this->decode_buffer[position_buffer].content_to_string().c_str());
 
             /// Solve the Branch Prediction
             this->solve_branch(this->fetch_buffer[fetch_buffer_position_start].opcode_number, PROCESSOR_STAGE_DECODE);
@@ -647,7 +647,7 @@ void processor_t::stage_decode() {
                                                                         this->fetch_buffer[fetch_buffer_position_start].read2_address, this->fetch_buffer[fetch_buffer_position_start].read2_size,
                                                                         this->fetch_buffer[fetch_buffer_position_start]);
             this->decode_buffer[position_buffer].package_ready(this->stage_decode_cycles);
-            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, this->decode_buffer[position_buffer].uop_to_string().c_str());
+            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, this->decode_buffer[position_buffer].content_to_string().c_str());
         }
 
         /// DECODE READ ====================================================
@@ -658,7 +658,7 @@ void processor_t::stage_decode() {
                                                                         this->fetch_buffer[fetch_buffer_position_start].read_address, this->fetch_buffer[fetch_buffer_position_start].read_size,
                                                                         this->fetch_buffer[fetch_buffer_position_start]);
             this->decode_buffer[position_buffer].package_ready(this->stage_decode_cycles);
-            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, this->decode_buffer[position_buffer].uop_to_string().c_str());
+            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, this->decode_buffer[position_buffer].content_to_string().c_str());
         }
         /// Remove the oldest OPCODE (just decoded) from the fetch buffer
         this->fetch_buffer_remove();
@@ -689,7 +689,7 @@ void processor_t::stage_rename() {
             break;
         }
 
-        PROCESSOR_DEBUG_PRINTF("\t Inserting ROB[%d] %s\n", position_buffer, this->decode_buffer[decode_buffer_position_start].uop_to_string().c_str());
+        PROCESSOR_DEBUG_PRINTF("\t Inserting ROB[%d] %s\n", position_buffer, this->decode_buffer[decode_buffer_position_start].content_to_string().c_str());
         this->reorder_buffer[position_buffer].uop = this->decode_buffer[decode_buffer_position_start];
         this->decode_buffer_remove();
 
@@ -940,7 +940,7 @@ void processor_t::stage_execution() {
     if (position_mem != POSITION_FAIL) {
         int32_t position_buffer = rob_find_uop_number(this->read_buffer[position_mem].uop_number);
         ERROR_ASSERT_PRINTF(position_buffer != POSITION_FAIL, "Instruction is executed but it is not on the reorder buffer anymore.\n");
-        PROCESSOR_DEBUG_PRINTF("\t Executing package:%s\n", this->reorder_buffer[position_buffer].uop.uop_to_string().c_str());
+        PROCESSOR_DEBUG_PRINTF("\t Executing package:%s\n", this->reorder_buffer[position_buffer].uop.content_to_string().c_str());
         this->reorder_buffer[position_buffer].stage = PROCESSOR_STAGE_COMMIT;
         this->reorder_buffer[position_buffer].uop.package_ready(this->stage_execution_cycles + this->stage_commit_cycles);
         this->solve_data_forward(&this->reorder_buffer[position_buffer]);
@@ -1011,7 +1011,7 @@ void processor_t::stage_execution() {
                 case INSTRUCTION_OPERATION_FP_MUL:
                 case INSTRUCTION_OPERATION_FP_DIV:
                 /// INTEGERS ===============================================
-                    PROCESSOR_DEBUG_PRINTF("\t Executing package:%s\n", reorder_buffer_line->uop.uop_to_string().c_str());
+                    PROCESSOR_DEBUG_PRINTF("\t Executing package:%s\n", reorder_buffer_line->uop.content_to_string().c_str());
                     reorder_buffer_line->stage = PROCESSOR_STAGE_COMMIT;
                     reorder_buffer_line->uop.package_ready(this->stage_execution_cycles + this->stage_commit_cycles);
                     this->solve_data_forward(reorder_buffer_line);
@@ -1093,7 +1093,7 @@ void processor_t::stage_execution() {
                         );
 
                         // INSERTED ON WRITE_BUFFER - reorder_buffer => READY
-                        PROCESSOR_DEBUG_PRINTF("\t Executing package:%s\n", reorder_buffer_line->uop.uop_to_string().c_str());
+                        PROCESSOR_DEBUG_PRINTF("\t Executing package:%s\n", reorder_buffer_line->uop.content_to_string().c_str());
                         reorder_buffer_line->stage = PROCESSOR_STAGE_COMMIT;
                         reorder_buffer_line->uop.package_ready(this->stage_execution_cycles + this->stage_commit_cycles);
                         this->solve_data_forward(reorder_buffer_line);
@@ -1120,7 +1120,7 @@ void processor_t::stage_execution() {
 ///     Else
 ///         Return POSITION_FAIL
 int32_t processor_t::send_data_package(memory_package_t *package) {
-    PROCESSOR_DEBUG_PRINTF("send_data_package() package:%s\n", package->memory_to_string().c_str());
+    PROCESSOR_DEBUG_PRINTF("send_data_package() package:%s\n", package->content_to_string().c_str());
 
     if (this->send_data_ready_cycle <= sinuca_engine.get_global_cycle()) {
         return send_package(package);
@@ -1324,7 +1324,7 @@ int32_t processor_t::send_package(memory_package_t *package) {
 bool processor_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
 
     if (this->recv_ready_cycle[input_port] <= sinuca_engine.get_global_cycle()) {
-        PROCESSOR_DEBUG_PRINTF("receive_package() port:%u, package:%s\n", input_port, package->memory_to_string().c_str());
+        PROCESSOR_DEBUG_PRINTF("receive_package() port:%u, package:%s\n", input_port, package->content_to_string().c_str());
         ERROR_ASSERT_PRINTF(package->id_owner == this->get_id(), "Received some package for a different owner.\n");
         ERROR_ASSERT_PRINTF(package->id_dst == this->get_id(), "Received some package for a different id_dst.\n");
         ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Received a wrong input_port\n");
@@ -1394,19 +1394,19 @@ void processor_t::allocate_token_list() {
 
 /// ============================================================================
 bool processor_t::check_token_list(memory_package_t *package) {
-    ERROR_PRINTF("check_token_list %s.\n", package->memory_to_string().c_str())
+    ERROR_PRINTF("check_token_list %s.\n", package->content_to_string().c_str())
     return FAIL;
 };
 
 /// ============================================================================
 uint32_t processor_t::check_token_space(memory_package_t *package) {
-    ERROR_PRINTF("check_token_space %s.\n", package->memory_to_string().c_str())
+    ERROR_PRINTF("check_token_space %s.\n", package->content_to_string().c_str())
     return 0;
 };
 
 /// ============================================================================
 void processor_t::remove_token_list(memory_package_t *package) {
-    ERROR_PRINTF("remove_token_list %s.\n", package->memory_to_string().c_str())
+    ERROR_PRINTF("remove_token_list %s.\n", package->content_to_string().c_str())
 };
 
 
@@ -1810,7 +1810,7 @@ std::string processor_t::rob_line_to_string(uint32_t reorder_buffer_line) {
         }
     #endif
 
-    PackageString = this->reorder_buffer[reorder_buffer_line].uop.uop_to_string();
+    PackageString = this->reorder_buffer[reorder_buffer_line].uop.content_to_string();
     PackageString = PackageString + " | STAGE:" + get_enum_processor_stage_char(this->reorder_buffer[reorder_buffer_line].stage);
     PackageString = PackageString + " | #WAIT:" + utils_t::uint32_to_char(this->reorder_buffer[reorder_buffer_line].wait_deps_number);
 

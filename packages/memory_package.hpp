@@ -59,7 +59,7 @@ class memory_package_t {
         memory_package_t();
         ~memory_package_t();
 
-        std::string memory_to_string();
+        std::string content_to_string();
 
         memory_package_t & operator=(const memory_package_t &package);
         void package_clean();
@@ -74,6 +74,8 @@ class memory_package_t {
                     memory_operation_t memory_operation, bool is_answer,
                     uint32_t id_src, uint32_t id_dst, uint32_t *hops, uint32_t hop_count);
 
+
+
         static int32_t find_free(memory_package_t *input_array, uint32_t size_array);
         static uint32_t count_free(memory_package_t *input_array, uint32_t size_array);
 
@@ -82,7 +84,7 @@ class memory_package_t {
         static int32_t find_old_answer_state_ready(memory_package_t *input_array, uint32_t size_array, package_state_t state);
         static int32_t find_state_mem_address(memory_package_t *input_array, uint32_t size_array, package_state_t state, uint64_t address);
 
-        static std::string print(memory_package_t input_package);
+        // ~ static std::string print(memory_package_t input_package);
         static std::string print_all(memory_package_t *input_array, uint32_t size_array);
         static std::string print_all(memory_package_t **input_matrix, uint32_t size_x_matrix, uint32_t size_y_matrix);
 

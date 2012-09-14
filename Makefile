@@ -65,6 +65,7 @@ SRC_DIRECTORY =		directory/directory_line.cpp\
 					directory/directory_controller.cpp
 
 SRC_PREFETCH =		prefetch/prefetcher.cpp \
+					prefetch/reference_prediction_line.cpp \
 					prefetch/prefetcher_stride.cpp \
 					prefetch/prefetcher_disable.cpp
 

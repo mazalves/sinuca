@@ -72,13 +72,6 @@ class prefetch_stride_t : public prefetch_t {
         void print_configuration();
         /// ====================================================================
 
-
-        /// STRIDE_TABLE =====================================================
-        void reference_prediction_table_line_clean(uint32_t stride_buffer_line);
-        std::string reference_prediction_table_line_to_string(uint32_t stride_buffer_line);
-        std::string reference_prediction_table_print_all();
-        /// ====================================================================
-
         void treat_prefetch(memory_package_t *package);
 
         INSTANTIATE_GET_SET(uint32_t, reference_prediction_table_size)

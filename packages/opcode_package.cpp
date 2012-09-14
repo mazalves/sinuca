@@ -173,7 +173,7 @@ void opcode_package_t::package_wait(uint32_t stall_time) {
 
 //==============================================================================
 /// Convert Instruction variables into String
-std::string opcode_package_t::opcode_to_string() {
+std::string opcode_package_t::content_to_string() {
     std::string PackageString;
     PackageString = "";
 
@@ -362,7 +362,7 @@ void opcode_package_t::trace_string_to_read(std::string input_string, uint32_t a
             switch (field) {
                 case 1:
                     /// Read or Write (Check the Instruction Type and the Memory Type)
-                    ERROR_ASSERT_PRINTF(sub_string.compare("R") == 0, "MemoryTraceFile Wrong Type. Type (R) expected.\n Inst: %s\n Mem:%s\n", this->opcode_to_string().c_str(), input_string.c_str())
+                    ERROR_ASSERT_PRINTF(sub_string.compare("R") == 0, "MemoryTraceFile Wrong Type. Type (R) expected.\n Inst: %s\n Mem:%s\n", this->content_to_string().c_str(), input_string.c_str())
                     field = 2;  /// Next Field
                 break;
 
@@ -406,7 +406,7 @@ void opcode_package_t::trace_string_to_read2(std::string input_string, uint32_t 
 
             switch (field) {
                 case 1:     /// Read or Write (Check the Instruction Type and the Memory Type)
-                    ERROR_ASSERT_PRINTF(sub_string.compare("R") == 0, "MemoryTraceFile Wrong Type. Type (R) expected.\n Inst: %s\n Mem:%s\n", this->opcode_to_string().c_str(), input_string.c_str())
+                    ERROR_ASSERT_PRINTF(sub_string.compare("R") == 0, "MemoryTraceFile Wrong Type. Type (R) expected.\n Inst: %s\n Mem:%s\n", this->content_to_string().c_str(), input_string.c_str())
                     field = 2;  /// Next Field
                 break;
 
@@ -447,7 +447,7 @@ void opcode_package_t::trace_string_to_write(std::string input_string, uint32_t 
 
             switch (field) {
                 case 1:     /// Read or Write (Check the Instruction Type and the Memory Type)
-                    ERROR_ASSERT_PRINTF(sub_string.compare("W") == 0, "MemoryTraceFile Wrong Type. Type (W) expected.\n Inst: %s\n Mem:%s\n", this->opcode_to_string().c_str(), input_string.c_str())
+                    ERROR_ASSERT_PRINTF(sub_string.compare("W") == 0, "MemoryTraceFile Wrong Type. Type (W) expected.\n Inst: %s\n Mem:%s\n", this->content_to_string().c_str(), input_string.c_str())
                     field = 2;  /// Next Field
                 break;
 
@@ -656,7 +656,7 @@ bool opcode_package_t::check_age(opcode_package_t *input_array, uint32_t size_ar
     for (uint32_t i = 0; i < size_array ; i++) {
         if (input_array[i].state != PACKAGE_STATE_FREE) {
             if (input_array[i].born_cycle < min_cycle) {
-                WARNING_PRINTF("CHECK AGE FAIL: %s\n", input_array[i].opcode_to_string().c_str())
+                WARNING_PRINTF("CHECK AGE FAIL: %s\n", input_array[i].content_to_string().c_str())
                 return FAIL;
             }
             /// Statistics of the oldest memory package
@@ -679,7 +679,7 @@ bool opcode_package_t::check_age(opcode_package_t **input_matrix, uint32_t size_
         for (uint32_t j = 0; j < size_y_matrix ; j++) {
             if (input_matrix[i][j].state != PACKAGE_STATE_FREE) {
                 if (input_matrix[i][j].born_cycle < min_cycle) {
-                    WARNING_PRINTF("CHECK AGE FAIL: %s\n", input_matrix[i][j].opcode_to_string().c_str())
+                    WARNING_PRINTF("CHECK AGE FAIL: %s\n", input_matrix[i][j].content_to_string().c_str())
                     return FAIL;
                 }
                 /// Statistics of the oldest memory package
@@ -700,7 +700,7 @@ std::string opcode_package_t::print_all(opcode_package_t *input_array, uint32_t 
     FinalString = "";
 
     for (uint32_t i = 0; i < size_array ; i++) {
-        PackageString = input_array[i].opcode_to_string();
+        PackageString = input_array[i].content_to_string();
         if (PackageString.size() > 1) {
             FinalString = FinalString + "[" + utils_t::uint32_to_string(i) + "] " + PackageString + "\n";
         }
@@ -717,7 +717,7 @@ std::string opcode_package_t::print_all(opcode_package_t **input_matrix, uint32_
 
     for (uint32_t i = 0; i < size_x_matrix ; i++) {
         for (uint32_t j = 0; j < size_y_matrix ; j++) {
-            PackageString = input_matrix[i][j].opcode_to_string();
+            PackageString = input_matrix[i][j].content_to_string();
             if (PackageString.size() > 1) {
                 FinalString = FinalString +
                                 "[" + utils_t::uint32_to_string(i) + "] " +

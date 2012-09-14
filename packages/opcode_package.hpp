@@ -72,7 +72,7 @@ class opcode_package_t {
         };
 
 
-        std::string opcode_to_string();
+        std::string content_to_string();
         void opcode_to_trace_char(char *trace_line);
 
         std::string opcode_to_trace_string();

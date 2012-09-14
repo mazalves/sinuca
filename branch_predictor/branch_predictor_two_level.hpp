@@ -60,10 +60,6 @@ class branch_predictor_two_level_t : public branch_predictor_t {
         uint64_t stat_btb_hit;
         uint64_t stat_btb_miss;
 
-        uint64_t stat_branch_predictor_operation;
-        uint64_t stat_branch_predictor_hit;
-        uint64_t stat_branch_predictor_miss;
-
     public:
         /// ====================================================================
         /// Methods
@@ -130,8 +126,4 @@ class branch_predictor_two_level_t : public branch_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_btb_accesses)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_btb_hit)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_btb_miss)
-
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_branch_predictor_operation)
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_branch_predictor_hit)
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_branch_predictor_miss)
 };

@@ -52,7 +52,7 @@ prefetch_stride_t::~prefetch_stride_t() {
 /// ============================================================================
 void prefetch_stride_t::allocate() {
     prefetch_t::allocate();
-    
+
     this->reference_prediction_table = utils_t::template_allocate_array<reference_prediction_line_t>(this->get_reference_prediction_table_size());
 };
 
@@ -69,7 +69,7 @@ void prefetch_stride_t::clock(uint32_t subcycle) {
         if (this->reference_prediction_table[slot].relevance_count > 0 &&
         this->reference_prediction_table[slot].cycle_last_activation <= sinuca_engine.get_global_cycle() - this->stride_window) {
             /// FREE the position
-            this->reference_prediction_table_line_clean(slot);
+            this->reference_prediction_table[slot].clean();
         }
 
         /// Something interesting to be requested. Check if can do a new request
@@ -83,7 +83,7 @@ void prefetch_stride_t::clock(uint32_t subcycle) {
             uint64_t memory_address = this->reference_prediction_table[slot].last_memory_address +
                                     ( (this->reference_prediction_table[slot].prefetch_ahead + 1) * this->reference_prediction_table[slot].memory_address_difference);
 
-            PREFETCHER_DEBUG_PRINTF("New Prefetch found STRIDE_BUFFER[%u] %s\n", slot, this->reference_prediction_table_line_to_string(slot).c_str());
+            PREFETCHER_DEBUG_PRINTF("New Prefetch found STRIDE_BUFFER[%u] %s\n", slot, this->reference_prediction_table[slot].content_to_string().c_str());
             if (!this->cmp_index_tag(last_memory_address, memory_address)) {
                 int32_t position = this->request_buffer_insert();
                 if (position != POSITION_FAIL) {
@@ -100,10 +100,12 @@ void prefetch_stride_t::clock(uint32_t subcycle) {
                         this->add_stat_downstride_prefetches();
                     }
 
+                    uint64_t opcode_address = this->reference_prediction_table[slot].last_opcode_address;
+
                     this->request_buffer[position].packager(
                                                         0,                                          /// Request Owner
                                                         0,                                          /// Opcode. Number
-                                                        0,                                          /// Opcode. Address
+                                                        opcode_address,                             /// Opcode. Address
                                                         0,                                          /// Uop. Number
 
                                                         memory_address,                             /// Mem. Address
@@ -121,7 +123,7 @@ void prefetch_stride_t::clock(uint32_t subcycle) {
                                                         0                                           /// Hop Counter
                                                         );
                     PREFETCHER_DEBUG_PRINTF("\t INSERTED on PREFETCHER_BUFFER[%d]\n", position);
-                    PREFETCHER_DEBUG_PRINTF("\t %s", this->request_buffer[position].memory_to_string().c_str());
+                    PREFETCHER_DEBUG_PRINTF("\t %s", this->request_buffer[position].content_to_string().c_str());
                     break;
                 }
             }
@@ -146,6 +148,7 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
         case PREFETCHER_STRIDE:
             /// Try to match the request with some Stream
             for (slot = 0; slot < this->reference_prediction_table_size; slot++) {
+                /// Found one stride with no difference on MemoryAddress - Ignoring
                 if (this->reference_prediction_table[slot].last_memory_address == package->memory_address) {
                     PREFETCHER_DEBUG_PRINTF("Prefetcher: Found one stride... No Difference on Address - Ignoring.\n");
                     break;
@@ -154,10 +157,12 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
                 /// Compute once the address diference, reused multiple times.
                 int64_t address_difference = package->memory_address - this->reference_prediction_table[slot].last_memory_address;
 
+                /// Found one stride with same MemoryAddressDifference - Match
                 if ((this->reference_prediction_table[slot].memory_address_difference == address_difference || this->reference_prediction_table[slot].memory_address_difference == 0) &&
                 abs(address_difference) <= stride_address_distance) {
                     PREFETCHER_DEBUG_PRINTF("Prefetcher: Found one Stream ... %s\n", address_difference > 0 ? "Increasing" : "Decreasing");
                     this->reference_prediction_table[slot].memory_address_difference = address_difference;
+                    this->reference_prediction_table[slot].last_opcode_address = package->opcode_address;
                     this->reference_prediction_table[slot].last_memory_address = package->memory_address;
                     this->reference_prediction_table[slot].relevance_count++;
                     this->reference_prediction_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
@@ -179,6 +184,8 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
                     if (this->reference_prediction_table[slot].relevance_count == 0) {
                         PREFETCHER_DEBUG_PRINTF("Prefetcher: No stride found... Allocating it.\n");
                         this->reference_prediction_table[slot].memory_address_difference = 0;
+                        this->reference_prediction_table[slot].first_opcode_address = package->opcode_address;
+                        this->reference_prediction_table[slot].last_opcode_address = package->opcode_address;
                         this->reference_prediction_table[slot].last_memory_address = package->memory_address;
                         this->reference_prediction_table[slot].relevance_count = 1;
                         this->reference_prediction_table[slot].prefetch_ahead = 0;
@@ -205,71 +212,23 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
 };
 
 /// ============================================================================
-/// REFERENCE_PREDICTION_TABLE
-/// ============================================================================
-void prefetch_stride_t::reference_prediction_table_line_clean(uint32_t stride_buffer_line) {
-    this->reference_prediction_table[stride_buffer_line].last_memory_address = 0;
-    this->reference_prediction_table[stride_buffer_line].memory_address_difference = 0;
-    this->reference_prediction_table[stride_buffer_line].relevance_count = 0;
-    this->reference_prediction_table[stride_buffer_line].prefetch_ahead = 0;
-    this->reference_prediction_table[stride_buffer_line].cycle_last_activation = 0;
-    this->reference_prediction_table[stride_buffer_line].cycle_last_request = 0;
-};
-
-/// ============================================================================
-std::string prefetch_stride_t::reference_prediction_table_line_to_string(uint32_t stride_buffer_line) {
-    std::string PackageString;
-    PackageString = "";
-
-    #ifndef SHOW_FREE_PACKAGE
-        if (this->reference_prediction_table[stride_buffer_line].relevance_count == 0) {
-            return PackageString;
-        }
-    #endif
-    PackageString = PackageString + " STRIDE: Last Address:" + utils_t::uint64_to_char(this->reference_prediction_table[stride_buffer_line].last_memory_address);
-    PackageString = PackageString + " Address Difference:" + utils_t::int64_to_char(this->reference_prediction_table[stride_buffer_line].memory_address_difference);
-    PackageString = PackageString + " Relevance:" + utils_t::uint32_to_char(this->reference_prediction_table[stride_buffer_line].relevance_count);
-    PackageString = PackageString + " Prefetch Ahead:" + utils_t::uint32_to_char(this->reference_prediction_table[stride_buffer_line].prefetch_ahead);
-    PackageString = PackageString + " Cycle Last Activation:" + utils_t::uint64_to_char(this->reference_prediction_table[stride_buffer_line].cycle_last_activation);
-    PackageString = PackageString + " Cycle Last Request:" + utils_t::uint64_to_char(this->reference_prediction_table[stride_buffer_line].cycle_last_request);
-    return PackageString;
-};
-
-/// ============================================================================
-std::string prefetch_stride_t::reference_prediction_table_print_all() {
-    std::string PackageString;
-    std::string FinalString;
-    PackageString = "";
-    FinalString = "";
-
-    for (uint32_t i = 0; i < this->reference_prediction_table_size ; i++) {
-        PackageString = this->reference_prediction_table_line_to_string(i);
-        if (PackageString.size() > 1) {
-            FinalString = FinalString + "[" + utils_t::uint32_to_char(i) + "] " + PackageString + "\n";
-        }
-    }
-    return FinalString;
-};
-
-
-/// ============================================================================
 void prefetch_stride_t::print_structures() {
     prefetch_t::print_structures();
 
-    SINUCA_PRINTF("%s STRIDE_TABLE:\n%s", this->get_label(), this->reference_prediction_table_print_all().c_str() )
+    SINUCA_PRINTF("%s STRIDE_TABLE:\n%s", this->get_label(), reference_prediction_line_t::print_all(this->reference_prediction_table, this->reference_prediction_table_size).c_str())
 };
 
 /// ============================================================================
 void prefetch_stride_t::panic() {
     prefetch_t::panic();
-    
+
     this->print_structures();
 };
 
 /// ============================================================================
 void prefetch_stride_t::periodic_check(){
     prefetch_t::periodic_check();
-    
+
     #ifdef PREFETCHER_DEBUG
         this->print_structures();
     #endif

@@ -360,7 +360,7 @@ void line_usage_predictor_dsbp_t::get_start_end_sub_blocks(uint64_t base_address
 
 /// ============================================================================
 void line_usage_predictor_dsbp_t::fill_package_sub_blocks(memory_package_t *package) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("fill_package_sub_blocks() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("fill_package_sub_blocks() package:%s\n", package->content_to_string().c_str())
 
     /// Compute the START and END sub_blocks
     uint32_t sub_block_ini, sub_block_end;
@@ -385,7 +385,7 @@ void line_usage_predictor_dsbp_t::fill_package_sub_blocks(memory_package_t *pack
 
 /// ============================================================================
 bool line_usage_predictor_dsbp_t::check_sub_block_is_hit(memory_package_t *package, uint64_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_sub_block_is_hit() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_sub_block_is_hit() package:%s\n", package->content_to_string().c_str())
 
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
         if (package->sub_blocks[i] == true &&
@@ -420,7 +420,7 @@ bool line_usage_predictor_dsbp_t::check_line_is_dead(uint32_t index, uint32_t wa
 // Mechanism Operations
 /// ============================================================================
 void line_usage_predictor_dsbp_t::line_hit(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_hit() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_hit() package:%s\n", package->content_to_string().c_str())
 
     ERROR_ASSERT_PRINTF(index < this->dsbp_total_sets, "Wrong index %d > total_sets %d", index, this->dsbp_total_sets);
     ERROR_ASSERT_PRINTF(way < this->dsbp_associativity, "Wrong way %d > associativity %d", way, this->dsbp_associativity);
@@ -611,7 +611,7 @@ void line_usage_predictor_dsbp_t::compute_static_energy(uint32_t index, uint32_t
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_dsbp_t::line_miss(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     this->add_stat_line_miss();
 
     this->line_eviction(index, way);
@@ -736,7 +736,7 @@ void line_usage_predictor_dsbp_t::line_miss(memory_package_t *package, uint32_t 
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_dsbp_t::sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("sub_block_miss() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("sub_block_miss() package:%s\n", package->content_to_string().c_str())
     this->add_stat_sub_block_miss();
 
     ERROR_ASSERT_PRINTF(index < this->dsbp_total_sets, "Wrong index %d > total_sets %d", index, this->dsbp_total_sets);
@@ -841,7 +841,7 @@ void line_usage_predictor_dsbp_t::sub_block_miss(memory_package_t *package, uint
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_dsbp_t::line_insert_copyback(memory_package_t *package, cache_memory_t *cache_memory, cache_line_t *cache_line, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     this->add_stat_line_miss();
 
     ERROR_ASSERT_PRINTF(index < this->dsbp_total_sets, "Wrong index %d > total_sets %d", index, this->dsbp_total_sets);
@@ -914,7 +914,7 @@ void line_usage_predictor_dsbp_t::line_insert_copyback(memory_package_t *package
 
 /// ============================================================================
 void line_usage_predictor_dsbp_t::line_get_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->content_to_string().c_str())
 
     this->add_stat_copyback();
 

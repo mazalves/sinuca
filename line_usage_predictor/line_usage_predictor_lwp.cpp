@@ -103,7 +103,7 @@ void line_usage_predictor_lwp_t::fill_package_sub_blocks(memory_package_t *packa
 
 /// ============================================================================
 bool line_usage_predictor_lwp_t::check_sub_block_is_hit(memory_package_t *package, uint64_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("fill_package_sub_blocks() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("fill_package_sub_blocks() package:%s\n", package->content_to_string().c_str())
 
     (void)package;
     (void)index;
@@ -126,7 +126,7 @@ bool line_usage_predictor_lwp_t::check_line_is_dead(uint32_t index, uint32_t way
 /// Cache Memory Operations
 /// ============================================================================
 void line_usage_predictor_lwp_t::line_hit(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_hit() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_hit() package:%s\n", package->content_to_string().c_str())
 
     (void)package;
     (void)index;
@@ -138,7 +138,7 @@ void line_usage_predictor_lwp_t::line_hit(memory_package_t *package, uint32_t in
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_lwp_t::line_miss(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
 
     (void)package;
     (void)index;
@@ -151,7 +151,7 @@ void line_usage_predictor_lwp_t::line_miss(memory_package_t *package, uint32_t i
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_lwp_t::sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("sub_block_miss() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("sub_block_miss() package:%s\n", package->content_to_string().c_str())
 
     (void)package;
     (void)index;
@@ -161,7 +161,7 @@ void line_usage_predictor_lwp_t::sub_block_miss(memory_package_t *package, uint3
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_lwp_t::line_insert_copyback(memory_package_t *package, cache_memory_t *cache_memory, cache_line_t *cache_line, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
 
     (void)package;
     (void)cache_memory;
@@ -176,7 +176,7 @@ void line_usage_predictor_lwp_t::line_insert_copyback(memory_package_t *package,
 
 /// ============================================================================
 void line_usage_predictor_lwp_t::line_get_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->memory_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->content_to_string().c_str())
 
     (void)package;
     (void)index;

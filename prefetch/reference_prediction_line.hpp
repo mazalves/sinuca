@@ -23,6 +23,8 @@
 /// ============================================================================
 class reference_prediction_line_t {
     public:
+        uint64_t first_opcode_address;          /// First Opcode Request which matched into this stride
+        uint64_t last_opcode_address;           /// Last Opcode Request which matched into this stride
         uint64_t last_memory_address;           /// Last Memory Request which matched into this stride
         int64_t memory_address_difference;      /// Difference between one access to another
         uint32_t relevance_count;               /// Number of Memory Requests which matched into this stride
@@ -33,14 +35,11 @@ class reference_prediction_line_t {
         /// ====================================================================
         /// Methods
         /// ====================================================================
-        reference_prediction_line_t() {
-            this->last_memory_address = 0;
-            this->memory_address_difference = 0;
-            this->relevance_count = 0;
-            this->cycle_last_activation = 0;
-            this->prefetch_ahead = 0;
-            this->cycle_last_request = 0;
-        };
-        ~reference_prediction_line_t() {
-        };
+        reference_prediction_line_t();
+        ~reference_prediction_line_t();
+
+        void clean();
+        std::string content_to_string();
+
+        static std::string print_all(reference_prediction_line_t *input_array, uint32_t size_array);
 };

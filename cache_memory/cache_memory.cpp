@@ -214,7 +214,7 @@ void cache_memory_t::clock(uint32_t subcycle) {
         this->mshr_born_ordered[0][i]->is_answer == true &&
         this->mshr_born_ordered[0][i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
 
-            CACHE_DEBUG_PRINTF("\t Send ANSWER this->mshr_born_ordered[%d] %s\n", i, this->mshr_born_ordered[0][i]->memory_to_string().c_str());
+            CACHE_DEBUG_PRINTF("\t Send ANSWER this->mshr_born_ordered[%d] %s\n", i, this->mshr_born_ordered[0][i]->content_to_string().c_str());
             int32_t transmission_latency = send_package(mshr_born_ordered[0][i]);
             if (transmission_latency != POSITION_FAIL) {
                 this->mshr_born_ordered[0][i]->package_clean();
@@ -229,7 +229,7 @@ void cache_memory_t::clock(uint32_t subcycle) {
         this->mshr_born_ordered[0][i]->is_answer == false &&
         this->mshr_born_ordered[0][i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
 
-            CACHE_DEBUG_PRINTF("\t Send REQUEST this->mshr_born_ordered[%d] %s\n", i, this->mshr_born_ordered[0][i]->memory_to_string().c_str());
+            CACHE_DEBUG_PRINTF("\t Send REQUEST this->mshr_born_ordered[%d] %s\n", i, this->mshr_born_ordered[0][i]->content_to_string().c_str());
             int32_t transmission_latency = send_package(mshr_born_ordered[0][i]);
             if (transmission_latency != POSITION_FAIL) {
                 this->mshr_born_ordered[0][i]->state = sinuca_engine.directory_controller->treat_cache_request_sent(this->get_cache_id(), this->mshr_born_ordered[0][i]);
@@ -279,7 +279,7 @@ void cache_memory_t::clock(uint32_t subcycle) {
         this->mshr_born_ordered[0][i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
 
             /// PREFETCH
-            CACHE_DEBUG_PRINTF("\t Treat REQUEST this->mshr_born_ordered[%d] %s\n", i, this->mshr_born_ordered[0][i]->memory_to_string().c_str());
+            CACHE_DEBUG_PRINTF("\t Treat REQUEST this->mshr_born_ordered[%d] %s\n", i, this->mshr_born_ordered[0][i]->content_to_string().c_str());
             if (this->mshr_born_ordered[0][i]->id_owner != this->get_id() &&
             this->mshr_born_ordered[0][i]->memory_operation != MEMORY_OPERATION_COPYBACK) {
                 this->prefetcher->treat_prefetch(this->mshr_born_ordered[0][i]);
@@ -405,8 +405,8 @@ int32_t cache_memory_t::allocate_prefetch(memory_package_t* package){
 
 /// ============================================================================
 int32_t cache_memory_t::send_package(memory_package_t *package) {
-    CACHE_DEBUG_PRINTF("send_package() package:%s\n", package->memory_to_string().c_str());
-    ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->memory_to_string().c_str());
+    CACHE_DEBUG_PRINTF("send_package() package:%s\n", package->content_to_string().c_str());
+    ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
 
     if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
         /// Check if FINAL DESTINATION has FREE SPACE available.
@@ -442,12 +442,12 @@ int32_t cache_memory_t::send_package(memory_package_t *package) {
 
 /// ============================================================================
 bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
-    CACHE_DEBUG_PRINTF("receive_package() port:%u, package:%s\n", input_port, package->memory_to_string().c_str());
+    CACHE_DEBUG_PRINTF("receive_package() port:%u, package:%s\n", input_port, package->content_to_string().c_str());
 
-    ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->memory_to_string().c_str());
-    ERROR_ASSERT_PRINTF(get_bank(package->memory_address) == this->get_bank_number(), "Wrong bank.\n%s\n", package->memory_to_string().c_str());
-    ERROR_ASSERT_PRINTF(package->id_dst == this->get_id() && package->hop_count == POSITION_FAIL, "Received some package for a different id_dst.\n%s\n", package->memory_to_string().c_str());
-    ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Received a wrong input_port\n%s\n", package->memory_to_string().c_str());
+    ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
+    ERROR_ASSERT_PRINTF(get_bank(package->memory_address) == this->get_bank_number(), "Wrong bank.\n%s\n", package->content_to_string().c_str());
+    ERROR_ASSERT_PRINTF(package->id_dst == this->get_id() && package->hop_count == POSITION_FAIL, "Received some package for a different id_dst.\n%s\n", package->content_to_string().c_str());
+    ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Received a wrong input_port\n%s\n", package->content_to_string().c_str());
 
     /// NEW ANSWER
     if (package->is_answer) {
@@ -469,7 +469,7 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
                     return OK;
                 }
             }
-            ERROR_PRINTF("Receive a NOT WANTED package %s.\n", package->memory_to_string().c_str())
+            ERROR_PRINTF("Receive a NOT WANTED package %s.\n", package->content_to_string().c_str())
         }
         CACHE_DEBUG_PRINTF("\tRECV DATA FAIL (BUSY)\n");
         return FAIL;
@@ -582,8 +582,8 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
 
 /// ============================================================================
 uint32_t cache_memory_t::check_token_space(memory_package_t *package) {
-    CACHE_DEBUG_PRINTF("check_token_space() %s\n", package->memory_to_string().c_str());
-    ERROR_ASSERT_PRINTF(get_bank(package->memory_address) == this->get_bank_number(), "Wrong bank.\n%s\n", package->memory_to_string().c_str());
+    CACHE_DEBUG_PRINTF("check_token_space() %s\n", package->content_to_string().c_str());
+    ERROR_ASSERT_PRINTF(get_bank(package->memory_address) == this->get_bank_number(), "Wrong bank.\n%s\n", package->content_to_string().c_str());
 
     uint32_t free_space = memory_package_t::count_free(this->mshr_buffer, this->mshr_buffer_request_reserved_size);
     return free_space;
@@ -603,7 +603,7 @@ void cache_memory_t::remove_token_list(memory_package_t *package) {
             return;
         }
     }
-    ERROR_PRINTF("Could not find the previous allocated token.\n%s\n", package->memory_to_string().c_str())
+    ERROR_PRINTF("Could not find the previous allocated token.\n%s\n", package->content_to_string().c_str())
 };
 
 /// ============================================================================

@@ -50,10 +50,6 @@ class branch_predictor_static_taken_t : public branch_predictor_t {
         uint64_t stat_btb_hit;
         uint64_t stat_btb_miss;
 
-        uint64_t stat_branch_predictor_operation;
-        uint64_t stat_branch_predictor_hit;
-        uint64_t stat_branch_predictor_miss;
-
     public:
         /// ====================================================================
         /// Methods

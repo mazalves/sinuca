@@ -182,7 +182,7 @@ void uop_package_t::package_wait(uint32_t stall_time) {
 
 //==============================================================================
 /// Convert Instruction variables into String
-std::string uop_package_t::uop_to_string() {
+std::string uop_package_t::content_to_string() {
     std::string PackageString;
     PackageString = "";
 
@@ -238,7 +238,7 @@ bool uop_package_t::check_age(uop_package_t *input_array, uint32_t size_array) {
     for (uint32_t i = 0; i < size_array ; i++) {
         if (input_array[i].state != PACKAGE_STATE_FREE) {
             if (input_array[i].born_cycle < min_cycle) {
-                WARNING_PRINTF("CHECK AGE FAIL: %s\n", input_array[i].uop_to_string().c_str())
+                WARNING_PRINTF("CHECK AGE FAIL: %s\n", input_array[i].content_to_string().c_str())
                 return FAIL;
             }
             /// Statistics of the oldest memory package
@@ -261,7 +261,7 @@ bool uop_package_t::check_age(uop_package_t **input_matrix, uint32_t size_x_matr
         for (uint32_t j = 0; j < size_y_matrix ; j++) {
             if (input_matrix[i][j].state != PACKAGE_STATE_FREE) {
                 if (input_matrix[i][j].born_cycle < min_cycle) {
-                    WARNING_PRINTF("CHECK AGE FAIL: %s\n", input_matrix[i][j].uop_to_string().c_str())
+                    WARNING_PRINTF("CHECK AGE FAIL: %s\n", input_matrix[i][j].content_to_string().c_str())
                     return FAIL;
                 }
                 /// Statistics of the oldest memory package
@@ -282,7 +282,7 @@ std::string uop_package_t::print_all(uop_package_t *input_array, uint32_t size_a
     FinalString = "";
 
     for (uint32_t i = 0; i < size_array ; i++) {
-        PackageString = input_array[i].uop_to_string();
+        PackageString = input_array[i].content_to_string();
         if (PackageString.size() > 1) {
             FinalString = FinalString + "[" + utils_t::utils_t::uint32_to_char(i) + "] " + PackageString + "\n";
         }
@@ -299,7 +299,7 @@ std::string uop_package_t::print_all(uop_package_t **input_matrix, uint32_t size
 
     for (uint32_t i = 0; i < size_x_matrix ; i++) {
         for (uint32_t j = 0; j < size_y_matrix ; j++) {
-            PackageString = input_matrix[i][j].uop_to_string();
+            PackageString = input_matrix[i][j].content_to_string();
             if (PackageString.size() > 1) {
                 FinalString = FinalString +
                                 "[" + utils_t::utils_t::uint32_to_char(i) + "] " +

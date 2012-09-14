@@ -11,7 +11,7 @@ def PRINT( str ):
    return
 
 ################################################################################
-BENCHMARK_LIST = ["spec_cpu2000", "spec_cpu2006", "spec_omp2001", "npb_omp"]
+BENCHMARK_LIST = ["spec_cpu2000", "spec_cpu2006", "spec_cpu2006_x86_32", "spec_omp2001", "npb_omp"]
 
 if (len(sys.argv) < 6) or (sys.argv[2] not in BENCHMARK_LIST):
     PRINT("Usage: python execute.py config_file "+str(BENCHMARK_LIST)+ " result_base_name warmup_instructions number_threads app_start app_end")
@@ -64,10 +64,22 @@ if arg_benchmark == 'spec_cpu2000':
     RESUTS_DST      = PROJECT_HOME + "/benchmarks/results/spec_cpu2000/"
     TRACE_SUFIX     = ""
 
+elif arg_benchmark == 'spec_cpu2000_x86_32':
+    APP_FILE_NAME   = SINUCA_HOME + "/scripts/command_to_run_spec_cpu2000.txt"
+    TRACE_SRC       = PROJECT_HOME + "/benchmarks/traces/spec_cpu2000_x86_32/"
+    RESUTS_DST      = PROJECT_HOME + "/benchmarks/results/spec_cpu2000_x86_32/"
+    TRACE_SUFIX     = ""
+
 elif arg_benchmark == 'spec_cpu2006':
     APP_FILE_NAME   = SINUCA_HOME + "/scripts/command_to_run_spec_cpu2006.txt"
     TRACE_SRC       = PROJECT_HOME + "/benchmarks/traces/spec_cpu2006/"
     RESUTS_DST      = PROJECT_HOME + "/benchmarks/results/spec_cpu2006/"
+    TRACE_SUFIX     = ""
+
+elif arg_benchmark == 'spec_cpu2006_x86_32':
+    APP_FILE_NAME   = SINUCA_HOME + "/scripts/command_to_run_spec_cpu2006.txt"
+    TRACE_SRC       = PROJECT_HOME + "/benchmarks/traces/spec_cpu2006_x86_32/"
+    RESUTS_DST      = PROJECT_HOME + "/benchmarks/results/spec_cpu2006_x86_32/"
     TRACE_SUFIX     = ""
 
 elif arg_benchmark == 'spec_omp2001':

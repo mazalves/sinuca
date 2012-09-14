@@ -53,13 +53,13 @@ void branch_predictor_t::clock(uint32_t subcycle) {
 
 /// ============================================================================
 int32_t branch_predictor_t::send_package(memory_package_t *package) {
-    ERROR_PRINTF("Send package %s.\n", package->memory_to_string().c_str());
+    ERROR_PRINTF("Send package %s.\n", package->content_to_string().c_str());
     return POSITION_FAIL;
 };
 
 /// ============================================================================
 bool branch_predictor_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
-    ERROR_PRINTF("Received package %s into the input_port %u, latency %u.\n", package->memory_to_string().c_str(), input_port, transmission_latency);
+    ERROR_PRINTF("Received package %s into the input_port %u, latency %u.\n", package->content_to_string().c_str(), input_port, transmission_latency);
     return FAIL;
 };
 
