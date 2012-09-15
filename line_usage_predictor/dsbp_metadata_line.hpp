@@ -45,27 +45,14 @@ class dsbp_metadata_line_t {
         /// Dead Statistics
         uint64_t stat_total_dead_cycles;
 
-        dsbp_metadata_line_t() {
-            this->valid_sub_blocks = NULL;
-            this->real_usage_counter = NULL;
-            this->usage_counter = NULL;
-            this->overflow = NULL;
-            this->learn_mode = 0;
-            this->pht_pointer = NULL;
-            this->clock_become_alive = NULL;
-            this->clock_become_dead = NULL;
-            this->is_dirty = false;
-            this->written_sub_blocks = NULL;
-            this->active_sub_blocks = 0;
-            this->is_dead = true;
-            this->stat_total_dead_cycles = 0;
-        };
-        ~dsbp_metadata_line_t() {
-            if (this->valid_sub_blocks) delete [] valid_sub_blocks;
-            if (this->real_usage_counter) delete [] real_usage_counter;
-            if (this->usage_counter) delete [] usage_counter;
-            if (this->overflow) delete [] overflow;
-        };
+        /// ====================================================================
+        /// Methods
+        /// ====================================================================
+        dsbp_metadata_line_t();
+        ~dsbp_metadata_line_t();
+
+        void clean();
+        std::string content_to_string();
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_total_dead_cycles);
 };

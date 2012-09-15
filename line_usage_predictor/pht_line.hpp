@@ -25,21 +25,19 @@ class pht_line_t {
     public:
         uint64_t opcode_address;
         uint64_t offset;
+
         uint64_t last_access;
         bool pointer;
+
         uint64_t *usage_counter;
         bool *overflow;
 
-        pht_line_t() {
-            this->opcode_address = 0;
-            this->offset = 0;
-            this->last_access = 0;
-            this->pointer = 0;
-            this->usage_counter = NULL;
-            this->overflow = NULL;
-        };
-        ~pht_line_t() {
-            if (this->usage_counter) delete [] usage_counter;
-            if (this->overflow) delete [] overflow;
-        };
+        /// ====================================================================
+        /// Methods
+        /// ====================================================================
+        pht_line_t();
+        ~pht_line_t();
+
+        void clean();
+        std::string content_to_string();
 };

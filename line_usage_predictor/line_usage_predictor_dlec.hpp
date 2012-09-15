@@ -64,6 +64,13 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
          /// ====================================================================
         /// Statistics related
         /// ====================================================================
+        uint64_t stat_line_hit;
+        uint64_t stat_line_miss;
+        uint64_t stat_sub_block_miss;
+        uint64_t stat_copyback;
+        uint64_t stat_eviction;
+        uint64_t stat_invalidation;
+
         uint64_t stat_ahtm_access;
         uint64_t stat_ahtm_hit;
         uint64_t stat_ahtm_miss;
@@ -129,21 +136,34 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET(uint32_t, metadata_associativity);
         INSTANTIATE_GET_SET(uint32_t, metadata_total_sets);
 
-        /// pht
+        /// aht misses
+        aht_line_t* ahtm_find_line(uint64_t opcode_address, uint64_t memory_address);
+        aht_line_t* ahtm_evict_address(uint64_t opcode_address, uint64_t memory_address);
+
         INSTANTIATE_GET_SET(uint32_t, ahtm_line_number);
         INSTANTIATE_GET_SET(uint32_t, ahtm_associativity);
         INSTANTIATE_GET_SET(replacement_t, ahtm_replacement_policy);
         INSTANTIATE_GET_SET(uint32_t, ahtm_total_sets);
+
+        /// aht copyback
+        aht_line_t* ahtc_find_line(uint64_t opcode_address, uint64_t memory_address);
+        aht_line_t* ahtc_evict_address(uint64_t opcode_address, uint64_t memory_address);
 
         INSTANTIATE_GET_SET(uint32_t, ahtc_line_number);
         INSTANTIATE_GET_SET(uint32_t, ahtc_associativity);
         INSTANTIATE_GET_SET(replacement_t, ahtc_replacement_policy);
         INSTANTIATE_GET_SET(uint32_t, ahtc_total_sets);
 
-
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_hit);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_miss);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_miss);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_copyback);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_invalidation);
+
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_ahtm_access);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_ahtm_hit);

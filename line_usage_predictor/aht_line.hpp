@@ -25,22 +25,21 @@ class aht_line_t {
     public:
         uint64_t opcode_address;
         uint64_t offset;
+
         uint64_t last_access;
         bool pointer;
+
         uint64_t usage_counter;
         bool overflow;
 
         bool is_last_write;
 
-        aht_line_t() {
-            this->opcode_address = 0;
-            this->offset = 0;
-            this->last_access = 0;
-            this->pointer = 0;
-            this->usage_counter = 0;
-            this->overflow = 0;
-            this->is_last_write = false;
-        };
-        ~aht_line_t() {
-        };
+        /// ====================================================================
+        /// Methods
+        /// ====================================================================
+        aht_line_t();
+        ~aht_line_t();
+
+        void clean();
+        std::string content_to_string();
 };

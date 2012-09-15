@@ -162,8 +162,6 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET(uint32_t, usage_counter_max);
 
         /// metadata
-        std::string dsbp_metadata_line_to_string(dsbp_metadata_line_t *dsbp_metadata_line);
-
         INSTANTIATE_GET_SET(dsbp_metadata_set_t*, metadata_sets);
         INSTANTIATE_GET_SET(uint32_t, metadata_line_number);
         INSTANTIATE_GET_SET(uint32_t, metadata_associativity);
@@ -172,7 +170,6 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         /// pht
         pht_line_t* pht_find_line(uint64_t opcode_address, uint64_t memory_address);
         pht_line_t* pht_evict_address(uint64_t opcode_address, uint64_t memory_address);
-        std::string pht_line_to_string(pht_line_t *pht_line);
 
         INSTANTIATE_GET_SET(uint32_t, pht_line_number);
         INSTANTIATE_GET_SET(uint32_t, pht_associativity);

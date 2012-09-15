@@ -16,7 +16,6 @@ TODO list:
 TRACE_READER -- Remove string, use char instead
 TRACE_READER -- Multiple single threaded applications
 TRACE_READER -- Fast check on the trace / fast get trace size
-PREFETCHER -- Check increment/decrement into a real machine / simulator
 PROCESSOR -- One instruction can be between two instruction cache lines.
 PROCESSOR -- Split requests when the load/store are unaligned (between two cache lines).
 PROCESSOR -- Add field NEW_DATA into MEMORY_PACKAGE, always true after write, and propagate false for others. Processor may receive only NEW_DATA==true
@@ -26,7 +25,7 @@ DIRECTORY -- Deadlock if Associativity < Directory Lines from the same set. (Not
 ################ Short Term
 STATISTICS -- Average Instruction Size and Number of cache lines
 STATISTICS -- Average Memory Size and Number of cache lines
-STATISTICS -- Average Fetched Uops
+STATISTICS -- Average Fetched Opcodes
 
 -- CHECK:
     -- cache state

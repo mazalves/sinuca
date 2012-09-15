@@ -28,7 +28,8 @@ class dlec_metadata_line_t {
         uint64_t usage_counter;
         bool overflow;
         bool learn_mode;
-        aht_line_t *aht_pointer;
+        aht_line_t *ahtm_pointer;
+        aht_line_t *ahtc_pointer;
 
         /// Static Energy
         uint64_t clock_become_alive;
@@ -40,20 +41,14 @@ class dlec_metadata_line_t {
         /// Dead Flag
         bool is_dead;
 
-        dlec_metadata_line_t() {
-            this->valid_sub_blocks = LINE_SUB_BLOCK_DISABLE;
-            this->real_usage_counter = 0;
-            this->usage_counter = 0;
-            this->overflow = 0;
-            this->learn_mode = false;
-            this->aht_pointer = NULL;
-            this->clock_become_alive = 0;
-            this->clock_become_dead = 0;
-            this->is_dirty = false;
-            this->is_dead = true;
-        };
-        ~dlec_metadata_line_t() {
-        };
+        /// ====================================================================
+        /// Methods
+        /// ====================================================================
+        dlec_metadata_line_t();
+        ~dlec_metadata_line_t();
+
+        void clean();
+        std::string content_to_string();
 
 
 };

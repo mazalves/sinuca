@@ -135,7 +135,6 @@ class line_usage_predictor_statistics_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET(uint32_t, usage_counter_bits);
 
         /// metadata
-        std::string dsbp_metadata_line_to_string(dsbp_metadata_line_t *dsbp_metadata_line);
         INSTANTIATE_GET_SET(dsbp_metadata_set_t*, metadata_sets);
         INSTANTIATE_GET_SET(uint32_t, metadata_line_number);
         INSTANTIATE_GET_SET(uint32_t, metadata_associativity);
@@ -157,7 +156,6 @@ class line_usage_predictor_statistics_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_touch_8_15);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_touch_16_127);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_touch_128_bigger);
-
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_dirty_lines_predicted_dead);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_clean_lines_predicted_dead);

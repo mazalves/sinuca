@@ -45,7 +45,6 @@ line_usage_predictor_dsbp_t::line_usage_predictor_dsbp_t() {
     this->metadata_associativity = 0;
     this->metadata_total_sets = 0;
 
-
     /// pht
     this->pht_sets = NULL;
     this->pht_line_number = 0;
@@ -431,7 +430,7 @@ void line_usage_predictor_dsbp_t::line_hit(memory_package_t *package, uint32_t i
         SINUCA_PRINTF("]\n")
     #endif
 
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Before Hit %s", dsbp_metadata_line_to_string(&this->metadata_sets[index].ways[way]).c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Before Hit %s", this->metadata_sets[index].ways[way].content_to_string().c_str())
 
     // =================================================================
     // Statistics for Dynamic Energy
@@ -533,7 +532,7 @@ void line_usage_predictor_dsbp_t::line_hit(memory_package_t *package, uint32_t i
         this->metadata_sets[index].ways[way].is_dead = true;
     }
 
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t After Hit %s", dsbp_metadata_line_to_string(&this->metadata_sets[index].ways[way]).c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t After Hit %s", this->metadata_sets[index].ways[way].content_to_string().c_str())
 };
 
 
@@ -622,7 +621,7 @@ void line_usage_predictor_dsbp_t::line_miss(memory_package_t *package, uint32_t 
     ///=================================================================
     if (pht_line != NULL) {
         LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t pht HIT\n")
-        LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t %s", pht_line_to_string(pht_line).c_str())
+        LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t %s", pht_line->content_to_string().c_str())
 
         this->add_stat_pht_hit();
 
@@ -750,8 +749,8 @@ void line_usage_predictor_dsbp_t::sub_block_miss(memory_package_t *package, uint
     ///=================================================================
     if (pht_line != NULL && pht_line->pointer == true) {
         LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t pht HIT\n")
-        LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Before Update %s", dsbp_metadata_line_to_string(&this->metadata_sets[index].ways[way]).c_str())
-        LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Before Update %s", pht_line_to_string(pht_line).c_str())
+        LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Before Update %s", this->metadata_sets[index].ways[way].content_to_string().c_str())
+        LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Before Update %s", pht_line->content_to_string().c_str())
 
         // Enable Learn_mode
         this->metadata_sets[index].ways[way].learn_mode = true;
@@ -779,7 +778,7 @@ void line_usage_predictor_dsbp_t::sub_block_miss(memory_package_t *package, uint
             if (this->metadata_sets[index].ways[way].valid_sub_blocks[i] == LINE_SUB_BLOCK_DISABLE) {
                 this->metadata_sets[index].ways[way].valid_sub_blocks[i] = LINE_SUB_BLOCK_WRONG_FIRST;
             }
-            LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t After Update %s", pht_line_to_string(pht_line).c_str())
+            LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t After Update %s", pht_line->content_to_string().c_str())
         }
 
         // Add the last access information
@@ -951,8 +950,8 @@ void line_usage_predictor_dsbp_t::line_eviction(uint32_t index, uint32_t way) {
     // pht HIT
     if (pht_line != NULL) {
         LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t pht HIT\n")
-        LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Before Update %s", dsbp_metadata_line_to_string(&this->metadata_sets[index].ways[way]).c_str())
-        LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Before Update %s", pht_line_to_string(pht_line).c_str())
+        LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Before Update %s", this->metadata_sets[index].ways[way].content_to_string().c_str())
+        LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Before Update %s", pht_line->content_to_string().c_str())
         // Update the pht entry
         this->add_stat_pht_access();
         pht_line->last_access = sinuca_engine.get_global_cycle();
@@ -968,7 +967,7 @@ void line_usage_predictor_dsbp_t::line_eviction(uint32_t index, uint32_t way) {
         }
         pht_line->pointer = false;
         this->metadata_sets[index].ways[way].pht_pointer = NULL;
-        LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t After Update %s", pht_line_to_string(pht_line).c_str())
+        LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t After Update %s", pht_line->content_to_string().c_str())
     }
     else {
         LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t pht MISS\n")
@@ -1105,57 +1104,6 @@ void line_usage_predictor_dsbp_t::line_invalidation(uint32_t index, uint32_t way
     (void)way;
 };
 
-
-/// ============================================================================
-std::string line_usage_predictor_dsbp_t::dsbp_metadata_line_to_string(dsbp_metadata_line_t *dsbp_metadata_line) {
-    std::string PackageString;
-    PackageString = "";
-
-    PackageString = PackageString + "dsbp_LINE Learn:" + utils_t::uint32_to_char(dsbp_metadata_line->learn_mode);
-    PackageString = PackageString + " Dead:" + utils_t::uint32_to_char(dsbp_metadata_line->is_dead);
-    PackageString = PackageString + " pht Ptr:" + utils_t::uint32_to_char(dsbp_metadata_line->pht_pointer != NULL);
-
-    PackageString = PackageString + "\n\t Valid Sub-Blocks      [";
-    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        if (i % this->sub_block_size == 0) {
-            PackageString = PackageString + "|";
-        }
-        PackageString = PackageString + " " + utils_t::uint32_to_char(dsbp_metadata_line->valid_sub_blocks[i]);
-    }
-    PackageString = PackageString + "]\n";
-
-    PackageString = PackageString + "\t Real Usage Counter    [";
-    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        if (i % this->sub_block_size == 0) {
-            PackageString = PackageString + "|";
-        }
-        PackageString = PackageString + " " + utils_t::uint32_to_char(dsbp_metadata_line->real_usage_counter[i]);
-    }
-    PackageString = PackageString + "]\n";
-
-    PackageString = PackageString + "\t Usage Counter         [";
-    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        if (i % this->sub_block_size == 0) {
-            PackageString = PackageString + "|";
-        }
-        PackageString = PackageString + " " + utils_t::uint32_to_char(dsbp_metadata_line->usage_counter[i]);
-    }
-    PackageString = PackageString + "]\n";
-
-    PackageString = PackageString + "\t Overflow              [";
-    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        if (i % this->sub_block_size == 0) {
-            PackageString = PackageString + "|";
-        }
-        PackageString = PackageString + " " + utils_t::uint32_to_char(dsbp_metadata_line->overflow[i]);
-    }
-
-    PackageString = PackageString + "]\n";
-    return PackageString;
-};
-
-
-
 /// ============================================================================
 /// dsbp - pht
 /// ============================================================================
@@ -1170,7 +1118,7 @@ pht_line_t* line_usage_predictor_dsbp_t::pht_find_line(uint64_t opcode_address, 
     for (uint32_t pht_way = 0; pht_way < this->get_pht_associativity(); pht_way++) {
         if (this->pht_sets[pht_index].ways[pht_way].opcode_address == opcode_address && this->pht_sets[pht_index].ways[pht_way].offset == pht_offset) {
             LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Found pht Index %u - Way %u\n", pht_index, pht_way )
-            LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t pht PC %"PRIu64" - Offset %"PRIu64" - Last Access %"PRIu64"\n", this->pht_sets[pht_index].ways[pht_way].opcode_address,
+            LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t pht OpcodeAddress %"PRIu64" - Offset %"PRIu64" - Last Access %"PRIu64"\n", this->pht_sets[pht_index].ways[pht_way].opcode_address,
                                                                                                     this->pht_sets[pht_index].ways[pht_way].offset,
                                                                                                     this->pht_sets[pht_index].ways[pht_way].last_access )
             return &this->pht_sets[pht_index].ways[pht_way];
@@ -1214,56 +1162,16 @@ pht_line_t* line_usage_predictor_dsbp_t::pht_evict_address(uint64_t opcode_addre
 
 
         case REPLACEMENT_INVALID_OR_LRU:
-            ERROR_PRINTF("Replacement Policy: REPLACEMENT_INVALID_OR_LRU not implemented.\n");
-        break;
-
-        case REPLACEMENT_FIFO:
-            ERROR_PRINTF("Replacement Policy: REPLACEMENT_POLICY_FIFO not implemented.\n");
-        break;
-
-        case REPLACEMENT_LRF:
-            ERROR_PRINTF("Replacement Policy: REPLACEMENT_POLICY_LRF not implemented.\n");
-        break;
-
         case REPLACEMENT_DEAD_OR_LRU:
-            ERROR_PRINTF("Replacement Policy: REPLACEMENT_POLICY_DEAD_OR_LRU should not use for line_usage_predictor.\n");
+        case REPLACEMENT_FIFO:
+        case REPLACEMENT_LRF:
+            ERROR_PRINTF("Replacement Policy: %s not implemented.\n",  get_enum_replacement_char(this->pht_replacement_policy));
         break;
     }
 
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t pht PC %"PRIu64" - Offset %"PRIu64" - Last Access %"PRIu64"\n", choosen_line->opcode_address,
-                                                                                                        choosen_line->offset,
-                                                                                                        choosen_line->last_access )
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t pht OpcodeAddress %"PRIu64" - Offset %"PRIu64" - Last Access %"PRIu64"\n",
+                                    choosen_line->opcode_address, choosen_line->offset, choosen_line->last_access )
     return choosen_line;
 };
 
 /// ============================================================================
-std::string line_usage_predictor_dsbp_t::pht_line_to_string(pht_line_t *pht_line) {
-    std::string PackageString;
-    PackageString = "";
-
-    PackageString = PackageString + "pht_LINE PC:" + utils_t::uint64_to_char(pht_line->opcode_address);
-    PackageString = PackageString + " Offset:" + utils_t::uint32_to_char(pht_line->offset);
-    PackageString = PackageString + " Last Access:" + utils_t::uint64_to_char(pht_line->last_access);
-    PackageString = PackageString + " Has Pointer:" + utils_t::uint32_to_char(pht_line->pointer);
-
-    PackageString = PackageString + "\n\t Usage Counter [";
-    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        if (i % this->sub_block_size == 0) {
-            PackageString = PackageString + "|";
-        }
-        PackageString = PackageString + " " + utils_t::uint32_to_char(pht_line->usage_counter[i]);
-    }
-    PackageString = PackageString + "]\n";
-
-    PackageString = PackageString + "\t Overflow      [";
-    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        if (i % this->sub_block_size == 0) {
-            PackageString = PackageString + "|";
-        }
-        PackageString = PackageString + " " + utils_t::uint32_to_char(pht_line->overflow[i]);
-    }
-    PackageString = PackageString + "]\n";
-    return PackageString;
-};
-
-

@@ -729,13 +729,13 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& i
         }
         break;
 
-        case REPLACEMENT_INVALID_OR_LRU: {
+        case REPLACEMENT_DEAD_OR_LRU: {
             uint64_t last_access = sinuca_engine.get_global_cycle() + 1;
             for (uint32_t way = 0; way < this->get_associativity(); way++) {
                 /// The line is not locked by directory
                 if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[way].tag) == FAIL) {
-                    /// If there is free space
-                    if (this->sets[index].ways[way].status == PROTOCOL_STATUS_I) {
+                    /// If is_dead
+                    if (this->line_usage_predictor->check_line_is_dead(index, way) == true) {
                         choosen_line = &this->sets[index].ways[way];
                         choosen_way = way;
                         break;
@@ -754,13 +754,13 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& i
         }
         break;
 
-        case REPLACEMENT_DEAD_OR_LRU: {
+        case REPLACEMENT_INVALID_OR_LRU: {
             uint64_t last_access = sinuca_engine.get_global_cycle() + 1;
             for (uint32_t way = 0; way < this->get_associativity(); way++) {
                 /// The line is not locked by directory
                 if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[way].tag) == FAIL) {
-                    /// If is_dead
-                    if (this->line_usage_predictor->check_line_is_dead(index, way) == true) {
+                    /// If there is free space
+                    if (this->sets[index].ways[way].status == PROTOCOL_STATUS_I) {
                         choosen_line = &this->sets[index].ways[way];
                         choosen_way = way;
                         break;
@@ -792,13 +792,12 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& i
         }
         break;
 
+
         case REPLACEMENT_FIFO:
-            ERROR_PRINTF("Replacement Policy: REPLACEMENT_POLICY_FIFO not implemented.\n");
+        case REPLACEMENT_LRF:
+            ERROR_PRINTF("Replacement Policy: %s not implemented.\n",  get_enum_replacement_char(this->replacement_policy));
         break;
 
-        case REPLACEMENT_LRF:
-            ERROR_PRINTF("Replacement Policy: REPLACEMENT_POLICY_LRF not implemented.\n");
-        break;
     }
 
     return choosen_line;
