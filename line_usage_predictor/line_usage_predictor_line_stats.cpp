@@ -110,7 +110,7 @@ bool line_usage_predictor_line_stats_t::check_line_is_dead(uint32_t index, uint3
 
 
 /// ============================================================================
-// Mechanism Operations
+/// Mechanism Operations
 /// ============================================================================
 void line_usage_predictor_line_stats_t::line_hit(memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_hit() package:%s\n", package->content_to_string().c_str())
@@ -294,8 +294,16 @@ void line_usage_predictor_line_stats_t::line_eviction(uint32_t index, uint32_t w
     // ~ uint64_t stat_clock_first_write;
     // ~ uint64_t stat_clock_last_write;
 
-    this->cycles_last_write_to_last_access += this->metadata_sets[index].ways[way].stat_clock_last_read - this->metadata_sets[index].ways[way].stat_clock_last_write;
-    this->cycles_last_write_to_eviction += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].stat_clock_last_write;
+    if (this->metadata_sets[index].ways[way].stat_clock_first_write != 0) {
+        ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_last_read != 0, "Possible not read line");
+        ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_last_write != 0, "Possible not written line");
+        
+        ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_last_read >= this->metadata_sets[index].ways[way].stat_clock_last_write, "Possible underflow");
+        this->cycles_last_write_to_last_access += this->metadata_sets[index].ways[way].stat_clock_last_read - this->metadata_sets[index].ways[way].stat_clock_last_write;
+        ERROR_ASSERT_PRINTF(sinuca_engine.get_global_cycle() >= this->metadata_sets[index].ways[way].stat_clock_last_write, "Possible underflow");
+        this->cycles_last_write_to_eviction += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].stat_clock_last_write;
+    }
+    ERROR_ASSERT_PRINTF(sinuca_engine.get_global_cycle() >= this->metadata_sets[index].ways[way].stat_clock_last_read, "Possible underflow");
     this->cycles_last_access_to_eviction += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].stat_clock_last_read;
 
     this->metadata_sets[index].ways[way].reset_statistics();
@@ -413,6 +421,15 @@ void line_usage_predictor_line_stats_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_last_write_to_last_access", cycles_last_write_to_last_access);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_last_write_to_eviction", cycles_last_write_to_eviction);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_last_access_to_eviction", cycles_last_access_to_eviction);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "cycles_last_write_to_last_access_ratio",
+                                                                                        cycles_last_write_to_last_access, stat_send_copyback);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "cycles_last_write_to_eviction_ratio",
+                                                                                        cycles_last_write_to_eviction, stat_send_copyback);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "cycles_last_access_to_eviction_ratio",
+                                                                                        cycles_last_access_to_eviction, stat_eviction);
+
 };
 
 /// ============================================================================
