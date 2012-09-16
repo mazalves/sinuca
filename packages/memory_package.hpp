@@ -60,6 +60,7 @@ class memory_package_t {
         ~memory_package_t();
 
         std::string content_to_string();
+        std::string sub_blocks_to_string();
 
         memory_package_t & operator=(const memory_package_t &package);
         void package_clean();

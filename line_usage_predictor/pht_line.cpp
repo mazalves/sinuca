@@ -35,19 +35,19 @@ pht_line_t::pht_line_t() {
     this->offset = 0;
     this->last_access = 0;
     this->pointer = 0;
-    this->usage_counter = NULL;
+    this->access_counter = NULL;
     this->overflow = NULL;
 };
 
 /// ============================================================================
 pht_line_t::~pht_line_t() {
-    if (this->usage_counter) delete [] usage_counter;
+    if (this->access_counter) delete [] access_counter;
     if (this->overflow) delete [] overflow;
 };
 
 /// ============================================================================
 void pht_line_t::clean() {
-    ERROR_ASSERT_PRINTF(this->usage_counter != NULL, "Cleanning a not allocated line.\n")
+    ERROR_ASSERT_PRINTF(this->access_counter != NULL, "Cleanning a not allocated line.\n")
     // ~ ERROR_ASSERT_PRINTF(this->overflow != NULL, "Cleanning a not allocated line.\n")
 
     this->opcode_address = 0;
@@ -56,7 +56,7 @@ void pht_line_t::clean() {
     this->pointer = false;
 
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        this->usage_counter[i] = 0;
+        this->access_counter[i] = 0;
         this->overflow[i] = false;
     }
 }
@@ -73,13 +73,13 @@ std::string pht_line_t::content_to_string() {
     content_string = content_string + " Pointer:" + utils_t::uint32_to_char(this->pointer);
     content_string = content_string + "\n";
     
-    /// usage_counter
-    content_string = content_string + "\t usage_counter [";
+    /// access_counter
+    content_string = content_string + "\t access_counter [";
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
         if (i % 4 == 0) {
             content_string = content_string + "|";
         }
-        content_string = content_string + " " + utils_t::uint32_to_char(this->usage_counter[i]);
+        content_string = content_string + " " + utils_t::uint32_to_char(this->access_counter[i]);
     }
     content_string = content_string + "]\n";
 

@@ -78,8 +78,8 @@ class line_usage_predictor_t : public interconnection_interface_t {
         virtual void line_hit(memory_package_t *package, uint32_t index, uint32_t way)=0;
         virtual void line_miss(memory_package_t *package, uint32_t index, uint32_t way)=0;
         virtual void sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way)=0;
-        virtual void line_get_copyback(memory_package_t *package, uint32_t index, uint32_t way)=0;
-        virtual void line_insert_copyback(memory_package_t *package, cache_memory_t *cache_memory, cache_line_t *cache_line, uint32_t index, uint32_t way)=0;
+        virtual void line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way)=0;
+        virtual void line_recv_copyback(memory_package_t *package, uint32_t index, uint32_t way)=0;
         virtual void line_eviction(uint32_t index, uint32_t way)=0;
         virtual void line_invalidation(uint32_t index, uint32_t way)=0;
 

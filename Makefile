@@ -77,7 +77,8 @@ SRC_LINE_USAGE_PREDICTOR =	line_usage_predictor/line_usage_predictor.cpp \
 							line_usage_predictor/dlec_metadata_line.cpp \
 							line_usage_predictor/line_usage_predictor_dlec.cpp \
 							line_usage_predictor/line_usage_predictor_lwp.cpp \
-							line_usage_predictor/line_usage_predictor_statistics.cpp \
+							line_usage_predictor/line_usage_predictor_subblock_stats.cpp \
+							line_usage_predictor/line_usage_predictor_line_stats.cpp \
 							line_usage_predictor/line_usage_predictor_disable.cpp
 
 SRC_CACHE_MEMORY =	cache_memory/cache_memory.cpp

@@ -46,14 +46,19 @@ void dlec_metadata_line_t::clean() {
     this->is_dead = false;
     this->is_last_write = false;
     
-    this->real_usage_counter = 0;
-    this->usage_counter = 0;
+    this->real_access_counter = 0;
+    this->real_write_counter = 0;
+    
+    this->access_counter = 0;
     this->overflow = false;
 
     this->ahtm_pointer = NULL;
     this->ahtc_pointer = NULL;
     this->clock_become_alive = 0;
     this->clock_become_dead = 0;
+
+    this->clock_first_write = 0;
+    this->clock_last_write = 0;        
 };
 
 /// ============================================================================
@@ -69,8 +74,10 @@ std::string dlec_metadata_line_t::content_to_string() {
     content_string = content_string + " Dead:" + utils_t::uint32_to_char(this->is_dead);
     content_string = content_string + " Last_Write:" + utils_t::uint32_to_char(this->is_last_write);
 
-    content_string = content_string + " RealUsage:" + utils_t::uint32_to_char(this->real_usage_counter);
-    content_string = content_string + " Usage:" + utils_t::uint32_to_char(this->usage_counter);
+    content_string = content_string + " RealAccess:" + utils_t::uint32_to_char(this->real_access_counter);
+    content_string = content_string + " RealWrite:" + utils_t::uint32_to_char(this->real_write_counter);
+        
+    content_string = content_string + " Usage:" + utils_t::uint32_to_char(this->access_counter);
     content_string = content_string + " Overflow:" + utils_t::uint32_to_char(this->overflow);
     
     content_string = content_string + " ahtm_ptr:" + utils_t::uint32_to_char(this->ahtm_pointer != NULL);
@@ -78,6 +85,10 @@ std::string dlec_metadata_line_t::content_to_string() {
 
     content_string = content_string + " Alive:" + utils_t::uint64_to_char(this->clock_become_alive);
     content_string = content_string + " Dead:" + utils_t::uint64_to_char(this->clock_become_dead);
+
+    content_string = content_string + " First_Write:" + utils_t::uint64_to_char(this->clock_first_write);
+    content_string = content_string + " Last_Write:" + utils_t::uint64_to_char(this->clock_last_write);
+
 
     content_string = content_string + "\n";
     return content_string;

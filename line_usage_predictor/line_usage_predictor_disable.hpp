@@ -34,7 +34,13 @@ class line_usage_predictor_disable_t : public line_usage_predictor_t {
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
-
+        uint64_t stat_line_hit;
+        uint64_t stat_line_miss;
+        uint64_t stat_sub_block_miss;
+        uint64_t stat_send_copyback;
+        uint64_t stat_recv_copyback;
+        uint64_t stat_eviction;
+        uint64_t stat_invalidation;
     public:
         /// ====================================================================
         /// Methods
@@ -77,8 +83,8 @@ class line_usage_predictor_disable_t : public line_usage_predictor_t {
         void line_hit(memory_package_t *package, uint32_t index, uint32_t way);
         void line_miss(memory_package_t *package, uint32_t index, uint32_t way);
         void sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way);
-        void line_insert_copyback(memory_package_t *package, cache_memory_t *cache_memory, cache_line_t *cache_line, uint32_t index, uint32_t way);
-        void line_get_copyback(memory_package_t *package, uint32_t index, uint32_t way);
+        void line_recv_copyback(memory_package_t *package, uint32_t index, uint32_t way);
+        void line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way);
         void line_eviction(uint32_t index, uint32_t way);
         void line_invalidation(uint32_t index, uint32_t way);
         /// ====================================================================
@@ -86,4 +92,11 @@ class line_usage_predictor_disable_t : public line_usage_predictor_t {
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_hit);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_miss);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_miss);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_send_copyback);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_recv_copyback);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_invalidation);
 };

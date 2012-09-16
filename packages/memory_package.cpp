@@ -203,6 +203,28 @@ std::string memory_package_t::content_to_string() {
 };
 
 /// ============================================================================
+std::string memory_package_t::sub_blocks_to_string() {
+    std::string content_string;
+    content_string = "";
+
+    #ifndef SHOW_FREE_PACKAGE
+        if (this->state == PACKAGE_STATE_FREE) {
+            return content_string;
+        }
+    #endif
+    
+    content_string = content_string + " SUB_BLOCKS:[";
+    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
+        if (i % 4 == 0) {
+            content_string = content_string + "|"; 
+        }
+        content_string = content_string + utils_t::uint32_to_char(this->sub_blocks[i]);
+    }
+    content_string = content_string + "]\n"; 
+    return content_string;
+};
+
+/// ============================================================================
 int32_t memory_package_t::find_free(memory_package_t *input_array, uint32_t size_array) {
     for (uint32_t i = 0; i < size_array ; i++) {
         if (input_array[i].state == PACKAGE_STATE_FREE)

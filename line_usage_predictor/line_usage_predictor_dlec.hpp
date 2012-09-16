@@ -26,7 +26,7 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         /// ====================================================================
         /// Set by sinuca_configurator
         /// ====================================================================
-        uint32_t usage_counter_bits;
+        uint32_t access_counter_bits;
 
         /// metadata
         uint32_t metadata_line_number;          /// Cache Metadata
@@ -45,7 +45,7 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
-        uint32_t usage_counter_max;
+        uint32_t access_counter_max;
 
         /// metadata
         dlec_metadata_set_t *metadata_sets;
@@ -67,7 +67,8 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         uint64_t stat_line_hit;
         uint64_t stat_line_miss;
         uint64_t stat_sub_block_miss;
-        uint64_t stat_copyback;
+        uint64_t stat_send_copyback;
+        uint64_t stat_recv_copyback;
         uint64_t stat_eviction;
         uint64_t stat_invalidation;
 
@@ -88,6 +89,27 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         uint64_t stat_line_sub_block_copyback_over;
         uint64_t stat_line_sub_block_copyback_correct;
         uint64_t stat_line_sub_block_copyback_under;
+
+        uint64_t stat_line_access_0;
+        uint64_t stat_line_access_1;
+        uint64_t stat_line_access_2_3;
+        uint64_t stat_line_access_4_7;
+        uint64_t stat_line_access_8_15;
+        uint64_t stat_line_access_16_127;
+        uint64_t stat_line_access_128_bigger;
+
+        uint64_t stat_line_write_0;
+        uint64_t stat_line_write_1;
+        uint64_t stat_line_write_2_3;
+        uint64_t stat_line_write_4_7;
+        uint64_t stat_line_write_8_15;
+        uint64_t stat_line_write_16_127;
+        uint64_t stat_line_write_128_bigger;
+
+        uint64_t cycles_last_write_to_last_access;
+        uint64_t cycles_last_write_to_eviction;
+        uint64_t cycles_last_access_to_eviction;
+
 
     public:
         /// ====================================================================
@@ -131,14 +153,14 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         void line_hit(memory_package_t *package, uint32_t index, uint32_t way);
         void line_miss(memory_package_t *package, uint32_t index, uint32_t way);
         void sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way);
-        void line_insert_copyback(memory_package_t *package, cache_memory_t *cache_memory, cache_line_t *cache_line, uint32_t index, uint32_t way);
-        void line_get_copyback(memory_package_t *package, uint32_t index, uint32_t way);
+        void line_recv_copyback(memory_package_t *package, uint32_t index, uint32_t way);
+        void line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way);
         void line_eviction(uint32_t index, uint32_t way);
         void line_invalidation(uint32_t index, uint32_t way);
         /// ====================================================================
 
-        INSTANTIATE_GET_SET(uint32_t, usage_counter_bits);
-        INSTANTIATE_GET_SET(uint32_t, usage_counter_max);
+        INSTANTIATE_GET_SET(uint32_t, access_counter_bits);
+        INSTANTIATE_GET_SET(uint32_t, access_counter_max);
 
         /// metadata
         INSTANTIATE_GET_SET(dlec_metadata_set_t*, metadata_sets);
@@ -170,7 +192,8 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_hit);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_miss);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_miss);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_copyback);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_send_copyback);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_recv_copyback);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_invalidation);
 
@@ -191,4 +214,25 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_copyback_over);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_copyback_correct);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_copyback_under);
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_0);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_1);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_2_3);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_4_7);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_8_15);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_16_127);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_128_bigger);
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_0);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_1);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_2_3);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_4_7);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_8_15);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_16_127);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_128_bigger);
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_last_write_to_last_access);
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_last_write_to_eviction);
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_last_access_to_eviction);
+
 };

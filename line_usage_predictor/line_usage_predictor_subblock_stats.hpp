@@ -21,15 +21,23 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
 /// ============================================================================
-class line_usage_predictor_lwp_t : public line_usage_predictor_t {
+class line_usage_predictor_subblock_stats_t : public line_usage_predictor_t {
     private:
         /// ====================================================================
         /// Set by sinuca_configurator
         /// ====================================================================
+        uint32_t sub_block_size;
+
+        uint32_t metadata_line_number;          /// Cache Metadata
+        uint32_t metadata_associativity;        /// Cache Metadata
 
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
+        uint32_t sub_block_total;
+
+        dsbp_metadata_set_t *metadata_sets;
+        uint32_t metadata_total_sets;
 
         /// ====================================================================
         /// Statistics related
@@ -41,12 +49,35 @@ class line_usage_predictor_lwp_t : public line_usage_predictor_t {
         uint64_t stat_recv_copyback;
         uint64_t stat_eviction;
         uint64_t stat_invalidation;
+
+        uint64_t stat_sub_block_access_0;
+        uint64_t stat_sub_block_access_1;
+        uint64_t stat_sub_block_access_2_3;
+        uint64_t stat_sub_block_access_4_7;
+        uint64_t stat_sub_block_access_8_15;
+        uint64_t stat_sub_block_access_16_127;
+        uint64_t stat_sub_block_access_128_bigger;
+
+        uint64_t stat_sub_block_write_0;
+        uint64_t stat_sub_block_write_1;
+        uint64_t stat_sub_block_write_2_3;
+        uint64_t stat_sub_block_write_4_7;
+        uint64_t stat_sub_block_write_8_15;
+        uint64_t stat_sub_block_write_16_127;
+        uint64_t stat_sub_block_write_128_bigger;
+
+        uint64_t *stat_accessed_sub_blocks;     /// Number of sub_blocks accessed
+        uint64_t *stat_real_write_counter;     /// Number of sub_blocks written
+
     public:
         /// ====================================================================
         /// Methods
         /// ====================================================================
-        line_usage_predictor_lwp_t();
-        ~line_usage_predictor_lwp_t();
+        line_usage_predictor_subblock_stats_t();
+        ~line_usage_predictor_subblock_stats_t();
+        inline const char* get_type_component_label() {
+            return "LINE_USAGE_PREDICTOR";
+        };
 
         /// ====================================================================
         /// Inheritance from interconnection_interface_t
@@ -89,6 +120,18 @@ class line_usage_predictor_lwp_t : public line_usage_predictor_t {
         void line_invalidation(uint32_t index, uint32_t way);
         /// ====================================================================
 
+        void get_start_end_sub_blocks(uint64_t base_address, uint32_t size, uint32_t& sub_block_ini, uint32_t& sub_block_end);
+
+        INSTANTIATE_GET_SET(uint32_t, sub_block_size);
+        INSTANTIATE_GET_SET(uint32_t, sub_block_total);
+
+        /// metadata
+        INSTANTIATE_GET_SET(dsbp_metadata_set_t*, metadata_sets);
+        INSTANTIATE_GET_SET(uint32_t, metadata_line_number);
+        INSTANTIATE_GET_SET(uint32_t, metadata_associativity);
+        INSTANTIATE_GET_SET(uint32_t, metadata_total_sets);
+
+
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
@@ -100,4 +143,19 @@ class line_usage_predictor_lwp_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_invalidation);
 
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_0);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_1);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_2_3);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_4_7);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_8_15);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_16_127);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_128_bigger);
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_0);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_1);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_2_3);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_4_7);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_8_15);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_16_127);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_128_bigger);
 };

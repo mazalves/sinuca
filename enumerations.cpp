@@ -205,12 +205,12 @@ const char *get_enum_routing_algorithm_char(routing_algorithm_t type) {
 /// Cache replacement policy
 const char *get_enum_replacement_char(replacement_t type) {
     switch (type) {
-        case REPLACEMENT_LRU:           return "LRU"; break;
-        case REPLACEMENT_INVALID_OR_LRU:   return "LRU_INVALID"; break;
-        case REPLACEMENT_DEAD_OR_LRU:      return "LRU_DSBP"; break;
-        case REPLACEMENT_RANDOM:        return "RANDOM"; break;
-        case REPLACEMENT_FIFO:          return "FIFO"; break;
-        case REPLACEMENT_LRF:           return "LRF"; break;
+        case REPLACEMENT_LRU:               return "LRU"; break;
+        case REPLACEMENT_DEAD_OR_LRU:       return "DEAR_OR_LRU"; break;
+        case REPLACEMENT_INVALID_OR_LRU:    return "INVALID_OR_LRU"; break;
+        case REPLACEMENT_RANDOM:            return "RANDOM"; break;
+        case REPLACEMENT_FIFO:              return "FIFO"; break;
+        case REPLACEMENT_LRF:               return "LRF"; break;
     };
     ERROR_PRINTF("Wrong REPLACEMENT\n");
     return "FAIL";
@@ -257,7 +257,8 @@ const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_polic
         case LINE_USAGE_PREDICTOR_POLICY_DSBP:              return "DSBP";          break;
         case LINE_USAGE_PREDICTOR_POLICY_DLEC:              return "DLEC";          break;
         case LINE_USAGE_PREDICTOR_POLICY_LWP:               return "LWP";           break;
-        case LINE_USAGE_PREDICTOR_POLICY_STATISTICS:        return "STATISTICS";    break;
+        case LINE_USAGE_PREDICTOR_POLICY_SUBBLOCK_STATS:    return "SUBBLOCK_STATS";    break;
+        case LINE_USAGE_PREDICTOR_POLICY_LINE_STATS:        return "LINE_STATS";    break;        
         case LINE_USAGE_PREDICTOR_POLICY_DISABLE:           return "DISABLE";       break;
     };
     ERROR_PRINTF("Wrong LINE_USAGE_PREDICTOR_POLICY\n");

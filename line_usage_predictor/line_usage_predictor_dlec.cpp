@@ -33,8 +33,8 @@
 line_usage_predictor_dlec_t::line_usage_predictor_dlec_t() {
     this->line_usage_predictor_type = LINE_USAGE_PREDICTOR_POLICY_DLEC;
 
-    this->usage_counter_bits = 0;
-    this->usage_counter_max = 0;
+    this->access_counter_bits = 0;
+    this->access_counter_max = 0;
 
     /// metadata
     this->metadata_sets = NULL;
@@ -70,7 +70,7 @@ line_usage_predictor_dlec_t::~line_usage_predictor_dlec_t() {
 void line_usage_predictor_dlec_t::allocate() {
     line_usage_predictor_t::allocate();
 
-    this->usage_counter_max = pow(2, this->usage_counter_bits) - 1;
+    this->access_counter_max = pow(2, this->access_counter_bits) - 1;
 
     ///=========================================================================
     /// metadata
@@ -167,26 +167,32 @@ bool line_usage_predictor_dlec_t::check_line_is_dead(uint32_t index, uint32_t wa
 /// ============================================================================
 void line_usage_predictor_dlec_t::line_hit(memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_hit() package:%s\n", package->content_to_string().c_str())
-    ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
-    ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
-
+    ERROR_ASSERT_PRINTF(package->memory_operation != MEMORY_OPERATION_COPYBACK, "Line hit received a COPYBACK, this component is a LLC only.\n");
     ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].valid_sub_blocks != LINE_SUB_BLOCK_DISABLE, "Line hit into a DISABLED sub_block.\n");
     ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].ahtm_pointer == NULL ||
-    this->metadata_sets[index].ways[way].ahtc_pointer == NULL, "Metadata has pointer for both ahtm and ahtc.\n");
+                        this->metadata_sets[index].ways[way].ahtc_pointer == NULL, "Metadata has pointer for both ahtm and ahtc.\n");
+    ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
+    ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+    this->add_stat_line_hit();         /// Access Statistics
 
-    ERROR_ASSERT_PRINTF(package->memory_operation != MEMORY_OPERATION_WRITE, "Line hit received a WRITE, this component is a LLC only.\n");
-    ERROR_ASSERT_PRINTF(package->memory_operation != MEMORY_OPERATION_COPYBACK, "Line hit received a COPYBACK, this component is a LLC only.\n");
+    // Update the METADATA real_access_counter
+    this->metadata_sets[index].ways[way].real_access_counter++;
 
-    /// Access Statistics
-    this->add_stat_line_hit();
-
-    // ~ /// Ignore Prefetches
-    // ~ if (package->memory_operation == MEMORY_OPERATION_PREFETCH){
-        // ~ return;
-    // ~ }
-
-    // Update the METADATA real_usage_counter
-    this->metadata_sets[index].ways[way].real_usage_counter++;
+    // Update the METADATA real_write_counter
+    if (package->memory_operation == MEMORY_OPERATION_WRITE) {
+        WARNING_PRINTF("Line hit received a WRITE, this component is a LLC only.\n");
+        this->metadata_sets[index].ways[way].real_write_counter++;
+        /// Not first write
+        if (this->metadata_sets[index].ways[way].is_dirty == true) {
+            this->metadata_sets[index].ways[way].clock_last_write = sinuca_engine.get_global_cycle();
+        }
+        /// First Write
+        else {
+            this->metadata_sets[index].ways[way].is_dirty = true;
+            this->metadata_sets[index].ways[way].clock_first_write = sinuca_engine.get_global_cycle();
+            this->metadata_sets[index].ways[way].clock_last_write = sinuca_engine.get_global_cycle();
+        }
+    }
 
     /// ================================================================
     /// METADATA Learn Mode
@@ -199,11 +205,11 @@ void line_usage_predictor_dlec_t::line_hit(memory_package_t *package, uint32_t i
         this->metadata_sets[index].ways[way].ahtm_pointer->pointer == true) {
 
             // Check the aht Overflow
-            if (this->metadata_sets[index].ways[way].ahtm_pointer->usage_counter >= this->usage_counter_max) {
+            if (this->metadata_sets[index].ways[way].ahtm_pointer->access_counter >= this->access_counter_max) {
                 this->metadata_sets[index].ways[way].ahtm_pointer->overflow = true;
             }
             else {
-                this->metadata_sets[index].ways[way].ahtm_pointer->usage_counter++;
+                this->metadata_sets[index].ways[way].ahtm_pointer->access_counter++;
             }
 
             // AHT Statistics
@@ -216,11 +222,11 @@ void line_usage_predictor_dlec_t::line_hit(memory_package_t *package, uint32_t i
         this->metadata_sets[index].ways[way].ahtc_pointer->pointer == true) {
 
             // Check the aht Overflow
-            if (this->metadata_sets[index].ways[way].ahtc_pointer->usage_counter >= this->usage_counter_max) {
+            if (this->metadata_sets[index].ways[way].ahtc_pointer->access_counter >= this->access_counter_max) {
                 this->metadata_sets[index].ways[way].ahtc_pointer->overflow = true;
             }
             else {
-                this->metadata_sets[index].ways[way].ahtc_pointer->usage_counter++;
+                this->metadata_sets[index].ways[way].ahtc_pointer->access_counter++;
             }
 
             // AHT Statistics
@@ -238,7 +244,7 @@ void line_usage_predictor_dlec_t::line_hit(memory_package_t *package, uint32_t i
         
         // METADATA Not Overflow + METADATA Used Predicted Number of Times
         if (this->metadata_sets[index].ways[way].overflow == false &&
-        this->metadata_sets[index].ways[way].real_usage_counter == this->metadata_sets[index].ways[way].usage_counter) {
+        this->metadata_sets[index].ways[way].real_access_counter == this->metadata_sets[index].ways[way].access_counter) {
             //Predicted as DEAD
             this->metadata_sets[index].ways[way].is_dead = true;            
             if (this->metadata_sets[index].ways[way].is_dirty == false) {
@@ -260,12 +266,10 @@ void line_usage_predictor_dlec_t::line_miss(memory_package_t *package, uint32_t 
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+    this->add_stat_line_miss();         /// Access Statistics
 
-    /// Access Statistics
-    this->add_stat_line_miss();
-
-    // Clean the metadata entry
-    this->metadata_sets[index].ways[way].clean();
+    // ~ // Clean the metadata entry
+    // ~ this->metadata_sets[index].ways[way].clean();
 
     aht_line_t *ahtm_line = this->ahtm_find_line(package->opcode_address, package->memory_address);
     ///=================================================================
@@ -293,7 +297,7 @@ void line_usage_predictor_dlec_t::line_miss(memory_package_t *package, uint32_t 
         // Copy AHTM prediction
         this->metadata_sets[index].ways[way].learn_mode = false;
         this->metadata_sets[index].ways[way].valid_sub_blocks = LINE_SUB_BLOCK_NORMAL;
-        this->metadata_sets[index].ways[way].usage_counter = ahtm_line->usage_counter;
+        this->metadata_sets[index].ways[way].access_counter = ahtm_line->access_counter;
         this->metadata_sets[index].ways[way].overflow = ahtm_line->overflow;
         this->metadata_sets[index].ways[way].clock_become_alive = sinuca_engine.get_global_cycle();
         this->metadata_sets[index].ways[way].clock_become_dead = sinuca_engine.get_global_cycle();
@@ -313,7 +317,7 @@ void line_usage_predictor_dlec_t::line_miss(memory_package_t *package, uint32_t 
         ahtm_line->offset = package->memory_address & sinuca_engine.get_global_offset_bits_mask();
         ahtm_line->last_access = sinuca_engine.get_global_cycle();
         ahtm_line->pointer = true;
-        ahtm_line->usage_counter = 0;
+        ahtm_line->access_counter = 0;
         ahtm_line->overflow = false;
 
         // Copy AHTM pointer
@@ -337,9 +341,7 @@ void line_usage_predictor_dlec_t::sub_block_miss(memory_package_t *package, uint
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("sub_block_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
-
-    /// Access Statistics
-    this->add_stat_sub_block_miss();
+    this->add_stat_sub_block_miss();         /// Access Statistics
 
     ///=================================================================
     /// aht_M HIT
@@ -354,12 +356,12 @@ void line_usage_predictor_dlec_t::sub_block_miss(memory_package_t *package, uint
         this->add_stat_ahtm_access();
         this->metadata_sets[index].ways[way].ahtm_pointer->last_access = sinuca_engine.get_global_cycle();
 
-        if (this->metadata_sets[index].ways[way].real_usage_counter <= this->usage_counter_max) {
-            this->metadata_sets[index].ways[way].ahtm_pointer->usage_counter = this->metadata_sets[index].ways[way].real_usage_counter;
+        if (this->metadata_sets[index].ways[way].real_access_counter <= this->access_counter_max) {
+            this->metadata_sets[index].ways[way].ahtm_pointer->access_counter = this->metadata_sets[index].ways[way].real_access_counter;
             this->metadata_sets[index].ways[way].ahtm_pointer->overflow = false;
         }
         else {
-            this->metadata_sets[index].ways[way].ahtm_pointer->usage_counter = this->usage_counter_max;
+            this->metadata_sets[index].ways[way].ahtm_pointer->access_counter = this->access_counter_max;
             this->metadata_sets[index].ways[way].ahtm_pointer->overflow = true;
         }
     }
@@ -376,12 +378,12 @@ void line_usage_predictor_dlec_t::sub_block_miss(memory_package_t *package, uint
         this->add_stat_ahtc_access();
         this->metadata_sets[index].ways[way].ahtc_pointer->last_access = sinuca_engine.get_global_cycle();
 
-        if (this->metadata_sets[index].ways[way].real_usage_counter <= this->usage_counter_max) {
-            this->metadata_sets[index].ways[way].ahtc_pointer->usage_counter = this->metadata_sets[index].ways[way].real_usage_counter;
+        if (this->metadata_sets[index].ways[way].real_access_counter <= this->access_counter_max) {
+            this->metadata_sets[index].ways[way].ahtc_pointer->access_counter = this->metadata_sets[index].ways[way].real_access_counter;
             this->metadata_sets[index].ways[way].ahtc_pointer->overflow = false;
         }
         else {
-            this->metadata_sets[index].ways[way].ahtc_pointer->usage_counter = this->usage_counter_max;
+            this->metadata_sets[index].ways[way].ahtc_pointer->access_counter = this->access_counter_max;
             this->metadata_sets[index].ways[way].ahtc_pointer->overflow = true;
         }
     }
@@ -393,27 +395,40 @@ void line_usage_predictor_dlec_t::sub_block_miss(memory_package_t *package, uint
     this->metadata_sets[index].ways[way].learn_mode = true;
     this->metadata_sets[index].ways[way].is_dirty = false;
     this->metadata_sets[index].ways[way].is_dead = false;
-    //this->metadata_sets[index].ways[way].real_usage_counter = 0;
+    //this->metadata_sets[index].ways[way].real_access_counter = 0;
     this->metadata_sets[index].ways[way].valid_sub_blocks = LINE_SUB_BLOCK_WRONG_FIRST;
     this->metadata_sets[index].ways[way].clock_become_alive = sinuca_engine.get_global_cycle();
     this->metadata_sets[index].ways[way].clock_become_dead = sinuca_engine.get_global_cycle();
-    this->metadata_sets[index].ways[way].usage_counter = 0;
+    this->metadata_sets[index].ways[way].access_counter = 0;
     this->metadata_sets[index].ways[way].overflow = true;
 };
 
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
-void line_usage_predictor_dlec_t::line_insert_copyback(memory_package_t *package, cache_memory_t *cache_memory, cache_line_t *cache_line, uint32_t index, uint32_t way) {
+void line_usage_predictor_dlec_t::line_recv_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
-    ERROR_ASSERT_PRINTF(cache_memory != NULL && cache_line != NULL, "Wrong Cache or Cache Line");
+    this->add_stat_recv_copyback();         /// Access Statistics
 
-    /// Access Statistics
-    this->add_stat_copyback();
+    // Update the METADATA real_write_counter
+    if (package->memory_operation == MEMORY_OPERATION_WRITE){
+        this->metadata_sets[index].ways[way].real_write_counter++;
+        /// Not first write
+        if (this->metadata_sets[index].ways[way].is_dirty == true) {
+            this->metadata_sets[index].ways[way].clock_last_write = sinuca_engine.get_global_cycle();
+        }
+        /// First Write
+        else {
+            this->metadata_sets[index].ways[way].is_dirty = true;
+            this->metadata_sets[index].ways[way].clock_first_write = sinuca_engine.get_global_cycle();
+            this->metadata_sets[index].ways[way].clock_last_write = sinuca_engine.get_global_cycle();
+        }
+    }
 
-    // Clean the metadata entry
-    this->metadata_sets[index].ways[way].clean();
+// ~ 
+    // ~ // Clean the metadata entry
+    // ~ this->metadata_sets[index].ways[way].clean();
 
     aht_line_t *ahtc_line = this->ahtc_find_line(package->opcode_address, package->memory_address);
     ///=================================================================
@@ -444,7 +459,7 @@ void line_usage_predictor_dlec_t::line_insert_copyback(memory_package_t *package
         this->metadata_sets[index].ways[way].valid_sub_blocks = LINE_SUB_BLOCK_COPYBACK;
 
         this->metadata_sets[index].ways[way].is_last_write = ahtc_line->is_last_write;        
-        this->metadata_sets[index].ways[way].usage_counter = ahtc_line->usage_counter;
+        this->metadata_sets[index].ways[way].access_counter = ahtc_line->access_counter;
         this->metadata_sets[index].ways[way].overflow = ahtc_line->overflow;
 
         this->metadata_sets[index].ways[way].clock_become_alive = sinuca_engine.get_global_cycle();
@@ -465,7 +480,7 @@ void line_usage_predictor_dlec_t::line_insert_copyback(memory_package_t *package
         ahtc_line->offset = package->memory_address & sinuca_engine.get_global_offset_bits_mask();
         ahtc_line->last_access = sinuca_engine.get_global_cycle();
         ahtc_line->pointer = true;
-        ahtc_line->usage_counter = 0;
+        ahtc_line->access_counter = 0;
         ahtc_line->overflow = false;
 
         // Copy AHTM pointer
@@ -485,9 +500,10 @@ void line_usage_predictor_dlec_t::line_insert_copyback(memory_package_t *package
 
 
 /// ============================================================================
-void line_usage_predictor_dlec_t::line_get_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
+void line_usage_predictor_dlec_t::line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->content_to_string().c_str())
-
+    this->add_stat_send_copyback();         /// Access Statistics
+    
     (void)package;
     (void)index;
     (void)way;
@@ -500,10 +516,8 @@ void line_usage_predictor_dlec_t::line_eviction(uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_eviction()\n")
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
-
-    /// Access Statistics
-    this->add_stat_eviction();
-
+    this->add_stat_eviction();         /// Access Statistics
+    
     switch (this->metadata_sets[index].ways[way].valid_sub_blocks) {
         case LINE_SUB_BLOCK_LEARN:
             this->add_stat_line_sub_block_learn();
@@ -536,6 +550,56 @@ void line_usage_predictor_dlec_t::line_eviction(uint32_t index, uint32_t way) {
         break;
     }
 
+    //==================================================================
+    // Statistics
+
+    // Accesses before eviction
+    if (this->metadata_sets[index].ways[way].real_access_counter == 0) {
+        this->add_stat_line_access_0();
+    }
+    else if (this->metadata_sets[index].ways[way].real_access_counter == 1) {
+        this->add_stat_line_access_1();
+    }
+    else if (this->metadata_sets[index].ways[way].real_access_counter >= 2 && this->metadata_sets[index].ways[way].real_access_counter <= 3) {
+        this->add_stat_line_access_2_3();
+    }
+    else if (this->metadata_sets[index].ways[way].real_access_counter >= 4 && this->metadata_sets[index].ways[way].real_access_counter <= 7) {
+        this->add_stat_line_access_4_7();
+    }
+    else if (this->metadata_sets[index].ways[way].real_access_counter >= 8 && this->metadata_sets[index].ways[way].real_access_counter <= 15) {
+        this->add_stat_line_access_8_15();
+    }
+    else if (this->metadata_sets[index].ways[way].real_access_counter >= 16 && this->metadata_sets[index].ways[way].real_access_counter <= 127) {
+        this->add_stat_line_access_16_127();
+    }
+    else if (this->metadata_sets[index].ways[way].real_access_counter >=128) {
+        this->add_stat_line_access_128_bigger();
+    }
+
+    // Writes before eviction
+    if (this->metadata_sets[index].ways[way].real_write_counter == 0) {
+        this->add_stat_line_write_0();
+    }
+    else if (this->metadata_sets[index].ways[way].real_write_counter == 1) {
+        this->add_stat_line_write_1();
+    }
+    else if (this->metadata_sets[index].ways[way].real_write_counter >= 2 && this->metadata_sets[index].ways[way].real_write_counter <= 3) {
+        this->add_stat_line_write_2_3();
+    }
+    else if (this->metadata_sets[index].ways[way].real_write_counter >= 4 && this->metadata_sets[index].ways[way].real_write_counter <= 7) {
+        this->add_stat_line_write_4_7();
+    }
+    else if (this->metadata_sets[index].ways[way].real_write_counter >= 8 && this->metadata_sets[index].ways[way].real_write_counter <= 15) {
+        this->add_stat_line_write_8_15();
+    }
+    else if (this->metadata_sets[index].ways[way].real_write_counter >= 16 && this->metadata_sets[index].ways[way].real_write_counter <= 127) {
+        this->add_stat_line_write_16_127();
+    }
+    else if (this->metadata_sets[index].ways[way].real_write_counter >=128) {
+        this->add_stat_line_write_128_bigger();
+    }
+
+
     /// AHT_M
     if (this->metadata_sets[index].ways[way].is_dirty == false) {
         aht_line_t *ahtm_line = this->metadata_sets[index].ways[way].ahtm_pointer;
@@ -548,12 +612,12 @@ void line_usage_predictor_dlec_t::line_eviction(uint32_t index, uint32_t way) {
             this->add_stat_ahtm_access();
             ahtm_line->last_access = sinuca_engine.get_global_cycle();
 
-            if (this->metadata_sets[index].ways[way].real_usage_counter <= this->usage_counter_max) {
-                ahtm_line->usage_counter = this->metadata_sets[index].ways[way].real_usage_counter;
+            if (this->metadata_sets[index].ways[way].real_access_counter <= this->access_counter_max) {
+                ahtm_line->access_counter = this->metadata_sets[index].ways[way].real_access_counter;
                 ahtm_line->overflow = false;
             }
             else {
-                ahtm_line->usage_counter = this->usage_counter_max;
+                ahtm_line->access_counter = this->access_counter_max;
                 ahtm_line->overflow = true;
             }
             ahtm_line->pointer = false;
@@ -576,12 +640,12 @@ void line_usage_predictor_dlec_t::line_eviction(uint32_t index, uint32_t way) {
             this->add_stat_ahtc_access();
             ahtc_line->last_access = sinuca_engine.get_global_cycle();
             ahtc_line->is_last_write = true;
-            if (this->metadata_sets[index].ways[way].real_usage_counter <= this->usage_counter_max) {
-                ahtc_line->usage_counter = this->metadata_sets[index].ways[way].real_usage_counter;
+            if (this->metadata_sets[index].ways[way].real_access_counter <= this->access_counter_max) {
+                ahtc_line->access_counter = this->metadata_sets[index].ways[way].real_access_counter;
                 ahtc_line->overflow = false;
             }
             else {
-                ahtc_line->usage_counter = this->usage_counter_max;
+                ahtc_line->access_counter = this->access_counter_max;
                 ahtc_line->overflow = true;
             }
             ahtc_line->pointer = false;
@@ -600,10 +664,8 @@ void line_usage_predictor_dlec_t::line_invalidation(uint32_t index, uint32_t way
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_invalidation()\n")
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
-
-    /// Access Statistics
-    this->add_stat_invalidation();
-
+    this->add_stat_invalidation();         /// Access Statistics
+    
     switch (this->metadata_sets[index].ways[way].valid_sub_blocks) {
         case LINE_SUB_BLOCK_LEARN:
             this->add_stat_line_sub_block_learn();
@@ -636,6 +698,56 @@ void line_usage_predictor_dlec_t::line_invalidation(uint32_t index, uint32_t way
         break;
     }
 
+    //==================================================================
+    // Statistics
+
+    // Accesses before eviction
+    if (this->metadata_sets[index].ways[way].real_access_counter == 0) {
+        this->add_stat_line_access_0();
+    }
+    else if (this->metadata_sets[index].ways[way].real_access_counter == 1) {
+        this->add_stat_line_access_1();
+    }
+    else if (this->metadata_sets[index].ways[way].real_access_counter >= 2 && this->metadata_sets[index].ways[way].real_access_counter <= 3) {
+        this->add_stat_line_access_2_3();
+    }
+    else if (this->metadata_sets[index].ways[way].real_access_counter >= 4 && this->metadata_sets[index].ways[way].real_access_counter <= 7) {
+        this->add_stat_line_access_4_7();
+    }
+    else if (this->metadata_sets[index].ways[way].real_access_counter >= 8 && this->metadata_sets[index].ways[way].real_access_counter <= 15) {
+        this->add_stat_line_access_8_15();
+    }
+    else if (this->metadata_sets[index].ways[way].real_access_counter >= 16 && this->metadata_sets[index].ways[way].real_access_counter <= 127) {
+        this->add_stat_line_access_16_127();
+    }
+    else if (this->metadata_sets[index].ways[way].real_access_counter >=128) {
+        this->add_stat_line_access_128_bigger();
+    }
+
+    // Writes before eviction
+    if (this->metadata_sets[index].ways[way].real_write_counter == 0) {
+        this->add_stat_line_write_0();
+    }
+    else if (this->metadata_sets[index].ways[way].real_write_counter == 1) {
+        this->add_stat_line_write_1();
+    }
+    else if (this->metadata_sets[index].ways[way].real_write_counter >= 2 && this->metadata_sets[index].ways[way].real_write_counter <= 3) {
+        this->add_stat_line_write_2_3();
+    }
+    else if (this->metadata_sets[index].ways[way].real_write_counter >= 4 && this->metadata_sets[index].ways[way].real_write_counter <= 7) {
+        this->add_stat_line_write_4_7();
+    }
+    else if (this->metadata_sets[index].ways[way].real_write_counter >= 8 && this->metadata_sets[index].ways[way].real_write_counter <= 15) {
+        this->add_stat_line_write_8_15();
+    }
+    else if (this->metadata_sets[index].ways[way].real_write_counter >= 16 && this->metadata_sets[index].ways[way].real_write_counter <= 127) {
+        this->add_stat_line_write_16_127();
+    }
+    else if (this->metadata_sets[index].ways[way].real_write_counter >=128) {
+        this->add_stat_line_write_128_bigger();
+    }
+
+
     /// AHT_M
     if (this->metadata_sets[index].ways[way].is_dirty == false) {
         aht_line_t *ahtm_line = this->metadata_sets[index].ways[way].ahtm_pointer;
@@ -648,12 +760,12 @@ void line_usage_predictor_dlec_t::line_invalidation(uint32_t index, uint32_t way
             this->add_stat_ahtm_access();
             ahtm_line->last_access = sinuca_engine.get_global_cycle();
 
-            if (this->metadata_sets[index].ways[way].real_usage_counter <= this->usage_counter_max) {
-                ahtm_line->usage_counter = this->metadata_sets[index].ways[way].real_usage_counter;
+            if (this->metadata_sets[index].ways[way].real_access_counter <= this->access_counter_max) {
+                ahtm_line->access_counter = this->metadata_sets[index].ways[way].real_access_counter;
                 ahtm_line->overflow = false;
             }
             else {
-                ahtm_line->usage_counter = this->usage_counter_max;
+                ahtm_line->access_counter = this->access_counter_max;
                 ahtm_line->overflow = true;
             }
             ahtm_line->pointer = false;
@@ -676,12 +788,12 @@ void line_usage_predictor_dlec_t::line_invalidation(uint32_t index, uint32_t way
             this->add_stat_ahtc_access();
             ahtc_line->last_access = sinuca_engine.get_global_cycle();
             ahtc_line->is_last_write = false;
-            if (this->metadata_sets[index].ways[way].real_usage_counter <= this->usage_counter_max) {
-                ahtc_line->usage_counter = this->metadata_sets[index].ways[way].real_usage_counter;
+            if (this->metadata_sets[index].ways[way].real_access_counter <= this->access_counter_max) {
+                ahtc_line->access_counter = this->metadata_sets[index].ways[way].real_access_counter;
                 ahtc_line->overflow = false;
             }
             else {
-                ahtc_line->usage_counter = this->usage_counter_max;
+                ahtc_line->access_counter = this->access_counter_max;
                 ahtc_line->overflow = true;
             }
             ahtc_line->pointer = false;
@@ -692,7 +804,7 @@ void line_usage_predictor_dlec_t::line_invalidation(uint32_t index, uint32_t way
             LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t ahtc MISS\n")
         }
     }
-    this->metadata_sets[index].ways[way].clean();
+    // ~ this->metadata_sets[index].ways[way].clean();
 };
 
 
@@ -831,19 +943,19 @@ aht_line_t* line_usage_predictor_dlec_t::ahtc_evict_address(uint64_t opcode_addr
 
 /// ============================================================================
 void line_usage_predictor_dlec_t::print_structures() {
-    line_usage_predictor_t::allocate();
+    line_usage_predictor_t::print_structures();
 };
 
 /// ============================================================================
 void line_usage_predictor_dlec_t::panic() {
-    line_usage_predictor_t::allocate();
+    line_usage_predictor_t::panic();
 
     this->print_structures();
 };
 
 /// ============================================================================
 void line_usage_predictor_dlec_t::periodic_check(){
-    line_usage_predictor_t::allocate();
+    line_usage_predictor_t::periodic_check();
 
     #ifdef PREFETCHER_DEBUG
         this->print_structures();
@@ -854,12 +966,13 @@ void line_usage_predictor_dlec_t::periodic_check(){
 /// STATISTICS
 /// ============================================================================
 void line_usage_predictor_dlec_t::reset_statistics() {
-    line_usage_predictor_t::allocate();
+    line_usage_predictor_t::reset_statistics();
 
     this->stat_line_hit = 0;
     this->stat_line_miss = 0;
     this->stat_sub_block_miss = 0;
-    this->stat_copyback = 0;
+    this->stat_send_copyback = 0;
+    this->stat_recv_copyback = 0;
     this->stat_eviction = 0;
     this->stat_invalidation = 0;
 
@@ -879,12 +992,33 @@ void line_usage_predictor_dlec_t::reset_statistics() {
 
     this->stat_line_sub_block_copyback_over = 0;
     this->stat_line_sub_block_copyback_correct = 0;
-    this->stat_line_sub_block_copyback_under = 0;        
+    this->stat_line_sub_block_copyback_under = 0;
+
+    this->stat_line_access_0 = 0;
+    this->stat_line_access_1 = 0;
+    this->stat_line_access_2_3 = 0;
+    this->stat_line_access_4_7 = 0;
+    this->stat_line_access_8_15 = 0;
+    this->stat_line_access_16_127 = 0;
+    this->stat_line_access_128_bigger = 0;
+
+    this->stat_line_write_0 = 0;
+    this->stat_line_write_1 = 0;
+    this->stat_line_write_2_3 = 0;
+    this->stat_line_write_4_7 = 0;
+    this->stat_line_write_8_15 = 0;
+    this->stat_line_write_16_127 = 0;
+    this->stat_line_write_128_bigger = 0;
+
+    this->cycles_last_write_to_last_access = 0;
+    this->cycles_last_write_to_eviction = 0;
+    this->cycles_last_access_to_eviction = 0;
+     
 };
 
 /// ============================================================================
 void line_usage_predictor_dlec_t::print_statistics() {
-    line_usage_predictor_t::allocate();
+    line_usage_predictor_t::print_statistics();
 
     for (uint32_t index = 0; index < this->get_metadata_total_sets(); index++) {
         for (uint32_t way = 0; way < this->get_metadata_associativity(); way++) {
@@ -896,7 +1030,8 @@ void line_usage_predictor_dlec_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_hit", stat_line_hit);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_miss", stat_line_miss);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_miss", stat_sub_block_miss);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_copyback", stat_copyback);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_send_copyback", stat_send_copyback);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_recv_copyback", stat_recv_copyback);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_eviction", stat_eviction);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_invalidation", stat_invalidation);
 
@@ -923,15 +1058,39 @@ void line_usage_predictor_dlec_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_sub_block_copyback_correct", stat_line_sub_block_copyback_correct);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_sub_block_copyback_under", stat_line_sub_block_copyback_under);        
 
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_access_0", stat_line_access_0);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_access_1", stat_line_access_1);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_access_2_3", stat_line_access_2_3);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_access_4_7", stat_line_access_4_7);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_access_8_15", stat_line_access_8_15);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_access_16_127", stat_line_access_16_127);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_access_128_bigger", stat_line_access_128_bigger);
+
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_write_0", stat_line_write_0);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_write_1", stat_line_write_1);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_write_2_3", stat_line_write_2_3);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_write_4_7", stat_line_write_4_7);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_write_8_15", stat_line_write_8_15);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_write_16_127", stat_line_write_16_127);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_write_128_bigger", stat_line_write_128_bigger);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_last_write_to_last_access", cycles_last_write_to_last_access);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_last_write_to_eviction", cycles_last_write_to_eviction);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_last_access_to_eviction", cycles_last_access_to_eviction);
+
 };
 
 /// ============================================================================
 void line_usage_predictor_dlec_t::print_configuration() {
-    line_usage_predictor_t::allocate();
+    line_usage_predictor_t::print_configuration();
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "usage_counter_bits", usage_counter_bits);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "usage_counter_max", usage_counter_max);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "access_counter_bits", access_counter_bits);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "access_counter_max", access_counter_max);
 
     /// metadata
     sinuca_engine.write_statistics_small_separator();

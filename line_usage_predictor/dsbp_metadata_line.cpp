@@ -37,41 +37,43 @@ dsbp_metadata_line_t::dsbp_metadata_line_t() {
     this->is_dirty = false;
     this->is_dead = false;
 
-    this->real_usage_counter = NULL;
-    this->usage_counter = NULL;
+    this->real_access_counter = NULL;
+    this->real_write_counter = NULL;
+    
+    this->access_counter = NULL;
     this->overflow = NULL;
 
     this->pht_pointer = NULL;
     this->clock_become_alive = NULL;
     this->clock_become_dead = NULL;
 
-    this->written_sub_blocks = NULL;
     this->active_sub_blocks = 0;
-
-    this->stat_total_dead_cycles = 0;
 };
 
 /// ============================================================================
 dsbp_metadata_line_t::~dsbp_metadata_line_t() {
-    
-    if (this->valid_sub_blocks) delete [] valid_sub_blocks;
-    if (this->real_usage_counter) delete [] real_usage_counter;
-    if (this->usage_counter) delete [] usage_counter;
-    if (this->overflow) delete [] overflow;
+    utils_t::template_delete_array<line_sub_block_t>(this->valid_sub_blocks);
+
+    utils_t::template_delete_array<uint64_t>(this->real_access_counter);
+    utils_t::template_delete_array<uint64_t>(this->real_write_counter);
+
+    utils_t::template_delete_array<uint64_t>(this->access_counter);
+    utils_t::template_delete_array<bool>(this->overflow);
 };
 
 /// ============================================================================
 void dsbp_metadata_line_t::clean() {
     ERROR_ASSERT_PRINTF(this->valid_sub_blocks != NULL, "Cleanning a not allocated line.\n")
 
-    // ~ ERROR_ASSERT_PRINTF(this->real_usage_counter != NULL, "Cleanning a not allocated line.\n")
-    // ~ ERROR_ASSERT_PRINTF(this->usage_counter != NULL, "Cleanning a not allocated line.\n")
+    // ~ ERROR_ASSERT_PRINTF(this->real_access_counter != NULL, "Cleanning a not allocated line.\n")
+    // ~ ERROR_ASSERT_PRINTF(this->real_write_counter != NULL, "Cleanning a not allocated line.\n")    
+    // ~ ERROR_ASSERT_PRINTF(this->access_counter != NULL, "Cleanning a not allocated line.\n")
     // ~ ERROR_ASSERT_PRINTF(this->overflow != NULL, "Cleanning a not allocated line.\n")
 // ~ 
     // ~ ERROR_ASSERT_PRINTF(this->clock_become_alive != NULL, "Cleanning a not allocated line.\n")
     // ~ ERROR_ASSERT_PRINTF(this->clock_become_dead != NULL, "Cleanning a not allocated line.\n")
 // ~ 
-    // ~ ERROR_ASSERT_PRINTF(this->written_sub_blocks != NULL, "Cleanning a not allocated line.\n")
+    // ~ ERROR_ASSERT_PRINTF(this->real_write_counter != NULL, "Cleanning a not allocated line.\n")
   
     this->learn_mode = false;
     this->is_dirty = false;
@@ -79,19 +81,20 @@ void dsbp_metadata_line_t::clean() {
     this->pht_pointer = NULL;
     
     this->active_sub_blocks = 0;
-    this->stat_total_dead_cycles = 0;
 
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
         this->valid_sub_blocks[i] = LINE_SUB_BLOCK_DISABLE;
 
-        this->real_usage_counter[i] = 0;
-        this->usage_counter[i] = 0;
+        this->real_access_counter[i] = 0;
+        this->real_write_counter[i] = 0;
+                
+        this->access_counter[i] = 0;
         this->overflow[i] = false;
 
         this->clock_become_alive[i] = 0;
         this->clock_become_dead[i] = 0;
 
-        this->written_sub_blocks[i] = 0;
+        this->real_write_counter[i] = 0;
     }
 };
 
@@ -119,23 +122,33 @@ std::string dsbp_metadata_line_t::content_to_string() {
     }
     content_string = content_string + "]\n";
 
-    /// real_usage_counter
-    content_string = content_string + "\t real_usage_counter    [";
+    /// real_access_counter
+    content_string = content_string + "\t real_access_counter    [";
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
         if (i % 4 == 0) {
             content_string = content_string + "|";
         }
-        content_string = content_string + " " + utils_t::uint32_to_char(this->real_usage_counter[i]);
+        content_string = content_string + " " + utils_t::uint32_to_char(this->real_access_counter[i]);
     }
     content_string = content_string + "]\n";
 
-    /// usage_counter
-    content_string = content_string + "\t usage_counter         [";
+    /// real_write_counter
+    content_string = content_string + "\t real_write_counter    [";
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
         if (i % 4 == 0) {
             content_string = content_string + "|";
         }
-        content_string = content_string + " " + utils_t::uint32_to_char(this->usage_counter[i]);
+        content_string = content_string + " " + utils_t::uint32_to_char(this->real_write_counter[i]);
+    }
+    content_string = content_string + "]\n";
+
+    /// access_counter
+    content_string = content_string + "\t access_counter         [";
+    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
+        if (i % 4 == 0) {
+            content_string = content_string + "|";
+        }
+        content_string = content_string + " " + utils_t::uint32_to_char(this->access_counter[i]);
     }
     content_string = content_string + "]\n";
 

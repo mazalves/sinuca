@@ -104,7 +104,8 @@ class line_usage_predictor_dlec_t;
 /// === LWP
 class line_usage_predictor_lwp_t;
 
-class line_usage_predictor_statistics_t;
+class line_usage_predictor_subblock_stats_t;
+class line_usage_predictor_line_stats_t;
 class line_usage_predictor_disable_t;
 /// Cache Memory
 class cache_line_t;
@@ -309,7 +310,8 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 #include "./line_usage_predictor/line_usage_predictor_dlec.hpp"
 
 #include "./line_usage_predictor/line_usage_predictor_lwp.hpp"
-#include "./line_usage_predictor/line_usage_predictor_statistics.hpp"
+#include "./line_usage_predictor/line_usage_predictor_subblock_stats.hpp"
+#include "./line_usage_predictor/line_usage_predictor_line_stats.hpp"
 #include "./line_usage_predictor/line_usage_predictor_disable.hpp"
 
 /// ============================================================================

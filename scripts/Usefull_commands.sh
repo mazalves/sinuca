@@ -86,45 +86,20 @@ python plot.py parameters_validation_x86_32.cfg
 # Plots all the benchmarks
 reset;
 cd ~/Experiment/SiNUCA/scripts ;
-python power.py spec_cpu2000 IncALL_Base base_200M_spec_cpu2000 ;
-python power.py spec_cpu2000 IncALL_DSBP_Reinstall dsbp_200M_spec_cpu2000 ;
-python power.py spec_cpu2000 IncALL_DSBP_NoReinstall dsbp_200M_spec_cpu2000 ;
-python power.py spec_cpu2006 IncALL_Base base_200M_spec_cpu2006 ;
-python power.py spec_cpu2006 IncALL_DSBP_Reinstall dsbp_200M_spec_cpu2006 ;
-python power.py spec_cpu2006 IncALL_DSBP_NoReinstall dsbp_200M_spec_cpu2006 ;
+python power.py spec_cpu2000 BASE BASE_200M_spec_cpu2000 ;
+python power.py spec_cpu2000 DLEC DLEC_200M_spec_cpu2000 ;
+python power.py spec_cpu2006 BASE BASE_200M_spec_cpu2006 ;
+python power.py spec_cpu2006 DLEC DLEC_200M_spec_cpu2006 ;
 python plot.py parameters_spec2000.cfg ;
 python plot.py parameters_spec2006.cfg
 
 for i in `seq 1 29` ; do
     byobu -p$i -X stuff "reset ; \
     cd ~/Experiment/SiNUCA/scripts ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_ALL/SBAC-DSBP-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2000 IncALL_DSBP_NoReinstall 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_ALL/SBAC-DSBP-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2006 IncALL_DSBP_NoReinstall 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_LLC/SBAC-DSBP-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2000 IncLLC_DSBP_NoReinstall 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_LLC/SBAC-DSBP-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2006 IncLLC_DSBP_NoReinstall 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-DSBP-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2000 NonInc_DSBP_NoReinstall 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-DSBP-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2006 NonInc_DSBP_NoReinstall 0 1 $i $i ; \
-
-    $(echo -ne '\r')";
-done
-
-
-# Run the Base and DSBP for all SPEC2000 and SPEC2006
-for i in `seq 1 29` ; do
-    byobu -p$i -X stuff "reset ; \
-    cd ~/Experiment/SiNUCA/scripts ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_ALL/SBAC-Baseline-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2000 IncALL_Base 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_ALL/SBAC-DSBP-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2000 IncALL_DSBP_Reinstall 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_ALL/SBAC-Baseline-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2006 IncALL_Base 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_ALL/SBAC-DSBP-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2006 IncALL_DSBP_Reinstall 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_LLC/SBAC-Baseline-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2000 IncLLC_Base 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_LLC/SBAC-DSBP-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2000 IncLLC_DSBP_Reinstall 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_LLC/SBAC-Baseline-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2006 IncLLC_Base 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_LLC/SBAC-DSBP-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2006 IncLLC_DSBP_Reinstall 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-Baseline-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2000 NonInc_Base 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-DSBP-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2000 NonInc_DSBP_Reinstall 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-Baseline-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2006 NonInc_Base 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-DSBP-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2006 NonInc_DSBP_Reinstall 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2000 BASE 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2006 BASE 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2000 DLEC 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2006 DLEC 0 1 $i $i ; \
     $(echo -ne '\r')";
 done
 
@@ -153,52 +128,24 @@ done
 # Plots all the benchmarks
 reset;
 cd ~/Experiment/SiNUCA/scripts ;
-python power.py npb_omp IncALL_Base base_200M_npb_omp ;
-python power.py npb_omp IncALL_DSBP_Reinstall dsbp_200M_npb_omp ;
-python power.py npb_omp IncALL_DSBP_NoReinstall dsbp_200M_npb_omp ;
-python power.py spec_omp2001 IncALL_Base base_200M_spec_omp2001 ;
-python power.py spec_omp2001 IncALL_DSBP_Reinstall dsbp_200M_spec_omp2001 ;
-python power.py spec_omp2001 IncALL_DSBP_NoReinstall dsbp_200M_spec_omp2001 ;
+python power.py npb_omp BASE BASE_200M_npb_omp ;
+python power.py npb_omp DLEC DLEC_200M_npb_omp ;
+python power.py spec_omp2001 BASE BASE_200M_spec_omp2001 ;
+python power.py spec_omp2001 DLEC DLEC_200M_spec_omp2001 ;
 python plot.py parameters_npb_omp.cfg ;
 python plot.py parameters_spec_omp2001.cfg ;
 
 
-
-
-
 # Run the Base and DSBP for all SPEC_OMP2001
 for i in `seq 1 11` ; do
     byobu -p$i -X stuff "reset ; \
     cd ~/Experiment/SiNUCA/scripts ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_ALL/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp IncALL_DSBP_NoReinstall 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_ALL/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 IncALL_DSBP_NoReinstall 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_LLC/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp IncLLC_DSBP_NoReinstall 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_LLC/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 IncLLC_DSBP_NoReinstall 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp NonInc_DSBP_NoReinstall 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 NonInc_DSBP_NoReinstall 0 8 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp BASE 0 8 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 BASE 0 8 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp DLEC 0 8 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 DLEC 0 8 $i $i ; \
     $(echo -ne '\r')";
 done
-
-
-# Run the Base and DSBP for all SPEC_OMP2001
-for i in `seq 1 11` ; do
-    byobu -p$i -X stuff "reset ; \
-    cd ~/Experiment/SiNUCA/scripts ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_ALL/SBAC-Baseline-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp IncALL_Base 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_ALL/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp IncALL_DSBP_Reinstall 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_ALL/SBAC-Baseline-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 IncALL_Base 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_ALL/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 IncALL_DSBP_Reinstall 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_LLC/SBAC-Baseline-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp IncLLC_Base 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_LLC/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp IncLLC_DSBP_Reinstall 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_LLC/SBAC-Baseline-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 IncLLC_Base 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Inclusive_LLC/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 IncLLC_DSBP_Reinstall 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-Baseline-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp NonInc_Base 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp NonInc_DSBP_Reinstall 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-Baseline-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 NonInc_Base 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 NonInc_DSBP_Reinstall 0 8 $i $i ; \
-    $(echo -ne '\r')";
-done
-
 
 
 # Run the Base and DSBP for all NPB_OMP

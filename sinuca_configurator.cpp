@@ -609,7 +609,13 @@ void sinuca_engine_t::initialize_cache_memory() {
 
                 line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_DSBP);
 
-                /// DSBP Metadata
+                line_usage_predictor_parameters.push_back("SUB_BLOCK_SIZE");
+                line_usage_predictor_ptr->set_sub_block_size( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+                line_usage_predictor_parameters.push_back("USAGE_COUNTER_BITS");
+                line_usage_predictor_ptr->set_access_counter_bits( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+                /// Metadata
                 line_usage_predictor_parameters.push_back("METADATA_LINE_NUMBER");
                 line_usage_predictor_ptr->set_metadata_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
                 ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_line_number() == line_usage_predictor_ptr->get_metadata_line_number(),
@@ -619,12 +625,6 @@ void sinuca_engine_t::initialize_cache_memory() {
                 line_usage_predictor_ptr->set_metadata_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
                 ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_associativity() == line_usage_predictor_ptr->get_metadata_associativity(),
                                     "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
-
-                line_usage_predictor_parameters.push_back("SUB_BLOCK_SIZE");
-                line_usage_predictor_ptr->set_sub_block_size( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
-
-                line_usage_predictor_parameters.push_back("USAGE_COUNTER_BITS");
-                line_usage_predictor_ptr->set_usage_counter_bits( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
 
                 /// PHT
                 line_usage_predictor_parameters.push_back("PHT_LINE_NUMBER");
@@ -658,7 +658,7 @@ void sinuca_engine_t::initialize_cache_memory() {
                 line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_DLEC);
 
 
-                /// DSBP Metadata
+                /// Metadata
                 line_usage_predictor_parameters.push_back("METADATA_LINE_NUMBER");
                 line_usage_predictor_ptr->set_metadata_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
                 ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_line_number() == line_usage_predictor_ptr->get_metadata_line_number(),
@@ -670,7 +670,7 @@ void sinuca_engine_t::initialize_cache_memory() {
                                     "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
 
                 line_usage_predictor_parameters.push_back("USAGE_COUNTER_BITS");
-                line_usage_predictor_ptr->set_usage_counter_bits( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+                line_usage_predictor_ptr->set_access_counter_bits( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
 
                 /// AHTM
                 line_usage_predictor_parameters.push_back("AHTM_LINE_NUMBER");
@@ -719,8 +719,6 @@ void sinuca_engine_t::initialize_cache_memory() {
                 else {
                     ERROR_PRINTF("CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
                 }
-
-
             }
             else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "LWP") ==  0) {
                 this->cache_memory_array[i]->line_usage_predictor = new line_usage_predictor_lwp_t;
@@ -728,13 +726,16 @@ void sinuca_engine_t::initialize_cache_memory() {
 
                 line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_LWP);
             }
-            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "STATISTICS") ==  0) {
-                this->cache_memory_array[i]->line_usage_predictor = new line_usage_predictor_statistics_t;
-                line_usage_predictor_statistics_t *line_usage_predictor_ptr = static_cast<line_usage_predictor_statistics_t*>(this->cache_memory_array[i]->line_usage_predictor);
+            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "SUBBLOCK_STATS") ==  0) {
+                this->cache_memory_array[i]->line_usage_predictor = new line_usage_predictor_subblock_stats_t;
+                line_usage_predictor_subblock_stats_t *line_usage_predictor_ptr = static_cast<line_usage_predictor_subblock_stats_t*>(this->cache_memory_array[i]->line_usage_predictor);
 
-                line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_STATISTICS);
+                line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_SUBBLOCK_STATS);
 
-                /// DSBP Metadata
+                line_usage_predictor_parameters.push_back("SUB_BLOCK_SIZE");
+                line_usage_predictor_ptr->set_sub_block_size( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+                /// Metadata
                 line_usage_predictor_parameters.push_back("METADATA_LINE_NUMBER");
                 line_usage_predictor_ptr->set_metadata_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
                 ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_line_number() == line_usage_predictor_ptr->get_metadata_line_number(),
@@ -745,11 +746,23 @@ void sinuca_engine_t::initialize_cache_memory() {
                 ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_associativity() == line_usage_predictor_ptr->get_metadata_associativity(),
                                     "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
 
-                line_usage_predictor_parameters.push_back("SUB_BLOCK_SIZE");
-                line_usage_predictor_ptr->set_sub_block_size( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+            }
+            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "LINE_STATS") ==  0) {
+                this->cache_memory_array[i]->line_usage_predictor = new line_usage_predictor_line_stats_t;
+                line_usage_predictor_line_stats_t *line_usage_predictor_ptr = static_cast<line_usage_predictor_line_stats_t*>(this->cache_memory_array[i]->line_usage_predictor);
 
-                line_usage_predictor_parameters.push_back("USAGE_COUNTER_BITS");
-                line_usage_predictor_ptr->set_usage_counter_bits( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+                line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_LINE_STATS);
+
+                /// Metadata
+                line_usage_predictor_parameters.push_back("METADATA_LINE_NUMBER");
+                line_usage_predictor_ptr->set_metadata_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+                ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_line_number() == line_usage_predictor_ptr->get_metadata_line_number(),
+                                    "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
+
+                line_usage_predictor_parameters.push_back("METADATA_ASSOCIATIVITY");
+                line_usage_predictor_ptr->set_metadata_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+                ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_associativity() == line_usage_predictor_ptr->get_metadata_associativity(),
+                                    "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
 
             }
             else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "DISABLE") ==  0) {

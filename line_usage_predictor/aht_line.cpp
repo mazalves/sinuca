@@ -44,7 +44,7 @@ void aht_line_t::clean() {
     this->offset = 0;
     this->last_access = 0;
     this->pointer = false;
-    this->usage_counter = 0;
+    this->access_counter = 0;
     this->overflow = 0;
     this->is_last_write = false;
 };
@@ -60,7 +60,7 @@ std::string aht_line_t::content_to_string() {
     content_string = content_string + " Last_Access:" + utils_t::uint64_to_char(this->last_access);
     content_string = content_string + " Pointer:" + utils_t::uint32_to_char(this->pointer);
 
-    content_string = content_string + " Usage_Counter:" + utils_t::uint32_to_char(this->usage_counter);
+    content_string = content_string + " Usage_Counter:" + utils_t::uint32_to_char(this->access_counter);
     content_string = content_string + " Overflow:" + utils_t::uint32_to_char(this->overflow);
     content_string = content_string + " Is_Last_Write:" + utils_t::uint32_to_char(this->is_last_write);
     content_string = content_string + "\n";

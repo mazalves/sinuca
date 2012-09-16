@@ -55,46 +55,6 @@ void line_usage_predictor_lwp_t::clock(uint32_t subcycle) {
 };
 
 /// ============================================================================
-void line_usage_predictor_lwp_t::print_structures() {
-    line_usage_predictor_t::allocate();
-};
-
-/// ============================================================================
-void line_usage_predictor_lwp_t::panic() {
-    line_usage_predictor_t::allocate();
-
-    this->print_structures();
-};
-
-/// ============================================================================
-void line_usage_predictor_lwp_t::periodic_check(){
-    line_usage_predictor_t::allocate();
-
-    #ifdef PREFETCHER_DEBUG
-        this->print_structures();
-    #endif
-};
-
-/// ============================================================================
-/// STATISTICS
-/// ============================================================================
-void line_usage_predictor_lwp_t::reset_statistics() {
-    line_usage_predictor_t::allocate();
-
-};
-
-/// ============================================================================
-void line_usage_predictor_lwp_t::print_statistics() {
-    line_usage_predictor_t::allocate();
-};
-
-/// ============================================================================
-void line_usage_predictor_lwp_t::print_configuration() {
-    line_usage_predictor_t::allocate();
-};
-
-
-/// ============================================================================
 
 /// ============================================================================
 void line_usage_predictor_lwp_t::fill_package_sub_blocks(memory_package_t *package) {
@@ -160,12 +120,10 @@ void line_usage_predictor_lwp_t::sub_block_miss(memory_package_t *package, uint3
 
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
-void line_usage_predictor_lwp_t::line_insert_copyback(memory_package_t *package, cache_memory_t *cache_memory, cache_line_t *cache_line, uint32_t index, uint32_t way) {
+void line_usage_predictor_lwp_t::line_recv_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
 
     (void)package;
-    (void)cache_memory;
-    (void)cache_line;
     (void)index;
     (void)way;
 
@@ -175,7 +133,7 @@ void line_usage_predictor_lwp_t::line_insert_copyback(memory_package_t *package,
 
 
 /// ============================================================================
-void line_usage_predictor_lwp_t::line_get_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
+void line_usage_predictor_lwp_t::line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->content_to_string().c_str())
 
     (void)package;
@@ -200,3 +158,60 @@ void line_usage_predictor_lwp_t::line_invalidation(uint32_t index, uint32_t way)
     (void)index;
     (void)way;
 };
+
+
+/// ============================================================================
+void line_usage_predictor_lwp_t::print_structures() {
+    line_usage_predictor_t::print_structures();
+};
+
+/// ============================================================================
+void line_usage_predictor_lwp_t::panic() {
+    line_usage_predictor_t::panic();
+
+    this->print_structures();
+};
+
+/// ============================================================================
+void line_usage_predictor_lwp_t::periodic_check(){
+    line_usage_predictor_t::periodic_check();
+
+    #ifdef PREFETCHER_DEBUG
+        this->print_structures();
+    #endif
+};
+
+/// ============================================================================
+/// STATISTICS
+/// ============================================================================
+void line_usage_predictor_lwp_t::reset_statistics() {
+    line_usage_predictor_t::reset_statistics();
+
+    this->stat_line_hit = 0;
+    this->stat_line_miss = 0;
+    this->stat_sub_block_miss = 0;
+    this->stat_send_copyback = 0;
+    this->stat_recv_copyback = 0;
+    this->stat_eviction = 0;
+    this->stat_invalidation = 0;
+};
+
+/// ============================================================================
+void line_usage_predictor_lwp_t::print_statistics() {
+    line_usage_predictor_t::print_statistics();
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_hit", stat_line_hit);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_miss", stat_line_miss);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_miss", stat_sub_block_miss);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_send_copyback", stat_send_copyback);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_recv_copyback", stat_recv_copyback);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_eviction", stat_eviction);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_invalidation", stat_invalidation);
+};
+
+/// ============================================================================
+void line_usage_predictor_lwp_t::print_configuration() {
+    line_usage_predictor_t::print_configuration();
+};
+

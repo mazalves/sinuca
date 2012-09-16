@@ -24,8 +24,10 @@
 class dsbp_metadata_line_t {
     public:
         line_sub_block_t *valid_sub_blocks;
-        uint64_t *real_usage_counter;
-        uint64_t *usage_counter;
+        uint64_t *real_access_counter;
+        uint64_t *real_write_counter;
+        
+        uint64_t *access_counter;
         bool *overflow;
         bool learn_mode;
         pht_line_t *pht_pointer;
@@ -34,17 +36,11 @@ class dsbp_metadata_line_t {
         uint64_t *clock_become_alive;
         uint64_t *clock_become_dead;
 
-        /// Copyback
+        /// Special Flags
         bool is_dirty;
-        uint64_t *written_sub_blocks;
-
-        /// Dead Flag
-        uint32_t active_sub_blocks;
         bool is_dead;
-
-        /// Dead Statistics
-        uint64_t stat_total_dead_cycles;
-
+        
+        uint32_t active_sub_blocks;
         /// ====================================================================
         /// Methods
         /// ====================================================================
@@ -53,6 +49,4 @@ class dsbp_metadata_line_t {
 
         void clean();
         std::string content_to_string();
-
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_total_dead_cycles);
 };

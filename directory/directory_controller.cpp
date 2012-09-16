@@ -298,6 +298,10 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             ///=================================================================
             /// Cache Line Sub_Block Miss
             else if (is_line_hit) {
+                // =============================================================
+                // Line Usage Prediction
+                cache->line_usage_predictor->sub_block_miss(package, index, way);
+                cache->line_usage_predictor->line_hit(package, index, way);
 
                 /// The request can be treated now !
                 /// New Directory_Line + LOCK
@@ -322,16 +326,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
                 /// Coherence Invalidate
                 cache->change_status(cache_line, PROTOCOL_STATUS_I);
-                /// Update Last Access
-                cache->update_last_access(cache_line);
 
                 /// Check if some HIGHER LEVEL has the cache line Modified
                 cache->change_status(cache_line, this->find_cache_line_higher_levels(cache, package, true));
-
-                // =============================================================
-                // Line Usage Prediction
-                cache->line_usage_predictor->sub_block_miss(package, index, way);
-                cache->line_usage_predictor->line_hit(package, index, way);
 
                 /// Higher Level Hit
                 if (cache_line->status != PROTOCOL_STATUS_I) {
@@ -466,8 +463,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 cache->change_address(cache_line, package->memory_address);
                 /// Coherence Invalidate
                 cache->change_status(cache_line, PROTOCOL_STATUS_I);
-                /// Update Last Access
-                cache->update_last_access(cache_line);
 
                 /// The request can be treated now !
                 /// New Directory_Line + LOCK
@@ -485,12 +480,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 directory_line->cache_request_order[cache_id] = ++directory_line->cache_requested;
                 DIRECTORY_CTRL_DEBUG_PRINTF("\t Update Directory Line:%s\n", directory_line->directory_line_to_string().c_str())
 
-
-                /// Send Request to fill the cache line
-                if (package->memory_operation == MEMORY_OPERATION_WRITE) {
-                    package->memory_operation = MEMORY_OPERATION_READ;
-                }
-
                 /// Check if some HIGHER LEVEL has the cache line
                 cache->change_status(cache_line, this->find_cache_line_higher_levels(cache, package, true));
 
@@ -499,7 +488,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                     // =============================================================
                     // Line Usage Prediction
                     //cache->line_usage_predictor->line_invalidation(index, way);
-                    cache->line_usage_predictor->line_insert_copyback(package, cache, cache_line, index, way);
+                    cache->line_usage_predictor->line_recv_copyback(package, index, way);
                     cache->line_usage_predictor->line_hit(package, index, way);
                 }
                 else {
@@ -507,6 +496,11 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                     // Line Usage Prediction
                     cache->line_usage_predictor->line_miss(package, index, way);
                     cache->line_usage_predictor->line_hit(package, index, way);
+                }
+
+                /// Send Request to fill the cache line
+                if (package->memory_operation == MEMORY_OPERATION_WRITE) {
+                    package->memory_operation = MEMORY_OPERATION_READ;
                 }
 
                 /// Higher Level Hit
@@ -649,7 +643,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             // =============================================================
             // Line Usage Prediction
             // ~ cache->line_usage_predictor->line_eviction(index, way);
-            cache->line_usage_predictor->line_insert_copyback(package, cache, cache_line, index, way);
+            cache->line_usage_predictor->line_recv_copyback(package, index, way);
 
             /// Reserve the evicted line for the new address
             cache->change_address(cache_line, package->memory_address);
@@ -930,7 +924,7 @@ bool directory_controller_t::create_cache_copyback(cache_memory_t *cache, cache_
 
     // =============================================================
     // Line Usage Prediction
-    cache->line_usage_predictor->line_get_copyback(package, index, way);
+    cache->line_usage_predictor->line_send_copyback(package, index, way);
 
     /// Higher Level Copy Back
     package->package_set_src_dst(cache->get_id(), this->find_next_obj_id(cache, package->memory_address));

@@ -29,7 +29,7 @@ class aht_line_t {
         uint64_t last_access;
         bool pointer;
 
-        uint64_t usage_counter;
+        uint64_t access_counter;
         bool overflow;
 
         bool is_last_write;

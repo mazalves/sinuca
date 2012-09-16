@@ -173,12 +173,12 @@ const char *get_enum_routing_algorithm_char(routing_algorithm_t type);
 /// ============================================================================
 /// Cache replacement policy
 enum replacement_t {
-    REPLACEMENT_LRU,            /// way list order: MRU -> LRU
-    REPLACEMENT_INVALID_OR_LRU,    /// way list order: MRU -> LRU with priority to Invalid Lines
-    REPLACEMENT_DEAD_OR_LRU,       /// way list order: MRU -> LRU with DSBP line_usage_predictor
-    REPLACEMENT_RANDOM,         /// way list order: arbitrary
-    REPLACEMENT_FIFO,           /// way list order: oldest block -> newest block
-    REPLACEMENT_LRF             /// way list order: Least recently filled
+    REPLACEMENT_LRU,                /// way list order: MRU -> LRU
+    REPLACEMENT_DEAD_OR_LRU,        /// way list order: MRU -> LRU with DSBP line_usage_predictor
+    REPLACEMENT_INVALID_OR_LRU,     /// way list order: MRU -> LRU with priority to Invalid Lines
+    REPLACEMENT_RANDOM,             /// way list order: arbitrary
+    REPLACEMENT_FIFO,               /// way list order: oldest block -> newest block
+    REPLACEMENT_LRF                 /// way list order: Least recently filled
 };
 const char *get_enum_replacement_char(replacement_t type);
 
@@ -212,7 +212,8 @@ enum line_usage_predictor_policy_t {
     LINE_USAGE_PREDICTOR_POLICY_DSBP,
     LINE_USAGE_PREDICTOR_POLICY_DLEC,
     LINE_USAGE_PREDICTOR_POLICY_LWP,
-    LINE_USAGE_PREDICTOR_POLICY_STATISTICS,
+    LINE_USAGE_PREDICTOR_POLICY_SUBBLOCK_STATS,
+    LINE_USAGE_PREDICTOR_POLICY_LINE_STATS,
     LINE_USAGE_PREDICTOR_POLICY_DISABLE
 };
 const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_policy_t type);
