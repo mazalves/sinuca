@@ -129,7 +129,6 @@ class line_usage_predictor_line_stats_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET(uint32_t, metadata_associativity);
         INSTANTIATE_GET_SET(uint32_t, metadata_total_sets);
 
-
         /// ====================================================================
         /// Statistics related
         /// ====================================================================

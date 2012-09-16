@@ -191,14 +191,41 @@ void line_usage_predictor_lwp_t::reset_statistics() {
     this->stat_line_miss = 0;
     this->stat_sub_block_miss = 0;
     this->stat_send_copyback = 0;
-    this->stat_recv_copyback = 0;
+    this->stat_recv_copyback = 0;    
     this->stat_eviction = 0;
     this->stat_invalidation = 0;
+
+    this->stat_line_access_0 = 0;
+    this->stat_line_access_1 = 0;
+    this->stat_line_access_2_3 = 0;
+    this->stat_line_access_4_7 = 0;
+    this->stat_line_access_8_15 = 0;
+    this->stat_line_access_16_127 = 0;
+    this->stat_line_access_128_bigger = 0;
+
+    this->stat_line_write_0 = 0;
+    this->stat_line_write_1 = 0;
+    this->stat_line_write_2_3 = 0;
+    this->stat_line_write_4_7 = 0;
+    this->stat_line_write_8_15 = 0;
+    this->stat_line_write_16_127 = 0;
+    this->stat_line_write_128_bigger = 0;
+
+    this->cycles_last_write_to_last_access = 0;
+    this->cycles_last_write_to_eviction = 0;
+    this->cycles_last_access_to_eviction = 0;
+
 };
 
 /// ============================================================================
 void line_usage_predictor_lwp_t::print_statistics() {
     line_usage_predictor_t::print_statistics();
+
+    // ~ for (uint32_t index = 0; index < this->get_metadata_total_sets(); index++) {
+        // ~ for (uint32_t way = 0; way < this->get_metadata_associativity(); way++) {
+            // ~ this->line_eviction(index, way);
+        // ~ }
+    // ~ }
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_hit", stat_line_hit);
@@ -208,6 +235,29 @@ void line_usage_predictor_lwp_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_recv_copyback", stat_recv_copyback);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_eviction", stat_eviction);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_invalidation", stat_invalidation);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_access_0", stat_line_access_0);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_access_1", stat_line_access_1);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_access_2_3", stat_line_access_2_3);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_access_4_7", stat_line_access_4_7);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_access_8_15", stat_line_access_8_15);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_access_16_127", stat_line_access_16_127);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_access_128_bigger", stat_line_access_128_bigger);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_write_0", stat_line_write_0);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_write_1", stat_line_write_1);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_write_2_3", stat_line_write_2_3);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_write_4_7", stat_line_write_4_7);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_write_8_15", stat_line_write_8_15);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_write_16_127", stat_line_write_16_127);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_write_128_bigger", stat_line_write_128_bigger);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_last_write_to_last_access", cycles_last_write_to_last_access);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_last_write_to_eviction", cycles_last_write_to_eviction);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_last_access_to_eviction", cycles_last_access_to_eviction);
 };
 
 /// ============================================================================

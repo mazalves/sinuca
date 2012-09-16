@@ -41,6 +41,27 @@ class line_usage_predictor_lwp_t : public line_usage_predictor_t {
         uint64_t stat_recv_copyback;
         uint64_t stat_eviction;
         uint64_t stat_invalidation;
+
+        uint64_t stat_line_access_0;
+        uint64_t stat_line_access_1;
+        uint64_t stat_line_access_2_3;
+        uint64_t stat_line_access_4_7;
+        uint64_t stat_line_access_8_15;
+        uint64_t stat_line_access_16_127;
+        uint64_t stat_line_access_128_bigger;
+
+        uint64_t stat_line_write_0;
+        uint64_t stat_line_write_1;
+        uint64_t stat_line_write_2_3;
+        uint64_t stat_line_write_4_7;
+        uint64_t stat_line_write_8_15;
+        uint64_t stat_line_write_16_127;
+        uint64_t stat_line_write_128_bigger;
+
+        uint64_t cycles_last_write_to_last_access;
+        uint64_t cycles_last_write_to_eviction;
+        uint64_t cycles_last_access_to_eviction;
+
     public:
         /// ====================================================================
         /// Methods
@@ -100,4 +121,23 @@ class line_usage_predictor_lwp_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_invalidation);
 
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_0);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_1);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_2_3);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_4_7);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_8_15);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_16_127);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_128_bigger);
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_0);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_1);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_2_3);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_4_7);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_8_15);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_16_127);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_128_bigger);
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_last_write_to_last_access);
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_last_write_to_eviction);
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_last_access_to_eviction);
 };

@@ -118,28 +118,31 @@ void line_usage_predictor_line_stats_t::line_hit(memory_package_t *package, uint
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
     this->add_stat_line_hit();
 
-    (void)package;
-    (void)index;
-    (void)way;
+    /// Statistics
+    this->metadata_sets[index].ways[way].stat_access_counter++;
+    this->metadata_sets[index].ways[way].stat_clock_last_read = sinuca_engine.get_global_cycle();
 
-    // Update the METADATA real_access_counter
-    this->metadata_sets[index].ways[way].real_access_counter++;
-    // Update the METADATA real_write_counter
     if (package->memory_operation == MEMORY_OPERATION_WRITE) {
-        this->metadata_sets[index].ways[way].real_write_counter++;
-        /// Not first write
-        if (this->metadata_sets[index].ways[way].is_dirty == true) {
-            this->metadata_sets[index].ways[way].clock_last_write = sinuca_engine.get_global_cycle();
+        this->metadata_sets[index].ways[way].stat_write_counter++;        
+        /// First write
+        if (this->metadata_sets[index].ways[way].stat_clock_first_write == 0) {
+            this->metadata_sets[index].ways[way].stat_clock_first_write = sinuca_engine.get_global_cycle();
+            this->metadata_sets[index].ways[way].stat_clock_last_write = sinuca_engine.get_global_cycle();
         }
-        /// First Write
+        /// NOT First Write
         else {
-            this->metadata_sets[index].ways[way].is_dirty = true;
-            this->metadata_sets[index].ways[way].clock_first_write = sinuca_engine.get_global_cycle();
-            this->metadata_sets[index].ways[way].clock_last_write = sinuca_engine.get_global_cycle();
+            this->metadata_sets[index].ways[way].stat_clock_last_write = sinuca_engine.get_global_cycle();
         }
     }
 
+
+    // Update the METADATA real_access_counter
+    this->metadata_sets[index].ways[way].real_access_counter++;
     this->metadata_sets[index].ways[way].clock_become_dead = sinuca_engine.get_global_cycle();
+    if (package->memory_operation == MEMORY_OPERATION_WRITE) {
+        WARNING_PRINTF("Line hit received a WRITE, this component is a LLC only.\n");
+        this->metadata_sets[index].ways[way].is_dirty = true;
+    }
 };
 
 
@@ -154,6 +157,10 @@ void line_usage_predictor_line_stats_t::line_miss(memory_package_t *package, uin
     (void)package;
     (void)index;
     (void)way;
+
+    /// Statistics
+    this->metadata_sets[index].ways[way].stat_clock_first_read = sinuca_engine.get_global_cycle();
+
 
     // Clean the metadata entry
     this->metadata_sets[index].ways[way].clean();
@@ -192,23 +199,20 @@ void line_usage_predictor_line_stats_t::line_recv_copyback(memory_package_t *pac
     (void)index;
     (void)way;
 
-    // Update the METADATA real_write_counter
-    if (package->memory_operation == MEMORY_OPERATION_WRITE) {
-        this->metadata_sets[index].ways[way].real_write_counter++;
-        /// Not first write
-        if (this->metadata_sets[index].ways[way].is_dirty == true) {
-            this->metadata_sets[index].ways[way].clock_last_write = sinuca_engine.get_global_cycle();
-        }
-        /// First Write
-        else {
-            this->metadata_sets[index].ways[way].is_dirty = true;
-            this->metadata_sets[index].ways[way].clock_first_write = sinuca_engine.get_global_cycle();
-            this->metadata_sets[index].ways[way].clock_last_write = sinuca_engine.get_global_cycle();
-        }
+    /// Statistics
+    this->metadata_sets[index].ways[way].stat_write_counter++;
+    this->metadata_sets[index].ways[way].stat_clock_last_write = sinuca_engine.get_global_cycle();
+
+    this->metadata_sets[index].ways[way].stat_clock_first_read = sinuca_engine.get_global_cycle();    
+    this->metadata_sets[index].ways[way].stat_clock_last_read = sinuca_engine.get_global_cycle();    
+    
+    /// First write
+    if (this->metadata_sets[index].ways[way].stat_clock_first_write == 0) {
+        this->metadata_sets[index].ways[way].stat_clock_first_write = sinuca_engine.get_global_cycle();
+
     }
 
     // Update the METADATA real_access_counter
-    this->metadata_sets[index].ways[way].real_write_counter++;
     this->metadata_sets[index].ways[way].valid_sub_blocks = LINE_SUB_BLOCK_NORMAL;
     this->metadata_sets[index].ways[way].clock_become_alive = sinuca_engine.get_global_cycle();
     this->metadata_sets[index].ways[way].clock_become_dead = sinuca_engine.get_global_cycle();
@@ -240,50 +244,61 @@ void line_usage_predictor_line_stats_t::line_eviction(uint32_t index, uint32_t w
     // Statistics
 
     // Accesses before eviction
-    if (this->metadata_sets[index].ways[way].real_access_counter == 0) {
+    if (this->metadata_sets[index].ways[way].stat_access_counter == 0) {
         this->add_stat_line_access_0();
     }
-    else if (this->metadata_sets[index].ways[way].real_access_counter == 1) {
+    else if (this->metadata_sets[index].ways[way].stat_access_counter == 1) {
         this->add_stat_line_access_1();
     }
-    else if (this->metadata_sets[index].ways[way].real_access_counter >= 2 && this->metadata_sets[index].ways[way].real_access_counter <= 3) {
+    else if (this->metadata_sets[index].ways[way].stat_access_counter >= 2 && this->metadata_sets[index].ways[way].stat_access_counter <= 3) {
         this->add_stat_line_access_2_3();
     }
-    else if (this->metadata_sets[index].ways[way].real_access_counter >= 4 && this->metadata_sets[index].ways[way].real_access_counter <= 7) {
+    else if (this->metadata_sets[index].ways[way].stat_access_counter >= 4 && this->metadata_sets[index].ways[way].stat_access_counter <= 7) {
         this->add_stat_line_access_4_7();
     }
-    else if (this->metadata_sets[index].ways[way].real_access_counter >= 8 && this->metadata_sets[index].ways[way].real_access_counter <= 15) {
+    else if (this->metadata_sets[index].ways[way].stat_access_counter >= 8 && this->metadata_sets[index].ways[way].stat_access_counter <= 15) {
         this->add_stat_line_access_8_15();
     }
-    else if (this->metadata_sets[index].ways[way].real_access_counter >= 16 && this->metadata_sets[index].ways[way].real_access_counter <= 127) {
+    else if (this->metadata_sets[index].ways[way].stat_access_counter >= 16 && this->metadata_sets[index].ways[way].stat_access_counter <= 127) {
         this->add_stat_line_access_16_127();
     }
-    else if (this->metadata_sets[index].ways[way].real_access_counter >=128) {
+    else if (this->metadata_sets[index].ways[way].stat_access_counter >=128) {
         this->add_stat_line_access_128_bigger();
     }
 
     // Writes before eviction
-    if (this->metadata_sets[index].ways[way].real_write_counter == 0) {
+    if (this->metadata_sets[index].ways[way].stat_write_counter == 0) {
         this->add_stat_line_write_0();
     }
-    else if (this->metadata_sets[index].ways[way].real_write_counter == 1) {
+    else if (this->metadata_sets[index].ways[way].stat_write_counter == 1) {
         this->add_stat_line_write_1();
     }
-    else if (this->metadata_sets[index].ways[way].real_write_counter >= 2 && this->metadata_sets[index].ways[way].real_write_counter <= 3) {
+    else if (this->metadata_sets[index].ways[way].stat_write_counter >= 2 && this->metadata_sets[index].ways[way].stat_write_counter <= 3) {
         this->add_stat_line_write_2_3();
     }
-    else if (this->metadata_sets[index].ways[way].real_write_counter >= 4 && this->metadata_sets[index].ways[way].real_write_counter <= 7) {
+    else if (this->metadata_sets[index].ways[way].stat_write_counter >= 4 && this->metadata_sets[index].ways[way].stat_write_counter <= 7) {
         this->add_stat_line_write_4_7();
     }
-    else if (this->metadata_sets[index].ways[way].real_write_counter >= 8 && this->metadata_sets[index].ways[way].real_write_counter <= 15) {
+    else if (this->metadata_sets[index].ways[way].stat_write_counter >= 8 && this->metadata_sets[index].ways[way].stat_write_counter <= 15) {
         this->add_stat_line_write_8_15();
     }
-    else if (this->metadata_sets[index].ways[way].real_write_counter >= 16 && this->metadata_sets[index].ways[way].real_write_counter <= 127) {
+    else if (this->metadata_sets[index].ways[way].stat_write_counter >= 16 && this->metadata_sets[index].ways[way].stat_write_counter <= 127) {
         this->add_stat_line_write_16_127();
     }
-    else if (this->metadata_sets[index].ways[way].real_write_counter >=128) {
+    else if (this->metadata_sets[index].ways[way].stat_write_counter >=128) {
         this->add_stat_line_write_128_bigger();
     }
+
+    // ~ uint64_t stat_clock_first_read;
+    // ~ uint64_t stat_clock_last_read;
+    // ~ uint64_t stat_clock_first_write;
+    // ~ uint64_t stat_clock_last_write;
+
+    this->cycles_last_write_to_last_access += this->metadata_sets[index].ways[way].stat_clock_last_read - this->metadata_sets[index].ways[way].stat_clock_last_write;
+    this->cycles_last_write_to_eviction += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].stat_clock_last_write;
+    this->cycles_last_access_to_eviction += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].stat_clock_last_read;
+
+    this->metadata_sets[index].ways[way].reset_statistics();
 
     this->metadata_sets[index].ways[way].clean();
 };
@@ -295,54 +310,7 @@ void line_usage_predictor_line_stats_t::line_invalidation(uint32_t index, uint32
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
     this->add_stat_invalidation();
 
-    //==================================================================
-    // Statistics
-
-    // Accesses before eviction
-    if (this->metadata_sets[index].ways[way].real_access_counter == 0) {
-        this->add_stat_line_access_0();
-    }
-    else if (this->metadata_sets[index].ways[way].real_access_counter == 1) {
-        this->add_stat_line_access_1();
-    }
-    else if (this->metadata_sets[index].ways[way].real_access_counter >= 2 && this->metadata_sets[index].ways[way].real_access_counter <= 3) {
-        this->add_stat_line_access_2_3();
-    }
-    else if (this->metadata_sets[index].ways[way].real_access_counter >= 4 && this->metadata_sets[index].ways[way].real_access_counter <= 7) {
-        this->add_stat_line_access_4_7();
-    }
-    else if (this->metadata_sets[index].ways[way].real_access_counter >= 8 && this->metadata_sets[index].ways[way].real_access_counter <= 15) {
-        this->add_stat_line_access_8_15();
-    }
-    else if (this->metadata_sets[index].ways[way].real_access_counter >= 16 && this->metadata_sets[index].ways[way].real_access_counter <= 127) {
-        this->add_stat_line_access_16_127();
-    }
-    else if (this->metadata_sets[index].ways[way].real_access_counter >=128) {
-        this->add_stat_line_access_128_bigger();
-    }
-
-    // Writes before eviction
-    if (this->metadata_sets[index].ways[way].real_write_counter == 0) {
-        this->add_stat_line_write_0();
-    }
-    else if (this->metadata_sets[index].ways[way].real_write_counter == 1) {
-        this->add_stat_line_write_1();
-    }
-    else if (this->metadata_sets[index].ways[way].real_write_counter >= 2 && this->metadata_sets[index].ways[way].real_write_counter <= 3) {
-        this->add_stat_line_write_2_3();
-    }
-    else if (this->metadata_sets[index].ways[way].real_write_counter >= 4 && this->metadata_sets[index].ways[way].real_write_counter <= 7) {
-        this->add_stat_line_write_4_7();
-    }
-    else if (this->metadata_sets[index].ways[way].real_write_counter >= 8 && this->metadata_sets[index].ways[way].real_write_counter <= 15) {
-        this->add_stat_line_write_8_15();
-    }
-    else if (this->metadata_sets[index].ways[way].real_write_counter >= 16 && this->metadata_sets[index].ways[way].real_write_counter <= 127) {
-        this->add_stat_line_write_16_127();
-    }
-    else if (this->metadata_sets[index].ways[way].real_write_counter >=128) {
-        this->add_stat_line_write_128_bigger();
-    }
+    this->metadata_sets[index].ways[way].clean();
 };
 
 
@@ -431,7 +399,6 @@ void line_usage_predictor_line_stats_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_access_8_15", stat_line_access_8_15);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_access_16_127", stat_line_access_16_127);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_access_128_bigger", stat_line_access_128_bigger);
-
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_write_0", stat_line_write_0);

@@ -32,6 +32,7 @@
 /// ============================================================================
 dlec_metadata_line_t::dlec_metadata_line_t() {
     this->clean();
+    this->reset_statistics();
 };
 
 /// ============================================================================
@@ -47,8 +48,6 @@ void dlec_metadata_line_t::clean() {
     this->is_last_write = false;
     
     this->real_access_counter = 0;
-    this->real_write_counter = 0;
-    
     this->access_counter = 0;
     this->overflow = false;
 
@@ -56,9 +55,18 @@ void dlec_metadata_line_t::clean() {
     this->ahtc_pointer = NULL;
     this->clock_become_alive = 0;
     this->clock_become_dead = 0;
+};
 
-    this->clock_first_write = 0;
-    this->clock_last_write = 0;        
+/// ============================================================================
+void dlec_metadata_line_t::reset_statistics() {
+    this->stat_access_counter = 0;
+    this->stat_write_counter = 0;
+
+    this->stat_clock_first_read = 0;
+    this->stat_clock_last_read = 0;
+
+    this->stat_clock_first_write = 0;
+    this->stat_clock_last_write = 0;
 };
 
 /// ============================================================================
@@ -75,8 +83,6 @@ std::string dlec_metadata_line_t::content_to_string() {
     content_string = content_string + " Last_Write:" + utils_t::uint32_to_char(this->is_last_write);
 
     content_string = content_string + " RealAccess:" + utils_t::uint32_to_char(this->real_access_counter);
-    content_string = content_string + " RealWrite:" + utils_t::uint32_to_char(this->real_write_counter);
-        
     content_string = content_string + " Usage:" + utils_t::uint32_to_char(this->access_counter);
     content_string = content_string + " Overflow:" + utils_t::uint32_to_char(this->overflow);
     
@@ -86,8 +92,11 @@ std::string dlec_metadata_line_t::content_to_string() {
     content_string = content_string + " Alive:" + utils_t::uint64_to_char(this->clock_become_alive);
     content_string = content_string + " Dead:" + utils_t::uint64_to_char(this->clock_become_dead);
 
-    content_string = content_string + " First_Write:" + utils_t::uint64_to_char(this->clock_first_write);
-    content_string = content_string + " Last_Write:" + utils_t::uint64_to_char(this->clock_last_write);
+    content_string = content_string + " First_Read:" + utils_t::uint64_to_char(this->stat_clock_first_read);
+    content_string = content_string + " Last_Read:" + utils_t::uint64_to_char(this->stat_clock_last_read);
+
+    content_string = content_string + " First_Write:" + utils_t::uint64_to_char(this->stat_clock_first_write);
+    content_string = content_string + " Last_Write:" + utils_t::uint64_to_char(this->stat_clock_last_write);
 
 
     content_string = content_string + "\n";

@@ -25,8 +25,6 @@ class dlec_metadata_line_t {
     public:
         line_sub_block_t valid_sub_blocks;
         uint64_t real_access_counter;
-        uint64_t real_write_counter;
-        
         uint64_t access_counter;
         bool overflow;
         bool learn_mode;
@@ -37,13 +35,21 @@ class dlec_metadata_line_t {
         uint64_t clock_become_alive;
         uint64_t clock_become_dead;
 
-        uint64_t clock_first_write;
-        uint64_t clock_last_write;
 
         /// Special Flags
         bool is_dirty;
         bool is_last_write;
         bool is_dead;
+
+        /// Statistics
+        uint64_t stat_access_counter;
+        uint64_t stat_write_counter;
+
+        uint64_t stat_clock_first_read;
+        uint64_t stat_clock_last_read;
+
+        uint64_t stat_clock_first_write;
+        uint64_t stat_clock_last_write;
 
         /// ====================================================================
         /// Methods
@@ -52,5 +58,6 @@ class dlec_metadata_line_t {
         ~dlec_metadata_line_t();
 
         void clean();
+        void reset_statistics();
         std::string content_to_string();
 };
