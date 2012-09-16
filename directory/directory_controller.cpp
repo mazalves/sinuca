@@ -120,7 +120,7 @@ void directory_controller_t::remove_token_list(memory_package_t *package) {
 
 
 /// ====================================================================================
-// Remember: The package latency is defined as 1 automatically by the interconnection_controller if the package is_answer
+// Remember: The package latency is defined as 1 automatically by the interconnection_controller if the package !is_answer
 package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, memory_package_t *package) {
     DIRECTORY_CTRL_DEBUG_PRINTF("new_cache_request() cache_id:%u, package:%s\n", cache_id, package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(cache_id < sinuca_engine.get_cache_memory_array_size(), "Wrong cache_id.\n")
@@ -263,18 +263,17 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 // Line Usage Prediction
                 cache->line_usage_predictor->line_hit(package, index, way);
 
+                /// Update Coherence Status and Last Access Time
+                this->coherence_new_operation(cache, cache_line, package, true);
+
                 /// THIS cache level started the request (PREFETCH)
                 if (package->id_owner == cache->get_id()) {
-                    /// Update Coherence Status and Last Access Time
-                    this->coherence_new_operation(cache, cache_line, package, true);
                     /// Erase the answer
                     DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (Requester = This)\n")
                     return PACKAGE_STATE_FREE;
                 }
                 /// Need to send answer to higher level
                 else {
-                    /// Update Coherence Status and Last Access Time
-                    this->coherence_new_operation(cache, cache_line, package, true);
                     /// WRITES never sends answer
                     if (package->memory_operation == MEMORY_OPERATION_WRITE) {
                         /// Add Latency
@@ -299,10 +298,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             ///=================================================================
             /// Cache Line Sub_Block Miss
             else if (is_line_hit) {
-                // =============================================================
-                // Line Usage Prediction
-                cache->line_usage_predictor->sub_block_miss(package, index, way);
-
 
                 /// The request can be treated now !
                 /// New Directory_Line + LOCK
@@ -320,15 +315,23 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 directory_line->cache_request_order[cache_id] = ++directory_line->cache_requested;
                 DIRECTORY_CTRL_DEBUG_PRINTF("\t Update Directory Line:%s\n", directory_line->directory_line_to_string().c_str())
 
-
-
                 /// Send Request to fill the cache line
                 if (package->memory_operation == MEMORY_OPERATION_WRITE) {
                     package->memory_operation = MEMORY_OPERATION_READ;
                 }
 
+                /// Coherence Invalidate
+                cache->change_status(cache_line, PROTOCOL_STATUS_I);
+                /// Update Last Access
+                cache->update_last_access(cache_line);
+
                 /// Check if some HIGHER LEVEL has the cache line Modified
                 cache->change_status(cache_line, this->find_cache_line_higher_levels(cache, package, true));
+
+                // =============================================================
+                // Line Usage Prediction
+                cache->line_usage_predictor->sub_block_miss(package, index, way);
+                cache->line_usage_predictor->line_hit(package, index, way);
 
                 /// Higher Level Hit
                 if (cache_line->status != PROTOCOL_STATUS_I) {
@@ -351,7 +354,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             ///=================================================================
             /// Cache Line Miss
             else {
-
                 ///=================================================================
                 /// Make room for the new cache line
                 ///=================================================================
@@ -451,21 +453,21 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                             break;
                         }
                     }
+                    // =============================================================
+                    // Line Usage Prediction (Tag different from actual)
+                    cache->line_usage_predictor->line_eviction(index, way);
                 }
 
                 ///=============================================================
                 /// Free space for the new line is ready
                 ///=============================================================
-
-                // =============================================================
-                // Line Usage Prediction
-                // ~ cache->line_usage_predictor->line_eviction(index, way);
-                cache->line_usage_predictor->line_miss(package, index, way);
-
+               
                 /// Reserve the evicted line for the new address
                 cache->change_address(cache_line, package->memory_address);
                 /// Coherence Invalidate
                 cache->change_status(cache_line, PROTOCOL_STATUS_I);
+                /// Update Last Access
+                cache->update_last_access(cache_line);
 
                 /// The request can be treated now !
                 /// New Directory_Line + LOCK
@@ -491,6 +493,21 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
                 /// Check if some HIGHER LEVEL has the cache line
                 cache->change_status(cache_line, this->find_cache_line_higher_levels(cache, package, true));
+
+                /// Received a dirty line ?
+                if (coherence_need_copyback(cache_line)) {
+                    // =============================================================
+                    // Line Usage Prediction
+                    //cache->line_usage_predictor->line_invalidation(index, way);
+                    cache->line_usage_predictor->line_insert_copyback(package, cache, cache_line, index, way);
+                    cache->line_usage_predictor->line_hit(package, index, way);
+                }
+                else {
+                    // =============================================================
+                    // Line Usage Prediction
+                    cache->line_usage_predictor->line_miss(package, index, way);
+                    cache->line_usage_predictor->line_hit(package, index, way);
+                }
 
                 /// Higher Level Hit
                 if (cache_line->status != PROTOCOL_STATUS_I) {
@@ -620,6 +637,10 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                         break;
                     }
                 }
+                // =============================================================
+                // Line Usage Prediction (Tag different from actual)
+                cache->line_usage_predictor->line_eviction(index, way);
+
             }
 
             ///=================================================================
@@ -1282,7 +1303,11 @@ void directory_controller_t::coherence_invalidate_all(cache_memory_t *cache_memo
             uint32_t index, way;
             cache_line_t *cache_line = sinuca_engine.cache_memory_array[i]->find_line(memory_address, index, way);
             if (cache_line != NULL) {
-                cache_line->status = PROTOCOL_STATUS_I;
+                // =============================================================
+                // Line Usage Prediction
+                sinuca_engine.cache_memory_array[i]->line_usage_predictor->line_invalidation(index, way);
+
+                sinuca_engine.cache_memory_array[i]->change_status(cache_line, PROTOCOL_STATUS_I);
                 /// Cache Statistics
                 sinuca_engine.cache_memory_array[i]->cache_invalidate(memory_address, false);
             }
@@ -1307,7 +1332,11 @@ void directory_controller_t::coherence_invalidate_higher_levels(cache_memory_t *
     uint32_t index, way;
     cache_line_t *cache_line = cache_memory->find_line(memory_address, index, way);
     if (cache_line != NULL) {
-        cache_line->status = PROTOCOL_STATUS_I;
+        // =============================================================
+        // Line Usage Prediction
+        cache_memory->line_usage_predictor->line_eviction(index, way);
+
+        cache_memory->change_status(cache_line, PROTOCOL_STATUS_I);
         /// Cache Statistics
         cache_memory->cache_invalidate(memory_address, false);
     }

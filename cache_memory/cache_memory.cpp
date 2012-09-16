@@ -735,7 +735,7 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& i
                 /// The line is not locked by directory
                 if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[way].tag) == FAIL) {
                     /// If is_dead
-                    if (this->line_usage_predictor->check_line_is_dead(index, way) == true) {
+                    if (this->line_usage_predictor->check_line_is_dead(index, way)) {
                         choosen_line = &this->sets[index].ways[way];
                         choosen_way = way;
                         break;

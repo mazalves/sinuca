@@ -44,6 +44,7 @@ void dlec_metadata_line_t::clean() {
     this->learn_mode = false;
     this->is_dirty = false;
     this->is_dead = false;
+    this->is_last_write = false;
     
     this->real_usage_counter = 0;
     this->usage_counter = 0;
@@ -66,6 +67,7 @@ std::string dlec_metadata_line_t::content_to_string() {
     content_string = content_string + " Learn:" + utils_t::uint32_to_char(this->learn_mode);    
     content_string = content_string + " Dirty:" + utils_t::uint32_to_char(this->is_dirty); 
     content_string = content_string + " Dead:" + utils_t::uint32_to_char(this->is_dead);
+    content_string = content_string + " Last_Write:" + utils_t::uint32_to_char(this->is_last_write);
 
     content_string = content_string + " RealUsage:" + utils_t::uint32_to_char(this->real_usage_counter);
     content_string = content_string + " Usage:" + utils_t::uint32_to_char(this->usage_counter);

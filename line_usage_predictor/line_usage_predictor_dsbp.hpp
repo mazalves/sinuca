@@ -59,13 +59,13 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
-        uint64_t stat_dsbp_line_sub_block_disable_always;
-        uint64_t stat_dsbp_line_sub_block_disable_turnoff;
-        uint64_t stat_dsbp_line_sub_block_normal_correct;
-        uint64_t stat_dsbp_line_sub_block_normal_over;
-        uint64_t stat_dsbp_line_sub_block_learn;
-        uint64_t stat_dsbp_line_sub_block_wrong_first;
-        uint64_t stat_dsbp_line_sub_block_copyback;
+        uint64_t stat_line_sub_block_disable_always;
+        uint64_t stat_line_sub_block_disable_turnoff;
+        uint64_t stat_line_sub_block_normal_correct;
+        uint64_t stat_line_sub_block_normal_over;
+        uint64_t stat_line_sub_block_learn;
+        uint64_t stat_line_sub_block_wrong_first;
+        uint64_t stat_line_sub_block_copyback;
 
         uint64_t stat_line_miss;
         uint64_t stat_sub_block_miss;
@@ -179,13 +179,13 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dsbp_line_sub_block_disable_always);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dsbp_line_sub_block_disable_turnoff);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dsbp_line_sub_block_normal_correct);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dsbp_line_sub_block_normal_over);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dsbp_line_sub_block_learn);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dsbp_line_sub_block_wrong_first);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dsbp_line_sub_block_copyback);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_disable_always);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_disable_turnoff);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_normal_correct);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_normal_over);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_learn);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_wrong_first);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_copyback);
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_miss);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_miss);

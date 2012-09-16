@@ -149,196 +149,6 @@ void line_usage_predictor_dsbp_t::clock(uint32_t subcycle) {
 };
 
 /// ============================================================================
-void line_usage_predictor_dsbp_t::print_structures() {
-    line_usage_predictor_t::print_structures();
-};
-
-/// ============================================================================
-void line_usage_predictor_dsbp_t::panic() {
-    line_usage_predictor_t::panic();
-
-    this->print_structures();
-};
-
-/// ============================================================================
-void line_usage_predictor_dsbp_t::periodic_check(){
-    line_usage_predictor_t::periodic_check();
-
-    #ifdef PREFETCHER_DEBUG
-        this->print_structures();
-    #endif
-};
-
-/// ============================================================================
-/// STATISTICS
-/// ============================================================================
-void line_usage_predictor_dsbp_t::reset_statistics() {
-    line_usage_predictor_t::reset_statistics();
-
-    this->stat_dsbp_line_sub_block_disable_always = 0;
-    this->stat_dsbp_line_sub_block_disable_turnoff = 0;
-    this->stat_dsbp_line_sub_block_normal_correct = 0;
-    this->stat_dsbp_line_sub_block_normal_over = 0;
-    this->stat_dsbp_line_sub_block_learn = 0;
-    this->stat_dsbp_line_sub_block_wrong_first = 0;
-    this->stat_dsbp_line_sub_block_copyback = 0;
-
-    this->stat_line_miss = 0;
-    this->stat_sub_block_miss = 0;
-    this->stat_copyback = 0;
-    this->stat_eviction = 0;
-
-    this->stat_pht_access = 0;
-    this->stat_pht_hit = 0;
-    this->stat_pht_miss = 0;
-
-    this->stat_sub_block_touch_0 = 0;
-    this->stat_sub_block_touch_1 = 0;
-    this->stat_sub_block_touch_2_3 = 0;
-    this->stat_sub_block_touch_4_7 = 0;
-    this->stat_sub_block_touch_8_15 = 0;
-    this->stat_sub_block_touch_16_127 = 0;
-    this->stat_sub_block_touch_128_bigger = 0;
-
-    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size() + 1; i++) {
-        this->stat_accessed_sub_block[i] = 0;
-        this->stat_active_sub_block_per_access[i] = 0;
-        this->stat_active_sub_block_per_cycle[i] = 0;
-        this->stat_written_sub_blocks_per_line[i] = 0;
-    }
-
-    /// Number of dirty lines predicted to be dead
-    this->stat_dirty_lines_predicted_dead = 0;
-    this->stat_clean_lines_predicted_dead = 0;
-
-    this->stat_written_lines_miss_predicted = 0;
-
-    /// Number of times each sub_block was written before eviction
-    this->stat_writes_per_sub_blocks_1 = 0;
-    this->stat_writes_per_sub_blocks_2 = 0;
-    this->stat_writes_per_sub_blocks_3 = 0;
-    this->stat_writes_per_sub_blocks_4 = 0;
-    this->stat_writes_per_sub_blocks_5 = 0;
-    this->stat_writes_per_sub_blocks_10 = 0;
-    this->stat_writes_per_sub_blocks_100 = 0;
-    this->stat_writes_per_sub_blocks_bigger = 0;
-};
-
-/// ============================================================================
-void line_usage_predictor_dsbp_t::print_statistics() {
-    line_usage_predictor_t::print_statistics();
-
-    uint64_t stat_average_dead_cycles = 0;
-    for (uint32_t index = 0; index < this->get_metadata_total_sets(); index++) {
-        for (uint32_t way = 0; way < this->get_metadata_associativity(); way++) {
-            this->line_eviction(index, way);
-            stat_average_dead_cycles += this->metadata_sets[index].ways[way].stat_total_dead_cycles / sinuca_engine.get_global_line_size();
-        }
-    }
-
-    sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_average_dead_cycles", stat_average_dead_cycles);
-
-
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dsbp_line_sub_block_disable_always", stat_dsbp_line_sub_block_disable_always);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dsbp_line_sub_block_disable_turnoff", stat_dsbp_line_sub_block_disable_turnoff);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dsbp_line_sub_block_normal_correct", stat_dsbp_line_sub_block_normal_correct);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dsbp_line_sub_block_normal_over", stat_dsbp_line_sub_block_normal_over);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dsbp_line_sub_block_learn", stat_dsbp_line_sub_block_learn);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dsbp_line_sub_block_wrong_first", stat_dsbp_line_sub_block_wrong_first);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dsbp_line_sub_block_copyback", stat_dsbp_line_sub_block_copyback);
-
-    sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_miss", stat_line_miss);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_miss", stat_sub_block_miss);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_copyback", stat_copyback);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_eviction", stat_eviction);
-    sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_pht_access", stat_pht_access);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_pht_hit", stat_pht_hit);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_pht_miss", stat_pht_miss);
-
-
-    sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_touch_0", stat_sub_block_touch_0);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_touch_1", stat_sub_block_touch_1);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_touch_2_3", stat_sub_block_touch_2_3);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_touch_4_7", stat_sub_block_touch_4_7);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_touch_8_15", stat_sub_block_touch_8_15);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_touch_16_127", stat_sub_block_touch_16_127);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_touch_128_bigger", stat_sub_block_touch_128_bigger);
-
-    char name[100];
-    sinuca_engine.write_statistics_small_separator();
-    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size() + 1; i++) {
-        sprintf(name, "stat_accessed_sub_block_%u", i);
-        sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), name, stat_accessed_sub_block[i]);
-    }
-
-    sinuca_engine.write_statistics_small_separator();
-    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size() + 1; i++) {
-        sprintf(name, "stat_active_sub_block_per_access_%u", i);
-        sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), name, stat_active_sub_block_per_access[i]);
-    }
-
-    sinuca_engine.write_statistics_small_separator();
-    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size() + 1; i++) {
-        sprintf(name, "stat_active_sub_block_per_cycle_%u", i);
-        sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), name, stat_active_sub_block_per_cycle[i]);
-    }
-
-    /// Number of dirty lines predicted to be dead
-    sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dirty_lines_predicted_dead", stat_dirty_lines_predicted_dead);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_clean_lines_predicted_dead", stat_clean_lines_predicted_dead);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_written_lines_miss_predicted", stat_written_lines_miss_predicted);
-
-    /// Number of times each sub_block was written before eviction
-    sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writes_per_sub_blocks_1", stat_writes_per_sub_blocks_1);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writes_per_sub_blocks_2", stat_writes_per_sub_blocks_2);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writes_per_sub_blocks_3", stat_writes_per_sub_blocks_3);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writes_per_sub_blocks_4", stat_writes_per_sub_blocks_4);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writes_per_sub_blocks_5", stat_writes_per_sub_blocks_5);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writes_per_sub_blocks_10", stat_writes_per_sub_blocks_10);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writes_per_sub_blocks_100", stat_writes_per_sub_blocks_100);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writes_per_sub_blocks_bigger", stat_writes_per_sub_blocks_bigger);
-
-    sinuca_engine.write_statistics_small_separator();
-    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size() + 1; i++) {
-        sprintf(name, "stat_written_sub_blocks_per_line_%u", i);
-        sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), name, stat_written_sub_blocks_per_line[i]);
-    }
-};
-
-/// ============================================================================
-void line_usage_predictor_dsbp_t::print_configuration() {
-    line_usage_predictor_t::print_configuration();
-
-    sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "usage_counter_bits", usage_counter_bits);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "usage_counter_max", usage_counter_max);
-
-    sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "sub_block_size", sub_block_size);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "sub_block_total", sub_block_total);
-
-    /// metadata
-    sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "metadata_line_number", metadata_line_number);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "metadata_associativity", metadata_associativity);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "metadata_total_sets", metadata_total_sets);
-
-    /// pht
-    sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "pht_line_number", pht_line_number);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "pht_associativity", pht_associativity);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "pht_total_sets", pht_total_sets);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "pht_replacement_policy", get_enum_replacement_char(pht_replacement_policy));
-};
-
-
-/// ============================================================================
 // Input:   base_address, size
 // Output:  start_sub_block, end_Sub_block
 void line_usage_predictor_dsbp_t::get_start_end_sub_blocks(uint64_t base_address, uint32_t size, uint32_t& sub_block_ini, uint32_t& sub_block_end) {
@@ -610,7 +420,7 @@ void line_usage_predictor_dsbp_t::line_miss(memory_package_t *package, uint32_t 
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     this->add_stat_line_miss();
 
-    this->line_eviction(index, way);
+    // ~ this->line_eviction(index, way);
 
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
@@ -661,7 +471,7 @@ void line_usage_predictor_dsbp_t::line_miss(memory_package_t *package, uint32_t 
         }
 
         // Add the last access information
-        this->line_hit(package, index, way);
+        // ~ this->line_hit(package, index, way);
 
         // Modify the package->sub_blocks (next level request)
         package->memory_size = 0;
@@ -716,7 +526,7 @@ void line_usage_predictor_dsbp_t::line_miss(memory_package_t *package, uint32_t 
         }
 
         // Add the last access information
-        this->line_hit(package, index, way);
+        // ~ this->line_hit(package, index, way);
 
         // Modify the package->sub_blocks (next level request)
         package->memory_size = 0;
@@ -782,7 +592,7 @@ void line_usage_predictor_dsbp_t::sub_block_miss(memory_package_t *package, uint
         }
 
         // Add the last access information
-        this->line_hit(package, index, way);
+        // ~ this->line_hit(package, index, way);
 
         // Enable all sub_blocks missing
         package->memory_size = 0;
@@ -818,7 +628,7 @@ void line_usage_predictor_dsbp_t::sub_block_miss(memory_package_t *package, uint
         }
 
         // Add the last access information
-        this->line_hit(package, index, way);
+        // ~ this->line_hit(package, index, way);
 
         // Enable all sub_blocks missing
         package->memory_size = 0;
@@ -877,7 +687,7 @@ void line_usage_predictor_dsbp_t::line_insert_copyback(memory_package_t *package
     }
     // Installing the CopyBack in DIFFERENT tagged line
     else {
-        this->line_eviction(index, way);
+        // ~ this->line_eviction(index, way);
         // Clean the metadata entry
         this->metadata_sets[index].ways[way].learn_mode = true;
         this->metadata_sets[index].ways[way].is_dead = false;
@@ -987,32 +797,32 @@ void line_usage_predictor_dsbp_t::line_eviction(uint32_t index, uint32_t way) {
         switch (this->metadata_sets[index].ways[way].valid_sub_blocks[i]) {
             case LINE_SUB_BLOCK_DISABLE:
                 if (this->metadata_sets[index].ways[way].real_usage_counter[i] == 0) {
-                    this->stat_dsbp_line_sub_block_disable_always++;
+                    this->stat_line_sub_block_disable_always++;
                 }
                 else {
-                    this->stat_dsbp_line_sub_block_disable_turnoff++;
+                    this->stat_line_sub_block_disable_turnoff++;
                 }
             break;
 
             case LINE_SUB_BLOCK_NORMAL:
                 if (this->metadata_sets[index].ways[way].overflow[i] == 1) {
-                    this->stat_dsbp_line_sub_block_normal_correct++;
+                    this->stat_line_sub_block_normal_correct++;
                 }
                 else {
-                    this->stat_dsbp_line_sub_block_normal_over++;
+                    this->stat_line_sub_block_normal_over++;
                 }
             break;
 
             case LINE_SUB_BLOCK_LEARN:
-                this->stat_dsbp_line_sub_block_learn++;
+                this->stat_line_sub_block_learn++;
             break;
 
             case LINE_SUB_BLOCK_WRONG_FIRST:
-                this->stat_dsbp_line_sub_block_wrong_first++;
+                this->stat_line_sub_block_wrong_first++;
             break;
 
             case LINE_SUB_BLOCK_COPYBACK:
-                this->stat_dsbp_line_sub_block_copyback++;
+                this->stat_line_sub_block_copyback++;
             break;
 
         }
@@ -1175,3 +985,193 @@ pht_line_t* line_usage_predictor_dsbp_t::pht_evict_address(uint64_t opcode_addre
 };
 
 /// ============================================================================
+
+/// ============================================================================
+void line_usage_predictor_dsbp_t::print_structures() {
+    line_usage_predictor_t::print_structures();
+};
+
+/// ============================================================================
+void line_usage_predictor_dsbp_t::panic() {
+    line_usage_predictor_t::panic();
+
+    this->print_structures();
+};
+
+/// ============================================================================
+void line_usage_predictor_dsbp_t::periodic_check(){
+    line_usage_predictor_t::periodic_check();
+
+    #ifdef PREFETCHER_DEBUG
+        this->print_structures();
+    #endif
+};
+
+/// ============================================================================
+/// STATISTICS
+/// ============================================================================
+void line_usage_predictor_dsbp_t::reset_statistics() {
+    line_usage_predictor_t::reset_statistics();
+
+    this->stat_line_sub_block_disable_always = 0;
+    this->stat_line_sub_block_disable_turnoff = 0;
+    this->stat_line_sub_block_normal_correct = 0;
+    this->stat_line_sub_block_normal_over = 0;
+    this->stat_line_sub_block_learn = 0;
+    this->stat_line_sub_block_wrong_first = 0;
+    this->stat_line_sub_block_copyback = 0;
+
+    this->stat_line_miss = 0;
+    this->stat_sub_block_miss = 0;
+    this->stat_copyback = 0;
+    this->stat_eviction = 0;
+
+    this->stat_pht_access = 0;
+    this->stat_pht_hit = 0;
+    this->stat_pht_miss = 0;
+
+    this->stat_sub_block_touch_0 = 0;
+    this->stat_sub_block_touch_1 = 0;
+    this->stat_sub_block_touch_2_3 = 0;
+    this->stat_sub_block_touch_4_7 = 0;
+    this->stat_sub_block_touch_8_15 = 0;
+    this->stat_sub_block_touch_16_127 = 0;
+    this->stat_sub_block_touch_128_bigger = 0;
+
+    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size() + 1; i++) {
+        this->stat_accessed_sub_block[i] = 0;
+        this->stat_active_sub_block_per_access[i] = 0;
+        this->stat_active_sub_block_per_cycle[i] = 0;
+        this->stat_written_sub_blocks_per_line[i] = 0;
+    }
+
+    /// Number of dirty lines predicted to be dead
+    this->stat_dirty_lines_predicted_dead = 0;
+    this->stat_clean_lines_predicted_dead = 0;
+
+    this->stat_written_lines_miss_predicted = 0;
+
+    /// Number of times each sub_block was written before eviction
+    this->stat_writes_per_sub_blocks_1 = 0;
+    this->stat_writes_per_sub_blocks_2 = 0;
+    this->stat_writes_per_sub_blocks_3 = 0;
+    this->stat_writes_per_sub_blocks_4 = 0;
+    this->stat_writes_per_sub_blocks_5 = 0;
+    this->stat_writes_per_sub_blocks_10 = 0;
+    this->stat_writes_per_sub_blocks_100 = 0;
+    this->stat_writes_per_sub_blocks_bigger = 0;
+};
+
+/// ============================================================================
+void line_usage_predictor_dsbp_t::print_statistics() {
+    line_usage_predictor_t::print_statistics();
+
+    uint64_t stat_average_dead_cycles = 0;
+    for (uint32_t index = 0; index < this->get_metadata_total_sets(); index++) {
+        for (uint32_t way = 0; way < this->get_metadata_associativity(); way++) {
+            this->line_eviction(index, way);
+            stat_average_dead_cycles += this->metadata_sets[index].ways[way].stat_total_dead_cycles / sinuca_engine.get_global_line_size();
+        }
+    }
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_average_dead_cycles", stat_average_dead_cycles);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_sub_block_disable_always", stat_line_sub_block_disable_always);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_sub_block_disable_turnoff", stat_line_sub_block_disable_turnoff);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_sub_block_normal_correct", stat_line_sub_block_normal_correct);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_sub_block_normal_over", stat_line_sub_block_normal_over);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_sub_block_learn", stat_line_sub_block_learn);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_sub_block_wrong_first", stat_line_sub_block_wrong_first);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_sub_block_copyback", stat_line_sub_block_copyback);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_miss", stat_line_miss);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_miss", stat_sub_block_miss);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_copyback", stat_copyback);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_eviction", stat_eviction);
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_pht_access", stat_pht_access);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_pht_hit", stat_pht_hit);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_pht_miss", stat_pht_miss);
+
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_touch_0", stat_sub_block_touch_0);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_touch_1", stat_sub_block_touch_1);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_touch_2_3", stat_sub_block_touch_2_3);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_touch_4_7", stat_sub_block_touch_4_7);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_touch_8_15", stat_sub_block_touch_8_15);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_touch_16_127", stat_sub_block_touch_16_127);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_touch_128_bigger", stat_sub_block_touch_128_bigger);
+
+    char name[100];
+    sinuca_engine.write_statistics_small_separator();
+    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size() + 1; i++) {
+        sprintf(name, "stat_accessed_sub_block_%u", i);
+        sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), name, stat_accessed_sub_block[i]);
+    }
+
+    sinuca_engine.write_statistics_small_separator();
+    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size() + 1; i++) {
+        sprintf(name, "stat_active_sub_block_per_access_%u", i);
+        sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), name, stat_active_sub_block_per_access[i]);
+    }
+
+    sinuca_engine.write_statistics_small_separator();
+    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size() + 1; i++) {
+        sprintf(name, "stat_active_sub_block_per_cycle_%u", i);
+        sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), name, stat_active_sub_block_per_cycle[i]);
+    }
+
+    /// Number of dirty lines predicted to be dead
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dirty_lines_predicted_dead", stat_dirty_lines_predicted_dead);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_clean_lines_predicted_dead", stat_clean_lines_predicted_dead);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_written_lines_miss_predicted", stat_written_lines_miss_predicted);
+
+    /// Number of times each sub_block was written before eviction
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writes_per_sub_blocks_1", stat_writes_per_sub_blocks_1);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writes_per_sub_blocks_2", stat_writes_per_sub_blocks_2);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writes_per_sub_blocks_3", stat_writes_per_sub_blocks_3);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writes_per_sub_blocks_4", stat_writes_per_sub_blocks_4);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writes_per_sub_blocks_5", stat_writes_per_sub_blocks_5);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writes_per_sub_blocks_10", stat_writes_per_sub_blocks_10);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writes_per_sub_blocks_100", stat_writes_per_sub_blocks_100);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writes_per_sub_blocks_bigger", stat_writes_per_sub_blocks_bigger);
+
+    sinuca_engine.write_statistics_small_separator();
+    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size() + 1; i++) {
+        sprintf(name, "stat_written_sub_blocks_per_line_%u", i);
+        sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), name, stat_written_sub_blocks_per_line[i]);
+    }
+};
+
+/// ============================================================================
+void line_usage_predictor_dsbp_t::print_configuration() {
+    line_usage_predictor_t::print_configuration();
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "usage_counter_bits", usage_counter_bits);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "usage_counter_max", usage_counter_max);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "sub_block_size", sub_block_size);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "sub_block_total", sub_block_total);
+
+    /// metadata
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "metadata_line_number", metadata_line_number);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "metadata_associativity", metadata_associativity);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "metadata_total_sets", metadata_total_sets);
+
+    /// pht
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "pht_line_number", pht_line_number);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "pht_associativity", pht_associativity);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "pht_total_sets", pht_total_sets);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "pht_replacement_policy", get_enum_replacement_char(pht_replacement_policy));
+};
+

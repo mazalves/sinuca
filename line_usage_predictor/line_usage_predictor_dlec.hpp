@@ -79,6 +79,16 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         uint64_t stat_ahtc_hit;
         uint64_t stat_ahtc_miss;
 
+        uint64_t stat_line_sub_block_learn;
+        uint64_t stat_line_sub_block_normal_over;
+        uint64_t stat_line_sub_block_normal_correct;
+        uint64_t stat_line_sub_block_disable_correct;
+        uint64_t stat_line_sub_block_disable_under;
+
+        uint64_t stat_line_sub_block_copyback_over;
+        uint64_t stat_line_sub_block_copyback_correct;
+        uint64_t stat_line_sub_block_copyback_under;
+
     public:
         /// ====================================================================
         /// Methods
@@ -164,7 +174,6 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_invalidation);
 
-
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_ahtm_access);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_ahtm_hit);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_ahtm_miss);
@@ -172,4 +181,14 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_ahtc_access);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_ahtc_hit);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_ahtc_miss);
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_learn);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_normal_over);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_normal_correct);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_disable_correct);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_disable_under);
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_copyback_over);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_copyback_correct);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_copyback_under);
 };

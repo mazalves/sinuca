@@ -37,6 +37,7 @@ class dlec_metadata_line_t {
 
         /// Copyback Flag
         bool is_dirty;
+        bool is_last_write;
 
         /// Dead Flag
         bool is_dead;
