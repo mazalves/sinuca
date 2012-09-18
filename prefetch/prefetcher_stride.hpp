@@ -29,18 +29,23 @@ class prefetch_stride_t : public prefetch_t {
         /// ====================================================================
         /// Set by sinuca_configurator
         /// ====================================================================
-        uint32_t reference_prediction_table_size;             /// Prefetch Stream Detector Table Size
-        uint32_t address_distance;          /// Prefetch Range to Detect Stream
-        uint32_t stride_window;                 /// Detect the Stream as Dead
-        uint32_t threshold_activate;     /// Minimum relevance to start prefetch
-        uint32_t prefetch_degree;               /// Maximum number of prefetchs ahead
-        uint32_t wait_between_requests;  /// Wait time between prefetch generation
+        uint32_t reference_prediction_table_size;   /// Prefetch Stream Detector Table Size
+        uint32_t address_distance;                  /// Prefetch Range to Detect Stream
 
+        uint32_t prefetch_degree;                   /// Maximum number of prefetchs ahead
+        uint32_t wait_between_requests;             /// Wait time between prefetch generation
 
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
         reference_prediction_line_t *reference_prediction_table;
+
+        /// ====================================================================
+        /// Statistics related
+        /// ====================================================================
+        uint64_t stat_steady_state;
+        uint64_t stat_allocate_stride_ok;
+        uint64_t stat_allocate_stride_fail;
 
     public:
         /// ====================================================================
@@ -75,10 +80,15 @@ class prefetch_stride_t : public prefetch_t {
         void treat_prefetch(memory_package_t *package);
 
         INSTANTIATE_GET_SET(uint32_t, reference_prediction_table_size)
-        INSTANTIATE_GET_SET(uint32_t, address_distance)
-        INSTANTIATE_GET_SET(uint32_t, stride_window)
-        INSTANTIATE_GET_SET(uint32_t, threshold_activate)
+
         INSTANTIATE_GET_SET(uint32_t, prefetch_degree)
         INSTANTIATE_GET_SET(uint32_t, wait_between_requests)
+
+        /// ====================================================================
+        /// Statistics related
+        /// ====================================================================
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_steady_state)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_allocate_stride_ok)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_allocate_stride_fail)
 };
 

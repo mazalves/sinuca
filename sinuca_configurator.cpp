@@ -557,15 +557,6 @@ void sinuca_engine_t::initialize_cache_memory() {
                 prefetcher_parameters.push_back("REFERENCE_PREDICTION_TABLE_SIZE");
                 prefetcher_ptr->set_reference_prediction_table_size( cfg_prefetcher[ prefetcher_parameters.back() ] );
 
-                prefetcher_parameters.push_back("ADDRESS_DISTANCE");
-                prefetcher_ptr->set_address_distance( cfg_prefetcher[ prefetcher_parameters.back() ] );
-
-                prefetcher_parameters.push_back("WINDOW");
-                prefetcher_ptr->set_stride_window( cfg_prefetcher[ prefetcher_parameters.back() ] );
-
-                prefetcher_parameters.push_back("THRESHOLD_ACTIVATE");
-                prefetcher_ptr->set_threshold_activate( cfg_prefetcher[ prefetcher_parameters.back() ] );
-
                 prefetcher_parameters.push_back("PREFETCH_DEGREE");
                 prefetcher_ptr->set_prefetch_degree( cfg_prefetcher[ prefetcher_parameters.back() ] );
 

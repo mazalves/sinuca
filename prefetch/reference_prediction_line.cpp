@@ -35,14 +35,13 @@ reference_prediction_line_t::~reference_prediction_line_t() {
 
 /// ============================================================================
 void reference_prediction_line_t::clean() {
-    this->first_opcode_address = 0;
     this->last_opcode_address = 0;
     this->last_memory_address = 0;
     this->memory_address_difference = 0;
-    this->relevance_count = 0;
-    this->cycle_last_activation = 0;
     this->prefetch_ahead = 0;
+    this->cycle_last_activation = 0;
     this->cycle_last_request = 0;
+    this->stride_state = PREFETCHER_STRIDE_STATE_NO_PRED;
 }
 
 /// ============================================================================
@@ -50,17 +49,14 @@ std::string reference_prediction_line_t::content_to_string() {
     std::string content_string;
     content_string = "";
 
-    #ifndef SHOW_FREE_PACKAGE
-        if (this->relevance_count == 0) {
-            return content_string;
-        }
-    #endif
-    content_string = content_string + " STRIDE: Last Address:" + utils_t::uint64_to_char(this->last_memory_address);
+    content_string = content_string + " STRIDE:";
+    content_string = content_string + " Last Opcode Address:" + utils_t::uint64_to_char(this->last_opcode_address);
+    content_string = content_string + " Last Memory Address:" + utils_t::uint64_to_char(this->last_memory_address);
     content_string = content_string + " Address Difference:" + utils_t::int64_to_char(this->memory_address_difference);
-    content_string = content_string + " Relevance:" + utils_t::uint32_to_char(this->relevance_count);
     content_string = content_string + " Prefetch Ahead:" + utils_t::uint32_to_char(this->prefetch_ahead);
     content_string = content_string + " Cycle Last Activation:" + utils_t::uint64_to_char(this->cycle_last_activation);
     content_string = content_string + " Cycle Last Request:" + utils_t::uint64_to_char(this->cycle_last_request);
+    content_string = content_string + " Stride State:" + get_enum_prefetch_stride_state_char(this->stride_state);    
     return content_string;
 };
 

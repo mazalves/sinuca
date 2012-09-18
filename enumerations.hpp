@@ -207,6 +207,16 @@ enum prefetch_policy_t {
 const char *get_enum_prefetch_policy_char(prefetch_policy_t type);
 
 /// ============================================================================
+/// Prefetcher type
+enum prefetch_stride_state_t {
+    PREFETCHER_STRIDE_STATE_INIT,
+    PREFETCHER_STRIDE_STATE_TRANSIENT,
+    PREFETCHER_STRIDE_STATE_STEADY,
+    PREFETCHER_STRIDE_STATE_NO_PRED
+};
+const char *get_enum_prefetch_stride_state_char(prefetch_stride_state_t type);
+
+/// ============================================================================
 /// Line Usage Predictor type
 enum line_usage_predictor_policy_t {
     LINE_USAGE_PREDICTOR_POLICY_DSBP,

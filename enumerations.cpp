@@ -249,6 +249,20 @@ const char *get_enum_prefetch_policy_char(prefetch_policy_t type) {
     return "FAIL";
 };
 
+/// ============================================================================
+/// Prefetcher type
+const char *get_enum_prefetch_stride_state_char(prefetch_stride_state_t type) {
+    switch (type) {
+        case PREFETCHER_STRIDE_STATE_INIT:          return "INIT"; break;
+        case PREFETCHER_STRIDE_STATE_TRANSIENT:     return "TRANSIENT"; break;
+        case PREFETCHER_STRIDE_STATE_STEADY:        return "STEADY"; break;
+        case PREFETCHER_STRIDE_STATE_NO_PRED:       return "NO_PRED"; break;
+
+    };
+    ERROR_PRINTF("Wrong PREFETCHER_STRIDE_STATE\n");
+    return "FAIL";
+};
+
 
 /// ============================================================================
 /// Prefetcher type
