@@ -299,6 +299,13 @@ void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *o
     this->write_statistics(buffer);
 };
 
+void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, bool value) {
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
+    sprintf(buffer, "%s.%s.%s:%s\n", obj_type, obj_label, variable_name, value ? "TRUE" : "FALSE");
+    this->write_statistics(buffer);
+};
+
+
 void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, uint32_t value) {
     char buffer[TRACE_LINE_SIZE * 4] = "\0";
     sprintf(buffer, "%s.%s.%s:%u\n", obj_type, obj_label, variable_name, value);

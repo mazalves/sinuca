@@ -28,6 +28,7 @@ class directory_controller_t : public interconnection_interface_t {
         /// ====================================================================
         coherence_protocol_t coherence_protocol_type;
         inclusiveness_t inclusiveness_type;
+        bool generate_llc_copyback;
 
         /// ====================================================================
         /// Set by this->allocate()
@@ -122,7 +123,7 @@ class directory_controller_t : public interconnection_interface_t {
 
         bool coherence_is_read(memory_operation_t memory_operation);
         bool coherence_is_hit(cache_line_t *cache_line, memory_package_t *package);
-        bool coherence_need_copyback(cache_line_t *cache_line);
+        bool coherence_need_copyback(cache_memory_t *cache_memory, cache_line_t *cache_line);
 
         protocol_status_t find_copyback_higher_levels(cache_memory_t *cache_memory, uint64_t memory_address);
         protocol_status_t find_cache_line_higher_levels(cache_memory_t *cache_memory, memory_package_t *package, bool check_llc);
@@ -144,7 +145,7 @@ class directory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint64_t, not_offset_bits_mask)
         INSTANTIATE_GET_SET(coherence_protocol_t, coherence_protocol_type)
         INSTANTIATE_GET_SET(inclusiveness_t, inclusiveness_type)
-
+        INSTANTIATE_GET_SET(bool, generate_llc_copyback)
 
         /// ====================================================================
         /// Statistics related

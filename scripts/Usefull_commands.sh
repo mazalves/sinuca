@@ -77,7 +77,44 @@ rm ~/Experiment/benchmarks/plots/*
 python plot.py parameters_validation.cfg
 python plot.py parameters_validation_x86_32.cfg
 
+########################################################################
+## Motivation ISPASS Different LLC Sizes
+########################################################################
+rm ~/Experiment/benchmarks/results/spec_cpu2000/*MOTIVATION_LLC*
+rm ~/Experiment/benchmarks/results/spec_omp2001/*MOTIVATION_LLC*
+for i in `seq 1 29` ; do
+    byobu -p$i -X stuff "reset ; \
+    cd ~/Experiment/SiNUCA/scripts ; \
+    echo  MOTIVATION_LLC8MB; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-MOTIVATION_LLC8MB-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2000 MOTIVATION_LLC8MB 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-MOTIVATION_LLC8MB-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 MOTIVATION_LLC8MB 0 8 $i $i ; \
+    echo  MOTIVATION_LLC16MB; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-MOTIVATION_LLC16MB-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2000 MOTIVATION_LLC16MB 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-MOTIVATION_LLC16MB-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 MOTIVATION_LLC16MB 0 8 $i $i ; \
+    echo  MOTIVATION_LLC32MB; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-MOTIVATION_LLC32MB-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2000 MOTIVATION_LLC32MB 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-MOTIVATION_LLC32MB-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 MOTIVATION_LLC32MB 0 8 $i $i ; \
+    $(echo -ne '\r')";
+done
 
+
+
+rm ~/Experiment/benchmarks/results/spec_cpu2006/*MOTIVATION_LLC*
+rm ~/Experiment/benchmarks/results/npb_omp/*MOTIVATION_LLC*
+for i in `seq 1 29` ; do
+    byobu -p$i -X stuff "reset ; \
+    cd ~/Experiment/SiNUCA/scripts ; \
+    echo  MOTIVATION_LLC8MB; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-MOTIVATION_LLC8MB-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2006 MOTIVATION_LLC8MB 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-MOTIVATION_LLC8MB-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp MOTIVATION_LLC8MB 0 8 $i $i ; \
+    echo  MOTIVATION_LLC16MB; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-MOTIVATION_LLC16MB-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2006 MOTIVATION_LLC16MB 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-MOTIVATION_LLC16MB-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp MOTIVATION_LLC16MB 0 8 $i $i ; \
+    echo  MOTIVATION_LLC32MB; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-MOTIVATION_LLC32MB-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2006 MOTIVATION_LLC32MB 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-MOTIVATION_LLC32MB-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp MOTIVATION_LLC32MB 0 8 $i $i ; \
+    $(echo -ne '\r')";
+done
 
 
 ########################################################################

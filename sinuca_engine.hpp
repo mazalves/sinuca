@@ -159,6 +159,7 @@ class sinuca_engine_t {
         void write_statistics_comments(const char *comment);
 
         void write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, const char *value);
+        void write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, bool value);
         void write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, uint32_t value);
         void write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, uint64_t value);
         void write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, float value);

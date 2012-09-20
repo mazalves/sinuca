@@ -1122,6 +1122,10 @@ void sinuca_engine_t::initialize_directory_controller() {
             ERROR_PRINTF("DIRECTORY found a strange VALUE %s for PARAMETER %s\n", cfg_directory[ directory_parameters.back() ].c_str(), directory_parameters.back());
         }
 
+        directory_parameters.push_back("GENERATE_LLC_COPYBACK");
+        this->directory_controller->set_generate_llc_copyback( cfg_directory[ directory_parameters.back() ] );
+
+
         /// ================================================================
         /// Check if any DIRECTORY non-required parameters exist
         for (int32_t j = 0 ; j < cfg_directory.getLength(); j++) {

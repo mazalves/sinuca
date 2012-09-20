@@ -413,30 +413,33 @@ void memory_controller_t::clock(uint32_t subcycle) {
                             this->channels[channel].row_buffer[bank].package_set_src_dst(this->get_id(), this->channels[channel].row_buffer[bank].id_src);
                             this->channels[channel].row_buffer[bank].package_transmit(this->get_CAS_latency());
 
+
+                            /// Statistics
+                            this->add_stat_accesses();
+                            switch (this->channels[channel].read_buffer[bank][read_cas].memory_operation) {
+                                case MEMORY_OPERATION_READ:
+                                    this->add_stat_read_completed(this->channels[channel].read_buffer[bank][read_cas].born_cycle);
+                                break;
+
+                                case MEMORY_OPERATION_INST:
+                                    this->add_stat_instruction_completed(this->channels[channel].read_buffer[bank][read_cas].born_cycle);
+                                break;
+
+                                case MEMORY_OPERATION_PREFETCH:
+                                    this->add_stat_prefetch_completed(this->channels[channel].read_buffer[bank][read_cas].born_cycle);
+                                break;
+
+                                case MEMORY_OPERATION_WRITE:
+                                case MEMORY_OPERATION_COPYBACK:
+                                    ERROR_PRINTF("Wrong MEMORY_OPERATION");
+                                break;
+                            }
+
                             this->channels[channel].read_buffer[bank][read_cas].package_clean();
                             this->channels[channel].read_buffer_position_used[bank]--;
                             this->bus_ready_cycle[channel] = this->bus_latency + sinuca_engine.get_global_cycle();
                             signal_sent = true;
 
-                            /// Statistics
-                            this->add_stat_accesses();
-                            switch (this->fill_buffer[channel].memory_operation) {
-                                case MEMORY_OPERATION_READ:
-                                    this->add_stat_read_completed(this->fill_buffer[channel].born_cycle);
-                                break;
-
-                                case MEMORY_OPERATION_INST:
-                                    this->add_stat_instruction_completed(this->fill_buffer[channel].born_cycle);
-                                break;
-
-                                case MEMORY_OPERATION_PREFETCH:
-                                    this->add_stat_prefetch_completed(this->fill_buffer[channel].born_cycle);
-                                break;
-
-                                case MEMORY_OPERATION_WRITE:
-                                case MEMORY_OPERATION_COPYBACK:
-                                break;
-                            }
                         }
                         /// Have some WRITE CAS
                         else if (write_cas != POSITION_FAIL) {
@@ -450,27 +453,30 @@ void memory_controller_t::clock(uint32_t subcycle) {
                             /// Never send WRITE ANSWER
                             this->channels[channel].row_buffer[bank].package_ready(this->get_CAS_latency());
 
-                            this->channels[channel].write_buffer[bank][write_cas].package_clean();
-                            this->channels[channel].write_buffer_position_used[bank]--;
-                            this->bus_ready_cycle[channel] = this->bus_latency + sinuca_engine.get_global_cycle();
-                            signal_sent = true;
 
                             /// Statistics
                             this->add_stat_accesses();
-                            switch (this->fill_buffer[channel].memory_operation) {
+                            switch (this->channels[channel].write_buffer[bank][write_cas].memory_operation) {
                                 case MEMORY_OPERATION_WRITE:
-                                    this->add_stat_write_completed(this->fill_buffer[channel].born_cycle);
+                                    this->add_stat_write_completed(this->channels[channel].write_buffer[bank][write_cas].born_cycle);
                                 break;
 
                                 case MEMORY_OPERATION_COPYBACK:
-                                    this->add_stat_copyback_completed(this->fill_buffer[channel].born_cycle);
+                                    this->add_stat_copyback_completed(this->channels[channel].write_buffer[bank][write_cas].born_cycle);
                                 break;
 
                                 case MEMORY_OPERATION_READ:
                                 case MEMORY_OPERATION_INST:
                                 case MEMORY_OPERATION_PREFETCH:
+                                    ERROR_PRINTF("Wrong MEMORY_OPERATION");
                                 break;
                             }
+
+                            this->channels[channel].write_buffer[bank][write_cas].package_clean();
+                            this->channels[channel].write_buffer_position_used[bank]--;
+                            this->bus_ready_cycle[channel] = this->bus_latency + sinuca_engine.get_global_cycle();
+                            signal_sent = true;
+
                         }
                     }
                 }

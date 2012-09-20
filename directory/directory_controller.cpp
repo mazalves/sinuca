@@ -370,7 +370,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                         ///=====================================================
 
                         /// Need CopyBack ?
-                        if (coherence_need_copyback(cache_line)) {
+                        if (coherence_need_copyback(cache, cache_line)) {
                             if (this->create_cache_copyback(cache, cache_line, index, way)) {
                                 /// Add statistics to the cache
                                 cache->cache_evict(package->memory_address, true);
@@ -410,7 +410,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                             }
 
                             /// Need CopyBack ?
-                            if (coherence_need_copyback(cache_line)) {
+                            if (coherence_need_copyback(cache, cache_line)) {
                                 if (this->create_cache_copyback(cache, cache_line, index, way)) {
                                     /// Add statistics to the cache
                                     cache->cache_evict(package->memory_address, true);
@@ -484,7 +484,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 cache->change_status(cache_line, this->find_cache_line_higher_levels(cache, package, true));
 
                 /// Received a dirty line ?
-                if (coherence_need_copyback(cache_line)) {
+                if (cache_line->status != PROTOCOL_STATUS_I) {
                     // =============================================================
                     // Line Usage Prediction
                     //cache->line_usage_predictor->line_invalidation(index, way);
@@ -551,7 +551,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                     ///=================================================================
 
                     /// Need CopyBack ?
-                    if (coherence_need_copyback(cache_line)) {
+                    if (coherence_need_copyback(cache, cache_line)) {
                         if (this->create_cache_copyback(cache, cache_line, index, way)) {
                             /// Add statistics to the cache
                             cache->cache_evict(package->memory_address, true);
@@ -591,7 +591,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                         }
 
                         /// Need CopyBack ?
-                        if (coherence_need_copyback(cache_line)) {
+                        if (coherence_need_copyback(cache, cache_line)) {
                             if (this->create_cache_copyback(cache, cache_line, index, way)) {
                                 /// Add statistics to the cache
                                 cache->cache_evict(package->memory_address, true);
@@ -1265,25 +1265,54 @@ bool directory_controller_t::coherence_is_hit(cache_line_t *cache_line,  memory_
 };
 
 /// ============================================================================
-bool directory_controller_t::coherence_need_copyback(cache_line_t *cache_line) {
+bool directory_controller_t::coherence_need_copyback(cache_memory_t *cache_memory, cache_line_t *cache_line) {
     ERROR_ASSERT_PRINTF(cache_line != NULL, "Received a NULL cache_line\n");
 
-    switch (this->coherence_protocol_type) {
-        case COHERENCE_PROTOCOL_MOESI:
-            switch (cache_line->status) {
-                case PROTOCOL_STATUS_M:
-                case PROTOCOL_STATUS_O:
-                    return OK;
-                break;
-
-                case PROTOCOL_STATUS_E:
-                case PROTOCOL_STATUS_S:
-                case PROTOCOL_STATUS_I:
-                    return FAIL;
+    if (generate_llc_copyback) {
+        switch (this->coherence_protocol_type) {
+            case COHERENCE_PROTOCOL_MOESI:
+                switch (cache_line->status) {
+                    case PROTOCOL_STATUS_M:
+                    case PROTOCOL_STATUS_O:
+                        return OK;
+                    break;
+    
+                    case PROTOCOL_STATUS_E:
+                    case PROTOCOL_STATUS_S:
+                    case PROTOCOL_STATUS_I:
+                        return FAIL;
+                    break;
+                }
+            break;
+        }
+    }
+    else {
+        container_ptr_cache_memory_t *lower_level_cache = cache_memory->get_lower_level_cache();
+        if (lower_level_cache->empty()) {
+            return FAIL;
+        }
+        else {
+            switch (this->coherence_protocol_type) {
+                case COHERENCE_PROTOCOL_MOESI:
+                    switch (cache_line->status) {
+                        case PROTOCOL_STATUS_M:
+                        case PROTOCOL_STATUS_O:
+                            return OK;
+                        break;
+        
+                        case PROTOCOL_STATUS_E:
+                        case PROTOCOL_STATUS_S:
+                        case PROTOCOL_STATUS_I:
+                            return FAIL;
+                        break;
+                    }
                 break;
             }
-        break;
+        }
+
     }
+
+
     ERROR_PRINTF("Invalid protocol status\n");
     return FAIL;
 };
@@ -1550,5 +1579,6 @@ void directory_controller_t::print_configuration() {
 
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "coherence_protocol_type", get_enum_coherence_protocol_char(coherence_protocol_type));
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "inclusiveness_type", get_enum_inclusiveness_char(inclusiveness_type));
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "generate_llc_copyback", generate_llc_copyback);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "not_offset_bits_mask", utils_t::address_to_binary(this->not_offset_bits_mask).c_str());
 };
