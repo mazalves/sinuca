@@ -143,6 +143,20 @@ void line_usage_predictor_subblock_stats_t::fill_package_sub_blocks(memory_packa
 };
 
 /// ============================================================================
+void line_usage_predictor_subblock_stats_t::line_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way) {
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_sub_blocks_to_package() package:%s\n", package->content_to_string().c_str())
+    ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
+    ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+
+    (void)package;
+    (void)index;
+    (void)way;
+
+    package->memory_size = sinuca_engine.get_global_line_size();
+};
+
+
+/// ============================================================================
 bool line_usage_predictor_subblock_stats_t::check_sub_block_is_hit(memory_package_t *package, uint64_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_sub_block_is_hit() package:%s\n", package->content_to_string().c_str())
 
@@ -155,8 +169,18 @@ bool line_usage_predictor_subblock_stats_t::check_sub_block_is_hit(memory_packag
 };
 
 /// ============================================================================
-bool line_usage_predictor_subblock_stats_t::check_line_is_dead(uint32_t index, uint32_t way){
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_dead()\n")
+bool line_usage_predictor_subblock_stats_t::check_line_is_last_access(uint32_t index, uint32_t way){
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_access()\n")
+
+    (void)index;
+    (void)way;
+
+    return false;
+};
+
+/// ============================================================================
+bool line_usage_predictor_subblock_stats_t::check_line_is_last_write(uint32_t index, uint32_t way){
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_write()\n")
 
     (void)index;
     (void)way;
@@ -230,6 +254,23 @@ void line_usage_predictor_subblock_stats_t::sub_block_miss(memory_package_t *pac
 
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
+void line_usage_predictor_subblock_stats_t::line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
+    ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
+    ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+    this->add_stat_send_copyback();
+
+    (void)package;
+    (void)index;
+    (void)way;
+
+    // Clean the metadata entry
+    this->metadata_sets[index].ways[way].is_dirty = false;
+};
+
+
+/// ============================================================================
+// Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_subblock_stats_t::line_recv_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -251,19 +292,6 @@ void line_usage_predictor_subblock_stats_t::line_recv_copyback(memory_package_t 
 };
 
 
-/// ============================================================================
-void line_usage_predictor_subblock_stats_t::line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->content_to_string().c_str())
-    ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
-    ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
-    this->add_stat_send_copyback();
-
-    package->memory_size = sinuca_engine.get_global_line_size();
-
-    (void)package;
-    (void)index;
-    (void)way;
-};
 
 /// ============================================================================
 void line_usage_predictor_subblock_stats_t::line_eviction(uint32_t index, uint32_t way) {

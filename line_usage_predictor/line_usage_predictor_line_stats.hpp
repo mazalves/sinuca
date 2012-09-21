@@ -72,6 +72,8 @@ class line_usage_predictor_line_stats_t : public line_usage_predictor_t {
         uint64_t cycles_last_write_to_eviction;
         uint64_t cycles_last_access_to_eviction;
 
+        uint64_t dead_cycles;
+
     public:
         /// ====================================================================
         /// Methods
@@ -110,15 +112,17 @@ class line_usage_predictor_line_stats_t : public line_usage_predictor_t {
         /// ====================================================================
         /// Inspections
         void fill_package_sub_blocks(memory_package_t *package);
+        void line_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way);
         bool check_sub_block_is_hit(memory_package_t *package, uint64_t index, uint32_t way);
-        bool check_line_is_dead(uint32_t index, uint32_t way);
+        bool check_line_is_last_access(uint32_t index, uint32_t way);
+        bool check_line_is_last_write(uint32_t index, uint32_t way);
 
         /// Cache Operations
         void line_hit(memory_package_t *package, uint32_t index, uint32_t way);
         void line_miss(memory_package_t *package, uint32_t index, uint32_t way);
         void sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way);
-        void line_recv_copyback(memory_package_t *package, uint32_t index, uint32_t way);
         void line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way);
+        void line_recv_copyback(memory_package_t *package, uint32_t index, uint32_t way);
         void line_eviction(uint32_t index, uint32_t way);
         void line_invalidation(uint32_t index, uint32_t way);
         /// ====================================================================
@@ -159,4 +163,6 @@ class line_usage_predictor_line_stats_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, cycles_last_write_to_last_access);
         INSTANTIATE_GET_SET_ADD(uint64_t, cycles_last_write_to_eviction);
         INSTANTIATE_GET_SET_ADD(uint64_t, cycles_last_access_to_eviction);
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, dead_cycles);
 };

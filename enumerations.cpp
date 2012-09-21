@@ -265,7 +265,7 @@ const char *get_enum_prefetch_stride_state_char(prefetch_stride_state_t type) {
 
 
 /// ============================================================================
-/// Prefetcher type
+/// Line Usage Predictor type
 const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_policy_t type) {
     switch (type) {
         case LINE_USAGE_PREDICTOR_POLICY_DSBP:              return "DSBP";          break;
@@ -278,6 +278,22 @@ const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_polic
     ERROR_PRINTF("Wrong LINE_USAGE_PREDICTOR_POLICY\n");
     return "FAIL";
 };
+
+/// ============================================================================
+/// Valid Sub-Block Type
+const char *get_enum_line_sub_block_t_char(line_sub_block_t type) {
+    switch (type) {
+        case LINE_SUB_BLOCK_DISABLE:        return "DISABLE";          break;
+        case LINE_SUB_BLOCK_NORMAL:         return "NORMAL";          break;
+        case LINE_SUB_BLOCK_LEARN:          return "LEARN";          break;
+        case LINE_SUB_BLOCK_WRONG_FIRST:    return "WRONG";           break;
+        case LINE_SUB_BLOCK_COPYBACK:       return "COPYBACK";    break;
+    };
+    ERROR_PRINTF("Wrong LINE_SUB_BLOCK\n");
+    return "FAIL";
+};
+
+
 
 /// ============================================================================
 /// Prefetcher full buffer type

@@ -182,6 +182,25 @@ void line_usage_predictor_dsbp_t::fill_package_sub_blocks(memory_package_t *pack
 };
 
 /// ============================================================================
+void line_usage_predictor_dsbp_t::line_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way) {
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->content_to_string().c_str())
+    ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
+    ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+
+    // Modify the package->sub_blocks (valid_sub_blocks)
+    package->memory_size = 0;
+    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
+        if (this->metadata_sets[index].ways[way].valid_sub_blocks[i] != LINE_SUB_BLOCK_DISABLE) {
+            package->sub_blocks[i] = true;
+            package->memory_size++;
+        }
+        else {
+            package->sub_blocks[i] = false;
+        }
+    }
+};
+
+/// ============================================================================
 bool line_usage_predictor_dsbp_t::check_sub_block_is_hit(memory_package_t *package, uint64_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_sub_block_is_hit() package:%s\n", package->content_to_string().c_str())
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Package %s", package->sub_blocks_to_string().c_str())
@@ -200,8 +219,15 @@ bool line_usage_predictor_dsbp_t::check_sub_block_is_hit(memory_package_t *packa
 };
 
 /// ============================================================================
-bool line_usage_predictor_dsbp_t::check_line_is_dead(uint32_t index, uint32_t way){
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_dead()\n")
+bool line_usage_predictor_dsbp_t::check_line_is_last_access(uint32_t index, uint32_t way){
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_access()\n")
+
+    return (this->metadata_sets[index].ways[way].is_dead);
+};
+
+/// ============================================================================
+bool line_usage_predictor_dsbp_t::check_line_is_last_write(uint32_t index, uint32_t way){
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_write()\n")
 
     return (this->metadata_sets[index].ways[way].is_dead);
 };
@@ -624,6 +650,19 @@ void line_usage_predictor_dsbp_t::sub_block_miss(memory_package_t *package, uint
 };
 
 /// ============================================================================
+void line_usage_predictor_dsbp_t::line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->content_to_string().c_str())
+    ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
+    ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+    this->add_stat_send_copyback();         /// Access Statistics
+    
+    (void)package;
+    (void)index;
+    (void)way;
+};
+
+
+/// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_dsbp_t::line_recv_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
@@ -646,31 +685,9 @@ void line_usage_predictor_dsbp_t::line_recv_copyback(memory_package_t *package, 
             this->metadata_sets[index].ways[way].active_sub_blocks++;
         }
     }
-
-    // Modify the package->sub_blocks (next level request)
-    package->memory_size = 1;
 };
 
 
-/// ============================================================================
-void line_usage_predictor_dsbp_t::line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->content_to_string().c_str())
-    ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
-    ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
-    this->add_stat_send_copyback();         /// Access Statistics
-
-    // Modify the package->sub_blocks (valid_sub_blocks)
-    package->memory_size = 0;
-    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        if (this->metadata_sets[index].ways[way].valid_sub_blocks[i] != LINE_SUB_BLOCK_DISABLE) {
-            package->sub_blocks[i] = true;
-            package->memory_size++;
-        }
-        else {
-            package->sub_blocks[i] = false;
-        }
-    }
-};
 
 /// ============================================================================
 void line_usage_predictor_dsbp_t::line_eviction(uint32_t index, uint32_t way) {

@@ -35,11 +35,12 @@ class dlec_metadata_line_t {
         uint64_t clock_become_alive;
         uint64_t clock_become_dead;
 
-
         /// Special Flags
         bool is_dirty;
-        bool is_last_write;
+        bool need_copyback;
         bool is_dead;
+        bool is_last_access;
+        bool is_last_write;
 
         /// Statistics
         uint64_t stat_access_counter;

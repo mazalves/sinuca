@@ -87,6 +87,20 @@ void line_usage_predictor_line_stats_t::fill_package_sub_blocks(memory_package_t
 };
 
 /// ============================================================================
+void line_usage_predictor_line_stats_t::line_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way) {
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->content_to_string().c_str())
+    ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
+    ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+
+    (void)package;
+    (void)index;
+    (void)way;
+
+    package->memory_size = sinuca_engine.get_global_line_size();
+};
+
+
+/// ============================================================================
 bool line_usage_predictor_line_stats_t::check_sub_block_is_hit(memory_package_t *package, uint64_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_sub_block_is_hit() package:%s\n", package->content_to_string().c_str())
 
@@ -99,8 +113,8 @@ bool line_usage_predictor_line_stats_t::check_sub_block_is_hit(memory_package_t 
 };
 
 /// ============================================================================
-bool line_usage_predictor_line_stats_t::check_line_is_dead(uint32_t index, uint32_t way){
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_dead()\n")
+bool line_usage_predictor_line_stats_t::check_line_is_last_access(uint32_t index, uint32_t way){
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_access()\n")
 
     (void)index;
     (void)way;
@@ -108,6 +122,15 @@ bool line_usage_predictor_line_stats_t::check_line_is_dead(uint32_t index, uint3
     return false;
 };
 
+/// ============================================================================
+bool line_usage_predictor_line_stats_t::check_line_is_last_write(uint32_t index, uint32_t way){
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_write()\n")
+
+    (void)index;
+    (void)way;
+
+    return false;
+};
 
 /// ============================================================================
 /// Mechanism Operations
@@ -142,6 +165,7 @@ void line_usage_predictor_line_stats_t::line_hit(memory_package_t *package, uint
     if (package->memory_operation == MEMORY_OPERATION_WRITE) {
         WARNING_PRINTF("Line hit received a WRITE, this component is a LLC only.\n");
         this->metadata_sets[index].ways[way].is_dirty = true;
+        this->metadata_sets[index].ways[way].need_copyback = true;
     }
 };
 
@@ -189,6 +213,22 @@ void line_usage_predictor_line_stats_t::sub_block_miss(memory_package_t *package
 
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
+void line_usage_predictor_line_stats_t::line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
+    ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
+    ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+    this->add_stat_send_copyback();
+
+    (void)package;
+    (void)index;
+    (void)way;
+
+    this->metadata_sets[index].ways[way].is_dirty = false;
+    this->metadata_sets[index].ways[way].need_copyback = false;
+};
+
+/// ============================================================================
+// Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_line_stats_t::line_recv_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -199,17 +239,22 @@ void line_usage_predictor_line_stats_t::line_recv_copyback(memory_package_t *pac
     (void)index;
     (void)way;
 
+    this->metadata_sets[index].ways[way].is_dirty = true;
+    this->metadata_sets[index].ways[way].need_copyback = true;
+
+    /// Compute Dead Cycles
+    this->dead_cycles += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].stat_clock_last_read;
+
     /// Statistics
+    this->metadata_sets[index].ways[way].stat_clock_first_read = sinuca_engine.get_global_cycle();    
+    this->metadata_sets[index].ways[way].stat_clock_last_read = sinuca_engine.get_global_cycle();    
+
     this->metadata_sets[index].ways[way].stat_write_counter++;
     this->metadata_sets[index].ways[way].stat_clock_last_write = sinuca_engine.get_global_cycle();
 
-    this->metadata_sets[index].ways[way].stat_clock_first_read = sinuca_engine.get_global_cycle();    
-    this->metadata_sets[index].ways[way].stat_clock_last_read = sinuca_engine.get_global_cycle();    
-    
     /// First write
     if (this->metadata_sets[index].ways[way].stat_clock_first_write == 0) {
         this->metadata_sets[index].ways[way].stat_clock_first_write = sinuca_engine.get_global_cycle();
-
     }
 
     // Update the METADATA real_access_counter
@@ -219,30 +264,21 @@ void line_usage_predictor_line_stats_t::line_recv_copyback(memory_package_t *pac
 };
 
 
-/// ============================================================================
-void line_usage_predictor_line_stats_t::line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->content_to_string().c_str())
-    ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
-    ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
-    this->add_stat_send_copyback();
-
-    package->memory_size = sinuca_engine.get_global_line_size();
-
-    (void)package;
-    (void)index;
-    (void)way;
-};
 
 /// ============================================================================
 void line_usage_predictor_line_stats_t::line_eviction(uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_eviction()\n")
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+
     this->add_stat_eviction();
+
+    /// Compute Dead Cycles
+    this->dead_cycles += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].stat_clock_last_read;
+
 
     //==================================================================
     // Statistics
-
     // Accesses before eviction
     if (this->metadata_sets[index].ways[way].stat_access_counter == 0) {
         this->add_stat_line_access_0();
@@ -289,10 +325,6 @@ void line_usage_predictor_line_stats_t::line_eviction(uint32_t index, uint32_t w
         this->add_stat_line_write_128_bigger();
     }
 
-    // ~ uint64_t stat_clock_first_read;
-    // ~ uint64_t stat_clock_last_read;
-    // ~ uint64_t stat_clock_first_write;
-    // ~ uint64_t stat_clock_last_write;
 
     if (this->metadata_sets[index].ways[way].stat_clock_first_write != 0) {
         ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_last_read != 0, "Possible not read line");
@@ -378,6 +410,8 @@ void line_usage_predictor_line_stats_t::reset_statistics() {
     this->cycles_last_write_to_last_access = 0;
     this->cycles_last_write_to_eviction = 0;
     this->cycles_last_access_to_eviction = 0;
+
+    this->dead_cycles = 0;
 };
 
 /// ============================================================================
@@ -430,6 +464,8 @@ void line_usage_predictor_line_stats_t::print_statistics() {
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "cycles_last_access_to_eviction_ratio",
                                                                                         cycles_last_access_to_eviction, stat_eviction);
 
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "dead_cycles", dead_cycles);
 };
 
 /// ============================================================================

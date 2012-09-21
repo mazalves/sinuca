@@ -237,6 +237,7 @@ enum line_sub_block_t {
     LINE_SUB_BLOCK_WRONG_FIRST,
     LINE_SUB_BLOCK_COPYBACK
 };
+const char *get_enum_line_sub_block_t_char(line_sub_block_t type);
 
 /// ============================================================================
 /// Prefetcher type

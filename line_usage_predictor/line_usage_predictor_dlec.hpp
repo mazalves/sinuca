@@ -80,16 +80,26 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         uint64_t stat_ahtc_hit;
         uint64_t stat_ahtc_miss;
 
-        uint64_t stat_line_sub_block_learn;
-        uint64_t stat_line_sub_block_normal_over;
-        uint64_t stat_line_sub_block_normal_correct;
-        uint64_t stat_line_sub_block_disable_correct;
-        uint64_t stat_line_sub_block_disable_under;
+        /// prediction accuracy
+        uint64_t stat_line_miss_learn;
+        uint64_t stat_line_miss_normal_over;
+        uint64_t stat_line_miss_normal_correct;
+        uint64_t stat_line_miss_disable_correct;
+        uint64_t stat_line_miss_disable_under;
 
-        uint64_t stat_line_sub_block_copyback_over;
-        uint64_t stat_line_sub_block_copyback_correct;
-        uint64_t stat_line_sub_block_copyback_under;
+        uint64_t stat_line_copyback_learn;
+        uint64_t stat_line_copyback_normal_over;
+        uint64_t stat_line_copyback_normal_correct;
+        uint64_t stat_line_copyback_disable_correct;
+        uint64_t stat_line_copyback_disable_under;
 
+        uint64_t stat_is_last_access_correct;
+        uint64_t stat_is_last_access_wrong;
+
+        uint64_t stat_is_last_write_correct;
+        uint64_t stat_is_last_write_wrong;
+
+        /// general statistics
         uint64_t stat_line_access_0;
         uint64_t stat_line_access_1;
         uint64_t stat_line_access_2_3;
@@ -109,6 +119,8 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         uint64_t cycles_last_write_to_last_access;
         uint64_t cycles_last_write_to_eviction;
         uint64_t cycles_last_access_to_eviction;
+
+        uint64_t dead_cycles;
 
 
     public:
@@ -146,15 +158,17 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         /// ====================================================================
         /// Inspections
         void fill_package_sub_blocks(memory_package_t *package);
+        void line_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way);
         bool check_sub_block_is_hit(memory_package_t *package, uint64_t index, uint32_t way);
-        bool check_line_is_dead(uint32_t index, uint32_t way);
+        bool check_line_is_last_access(uint32_t index, uint32_t way);
+        bool check_line_is_last_write(uint32_t index, uint32_t way);
 
         /// Cache Operations
         void line_hit(memory_package_t *package, uint32_t index, uint32_t way);
         void line_miss(memory_package_t *package, uint32_t index, uint32_t way);
         void sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way);
-        void line_recv_copyback(memory_package_t *package, uint32_t index, uint32_t way);
         void line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way);
+        void line_recv_copyback(memory_package_t *package, uint32_t index, uint32_t way);
         void line_eviction(uint32_t index, uint32_t way);
         void line_invalidation(uint32_t index, uint32_t way);
         /// ====================================================================
@@ -205,16 +219,26 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_ahtc_hit);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_ahtc_miss);
 
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_learn);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_normal_over);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_normal_correct);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_disable_correct);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_disable_under);
+        /// Prediction Accuracy
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_miss_learn);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_miss_normal_over);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_miss_normal_correct);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_miss_disable_correct);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_miss_disable_under);
 
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_copyback_over);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_copyback_correct);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_copyback_under);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_copyback_learn);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_copyback_normal_over);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_copyback_normal_correct);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_copyback_disable_correct);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_copyback_disable_under);
 
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_is_last_access_correct);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_is_last_access_wrong);        
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_is_last_write_correct);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_is_last_write_wrong);
+
+        /// General statistics
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_0);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_1);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_2_3);
@@ -235,4 +259,5 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, cycles_last_write_to_eviction);
         INSTANTIATE_GET_SET_ADD(uint64_t, cycles_last_access_to_eviction);
 
+        INSTANTIATE_GET_SET_ADD(uint64_t, dead_cycles);
 };

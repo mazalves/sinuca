@@ -44,7 +44,9 @@ void dlec_metadata_line_t::clean() {
     this->valid_sub_blocks = LINE_SUB_BLOCK_DISABLE;
     this->learn_mode = false;
     this->is_dirty = false;
+    this->need_copyback = false;
     this->is_dead = false;
+    this->is_last_access = false;
     this->is_last_write = false;
     
     this->real_access_counter = 0;
@@ -75,11 +77,13 @@ std::string dlec_metadata_line_t::content_to_string() {
     content_string = "";
 
     content_string = content_string + "Metadata -";
-    content_string = content_string + " " + utils_t::uint32_to_char(this->valid_sub_blocks);
+    content_string = content_string + " " + get_enum_line_sub_block_t_char(this->valid_sub_blocks);
 
     content_string = content_string + " Learn:" + utils_t::uint32_to_char(this->learn_mode);    
-    content_string = content_string + " Dirty:" + utils_t::uint32_to_char(this->is_dirty); 
+    content_string = content_string + " Dirty:" + utils_t::uint32_to_char(this->is_dirty);
+    content_string = content_string + " Need_Copyback:" + utils_t::uint32_to_char(this->need_copyback); 
     content_string = content_string + " Dead:" + utils_t::uint32_to_char(this->is_dead);
+    content_string = content_string + " Last_Access:" + utils_t::uint32_to_char(this->is_last_access);
     content_string = content_string + " Last_Write:" + utils_t::uint32_to_char(this->is_last_write);
 
     content_string = content_string + " RealAccess:" + utils_t::uint32_to_char(this->real_access_counter);

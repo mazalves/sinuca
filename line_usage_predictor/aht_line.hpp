@@ -32,6 +32,7 @@ class aht_line_t {
         uint64_t access_counter;
         bool overflow;
 
+        bool is_last_access;
         bool is_last_write;
 
         /// ====================================================================

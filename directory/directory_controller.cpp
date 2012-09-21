@@ -374,6 +374,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                             if (this->create_cache_copyback(cache, cache_line, index, way)) {
                                 /// Add statistics to the cache
                                 cache->cache_evict(package->memory_address, true);
+                                // =============================================================
+                                // Line Usage Prediction (Tag different from actual)
+                                cache->line_usage_predictor->line_send_copyback(package, index, way);                                                                
                             }
                             else {
                                 /// Cannot continue right now
@@ -411,9 +414,16 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
                             /// Need CopyBack ?
                             if (coherence_need_copyback(cache, cache_line)) {
+                                // =============================================================
+                                // Line Usage Prediction (Tag different from actual)
+                                cache->line_usage_predictor->line_recv_copyback(package, index, way);
+
                                 if (this->create_cache_copyback(cache, cache_line, index, way)) {
                                     /// Add statistics to the cache
                                     cache->cache_evict(package->memory_address, true);
+                                    // =============================================================
+                                    // Line Usage Prediction (Tag different from actual)
+                                    cache->line_usage_predictor->line_send_copyback(package, index, way);                                                                
                                 }
                                 else {
                                     /// Cannot continue right now
@@ -555,6 +565,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                         if (this->create_cache_copyback(cache, cache_line, index, way)) {
                             /// Add statistics to the cache
                             cache->cache_evict(package->memory_address, true);
+                            // =============================================================
+                            // Line Usage Prediction (Tag different from actual)
+                            cache->line_usage_predictor->line_send_copyback(package, index, way);                                                                
                         }
                         else {
                             /// Cannot continue right now
@@ -592,9 +605,15 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
                         /// Need CopyBack ?
                         if (coherence_need_copyback(cache, cache_line)) {
+                            // =============================================================
+                            // Line Usage Prediction (Tag different from actual)
+                            cache->line_usage_predictor->line_recv_copyback(package, index, way);
                             if (this->create_cache_copyback(cache, cache_line, index, way)) {
                                 /// Add statistics to the cache
                                 cache->cache_evict(package->memory_address, true);
+                                // =============================================================
+                                // Line Usage Prediction (Tag different from actual)
+                                cache->line_usage_predictor->line_send_copyback(package, index, way);                                                                
                             }
                             else {
                                 /// Cannot continue right now
@@ -634,7 +653,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 // =============================================================
                 // Line Usage Prediction (Tag different from actual)
                 cache->line_usage_predictor->line_eviction(index, way);
-
             }
 
             ///=================================================================
@@ -653,6 +671,22 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             this->coherence_new_operation(cache, cache_line, package, true);
             /// Add Latency
             package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_write();
+
+/*
+            /// Is Last Write ?
+            if (cache->line_usage_predictor->check_line_is_last_write(index, way)) {
+                if (this->create_cache_copyback(cache, cache_line, index, way)) {
+                    /// Add statistics to the cache
+                    cache->cache_evict(package->memory_address, true);
+                    /// Update Coherence Status and Last Access Time
+                    this->coherence_new_operation(cache, cache_line, package, false);
+
+                    // =============================================================
+                    // Line Usage Prediction (Tag different from actual)
+                    cache->line_usage_predictor->line_send_copyback(package, index, way);                                                                
+                }
+            }
+*/
 
             /// Erase the directory_entry
             DIRECTORY_CTRL_DEBUG_PRINTF("\t Erasing Directory Line:%s\n", directory_line->directory_line_to_string().c_str())
@@ -903,8 +937,8 @@ bool directory_controller_t::create_cache_copyback(cache_memory_t *cache, cache_
     }
     memory_package_t *cache_mshr_buffer = cache->get_mshr_buffer();
     memory_package_t *package = &cache_mshr_buffer[slot];
-    cache->change_status(cache_line, PROTOCOL_STATUS_I);
-    cache->change_address(cache_line, 0);
+    // ~ cache->change_status(cache_line, PROTOCOL_STATUS_I);
+    // ~ cache->change_address(cache_line, 0);
 
 
     ///=========================================================================
@@ -924,7 +958,7 @@ bool directory_controller_t::create_cache_copyback(cache_memory_t *cache, cache_
 
     // =============================================================
     // Line Usage Prediction
-    cache->line_usage_predictor->line_send_copyback(package, index, way);
+    cache->line_usage_predictor->line_sub_blocks_to_package(package, index, way);
 
     /// Higher Level Copy Back
     package->package_set_src_dst(cache->get_id(), this->find_next_obj_id(cache, package->memory_address));
@@ -1390,13 +1424,20 @@ void directory_controller_t::coherence_new_operation(cache_memory_t *cache, cach
                 break;
 
                 case MEMORY_OPERATION_COPYBACK:
-                    ERROR_ASSERT_PRINTF(cache_line == NULL || cache_line->status == PROTOCOL_STATUS_I, "Receiving a Copyback the line should be NULL or INVALID\n")
                     if (is_hit) {
-                        ERROR_ASSERT_PRINTF(cache->get_id() != package->id_owner, "CopyBack Hit on the same cache which stated the copyback\n")
+                        ERROR_ASSERT_PRINTF(cache_line->status == PROTOCOL_STATUS_I, "Receiving a Copyback the line should be NULL or INVALID\n")
+                        ERROR_ASSERT_PRINTF(cache->get_id() != package->id_owner, "CopyBack Recv on the same cache which stated the copyback\n")
                         /// Update the Replacement Policy information
                         cache->update_last_access(cache_line);
                         cache_line->status = PROTOCOL_STATUS_O;
                     }
+                    else {
+                        ERROR_ASSERT_PRINTF(cache_line->status != PROTOCOL_STATUS_I, "Receiving a Copyback the line should be NULL or INVALID\n")
+                        /// Update the Replacement Policy information
+                        cache->update_last_access(cache_line);
+                        cache_line->status = PROTOCOL_STATUS_S;
+                    }
+
                 break;
             }
         break;
