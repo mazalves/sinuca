@@ -1,15 +1,15 @@
 #------------SPEC2006 (11)
 #-----MEDIUM
-ammp;m;ammp.M;      Simulation8CPU=0.64h
-applu;m;applu.M;    Simulation8CPU=5.31h
-apsi;m;apsi.M;      Simulation8CPU=2.45h
 art;m;art.M;        Simulation8CPU=0.03h
-equake;m;equake.M;  Simulation8CPU=2.46h
-fma3d;m;fma3d.M;    Simulation8CPU=4.24h
-gafort;m;gafort.M;  Simulation8CPU=3.93h
 galgel;m;galgel.M;  Simulation8CPU=0.72h
+apsi;m;apsi.M;      Simulation8CPU=2.45h
 mgrid;m;mgrid.M;    Simulation8CPU=3.83h
+fma3d;m;fma3d.M;    Simulation8CPU=4.24h
 swim;m;swim.M;      Simulation8CPU=5.71h
+ammp;m;ammp.M;      Simulation8CPU=0.64h
+equake;m;equake.M;  Simulation8CPU=2.46h
+gafort;m;gafort.M;  Simulation8CPU=3.93h
+applu;m;applu.M;    Simulation8CPU=5.31h
 wupwise;m;wupwise.M;Simulation8CPU=8.04h
 #-----LARGER
 #-----END OF FILE

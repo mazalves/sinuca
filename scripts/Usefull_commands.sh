@@ -48,6 +48,9 @@ for i in *8t.tid0.stat.out.gz; do
     mv cmp_jnz.txt $k.pause.txt
 done
 
+# Check the progress of multiple simulations
+for i in `ls ~/Experiment/benchmarks/results/*/*.log`; do tail -n32 $i | grep 'CPU 0' | grep IPC -m1 | grep -v 100.000%; done
+
 ## Shows the benchmarks which failed.
 for i in `ls ~/Experiment/benchmarks/results/*/*.log | sed 's/log//g'`; do ls $i*result | grep "No such"; done
 

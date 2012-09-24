@@ -1,12 +1,12 @@
 ## NAS A
-ep;A;ep.A;Simulation8CPU=0.01h
-ft;A;ft.A;Simulation8CPU=6.72h
 is;A;is.A;Simulation8CPU=0.59h
-bt;A;bt.A;Simulation8CPU=3.42h
 cg;A;cg.A;Simulation8CPU=1.24h
-ua;A;ua.A;Simulation8CPU=1.89h
 sp;A;sp.A;Simulation8CPU=1.24h
+ua;A;ua.A;Simulation8CPU=1.89h
+ft;A;ft.A;Simulation8CPU=6.72h
+ep;A;ep.A;Simulation8CPU=0.01h
 lu;A;lu.A;Simulation8CPU=1.64h
+bt;A;bt.A;Simulation8CPU=3.42h
 mg;A;mg.A;Simulation8CPU=6.89h
 ## NAS W
 #bt;W;bt.W
