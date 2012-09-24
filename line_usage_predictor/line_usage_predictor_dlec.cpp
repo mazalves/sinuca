@@ -375,6 +375,8 @@ void line_usage_predictor_dlec_t::sub_block_miss(memory_package_t *package, uint
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
     this->add_stat_sub_block_miss();         /// Access Statistics
 
+    this->metadata_sets[index].ways[way].stat_clock_last_read = sinuca_engine.get_global_cycle();
+
     ///=================================================================
     /// aht_M HIT
     ///=================================================================
@@ -481,6 +483,10 @@ void line_usage_predictor_dlec_t::line_recv_copyback(memory_package_t *package, 
     /// Compute Dead Cycles
     if (this->metadata_sets[index].ways[way].valid_sub_blocks == LINE_SUB_BLOCK_DISABLE) {
         this->dead_cycles += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].stat_clock_last_read;
+        this->alive_cycles += this->metadata_sets[index].ways[way].stat_clock_last_read - this->metadata_sets[index].ways[way].stat_clock_first_read;
+    }
+    else {
+        this->alive_cycles += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].stat_clock_first_read;
     }
 
     /// Statistics
@@ -493,7 +499,6 @@ void line_usage_predictor_dlec_t::line_recv_copyback(memory_package_t *package, 
     /// First write
     if (this->metadata_sets[index].ways[way].stat_clock_first_write == 0) {
         this->metadata_sets[index].ways[way].stat_clock_first_write = sinuca_engine.get_global_cycle();
-
     }
 
 
@@ -574,11 +579,6 @@ void line_usage_predictor_dlec_t::line_eviction(uint32_t index, uint32_t way) {
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
     this->add_stat_eviction();         /// Access Statistics
-
-    /// Compute Dead Cycles
-    if (this->metadata_sets[index].ways[way].valid_sub_blocks == LINE_SUB_BLOCK_DISABLE) {
-        this->dead_cycles += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].stat_clock_last_read;
-    }
 
     //==================================================================
     // Prediction Accuracy Statistics
@@ -702,10 +702,6 @@ void line_usage_predictor_dlec_t::line_eviction(uint32_t index, uint32_t way) {
         this->add_stat_line_write_128_bigger();
     }
 
-    // ~ uint64_t stat_clock_first_read;
-    // ~ uint64_t stat_clock_last_read;
-    // ~ uint64_t stat_clock_first_write;
-    // ~ uint64_t stat_clock_last_write;
 
     if (this->metadata_sets[index].ways[way].stat_clock_first_write != 0) {
         ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_last_read != 0, "Possible not read line");
@@ -719,7 +715,21 @@ void line_usage_predictor_dlec_t::line_eviction(uint32_t index, uint32_t way) {
     ERROR_ASSERT_PRINTF(sinuca_engine.get_global_cycle() >= this->metadata_sets[index].ways[way].stat_clock_last_read, "Possible underflow");
     this->cycles_last_access_to_eviction += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].stat_clock_last_read;
 
+    /// Compute Dead Cycles
+    if (this->metadata_sets[index].ways[way].valid_sub_blocks == LINE_SUB_BLOCK_DISABLE) {
+        this->dead_cycles += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].stat_clock_last_read;
+        this->alive_cycles += this->metadata_sets[index].ways[way].stat_clock_last_read - this->metadata_sets[index].ways[way].stat_clock_first_read;
+    }
+    else {
+        this->alive_cycles += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].stat_clock_first_read;
+    }
+
     this->metadata_sets[index].ways[way].reset_statistics();
+
+    /// Statistics
+    this->metadata_sets[index].ways[way].stat_clock_first_read = sinuca_engine.get_global_cycle();
+    this->metadata_sets[index].ways[way].stat_clock_last_read = sinuca_engine.get_global_cycle();
+
 
     /// AHT_M
     if (this->metadata_sets[index].ways[way].is_dirty == false) {
@@ -793,6 +803,16 @@ void line_usage_predictor_dlec_t::line_invalidation(uint32_t index, uint32_t way
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
     this->add_stat_invalidation();         /// Access Statistics
+
+    /// Compute Dead Cycles
+    this->dead_cycles += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].stat_clock_last_read;
+    this->alive_cycles += this->metadata_sets[index].ways[way].stat_clock_last_read - this->metadata_sets[index].ways[way].stat_clock_first_read;
+    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_last_read >= this->metadata_sets[index].ways[way].stat_clock_first_read, "Possible underflow");
+
+    /// Statistics
+    this->metadata_sets[index].ways[way].stat_clock_first_read = sinuca_engine.get_global_cycle();
+    this->metadata_sets[index].ways[way].stat_clock_last_read = sinuca_engine.get_global_cycle();
+
 
     //==================================================================
     // Prediction Accuracy Statistics
@@ -1156,6 +1176,7 @@ void line_usage_predictor_dlec_t::reset_statistics() {
     this->cycles_last_access_to_eviction = 0;
 
     this->dead_cycles = 0;
+    this->alive_cycles = 0;
 };
 
 /// ============================================================================
@@ -1247,7 +1268,11 @@ void line_usage_predictor_dlec_t::print_statistics() {
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "dead_cycles", dead_cycles);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "alive_cycles", alive_cycles);
 
+    if ((alive_cycles + dead_cycles) / metadata_line_number != sinuca_engine.get_global_cycle()) {
+        WARNING_PRINTF("Total of cycles (alive + dead) does not match with global cycle.\n")
+    }
 
 };
 

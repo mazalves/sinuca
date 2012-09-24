@@ -122,7 +122,7 @@ class directory_controller_t : public interconnection_interface_t {
         bool is_locked(uint64_t memory_address);
 
         bool coherence_is_read(memory_operation_t memory_operation);
-        bool coherence_is_hit(cache_line_t *cache_line, memory_package_t *package);
+        bool coherence_is_hit(cache_line_t *cache_line, memory_operation_t memory_operation);
         bool coherence_need_copyback(cache_memory_t *cache_memory, cache_line_t *cache_line);
 
         protocol_status_t find_copyback_higher_levels(cache_memory_t *cache_memory, uint64_t memory_address);

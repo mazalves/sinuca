@@ -136,12 +136,10 @@ bool line_usage_predictor_line_stats_t::check_line_is_last_write(uint32_t index,
 /// Mechanism Operations
 /// ============================================================================
 void line_usage_predictor_line_stats_t::line_hit(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_hit() package:%s\n", package->content_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_hit() index:%d, way:%d package:%s\n", index, way, package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
     this->add_stat_line_hit();
-
-    printf("line_hit() index:%d, way:%d package:%s\n", index, way, package->content_to_string().c_str());
 
     /// Statistics
     this->metadata_sets[index].ways[way].stat_access_counter++;
@@ -160,7 +158,6 @@ void line_usage_predictor_line_stats_t::line_hit(memory_package_t *package, uint
         }
     }
 
-
     // Update the METADATA real_access_counter
     this->metadata_sets[index].ways[way].real_access_counter++;
     this->metadata_sets[index].ways[way].clock_become_dead = sinuca_engine.get_global_cycle();
@@ -175,13 +172,10 @@ void line_usage_predictor_line_stats_t::line_hit(memory_package_t *package, uint
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_line_stats_t::line_miss(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() index:%d, way:%d package:%s\n", index, way, package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
     this->add_stat_line_miss();
-
-
-    printf("line_miss() index:%d, way:%d package:%s\n", index, way, package->content_to_string().c_str());
 
     (void)package;
     (void)index;
@@ -207,12 +201,10 @@ void line_usage_predictor_line_stats_t::line_miss(memory_package_t *package, uin
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_line_stats_t::sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("sub_block_miss() package:%s\n", package->content_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("sub_block_miss() index:%d, way:%d package:%s\n", index, way, package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
     this->add_stat_sub_block_miss();
-
-    printf("sub_block_miss() index:%d, way:%d package:%s\n", index, way, package->content_to_string().c_str());
 
     (void)package;
     (void)index;
@@ -222,12 +214,10 @@ void line_usage_predictor_line_stats_t::sub_block_miss(memory_package_t *package
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_line_stats_t::line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_send_copyback() package:%s\n", package->content_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_send_copyback() index:%d, way:%d package:%s\n", index, way, package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
     this->add_stat_send_copyback();
-
-    printf("line_send_copyback() index:%d, way:%d package:%s\n", index, way, package->content_to_string().c_str());
 
     (void)package;
     (void)index;
@@ -240,12 +230,10 @@ void line_usage_predictor_line_stats_t::line_send_copyback(memory_package_t *pac
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_line_stats_t::line_recv_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_recv_copyback() package:%s\n", package->content_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_recv_copyback() index:%d, way:%d package:%s\n", index, way, package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
     this->add_stat_recv_copyback();
-
-    printf("line_recv_copyback() index:%d, way:%d package:%s\n", index, way, package->content_to_string().c_str());
 
     (void)package;
     (void)index;
@@ -281,11 +269,9 @@ void line_usage_predictor_line_stats_t::line_recv_copyback(memory_package_t *pac
 
 /// ============================================================================
 void line_usage_predictor_line_stats_t::line_eviction(uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_eviction()\n")
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_eviction() index:%d, way:%d\n", index, way);
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
-
-    printf("line_eviction() index:%d, way:%d\n", index, way);
 
     this->add_stat_eviction();
 
@@ -368,12 +354,10 @@ void line_usage_predictor_line_stats_t::line_eviction(uint32_t index, uint32_t w
 
 /// ============================================================================
 void line_usage_predictor_line_stats_t::line_invalidation(uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_invalidation()\n")
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_invalidation() index:%d, way:%d\n", index, way);
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
     this->add_stat_invalidation();
-
-    printf("line_invalidation() index:%d, way:%d\n", index, way);
 
     /// Compute Dead Cycles
     this->dead_cycles += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].stat_clock_last_read;
@@ -503,6 +487,10 @@ void line_usage_predictor_line_stats_t::print_statistics() {
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "dead_cycles", dead_cycles);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "alive_cycles", alive_cycles);
+    if ((alive_cycles + dead_cycles) / metadata_line_number != sinuca_engine.get_global_cycle()) {
+        WARNING_PRINTF("Total of cycles (alive + dead) does not match with global cycle.\n")
+    }
+
 };
 
 /// ============================================================================

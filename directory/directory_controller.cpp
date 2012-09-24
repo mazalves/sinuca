@@ -197,7 +197,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
         if (directory_lines[0][i]->cache_request_order[cache_id] != 0 &&
         this->cmp_index_tag(directory_lines[0][i]->initial_memory_address, package->memory_address)) {
             /// Inspect IS_HIT
-            bool is_line_hit = this->coherence_is_hit(cache_line, package);
+            bool is_line_hit = this->coherence_is_hit(cache_line, package->memory_operation);
             bool is_sub_block_hit = false;
             // =============================================================
             // Line Usage Prediction
@@ -249,7 +249,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
         case MEMORY_OPERATION_WRITE:
         {
             /// Inspect IS_HIT
-            bool is_line_hit = this->coherence_is_hit(cache_line, package);
+            bool is_line_hit = this->coherence_is_hit(cache_line, package->memory_operation);
             bool is_sub_block_hit = false;
             // =============================================================
             // Line Usage Prediction
@@ -466,7 +466,14 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                         }
                         break;
                     }
-
+                }
+                else {
+                    /// Will it receive a copyback ?
+                    if (this->find_cache_line_higher_levels(cache, package, true) == PROTOCOL_STATUS_I) {
+                        // =============================================================
+                        // Line Usage Prediction (Tag different from actual)
+                        cache->line_usage_predictor->line_eviction(index, way);
+                    }
                 }
 
                 ///=============================================================
@@ -1244,14 +1251,14 @@ bool directory_controller_t::coherence_is_read(memory_operation_t memory_operati
 };
 
 /// ============================================================================
-bool directory_controller_t::coherence_is_hit(cache_line_t *cache_line,  memory_package_t *package) {
+bool directory_controller_t::coherence_is_hit(cache_line_t *cache_line,  memory_operation_t memory_operation) {
     if (cache_line == NULL){
         return FAIL;
     }
     switch (this->coherence_protocol_type) {
         case COHERENCE_PROTOCOL_MOESI:
 
-            switch (package->memory_operation) {
+            switch (memory_operation) {
                 case MEMORY_OPERATION_READ:
                 case MEMORY_OPERATION_INST:
                 case MEMORY_OPERATION_PREFETCH:
@@ -1365,8 +1372,8 @@ void directory_controller_t::coherence_invalidate_all(cache_memory_t *cache_memo
         if (i != cache_memory->get_cache_id()) {
             uint32_t index, way;
             cache_line_t *cache_line = sinuca_engine.cache_memory_array[i]->find_line(memory_address, index, way);
-            if (cache_line != NULL) {
-
+            /// Only invalidate if the line has a valid state
+            if (cache_line != NULL && this->coherence_is_hit(cache_line, MEMORY_OPERATION_READ)) {
                 // =============================================================
                 // Line Usage Prediction
                 sinuca_engine.cache_memory_array[i]->line_usage_predictor->line_invalidation(index, way);
@@ -1395,8 +1402,8 @@ void directory_controller_t::coherence_evict_higher_levels(cache_memory_t *cache
     /// Invalidate this level
     uint32_t index, way;
     cache_line_t *cache_line = cache_memory->find_line(memory_address, index, way);
+    /// Only evict if the line has a valid state
     if (cache_line != NULL) {
-        printf("DIR: EvictHigher address:%lld, index:%d, way:%d\n", (long long int)memory_address, index, way);
         // =============================================================
         // Line Usage Prediction
         cache_memory->line_usage_predictor->line_eviction(index, way);

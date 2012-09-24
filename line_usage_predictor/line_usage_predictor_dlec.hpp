@@ -127,6 +127,7 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         uint64_t cycles_last_access_to_eviction;
 
         uint64_t dead_cycles;
+        uint64_t alive_cycles;
 
 
     public:
@@ -272,4 +273,5 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, cycles_last_access_to_eviction);
 
         INSTANTIATE_GET_SET_ADD(uint64_t, dead_cycles);
+        INSTANTIATE_GET_SET_ADD(uint64_t, alive_cycles);
 };
