@@ -88,9 +88,16 @@ void cache_memory_t::allocate() {
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_line_size()), "Wrong line size.\n");
 
     this->set_total_sets(this->get_line_number() / this->get_associativity());
+    this->set_masks();
+
+
     this->sets = utils_t::template_allocate_array<cache_set_t>(this->get_total_sets());
     for (uint32_t i = 0; i < this->get_total_sets(); i++) {
         this->sets[i].ways = utils_t::template_allocate_array<cache_line_t>(this->get_associativity());
+        /// Generate a fake but valid address for each cache line
+        for (uint32_t j = 0; j < this->get_associativity(); j++) {
+            this->sets[i].ways[j].tag = this->get_fake_address(i, j);
+        }
     }
 
     ERROR_ASSERT_PRINTF(mshr_buffer_request_reserved_size > 0, "mshr_buffer_request_reserved_size should be bigger than zero.\n");
@@ -105,7 +112,7 @@ void cache_memory_t::allocate() {
     this->mshr_buffer = utils_t::template_allocate_array<memory_package_t>(this->get_mshr_buffer_size());
 
 
-    this->set_masks();
+
 
     ERROR_ASSERT_PRINTF(this->get_total_banks() == 1 || this->prefetcher->get_prefetcher_type() == PREFETCHER_DISABLE, "Cannot use a multibanked cache with prefetch. (Some requests may be generated in the wrong bank)\n");
 
@@ -130,10 +137,48 @@ void cache_memory_t::allocate() {
 };
 
 /// ============================================================================
-void cache_memory_t::set_masks() {
-    uint64_t i;
+uint64_t cache_memory_t::get_fake_address(uint32_t index, uint32_t way){
+    CACHE_DEBUG_PRINTF("index:%d way:%d\n", index, way);
+    CACHE_DEBUG_PRINTF("tag:%"PRIu64" index:%"PRIu64" bank:%"PRIu64" offset:%"PRIu64"\n", tag_bits_shift, index_bits_shift, bank_bits_shift, offset_bits_shift );
 
+
+    uint64_t final_address = 0;
+    switch (this->get_address_mask_type()) {
+        case CACHE_MASK_TAG_INDEX_BANK_OFFSET:
+            CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+
+            final_address = (way << this->tag_bits_shift);
+            CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+
+            final_address += (index << this->index_bits_shift);
+            CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+
+            final_address += (this->get_bank_number() << this->bank_bits_shift);
+            CACHE_DEBUG_PRINTF("%"PRIu64"\n", final_address);
+        break;
+
+        case CACHE_MASK_TAG_INDEX_OFFSET:
+            CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+
+            final_address = (way << this->tag_bits_shift);
+            CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+
+            final_address += (index << this->index_bits_shift);
+            CACHE_DEBUG_PRINTF("%"PRIu64"\n", final_address);
+        break;
+    }
+    ERROR_ASSERT_PRINTF(index == get_index(final_address), "Wrong Index into the Fake Address.\n")
+    ERROR_ASSERT_PRINTF(this->get_bank_number() == get_bank(final_address), "Wrong Bank into the Fake Address.\n")
+    return final_address;
+
+};
+
+/// ============================================================================
+void cache_memory_t::set_masks() {
     ERROR_ASSERT_PRINTF(this->get_total_banks() > this->get_bank_number(), "Wrong number of banks (%u/%u).\n", this->get_bank_number(), this->get_total_banks());
+    ERROR_ASSERT_PRINTF(this->get_total_sets() > 0, "Wrong number of sets (%u).\n", this->get_total_sets());
+
+    uint64_t i;
     this->offset_bits_mask = 0;
     this->bank_bits_mask = 0;
     this->index_bits_mask = 0;

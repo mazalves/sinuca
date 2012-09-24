@@ -16,10 +16,11 @@ for i in `seq 1 29` ; do
     cd ~/Experiment/SiNUCA/scripts ; \
     python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2000 BASE_INCLUSIVE_LLC 0 1 $i $i ; \
     python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 BASE_INCLUSIVE_LLC 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2000 BASE_NON_INCLUSIVE 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 BASE_NON_INCLUSIVE 0 8 $i $i ; \
     python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC_ALL-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2000 DLEC_ALL_INCLUSIVE_LLC 0 1 $i $i ; \
     python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC_ALL-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 DLEC_ALL_INCLUSIVE_LLC 0 8 $i $i ; \
+    echo TESTE;
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2000 BASE_NON_INCLUSIVE 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 BASE_NON_INCLUSIVE 0 8 $i $i ; \
     python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2000 DLEC_ALL_NON_INCLUSIVE 0 1 $i $i ; \
     python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 DLEC_ALL_NON_INCLUSIVE 0 8 $i $i ; \
     $(echo -ne '\r')";
@@ -53,10 +54,11 @@ for i in `seq 1 29` ; do
     cd ~/Experiment/SiNUCA/scripts ; \
     python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2006 BASE_INCLUSIVE_LLC 0 1 $i $i ; \
     python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp BASE_INCLUSIVE_LLC 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2006 BASE_NON_INCLUSIVE 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp BASE_NON_INCLUSIVE 0 8 $i $i ; \
     python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC_ALL-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2006 DLEC_ALL_INCLUSIVE_LLC 0 1 $i $i ; \
     python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC_ALL-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp DLEC_ALL_INCLUSIVE_LLC 0 8 $i $i ; \
+    echo TESTE;
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2006 BASE_NON_INCLUSIVE 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp BASE_NON_INCLUSIVE 0 8 $i $i ; \
     python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2006 DLEC_ALL_NON_INCLUSIVE 0 1 $i $i ; \
     python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp DLEC_ALL_NON_INCLUSIVE 0 8 $i $i ; \
     $(echo -ne '\r')";

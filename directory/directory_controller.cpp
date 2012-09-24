@@ -1366,6 +1366,7 @@ void directory_controller_t::coherence_invalidate_all(cache_memory_t *cache_memo
             uint32_t index, way;
             cache_line_t *cache_line = sinuca_engine.cache_memory_array[i]->find_line(memory_address, index, way);
             if (cache_line != NULL) {
+
                 // =============================================================
                 // Line Usage Prediction
                 sinuca_engine.cache_memory_array[i]->line_usage_predictor->line_invalidation(index, way);
@@ -1395,6 +1396,7 @@ void directory_controller_t::coherence_evict_higher_levels(cache_memory_t *cache
     uint32_t index, way;
     cache_line_t *cache_line = cache_memory->find_line(memory_address, index, way);
     if (cache_line != NULL) {
+        printf("DIR: EvictHigher address:%lld, index:%d, way:%d\n", (long long int)memory_address, index, way);
         // =============================================================
         // Line Usage Prediction
         cache_memory->line_usage_predictor->line_eviction(index, way);

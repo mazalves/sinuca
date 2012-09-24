@@ -26,12 +26,19 @@
 
 //==============================================================================
 uint64_t utils_t::get_power_of_two(uint64_t n) {
-    uint8_t i;
-    for (i = 0 ; i < 64 ; i++) {
-        if (n & (1 << i))
-            break;
+    if (n == 0) {
+        return 0;
     }
-    return i;
+
+    ERROR_ASSERT_PRINTF(check_if_power_of_two(n), "Trying to get a log2 of a non power of two number %"PRIu64".\n", n);
+    return log( n ) / log( 2 );
+// ~
+    // ~ uint64_t i;
+    // ~ for (i = 0 ; i < 64 ; i++) {
+        // ~ if (n & (1 << i))
+            // ~ break;
+    // ~ }
+    // ~ return i;
 };
 
 //==============================================================================
