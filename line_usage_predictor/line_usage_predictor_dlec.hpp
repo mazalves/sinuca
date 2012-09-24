@@ -28,6 +28,10 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         /// ====================================================================
         uint32_t access_counter_bits;
 
+        bool early_eviction;
+        bool early_copyback;
+        bool turnoff_dead_lines;
+
         /// metadata
         uint32_t metadata_line_number;          /// Cache Metadata
         uint32_t metadata_associativity;        /// Cache Metadata
@@ -93,11 +97,13 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         uint64_t stat_line_copyback_disable_correct;
         uint64_t stat_line_copyback_disable_under;
 
+        uint64_t stat_is_last_access_over;
         uint64_t stat_is_last_access_correct;
-        uint64_t stat_is_last_access_wrong;
+        uint64_t stat_is_last_access_under;
 
+        uint64_t stat_is_last_write_over;
         uint64_t stat_is_last_write_correct;
-        uint64_t stat_is_last_write_wrong;
+        uint64_t stat_is_last_write_under;
 
         /// general statistics
         uint64_t stat_line_access_0;
@@ -176,6 +182,10 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET(uint32_t, access_counter_bits);
         INSTANTIATE_GET_SET(uint32_t, access_counter_max);
 
+        INSTANTIATE_GET_SET(bool, early_eviction);
+        INSTANTIATE_GET_SET(bool, early_copyback);
+        INSTANTIATE_GET_SET(bool, turnoff_dead_lines);
+
         /// metadata
         INSTANTIATE_GET_SET(dlec_metadata_set_t*, metadata_sets);
         INSTANTIATE_GET_SET(uint32_t, metadata_line_number);
@@ -232,11 +242,13 @@ class line_usage_predictor_dlec_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_copyback_disable_correct);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_copyback_disable_under);
 
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_is_last_access_over);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_is_last_access_correct);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_is_last_access_wrong);        
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_is_last_access_under);
 
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_is_last_write_over);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_is_last_write_correct);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_is_last_write_wrong);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_is_last_write_under);
 
         /// General statistics
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_0);

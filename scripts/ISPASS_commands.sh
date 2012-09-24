@@ -1,9 +1,79 @@
+########################################################################
+## INCLUSIVENESS ISPASS - VK3
+########################################################################
+# Plots all the benchmarks
+# ~ rm ~/Experiment/benchmarks/results/spec_cpu2000/*.BASE_INCLUSIVE_LLC.*
+# ~ rm ~/Experiment/benchmarks/results/spec_cpu2000/*.BASE_NON_INCLUSIVE.*
+# ~ rm ~/Experiment/benchmarks/results/spec_cpu2000/*.DLEC_ALL_INCLUSIVE_LLC.*
+# ~ rm ~/Experiment/benchmarks/results/spec_cpu2000/*.DLEC_ALL_NON_INCLUSIVE.*
+# ~
+# ~ rm ~/Experiment/benchmarks/results/spec_omp2001/*.BASE_INCLUSIVE_LLC.*
+# ~ rm ~/Experiment/benchmarks/results/spec_omp2001/*.BASE_NON_INCLUSIVE.*
+# ~ rm ~/Experiment/benchmarks/results/spec_omp2001/*.DLEC_ALL_INCLUSIVE_LLC.*
+# ~ rm ~/Experiment/benchmarks/results/spec_omp2001/*.DLEC_ALL_NON_INCLUSIVE.*
+for i in `seq 1 29` ; do
+    byobu -p$i -X stuff "reset ; \
+    cd ~/Experiment/SiNUCA/scripts ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2000 BASE_INCLUSIVE_LLC 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 BASE_INCLUSIVE_LLC 0 8 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2000 BASE_NON_INCLUSIVE 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 BASE_NON_INCLUSIVE 0 8 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC_ALL-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2000 DLEC_ALL_INCLUSIVE_LLC 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC_ALL-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 DLEC_ALL_INCLUSIVE_LLC 0 8 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2000 DLEC_ALL_NON_INCLUSIVE 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 DLEC_ALL_NON_INCLUSIVE 0 8 $i $i ; \
+    $(echo -ne '\r')";
+done
+
+rm ~/Experiment/benchmarks/plots/*INCLUSIVENESS*
+cd ~/Experiment/SiNUCA/scripts ;
+python plot.py ISPASS_inclusiveness_spec_cpu2000.cfg ;
+python plot.py ISPASS_inclusiveness_spec_omp2001.cfg ;
+cp ~/Experiment/benchmarks/plots/*INCLUSIVENESS*.data ~/Dropbox/ISPASS/latex/Figures/Inclusiveness/
+cp ~/Experiment/benchmarks/plots/*INCLUSIVENESS*.pdf ~/Dropbox/ISPASS/latex/Figures/Inclusiveness/
+
+
 
 ########################################################################
-## Motivation ISPASS
+## INCLUSIVENESS ISPASS - VK4
 ########################################################################
-rm ~/Experiment/benchmarks/results/spec_cpu2000/*MOTIVATION_LLC*
-rm ~/Experiment/benchmarks/results/spec_omp2001/*MOTIVATION_LLC*
+# Plots all the benchmarks
+# ~ rm ~/Experiment/benchmarks/results/spec_cpu2006/*.BASE_INCLUSIVE_LLC.*
+# ~ rm ~/Experiment/benchmarks/results/spec_cpu2006/*.BASE_NON_INCLUSIVE.*
+# ~ rm ~/Experiment/benchmarks/results/spec_cpu2006/*.DLEC_ALL_INCLUSIVE_LLC.*
+# ~ rm ~/Experiment/benchmarks/results/spec_cpu2006/*.DLEC_ALL_NON_INCLUSIVE.*
+# ~
+# ~ rm ~/Experiment/benchmarks/results/npb_omp/*.BASE_INCLUSIVE_LLC.*
+# ~ rm ~/Experiment/benchmarks/results/npb_omp/*.BASE_NON_INCLUSIVE.*
+# ~ rm ~/Experiment/benchmarks/results/npb_omp/*.DLEC_ALL_INCLUSIVE_LLC.*
+# ~ rm ~/Experiment/benchmarks/results/npb_omp/*.DLEC_ALL_NON_INCLUSIVE.*
+# Run the Base and DSBP for all SPEC_OMP2001
+for i in `seq 1 29` ; do
+    byobu -p$i -X stuff "reset ; \
+    cd ~/Experiment/SiNUCA/scripts ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2006 BASE_INCLUSIVE_LLC 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp BASE_INCLUSIVE_LLC 0 8 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2006 BASE_NON_INCLUSIVE 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp BASE_NON_INCLUSIVE 0 8 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC_ALL-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2006 DLEC_ALL_INCLUSIVE_LLC 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC_ALL-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp DLEC_ALL_INCLUSIVE_LLC 0 8 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2006 DLEC_ALL_NON_INCLUSIVE 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC_NON_INCLUSIVE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp DLEC_ALL_NON_INCLUSIVE 0 8 $i $i ; \
+    $(echo -ne '\r')";
+done
+
+rm ~/Experiment/benchmarks/plots/*INCLUSIVENESS*
+cd ~/Experiment/SiNUCA/scripts ;
+python plot.py ISPASS_inclusiveness_spec_cpu2006.cfg ;
+python plot.py ISPASS_inclusiveness_npb_omp.cfg ;
+cp ~/Experiment/benchmarks/plots/*INCLUSIVENESS*.data ~/Dropbox/ISPASS/latex/Figures/Inclusiveness/
+cp ~/Experiment/benchmarks/plots/*INCLUSIVENESS*.pdf ~/Dropbox/ISPASS/latex/Figures/Inclusiveness/
+
+########################################################################
+## Motivation ISPASS - VK3
+########################################################################
+#rm ~/Experiment/benchmarks/results/spec_cpu2000/*MOTIVATION_LLC*
+#rm ~/Experiment/benchmarks/results/spec_omp2001/*MOTIVATION_LLC*
 for i in `seq 1 29` ; do
     byobu -p$i -X stuff "reset ; \
     cd ~/Experiment/SiNUCA/scripts ; \
@@ -19,8 +89,8 @@ for i in `seq 1 29` ; do
     $(echo -ne '\r')";
 done
 
-rm ~/Experiment/benchmarks/results/spec_cpu2000/*MOTIVATION_*COPYBACK*
-rm ~/Experiment/benchmarks/results/spec_omp2001/*MOTIVATION_*COPYBACK*
+#rm ~/Experiment/benchmarks/results/spec_cpu2000/*MOTIVATION_*COPYBACK*
+#rm ~/Experiment/benchmarks/results/spec_omp2001/*MOTIVATION_*COPYBACK*
 for i in `seq 1 29` ; do
     byobu -p$i -X stuff "reset ; \
     cd ~/Experiment/SiNUCA/scripts ; \
@@ -38,12 +108,18 @@ rm ~/Experiment/benchmarks/plots/*MOTIVATION*
 cd ~/Experiment/SiNUCA/scripts ;
 python plot.py ISPASS_motivation_spec_cpu2000.cfg ;
 python plot.py ISPASS_motivation_spec_omp2001.cfg ;
-cp ~/Experiment/benchmarks/plots/*MOTIVATION* ~/Dropbox/ISPASS/latex/Figures/
+cp ~/Experiment/benchmarks/plots/*MOTIVATION_LLC*.data ~/Dropbox/ISPASS/latex/Figures/Motivation_LLC_Size/
+cp ~/Experiment/benchmarks/plots/*MOTIVATION_LLC*.pdf ~/Dropbox/ISPASS/latex/Figures/Motivation_LLC_Size/
+cp ~/Experiment/benchmarks/plots/*MOTIVATION_*COPYBACK*.data ~/Dropbox/ISPASS/latex/Figures/Motivation_No_Copyback/
+cp ~/Experiment/benchmarks/plots/*MOTIVATION_*COPYBACK*.pdf ~/Dropbox/ISPASS/latex/Figures/Motivation_No_Copyback/
+cp ~/Experiment/benchmarks/plots/*MOTIVATION_*ENERGY*.data ~/Dropbox/ISPASS/latex/Figures/Motivation_Energy/
+cp ~/Experiment/benchmarks/plots/*MOTIVATION_*ENERGY*.pdf ~/Dropbox/ISPASS/latex/Figures/Motivation_Energy/
 
-################################################################################
-
-rm ~/Experiment/benchmarks/results/spec_cpu2006/*MOTIVATION_LLC*
-rm ~/Experiment/benchmarks/results/npb_omp/*MOTIVATION_LLC*
+########################################################################
+## Motivation ISPASS - VK4
+########################################################################
+#rm ~/Experiment/benchmarks/results/spec_cpu2006/*MOTIVATION_LLC*
+#rm ~/Experiment/benchmarks/results/npb_omp/*MOTIVATION_LLC*
 for i in `seq 1 29` ; do
     byobu -p$i -X stuff "reset ; \
     cd ~/Experiment/SiNUCA/scripts ; \
@@ -59,8 +135,8 @@ for i in `seq 1 29` ; do
     $(echo -ne '\r')";
 done
 
-rm ~/Experiment/benchmarks/results/spec_cpu2006/*MOTIVATION_*COPYBACK*
-rm ~/Experiment/benchmarks/results/npb_omp/*MOTIVATION_*COPYBACK*
+#rm ~/Experiment/benchmarks/results/spec_cpu2006/*MOTIVATION_*COPYBACK*
+#rm ~/Experiment/benchmarks/results/npb_omp/*MOTIVATION_*COPYBACK*
 for i in `seq 1 29` ; do
     byobu -p$i -X stuff "reset ; \
     cd ~/Experiment/SiNUCA/scripts ; \
@@ -77,92 +153,83 @@ rm ~/Experiment/benchmarks/plots/*MOTIVATION*
 cd ~/Experiment/SiNUCA/scripts ;
 python plot.py ISPASS_motivation_spec_cpu2006.cfg ;
 python plot.py ISPASS_motivation_npb_omp.cfg ;
-cp ~/Experiment/benchmarks/plots/*MOTIVATION* ~/Dropbox/ISPASS/latex/Figures/
+cp ~/Experiment/benchmarks/plots/*MOTIVATION_LLC*.data ~/Dropbox/ISPASS/latex/Figures/Motivation_LLC_Size/
+cp ~/Experiment/benchmarks/plots/*MOTIVATION_LLC*.pdf ~/Dropbox/ISPASS/latex/Figures/Motivation_LLC_Size/
+cp ~/Experiment/benchmarks/plots/*MOTIVATION_*COPYBACK*.data ~/Dropbox/ISPASS/latex/Figures/Motivation_No_Copyback/
+cp ~/Experiment/benchmarks/plots/*MOTIVATION_*COPYBACK*.pdf ~/Dropbox/ISPASS/latex/Figures/Motivation_No_Copyback/
+cp ~/Experiment/benchmarks/plots/*MOTIVATION_*ENERGY*.data ~/Dropbox/ISPASS/latex/Figures/Motivation_Energy/
+cp ~/Experiment/benchmarks/plots/*MOTIVATION_*ENERGY*.pdf ~/Dropbox/ISPASS/latex/Figures/Motivation_Energy/
 
 
 ########################################################################
-## SPEC CPU 2000 and 2006
+## AHT_C OFFSET/PC ISPASS - VK3
 ########################################################################
 # Plots all the benchmarks
-reset;
-cd ~/Experiment/SiNUCA/scripts ;
-python power.py spec_cpu2000 BASE BASE_200M_spec_cpu2000 ;
-python power.py spec_cpu2000 DLEC DLEC_200M_spec_cpu2000 ;
-python power.py spec_cpu2006 BASE BASE_200M_spec_cpu2006 ;
-python power.py spec_cpu2006 DLEC DLEC_200M_spec_cpu2006 ;
-python plot.py parameters_spec2000.cfg ;
-python plot.py parameters_spec2006.cfg
-
+#rm ~/Experiment/benchmarks/results/spec_cpu2000/*BASE*
+#rm ~/Experiment/benchmarks/results/spec_cpu2000/*DLEC_NEC_OFFSET*
+#rm ~/Experiment/benchmarks/results/spec_cpu2000/*DLEC_NEC_PC*
+#rm ~/Experiment/benchmarks/results/spec_omp2001/*BASE*
+#rm ~/Experiment/benchmarks/results/spec_omp2001/*DLEC_NEC_OFFSET*
+#rm ~/Experiment/benchmarks/results/spec_omp2001/*DLEC_NEC_PC*
 for i in `seq 1 29` ; do
     byobu -p$i -X stuff "reset ; \
     cd ~/Experiment/SiNUCA/scripts ; \
     python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2000 BASE 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2006 BASE 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2000 DLEC 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2006 DLEC 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 BASE 0 8 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2000 DLEC_NEC_OFFSET 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 DLEC_NEC_OFFSET 0 8 $i $i ; \
     $(echo -ne '\r')";
 done
 
-# Run the Base and DSBP for all SPEC2000
-for i in `seq 1 26` ; do
-    byobu -p$i -X stuff "reset ; \
-    cd ~/Experiment/SiNUCA/scripts ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-Baseline-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2000 Base 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-DSBP-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2000 DSBP 0 1 $i $i ; \
-    $(echo -ne '\r')";
-done
-
-# Run the Base and DSBP for all SPEC2006
 for i in `seq 1 29` ; do
     byobu -p$i -X stuff "reset ; \
     cd ~/Experiment/SiNUCA/scripts ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-Baseline-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2006 Base 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-DSBP-1CoreNoPrefetch/main_1core_1cachel2_1cachel3.cfg spec_cpu2006 DSBP 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2000 DLEC_NEC_PC 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 DLEC_NEC_PC 0 8 $i $i ; \
     $(echo -ne '\r')";
 done
 
-########################################################################
-## NPB_OMP and SPEC OMP 2001
-########################################################################
-
-# Plots all the benchmarks
-reset;
+rm ~/Experiment/benchmarks/plots/*PC_OFFSET*
 cd ~/Experiment/SiNUCA/scripts ;
-python power.py npb_omp BASE BASE_200M_npb_omp ;
-python power.py npb_omp DLEC DLEC_200M_npb_omp ;
-python power.py spec_omp2001 BASE BASE_200M_spec_omp2001 ;
-python power.py spec_omp2001 DLEC DLEC_200M_spec_omp2001 ;
-python plot.py parameters_npb_omp.cfg ;
-python plot.py parameters_spec_omp2001.cfg ;
+python plot.py ISPASS_pc_offset_spec_cpu2000.cfg ;
+python plot.py ISPASS_pc_offset_spec_omp2001.cfg ;
+cp ~/Experiment/benchmarks/plots/*PC_OFFSET*.data ~/Dropbox/ISPASS/latex/Figures/NEC_AHTC_PC_or_PC_Offset/
+cp ~/Experiment/benchmarks/plots/*PC_OFFSET*.pdf ~/Dropbox/ISPASS/latex/Figures/NEC_AHTC_PC_or_PC_Offset/
 
 
+
+########################################################################
+## AHT_C OFFSET/PC ISPASS - VK4
+########################################################################
+# Plots all the benchmarks
+#rm ~/Experiment/benchmarks/results/spec_cpu2006/*BASE*
+#rm ~/Experiment/benchmarks/results/spec_cpu2006/*DLEC_NEC_OFFSET*
+#rm ~/Experiment/benchmarks/results/spec_cpu2006/*DLEC_NEC_PC*
+#rm ~/Experiment/benchmarks/results/npb_omp/*BASE*
+#rm ~/Experiment/benchmarks/results/npb_omp/*DLEC_NEC_OFFSET*
+#rm ~/Experiment/benchmarks/results/npb_omp/*DLEC_NEC_PC*
 # Run the Base and DSBP for all SPEC_OMP2001
-for i in `seq 1 11` ; do
+for i in `seq 1 29` ; do
     byobu -p$i -X stuff "reset ; \
     cd ~/Experiment/SiNUCA/scripts ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2006 BASE 0 1 $i $i ; \
     python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp BASE 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-BASE-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 BASE 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp DLEC 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 DLEC 0 8 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2006 DLEC_NEC_OFFSET 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp DLEC_NEC_OFFSET 0 8 $i $i ; \
     $(echo -ne '\r')";
 done
 
-
-# Run the Base and DSBP for all NPB_OMP
-for i in `seq 1 9` ; do
+for i in `seq 1 29` ; do
     byobu -p$i -X stuff "reset ; \
     cd ~/Experiment/SiNUCA/scripts ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-Baseline-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp Base 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp DSBP 0 8 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_cpu2006 DLEC_NEC_PC 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/ISPASS-DLEC-8CoresPrefetch/main_8cores_8cachel2_1cacheL3.cfg npb_omp DLEC_NEC_PC 0 8 $i $i ; \
     $(echo -ne '\r')";
 done
 
-
-# Run the Base and DSBP for all SPEC_OMP2001
-for i in `seq 1 11` ; do
-    byobu -p$i -X stuff "reset ; \
-    cd ~/Experiment/SiNUCA/scripts ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-Baseline-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 Base 0 8 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/configurations/Non_Inclusive/SBAC-DSBP-8CoresNoPrefetch/main_8cores_8cachel2_1cacheL3.cfg spec_omp2001 DSBP 0 8 $i $i ; \
-    $(echo -ne '\r')";
-done
+rm ~/Experiment/benchmarks/plots/*PC_OFFSET*
+cd ~/Experiment/SiNUCA/scripts ;
+python plot.py ISPASS_pc_offset_spec_cpu2006.cfg ;
+python plot.py ISPASS_pc_offset_npb_omp.cfg ;
+cp ~/Experiment/benchmarks/plots/*PC_OFFSET*.data ~/Dropbox/ISPASS/latex/Figures/NEC_AHTC_PC_or_PC_Offset/
+cp ~/Experiment/benchmarks/plots/*PC_OFFSET*.pdf ~/Dropbox/ISPASS/latex/Figures/NEC_AHTC_PC_or_PC_Offset/

@@ -142,11 +142,14 @@ void line_usage_predictor_line_stats_t::line_hit(memory_package_t *package, uint
     this->add_stat_line_hit();
 
     /// Statistics
+    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_first_read != 0, "First access should be different from 0.\n");
+    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_last_read != 0, "Last access should be different from 0.\n");
+
     this->metadata_sets[index].ways[way].stat_access_counter++;
     this->metadata_sets[index].ways[way].stat_clock_last_read = sinuca_engine.get_global_cycle();
 
     if (package->memory_operation == MEMORY_OPERATION_WRITE) {
-        this->metadata_sets[index].ways[way].stat_write_counter++;        
+        this->metadata_sets[index].ways[way].stat_write_counter++;
         /// First write
         if (this->metadata_sets[index].ways[way].stat_clock_first_write == 0) {
             this->metadata_sets[index].ways[way].stat_clock_first_write = sinuca_engine.get_global_cycle();
@@ -184,6 +187,7 @@ void line_usage_predictor_line_stats_t::line_miss(memory_package_t *package, uin
 
     /// Statistics
     this->metadata_sets[index].ways[way].stat_clock_first_read = sinuca_engine.get_global_cycle();
+    this->metadata_sets[index].ways[way].stat_clock_last_read = sinuca_engine.get_global_cycle();
 
 
     // Clean the metadata entry
@@ -223,6 +227,10 @@ void line_usage_predictor_line_stats_t::line_send_copyback(memory_package_t *pac
     (void)index;
     (void)way;
 
+    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_first_read != 0, "First access should be different from 0.\n");
+    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_last_read != 0, "Last access should be different from 0.\n");
+
+
     this->metadata_sets[index].ways[way].is_dirty = false;
     this->metadata_sets[index].ways[way].need_copyback = false;
 };
@@ -239,15 +247,20 @@ void line_usage_predictor_line_stats_t::line_recv_copyback(memory_package_t *pac
     (void)index;
     (void)way;
 
+    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_first_read != 0, "First access should be different from 0.\n");
+    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_last_read != 0, "Last access should be different from 0.\n");
+
     this->metadata_sets[index].ways[way].is_dirty = true;
     this->metadata_sets[index].ways[way].need_copyback = true;
 
     /// Compute Dead Cycles
     this->dead_cycles += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].stat_clock_last_read;
+    this->alive_cycles += this->metadata_sets[index].ways[way].stat_clock_last_read - this->metadata_sets[index].ways[way].stat_clock_first_read;
+    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_last_read >= this->metadata_sets[index].ways[way].stat_clock_first_read, "Possible underflow");
 
     /// Statistics
-    this->metadata_sets[index].ways[way].stat_clock_first_read = sinuca_engine.get_global_cycle();    
-    this->metadata_sets[index].ways[way].stat_clock_last_read = sinuca_engine.get_global_cycle();    
+    this->metadata_sets[index].ways[way].stat_clock_first_read = sinuca_engine.get_global_cycle();
+    this->metadata_sets[index].ways[way].stat_clock_last_read = sinuca_engine.get_global_cycle();
 
     this->metadata_sets[index].ways[way].stat_write_counter++;
     this->metadata_sets[index].ways[way].stat_clock_last_write = sinuca_engine.get_global_cycle();
@@ -275,7 +288,8 @@ void line_usage_predictor_line_stats_t::line_eviction(uint32_t index, uint32_t w
 
     /// Compute Dead Cycles
     this->dead_cycles += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].stat_clock_last_read;
-
+    this->alive_cycles += this->metadata_sets[index].ways[way].stat_clock_last_read - this->metadata_sets[index].ways[way].stat_clock_first_read;
+    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_last_read >= this->metadata_sets[index].ways[way].stat_clock_first_read, "Possible underflow");
 
     //==================================================================
     // Statistics
@@ -329,7 +343,7 @@ void line_usage_predictor_line_stats_t::line_eviction(uint32_t index, uint32_t w
     if (this->metadata_sets[index].ways[way].stat_clock_first_write != 0) {
         ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_last_read != 0, "Possible not read line");
         ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_last_write != 0, "Possible not written line");
-        
+
         ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_last_read >= this->metadata_sets[index].ways[way].stat_clock_last_write, "Possible underflow");
         this->cycles_last_write_to_last_access += this->metadata_sets[index].ways[way].stat_clock_last_read - this->metadata_sets[index].ways[way].stat_clock_last_write;
         ERROR_ASSERT_PRINTF(sinuca_engine.get_global_cycle() >= this->metadata_sets[index].ways[way].stat_clock_last_write, "Possible underflow");
@@ -387,7 +401,7 @@ void line_usage_predictor_line_stats_t::reset_statistics() {
     this->stat_line_miss = 0;
     this->stat_sub_block_miss = 0;
     this->stat_send_copyback = 0;
-    this->stat_recv_copyback = 0;    
+    this->stat_recv_copyback = 0;
     this->stat_eviction = 0;
     this->stat_invalidation = 0;
 
@@ -412,6 +426,7 @@ void line_usage_predictor_line_stats_t::reset_statistics() {
     this->cycles_last_access_to_eviction = 0;
 
     this->dead_cycles = 0;
+    this->alive_cycles = 0;
 };
 
 /// ============================================================================
@@ -466,6 +481,7 @@ void line_usage_predictor_line_stats_t::print_statistics() {
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "dead_cycles", dead_cycles);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "alive_cycles", alive_cycles);
 };
 
 /// ============================================================================

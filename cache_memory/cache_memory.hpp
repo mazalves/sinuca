@@ -207,8 +207,8 @@ class cache_memory_t : public interconnection_interface_t {
         /// Methods called by the directory to add statistics and others
         void cache_hit(memory_package_t *package);
         void cache_miss(memory_package_t *package);
-        void cache_invalidate(uint64_t memory_address, bool is_copyback);
-        void cache_evict(uint64_t memory_address, bool is_copyback);
+        void cache_invalidate(bool is_copyback);
+        void cache_evict(bool is_copyback);
 
         INSTANTIATE_GET_SET(uint32_t, cache_id)
         INSTANTIATE_GET_SET(uint32_t, bank_number)

@@ -663,6 +663,17 @@ void sinuca_engine_t::initialize_cache_memory() {
                 line_usage_predictor_parameters.push_back("USAGE_COUNTER_BITS");
                 line_usage_predictor_ptr->set_access_counter_bits( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
 
+
+
+                line_usage_predictor_parameters.push_back("EARLY_EVICTION");
+                line_usage_predictor_ptr->set_early_eviction( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+                line_usage_predictor_parameters.push_back("EARLY_COPYBACK");
+                line_usage_predictor_ptr->set_early_copyback( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+                line_usage_predictor_parameters.push_back("TURNOFF_DEAD_LINES");
+                line_usage_predictor_ptr->set_turnoff_dead_lines( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
                 /// AHTM
                 line_usage_predictor_parameters.push_back("AHTM_LINE_NUMBER");
                 line_usage_predictor_ptr->set_ahtm_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );

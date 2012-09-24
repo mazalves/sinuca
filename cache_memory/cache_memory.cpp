@@ -663,8 +663,7 @@ void cache_memory_t::cache_miss(memory_package_t *package) {
     }
 };
 /// ============================================================================
-void cache_memory_t::cache_invalidate(uint64_t memory_address, bool is_copyback) {
-    ERROR_ASSERT_PRINTF(memory_address != 0, "Invalid memory_address.\n")
+void cache_memory_t::cache_invalidate(bool is_copyback) {
     if (is_copyback) {
         this->add_stat_invalidation_copyback();
     }
@@ -674,8 +673,7 @@ void cache_memory_t::cache_invalidate(uint64_t memory_address, bool is_copyback)
 };
 
 /// ============================================================================
-void cache_memory_t::cache_evict(uint64_t memory_address, bool is_copyback) {
-    ERROR_ASSERT_PRINTF(memory_address != 0, "Invalid memory_address.\n")
+void cache_memory_t::cache_evict(bool is_copyback) {
     if (is_copyback) {
         this->add_stat_eviction_copyback();
     }
@@ -806,7 +804,7 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& i
 
 /// ============================================================================
 void cache_memory_t::change_address(cache_line_t *line, uint64_t new_memory_address) {
-    ERROR_ASSERT_PRINTF(line != NULL, "Can not change the tag address of a NULL line.\n")
+    ERROR_ASSERT_PRINTF(line != NULL, "Cannot change the tag address of a NULL line.\n")
     line->tag = new_memory_address;
     return;
 };
@@ -814,14 +812,14 @@ void cache_memory_t::change_address(cache_line_t *line, uint64_t new_memory_addr
 
 /// ============================================================================
 void cache_memory_t::change_status(cache_line_t *line, protocol_status_t status) {
-    ERROR_ASSERT_PRINTF(line != NULL, "Can not change the status of a NULL line.\n")
+    ERROR_ASSERT_PRINTF(line != NULL, "Cannot change the status of a NULL line.\n")
     line->status = status;
     return;
 };
 
 /// ============================================================================
 void cache_memory_t::update_last_access(cache_line_t *line) {
-    ERROR_ASSERT_PRINTF(line != NULL, "Can not change the last_access of a NULL line.\n")
+    ERROR_ASSERT_PRINTF(line != NULL, "Cannot change the last_access of a NULL line.\n")
     line->last_access = sinuca_engine.get_global_cycle();
     line->usage_counter++;
     return;

@@ -142,7 +142,7 @@ void line_usage_predictor_dlec_t::fill_package_sub_blocks(memory_package_t *pack
 /// ============================================================================
 void line_usage_predictor_dlec_t::line_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->content_to_string().c_str())
-    
+
     (void)package;
     (void)index;
     (void)way;
@@ -171,14 +171,17 @@ bool line_usage_predictor_dlec_t::check_sub_block_is_hit(memory_package_t *packa
 bool line_usage_predictor_dlec_t::check_line_is_last_access(uint32_t index, uint32_t way){
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_access()\n")
 
-    return (this->metadata_sets[index].ways[way].is_dead && this->metadata_sets[index].ways[way].is_last_access);
+    return (this->metadata_sets[index].ways[way].is_dead &&
+            this->early_eviction &&
+            this->metadata_sets[index].ways[way].is_last_access);
 };
 
 /// ============================================================================
 bool line_usage_predictor_dlec_t::check_line_is_last_write(uint32_t index, uint32_t way){
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_access()\n")
 
-    return (this->metadata_sets[index].ways[way].is_last_write);
+    return (this->metadata_sets[index].ways[way].is_last_write &&
+            this->early_copyback);
 };
 
 /// ============================================================================
@@ -199,7 +202,7 @@ void line_usage_predictor_dlec_t::line_hit(memory_package_t *package, uint32_t i
     this->metadata_sets[index].ways[way].stat_clock_last_read = sinuca_engine.get_global_cycle();
 
     if (package->memory_operation == MEMORY_OPERATION_WRITE) {
-        this->metadata_sets[index].ways[way].stat_write_counter++;        
+        this->metadata_sets[index].ways[way].stat_write_counter++;
         /// First write
         if (this->metadata_sets[index].ways[way].stat_clock_first_write == 0) {
             this->metadata_sets[index].ways[way].stat_clock_first_write = sinuca_engine.get_global_cycle();
@@ -272,8 +275,8 @@ void line_usage_predictor_dlec_t::line_hit(memory_package_t *package, uint32_t i
         if (this->metadata_sets[index].ways[way].overflow == false &&
         this->metadata_sets[index].ways[way].real_access_counter == this->metadata_sets[index].ways[way].access_counter) {
             //Predicted as DEAD
-            this->metadata_sets[index].ways[way].is_dead = true;            
-            if (this->metadata_sets[index].ways[way].need_copyback == false) {
+            this->metadata_sets[index].ways[way].is_dead = true;
+            if (this->metadata_sets[index].ways[way].need_copyback == false && this->turnoff_dead_lines == true) {
                 // METADATA Turn off the sub_blocks
                 this->metadata_sets[index].ways[way].valid_sub_blocks = LINE_SUB_BLOCK_DISABLE;
                 this->metadata_sets[index].ways[way].clock_become_dead = sinuca_engine.get_global_cycle();
@@ -422,7 +425,7 @@ void line_usage_predictor_dlec_t::sub_block_miss(memory_package_t *package, uint
 
     // Enable Learn_mode
     this->metadata_sets[index].ways[way].learn_mode = true;
-    this->metadata_sets[index].ways[way].is_dirty = false;
+    // ~ this->metadata_sets[index].ways[way].is_dirty = false;
     this->metadata_sets[index].ways[way].need_copyback = false;
     this->metadata_sets[index].ways[way].is_dead = false;
     // ~ this->metadata_sets[index].ways[way].real_access_counter = 0;
@@ -437,7 +440,7 @@ void line_usage_predictor_dlec_t::sub_block_miss(memory_package_t *package, uint
 void line_usage_predictor_dlec_t::line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->content_to_string().c_str())
     this->add_stat_send_copyback();         /// Access Statistics
-    
+
     (void)package;
     (void)index;
     (void)way;
@@ -455,8 +458,8 @@ void line_usage_predictor_dlec_t::line_send_copyback(memory_package_t *package, 
         if (this->metadata_sets[index].ways[way].overflow == false &&
         this->metadata_sets[index].ways[way].real_access_counter == this->metadata_sets[index].ways[way].access_counter) {
             //Predicted as DEAD
-            this->metadata_sets[index].ways[way].is_dead = true;            
-            if (this->metadata_sets[index].ways[way].need_copyback == false) {
+            this->metadata_sets[index].ways[way].is_dead = true;
+            if (this->metadata_sets[index].ways[way].need_copyback == false && this->turnoff_dead_lines == true) {
                 // METADATA Turn off the sub_blocks
                 this->metadata_sets[index].ways[way].valid_sub_blocks = LINE_SUB_BLOCK_DISABLE;
                 this->metadata_sets[index].ways[way].clock_become_dead = sinuca_engine.get_global_cycle();
@@ -484,9 +487,9 @@ void line_usage_predictor_dlec_t::line_recv_copyback(memory_package_t *package, 
     this->metadata_sets[index].ways[way].stat_write_counter++;
     this->metadata_sets[index].ways[way].stat_clock_last_write = sinuca_engine.get_global_cycle();
 
-    this->metadata_sets[index].ways[way].stat_clock_first_read = sinuca_engine.get_global_cycle();    
-    this->metadata_sets[index].ways[way].stat_clock_last_read = sinuca_engine.get_global_cycle();    
-    
+    this->metadata_sets[index].ways[way].stat_clock_first_read = sinuca_engine.get_global_cycle();
+    this->metadata_sets[index].ways[way].stat_clock_last_read = sinuca_engine.get_global_cycle();
+
     /// First write
     if (this->metadata_sets[index].ways[way].stat_clock_first_write == 0) {
         this->metadata_sets[index].ways[way].stat_clock_first_write = sinuca_engine.get_global_cycle();
@@ -524,7 +527,7 @@ void line_usage_predictor_dlec_t::line_recv_copyback(memory_package_t *package, 
         this->metadata_sets[index].ways[way].need_copyback = true;
         this->metadata_sets[index].ways[way].valid_sub_blocks = LINE_SUB_BLOCK_COPYBACK;
 
-        this->metadata_sets[index].ways[way].is_last_write = ahtc_line->is_last_write;        
+        this->metadata_sets[index].ways[way].is_last_write = ahtc_line->is_last_write;
         this->metadata_sets[index].ways[way].access_counter = ahtc_line->access_counter;
         this->metadata_sets[index].ways[way].overflow = ahtc_line->overflow;
         this->metadata_sets[index].ways[way].is_last_access = ahtc_line->is_last_access;
@@ -544,8 +547,8 @@ void line_usage_predictor_dlec_t::line_recv_copyback(memory_package_t *package, 
         this->add_stat_ahtc_access();
         this->add_stat_ahtc_miss();
         ahtc_line->opcode_address = package->opcode_address;
-        ahtc_line->offset = package->memory_address & sinuca_engine.get_global_offset_bits_mask();
-        // ~ ahtc_line->offset = 0;
+        // ~ ahtc_line->offset = package->memory_address & sinuca_engine.get_global_offset_bits_mask();
+        ahtc_line->offset = 0;
         ahtc_line->last_access = sinuca_engine.get_global_cycle();
         ahtc_line->pointer = true;
         ahtc_line->access_counter = 0;
@@ -583,7 +586,7 @@ void line_usage_predictor_dlec_t::line_eviction(uint32_t index, uint32_t way) {
         this->add_stat_is_last_access_correct();
     }
     else {
-        this->add_stat_is_last_access_wrong();
+        this->add_stat_is_last_access_over();
     }
 
     if (this->metadata_sets[index].ways[way].is_dirty == true) {
@@ -591,26 +594,26 @@ void line_usage_predictor_dlec_t::line_eviction(uint32_t index, uint32_t way) {
             this->add_stat_is_last_write_correct();
         }
         else {
-            this->add_stat_is_last_write_wrong();
+            this->add_stat_is_last_write_over();
         }
 
         switch (this->metadata_sets[index].ways[way].valid_sub_blocks) {
             case LINE_SUB_BLOCK_LEARN:
                 this->add_stat_line_copyback_learn();
             break;
-    
+
             case LINE_SUB_BLOCK_NORMAL:
                 ERROR_PRINTF("Wrong state.\n")
             break;
-    
+
             case LINE_SUB_BLOCK_DISABLE:
                 this->add_stat_line_copyback_disable_correct();
             break;
-    
+
             case LINE_SUB_BLOCK_WRONG_FIRST:
                 this->add_stat_line_copyback_disable_under();
             break;
-        
+
             case LINE_SUB_BLOCK_COPYBACK:
                 if (this->metadata_sets[index].ways[way].overflow) {
                     this->add_stat_line_copyback_normal_correct();
@@ -626,7 +629,7 @@ void line_usage_predictor_dlec_t::line_eviction(uint32_t index, uint32_t way) {
             case LINE_SUB_BLOCK_LEARN:
                 this->add_stat_line_miss_learn();
             break;
-    
+
             case LINE_SUB_BLOCK_NORMAL:
                 if (this->metadata_sets[index].ways[way].overflow) {
                     this->add_stat_line_miss_normal_correct();
@@ -635,15 +638,15 @@ void line_usage_predictor_dlec_t::line_eviction(uint32_t index, uint32_t way) {
                     this->add_stat_line_miss_normal_over();
                 }
             break;
-    
+
             case LINE_SUB_BLOCK_DISABLE:
                 this->add_stat_line_miss_disable_correct();
             break;
-    
+
             case LINE_SUB_BLOCK_WRONG_FIRST:
                 this->add_stat_line_miss_disable_under();
             break;
-        
+
             case LINE_SUB_BLOCK_COPYBACK:
                 ERROR_PRINTF("Wrong state.\n")
             break;
@@ -707,7 +710,7 @@ void line_usage_predictor_dlec_t::line_eviction(uint32_t index, uint32_t way) {
     if (this->metadata_sets[index].ways[way].stat_clock_first_write != 0) {
         ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_last_read != 0, "Possible not read line");
         ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_last_write != 0, "Possible not written line");
-        
+
         ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].stat_clock_last_read >= this->metadata_sets[index].ways[way].stat_clock_last_write, "Possible underflow");
         this->cycles_last_write_to_last_access += this->metadata_sets[index].ways[way].stat_clock_last_read - this->metadata_sets[index].ways[way].stat_clock_last_write;
         ERROR_ASSERT_PRINTF(sinuca_engine.get_global_cycle() >= this->metadata_sets[index].ways[way].stat_clock_last_write, "Possible underflow");
@@ -715,7 +718,7 @@ void line_usage_predictor_dlec_t::line_eviction(uint32_t index, uint32_t way) {
     }
     ERROR_ASSERT_PRINTF(sinuca_engine.get_global_cycle() >= this->metadata_sets[index].ways[way].stat_clock_last_read, "Possible underflow");
     this->cycles_last_access_to_eviction += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].stat_clock_last_read;
-    
+
     this->metadata_sets[index].ways[way].reset_statistics();
 
     /// AHT_M
@@ -752,7 +755,7 @@ void line_usage_predictor_dlec_t::line_eviction(uint32_t index, uint32_t way) {
     /// AHT_C
     else {
         ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].ahtm_pointer == NULL, "Dirty line should not point to AHT_M\n");
-        
+
         aht_line_t *ahtc_line = this->metadata_sets[index].ways[way].ahtc_pointer;
         // ahtc HIT
         if (ahtc_line != NULL) {
@@ -794,7 +797,7 @@ void line_usage_predictor_dlec_t::line_invalidation(uint32_t index, uint32_t way
     //==================================================================
     // Prediction Accuracy Statistics
     if (this->metadata_sets[index].ways[way].is_last_access) {
-        this->add_stat_is_last_access_wrong();
+        this->add_stat_is_last_access_under();
     }
     else {
         this->add_stat_is_last_access_correct();
@@ -802,7 +805,7 @@ void line_usage_predictor_dlec_t::line_invalidation(uint32_t index, uint32_t way
 
     if (this->metadata_sets[index].ways[way].is_dirty == true) {
         if (this->metadata_sets[index].ways[way].is_last_write) {
-            this->add_stat_is_last_write_wrong();
+            this->add_stat_is_last_write_under();
         }
         else {
             this->add_stat_is_last_write_correct();
@@ -812,19 +815,19 @@ void line_usage_predictor_dlec_t::line_invalidation(uint32_t index, uint32_t way
             case LINE_SUB_BLOCK_LEARN:
                 this->add_stat_line_copyback_learn();
             break;
-    
+
             case LINE_SUB_BLOCK_NORMAL:
                 ERROR_PRINTF("Wrong state.\n")
             break;
-    
+
             case LINE_SUB_BLOCK_DISABLE:
                 this->add_stat_line_copyback_disable_correct();
             break;
-    
+
             case LINE_SUB_BLOCK_WRONG_FIRST:
                 this->add_stat_line_copyback_disable_under();
             break;
-        
+
             case LINE_SUB_BLOCK_COPYBACK:
                 if (this->metadata_sets[index].ways[way].overflow) {
                     this->add_stat_line_copyback_normal_correct();
@@ -840,7 +843,7 @@ void line_usage_predictor_dlec_t::line_invalidation(uint32_t index, uint32_t way
             case LINE_SUB_BLOCK_LEARN:
                 this->add_stat_line_miss_learn();
             break;
-    
+
             case LINE_SUB_BLOCK_NORMAL:
                 if (this->metadata_sets[index].ways[way].overflow) {
                     this->add_stat_line_miss_normal_correct();
@@ -849,15 +852,15 @@ void line_usage_predictor_dlec_t::line_invalidation(uint32_t index, uint32_t way
                     this->add_stat_line_miss_normal_over();
                 }
             break;
-    
+
             case LINE_SUB_BLOCK_DISABLE:
                 this->add_stat_line_miss_disable_correct();
             break;
-    
+
             case LINE_SUB_BLOCK_WRONG_FIRST:
                 this->add_stat_line_miss_disable_under();
             break;
-        
+
             case LINE_SUB_BLOCK_COPYBACK:
                 ERROR_PRINTF("Wrong state.\n")
             break;
@@ -867,7 +870,7 @@ void line_usage_predictor_dlec_t::line_invalidation(uint32_t index, uint32_t way
     /// AHT_M
     if (this->metadata_sets[index].ways[way].is_dirty == false) {
         ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].ahtc_pointer == NULL, "Clean line should not point to AHT_C\n");
-        
+
         aht_line_t *ahtm_line = this->metadata_sets[index].ways[way].ahtm_pointer;
         // ahtm HIT
         if (ahtm_line != NULL) {
@@ -897,7 +900,7 @@ void line_usage_predictor_dlec_t::line_invalidation(uint32_t index, uint32_t way
     /// AHT_C
     else {
         ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].ahtm_pointer == NULL, "Dirty line should not point to AHT_M\n");
-                
+
         aht_line_t *ahtc_line = this->metadata_sets[index].ways[way].ahtc_pointer;
         // ahtc HIT
         if (ahtc_line != NULL) {
@@ -1001,9 +1004,9 @@ aht_line_t* line_usage_predictor_dlec_t::ahtm_evict_address(uint64_t opcode_addr
 aht_line_t* line_usage_predictor_dlec_t::ahtc_find_line(uint64_t opcode_address, uint64_t memory_address) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("ahtc_find_line()\n")
     uint32_t ahtc_index = opcode_address & this->ahtc_index_bits_mask;
-    uint32_t ahtc_offset = memory_address & sinuca_engine.get_global_offset_bits_mask();
-    // ~ (void)memory_address;
-    // ~ uint32_t ahtc_offset = 0;
+    // ~ uint32_t ahtc_offset = memory_address & sinuca_engine.get_global_offset_bits_mask();
+    (void)memory_address;
+    uint32_t ahtc_offset = 0;
 
     ERROR_ASSERT_PRINTF(ahtc_offset < sinuca_engine.get_global_line_size(), "Wrong offset %d > line_size %d", ahtc_offset, sinuca_engine.get_global_line_size());
     ERROR_ASSERT_PRINTF(ahtc_index < this->ahtc_total_sets, "Wrong index %d > total_sets %d", ahtc_index, this->ahtc_total_sets);
@@ -1022,9 +1025,9 @@ aht_line_t* line_usage_predictor_dlec_t::ahtc_find_line(uint64_t opcode_address,
 aht_line_t* line_usage_predictor_dlec_t::ahtc_evict_address(uint64_t opcode_address, uint64_t memory_address) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("ahtc_evict_address()\n")
     uint32_t ahtc_index = opcode_address & this->ahtc_index_bits_mask;
-    uint32_t ahtc_offset = memory_address & sinuca_engine.get_global_offset_bits_mask();
-    // ~ (void)memory_address;
-    // ~ uint32_t ahtc_offset = 0;
+    // ~ uint32_t ahtc_offset = memory_address & sinuca_engine.get_global_offset_bits_mask();
+    (void)memory_address;
+    uint32_t ahtc_offset = 0;
 
 
     ERROR_ASSERT_PRINTF(ahtc_offset < sinuca_engine.get_global_line_size(), "Wrong offset %d > line_size %d", ahtc_offset, sinuca_engine.get_global_line_size());
@@ -1123,11 +1126,13 @@ void line_usage_predictor_dlec_t::reset_statistics() {
     this->stat_line_copyback_disable_correct = 0;
     this->stat_line_copyback_disable_under = 0;
 
+    this->stat_is_last_access_over = 0;
     this->stat_is_last_access_correct = 0;
-    this->stat_is_last_access_wrong = 0;
-    
+    this->stat_is_last_access_under = 0;
+
+    this->stat_is_last_write_over = 0;
     this->stat_is_last_write_correct = 0;
-    this->stat_is_last_write_wrong = 0;
+    this->stat_is_last_write_under = 0;
 
     /// general statistics
     this->stat_line_access_0 = 0;
@@ -1198,10 +1203,14 @@ void line_usage_predictor_dlec_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_copyback_disable_under", stat_line_copyback_disable_under);
 
     sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_is_last_access_over", stat_is_last_access_over);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_is_last_access_correct", stat_is_last_access_correct);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_is_last_access_wrong", stat_is_last_access_wrong);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_is_last_access_under", stat_is_last_access_under);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_is_last_write_over", stat_is_last_write_over);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_is_last_write_correct", stat_is_last_write_correct);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_is_last_write_wrong", stat_is_last_write_wrong);        
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_is_last_write_under", stat_is_last_write_under);
 
     /// general statistics
     sinuca_engine.write_statistics_small_separator();
@@ -1249,6 +1258,10 @@ void line_usage_predictor_dlec_t::print_configuration() {
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "access_counter_bits", access_counter_bits);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "access_counter_max", access_counter_max);
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "early_eviction", early_eviction);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "early_copyback", early_copyback);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "turnoff_dead_lines", turnoff_dead_lines);
 
     /// metadata
     sinuca_engine.write_statistics_small_separator();

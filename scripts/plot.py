@@ -11,8 +11,8 @@ def gnulot_base(TMP_GNU_FILE_NAME):
     TMP_GNU_FILE.write("reset\n")
     ##########################
     # Output
-    TMP_GNU_FILE.write("set terminal jpeg medium size 1280,1024 font Helvetica 16\n")
-
+    # ~ TMP_GNU_FILE.write("set terminal jpeg medium size 1920,1080 font Helvetica 16\n")
+    TMP_GNU_FILE.write("set term postscript landscape noenhanced color solid \"Helvetica\" 8 \n")
     ##########################
     # Scale
     TMP_GNU_FILE.write("set autoscale x\n")
@@ -293,8 +293,8 @@ for cfg_line in cfg_file:
             output_gnuplot_file.write("set style fill solid border 1\n")
             output_gnuplot_file.write("set boxwidth 1.0\n")
             output_gnuplot_file.write("set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000\n")
-            output_gnuplot_file.write("set title '" + arg_output_results_filename + "' \n")
-            output_gnuplot_file.write("set output '"+arg_output_results_filename+".jpeg' \n")
+            output_gnuplot_file.write("set title \"" + arg_output_results_filename + "\" \n")
+            output_gnuplot_file.write("set output \""+arg_output_results_filename+".ps\" \n")
 
             # First two values are Architecture + Application
             title_size = 1
@@ -317,8 +317,8 @@ for cfg_line in cfg_file:
             output_gnuplot_file.write("set style fill solid border 1\n")
             output_gnuplot_file.write("set boxwidth 1.0\n")
             output_gnuplot_file.write("set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000\n")
-            output_gnuplot_file.write("set title '" + arg_output_results_filename + "_NORMALIZED' \n")
-            output_gnuplot_file.write("set output '"+arg_output_results_filename+".jpeg' \n")
+            output_gnuplot_file.write("set title \"" + arg_output_results_filename + "_NORMALIZED\" \n")
+            output_gnuplot_file.write("set output \""+arg_output_results_filename+".ps\" \n")
 
             # First two values are Architecture + Application
             title_size = 1
@@ -343,8 +343,9 @@ for cfg_line in cfg_file:
             output_gnuplot_file.write("set style fill solid border -1\n")
             output_gnuplot_file.write("set boxwidth 0.80\n")
             output_gnuplot_file.write("set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000\n")
-            output_gnuplot_file.write("set title '" + arg_output_results_filename + "' \n")
-            output_gnuplot_file.write("set output '" + arg_output_results_filename + ".jpeg' \n")
+            output_gnuplot_file.write("set title \"" + arg_output_results_filename + "\" \n")
+            output_gnuplot_file.write("set output \""+arg_output_results_filename+".ps\" \n")
+
 
             # First two values are Architecture + Application
             title_size = 1
@@ -369,8 +370,8 @@ for cfg_line in cfg_file:
             output_gnuplot_file.write("set style fill solid border -1\n")
             output_gnuplot_file.write("set boxwidth 0.80\n")
             output_gnuplot_file.write("set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000\n")
-            output_gnuplot_file.write("set title '" + arg_output_results_filename + "_NORMALIZED' \n")
-            output_gnuplot_file.write("set output '" + arg_output_results_filename + ".jpeg' \n")
+            output_gnuplot_file.write("set title \"" + arg_output_results_filename + "_NORMALIZED\" \n")
+            output_gnuplot_file.write("set output \"" + arg_output_results_filename + ".ps\" \n")
 
             # First two values are Architecture + Application
             title_size = 1
@@ -396,8 +397,9 @@ for cfg_line in cfg_file:
             output_gnuplot_file.write("set style fill solid border -1\n")
             output_gnuplot_file.write("set boxwidth 0.80\n")
             output_gnuplot_file.write("set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000\n")
-            output_gnuplot_file.write("set title '" + arg_output_results_filename + "' \n")
-            output_gnuplot_file.write("set output '" + arg_output_results_filename + ".jpeg' \n")
+            output_gnuplot_file.write("set title \"" + arg_output_results_filename + "\" \n")
+            output_gnuplot_file.write("set output \""+arg_output_results_filename+".ps\" \n")
+
 
             # First two values are Architecture + Application
             title_size = 1
@@ -423,8 +425,9 @@ for cfg_line in cfg_file:
             output_gnuplot_file.write("set style fill solid border -1\n")
             output_gnuplot_file.write("set boxwidth 0.80\n")
             output_gnuplot_file.write("set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000\n")
-            output_gnuplot_file.write("set title '" + arg_output_results_filename + "' \n")
-            output_gnuplot_file.write("set output '" + arg_output_results_filename + ".jpeg' \n")
+            output_gnuplot_file.write("set title \"" + arg_output_results_filename + "\" \n")
+            output_gnuplot_file.write("set output \""+arg_output_results_filename+".ps\" \n")
+
 
             # First two values are Architecture + Application
             title_size = 1
@@ -448,7 +451,10 @@ for cfg_line in cfg_file:
 
         PRINT("gnuplot " + arg_gnuplot_filename)
         os.system("gnuplot " + arg_gnuplot_filename)
-
+        pdf_output_results_filename = arg_output_results_filename.replace(".data",".pdf")
+        os.system("ps2pdf " + arg_output_results_filename + ".ps " + pdf_output_results_filename)
+        os.system("echo " + arg_output_results_filename)
+        os.system("echo " + pdf_output_results_filename)
 
 cfg_file.close()
 sys.exit()

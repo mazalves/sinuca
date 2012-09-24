@@ -129,7 +129,7 @@ class directory_controller_t : public interconnection_interface_t {
         protocol_status_t find_cache_line_higher_levels(cache_memory_t *cache_memory, memory_package_t *package, bool check_llc);
 
         void coherence_invalidate_all(cache_memory_t *cache_memory, uint64_t memory_address);
-        void coherence_invalidate_higher_levels(cache_memory_t *cache_memory, uint64_t memory_address);
+        void coherence_evict_higher_levels(cache_memory_t *cache_memory, uint64_t memory_address);
 
         void coherence_new_operation(cache_memory_t *cache_memory, cache_line_t *cache_line,  memory_package_t *package, bool is_hit);
 
