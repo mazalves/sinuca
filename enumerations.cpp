@@ -109,7 +109,7 @@ const char *get_enum_component_char(component_t type) {
     switch (type) {
         case COMPONENT_PROCESSOR:                   return "PROCESSOR"; break;
         case COMPONENT_CACHE_MEMORY:                return "CACHE_MEMORY"; break;
-        case COMPONENT_MEMORY_CONTROLLER:                 return "MEMORY_CONTROLLER"; break;
+        case COMPONENT_MEMORY_CONTROLLER:           return "MEMORY_CONTROLLER"; break;
         case COMPONENT_INTERCONNECTION_ROUTER:      return "INTERCONNECTION_ROUTER"; break;
         case COMPONENT_DIRECTORY_CONTROLLER:        return "DIRECTORY_CONTROLLER"; break;
         case COMPONENT_INTERCONNECTION_CONTROLLER:  return "INTERCONNECTION_CONTROLLER"; break;
@@ -174,7 +174,6 @@ const char *get_enum_sync_char(sync_t type) {
     ERROR_PRINTF("Wrong SYNC\n");
     return "FAIL";
 };
-
 
 
 /// ============================================================================
@@ -272,7 +271,7 @@ const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_polic
         case LINE_USAGE_PREDICTOR_POLICY_DLEC:              return "DLEC";          break;
         case LINE_USAGE_PREDICTOR_POLICY_LWP:               return "LWP";           break;
         case LINE_USAGE_PREDICTOR_POLICY_SUBBLOCK_STATS:    return "SUBBLOCK_STATS";    break;
-        case LINE_USAGE_PREDICTOR_POLICY_LINE_STATS:        return "LINE_STATS";    break;        
+        case LINE_USAGE_PREDICTOR_POLICY_LINE_STATS:        return "LINE_STATS";    break;
         case LINE_USAGE_PREDICTOR_POLICY_DISABLE:           return "DISABLE";       break;
     };
     ERROR_PRINTF("Wrong LINE_USAGE_PREDICTOR_POLICY\n");

@@ -339,6 +339,8 @@ void processor_t::synchronize(sync_t new_sync) {
                 }
             }
 
+
+
             bool is_last_barrier = true;
             for (uint32_t proc = 0; proc < sinuca_engine.get_processor_array_size(); proc++) {
                 if (proc != this->get_core_id() && !sinuca_processor[proc]->trace_over) {
@@ -415,6 +417,7 @@ void processor_t::stage_fetch() {
             valid_opcode = sinuca_engine.trace_reader->trace_fetch(this->core_id, &this->trace_next_opcode);
             if (!valid_opcode) {
                 this->trace_over = true;
+                this->synchronize(SYNC_BARRIER);
                 break;
             }
         }

@@ -252,7 +252,6 @@ void sinuca_engine_t::global_reset_statistics() {
     /// Save the variables after the warmup
     this->set_reset_cycle(this->global_cycle);
 
-
     /// Sinuca Reset Statistics
     for (uint32_t i = 0 ; i < this->get_interconnection_interface_array_size() ; i++) {
         this->interconnection_interface_array[i]->reset_statistics();

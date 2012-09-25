@@ -130,6 +130,43 @@ void premature_termination(int param) {
 }
 
 //==============================================================================
+//  > CPU  7 - Opcode[         1/   2095984] -   0.000% [                    ] IPC(  inf) [   SYNC_FREE] [ON]
+std::string simulation_status_to_string() {
+    std::string final_report;
+    char processor_report[1000];
+    char tmp_char[1000];
+
+    for (uint32_t cpu = 0 ; cpu < sinuca_engine.get_processor_array_size() ; cpu++) {
+        uint64_t ActualLength = sinuca_engine.trace_reader->get_trace_opcode_counter(cpu);
+        uint64_t FullLength = sinuca_engine.trace_reader->get_trace_opcode_max(cpu) + 1;
+        sprintf(tmp_char, "  > CPU %2d", cpu);
+        strcpy(processor_report, tmp_char);
+
+        sprintf(tmp_char, " - Opcode[%10"PRIu64"/%10"PRIu64"]", ActualLength, FullLength);
+        strcat(processor_report, tmp_char);
+
+        sprintf(tmp_char, " - %7.3lf%%", 100.0 * ((double)ActualLength / (double)FullLength));
+        strcat(processor_report, tmp_char);
+
+        sprintf(tmp_char, " %s", utils_t::progress_pretty(ActualLength, FullLength).c_str());
+        strcat(processor_report, tmp_char);
+
+        sprintf(tmp_char, " IPC(%5.3lf)", (double)ActualLength / (double)sinuca_engine.get_global_cycle() );
+        strcat(processor_report, tmp_char);
+
+        sprintf(tmp_char, " [%12s]", get_enum_sync_char(sinuca_engine.processor_array[cpu]->get_sync_status()));
+        strcat(processor_report, tmp_char);
+
+        sprintf(tmp_char, " [%s]", sinuca_engine.is_processor_trace_eof[cpu] ? "OFF" : "ON");
+        strcat(processor_report, tmp_char);
+        strcat(processor_report, "\n");
+
+        final_report += processor_report;
+    }
+    return final_report;
+};
+
+//==============================================================================
 int main(int argc, char **argv) {
     process_argv(argc-1, argv+1);
 
@@ -166,32 +203,7 @@ int main(int argc, char **argv) {
         /// Progress Information
         if ((sinuca_engine.get_global_cycle() % HEART_BEAT) == 0) {
             SINUCA_PRINTF("HEART-BEAT - CYCLE: %"PRIu64"\n", sinuca_engine.get_global_cycle() );
-            char processor_report[1000];
-            char tmp_char[1000];
-            for (uint32_t cpu = 0 ; cpu < sinuca_engine.get_processor_array_size() ; cpu++) {
-                uint64_t ActualLength = sinuca_engine.trace_reader->get_trace_opcode_counter(cpu);
-                uint64_t FullLength = sinuca_engine.trace_reader->get_trace_opcode_max(cpu);
-                sprintf(tmp_char, "\t -- CPU %d", cpu);
-                strcpy(processor_report, tmp_char);
-
-                sprintf(tmp_char, " - Opcode[%10"PRIu64"/%10"PRIu64"]", ActualLength, FullLength);
-                strcat(processor_report, tmp_char);
-
-                sprintf(tmp_char, " - (%7.3lf%%)", 100.0 * ((double)ActualLength / (double)FullLength));
-                strcat(processor_report, tmp_char);
-                
-                sprintf(tmp_char, " - %s", utils_t::progress_pretty(ActualLength, FullLength).c_str());
-                strcat(processor_report, tmp_char);
-                
-                sprintf(tmp_char, " - IPC(%5.3lf)", (double)ActualLength / (double)sinuca_engine.get_global_cycle() );
-                strcat(processor_report, tmp_char);
-                
-                sprintf(tmp_char, " - [%s]", sinuca_engine.is_processor_trace_eof[cpu] ? "OFF-LINE" : "ON-LINE");
-                strcat(processor_report, tmp_char);
-                
-                SINUCA_PRINTF("%s\n", processor_report);
-            }
-            SINUCA_PRINTF("\n");
+            SINUCA_PRINTF("%s\n", simulation_status_to_string().c_str());
         }
 
         /// Spawn Periodic Check
@@ -202,6 +214,9 @@ int main(int argc, char **argv) {
         /// Spawn Clock Signal
         sinuca_engine.global_clock();
     }
+
+    SINUCA_PRINTF("SIMULATION FINISHED - CYCLE: %"PRIu64"\n", sinuca_engine.get_global_cycle() );
+    SINUCA_PRINTF("%s\n", simulation_status_to_string().c_str());
 
     sinuca_engine.global_print_configuration();
     sinuca_engine.global_print_statistics();
