@@ -85,7 +85,10 @@ class directory_line_t;
 class directory_controller_t;
 /// Prefetch
 class prefetch_t;
+class reference_prediction_line_t;
 class prefetch_stride_t;
+class stream_table_line_t;
+class prefetch_stream_t;
 class prefetch_disable_t;
 /// Line Usage Predictor
 class line_usage_predictor_t;
@@ -101,9 +104,7 @@ class aht_set_t;
 class dlec_metadata_line_t;
 class dlec_metadata_set_t;
 class line_usage_predictor_dlec_t;
-/// === LWP
-class line_usage_predictor_lwp_t;
-
+/// === STATISTICS / DISABLE
 class line_usage_predictor_subblock_stats_t;
 class line_usage_predictor_line_stats_t;
 class line_usage_predictor_disable_t;
@@ -309,7 +310,6 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 #include "./line_usage_predictor/dlec_metadata_set.hpp"
 #include "./line_usage_predictor/line_usage_predictor_dlec.hpp"
 
-#include "./line_usage_predictor/line_usage_predictor_lwp.hpp"
 #include "./line_usage_predictor/line_usage_predictor_subblock_stats.hpp"
 #include "./line_usage_predictor/line_usage_predictor_line_stats.hpp"
 #include "./line_usage_predictor/line_usage_predictor_disable.hpp"
@@ -321,11 +321,12 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 #include "./directory/directory_controller.hpp"
 
 #include "./prefetch/reference_prediction_line.hpp"
+#include "./prefetch/stream_table_line.hpp"
 
 #include "./prefetch/prefetcher.hpp"
 #include "./prefetch/prefetcher_stride.hpp"
+#include "./prefetch/prefetcher_stream.hpp"
 #include "./prefetch/prefetcher_disable.hpp"
-
 
 #include "./cache_memory/cache_line.hpp"
 #include "./cache_memory/cache_set.hpp"

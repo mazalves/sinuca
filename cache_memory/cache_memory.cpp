@@ -323,12 +323,6 @@ void cache_memory_t::clock(uint32_t subcycle) {
         this->mshr_born_ordered[0][i]->is_answer == false &&
         this->mshr_born_ordered[0][i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
 
-            /// PREFETCH
-            CACHE_DEBUG_PRINTF("\t Treat REQUEST this->mshr_born_ordered[%d] %s\n", i, this->mshr_born_ordered[0][i]->content_to_string().c_str());
-            if (this->mshr_born_ordered[0][i]->id_owner != this->get_id() &&
-            this->mshr_born_ordered[0][i]->memory_operation != MEMORY_OPERATION_COPYBACK) {
-                this->prefetcher->treat_prefetch(this->mshr_born_ordered[0][i]);
-            }
 
             this->mshr_born_ordered[0][i]->state = sinuca_engine.directory_controller->treat_cache_request(this->get_cache_id(), this->mshr_born_ordered[0][i]);
             /// Could not treat, then restart born_cycle (change priority)
@@ -343,6 +337,15 @@ void cache_memory_t::clock(uint32_t subcycle) {
                 this->mshr_born_ordered[0][i]->package_clean();
                 this->mshr_born_ordered->erase(this->mshr_born_ordered->begin() + i);
             }
+            else {
+                 /// PREFETCH
+                CACHE_DEBUG_PRINTF("\t Treat REQUEST this->mshr_born_ordered[%d] %s\n", i, this->mshr_born_ordered[0][i]->content_to_string().c_str());
+                if (this->mshr_born_ordered[0][i]->id_owner != this->get_id() &&
+                this->mshr_born_ordered[0][i]->memory_operation != MEMORY_OPERATION_COPYBACK) {
+                    this->prefetcher->treat_prefetch(this->mshr_born_ordered[0][i]);
+                }
+            }
+
             break;
         }
     }

@@ -202,6 +202,7 @@ const char *get_enum_inclusiveness_char(inclusiveness_t type);
 /// Prefetcher type
 enum prefetch_policy_t {
     PREFETCHER_STRIDE,
+	PREFETCHER_STREAM,
     PREFETCHER_DISABLE
 };
 const char *get_enum_prefetch_policy_char(prefetch_policy_t type);
@@ -217,11 +218,20 @@ enum prefetch_stride_state_t {
 const char *get_enum_prefetch_stride_state_char(prefetch_stride_state_t type);
 
 /// ============================================================================
+/// Prefetcher type
+enum prefetch_stream_state_t {
+    PREFETCHER_STREAM_STATE_INVALID,
+    PREFETCHER_STREAM_STATE_ALLOCATED,
+    PREFETCHER_STREAM_STATE_TRAINING,
+    PREFETCHER_STREAM_STATE_MONITOR_AND_REQUEST
+};
+const char *get_enum_prefetch_stream_state_char(prefetch_stream_state_t type);
+
+/// ============================================================================
 /// Line Usage Predictor type
 enum line_usage_predictor_policy_t {
     LINE_USAGE_PREDICTOR_POLICY_DSBP,
     LINE_USAGE_PREDICTOR_POLICY_DLEC,
-    LINE_USAGE_PREDICTOR_POLICY_LWP,
     LINE_USAGE_PREDICTOR_POLICY_SUBBLOCK_STATS,
     LINE_USAGE_PREDICTOR_POLICY_LINE_STATS,
     LINE_USAGE_PREDICTOR_POLICY_DISABLE

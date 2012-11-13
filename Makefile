@@ -67,6 +67,8 @@ SRC_DIRECTORY =		directory/directory_line.cpp\
 SRC_PREFETCH =		prefetch/prefetcher.cpp \
 					prefetch/reference_prediction_line.cpp \
 					prefetch/prefetcher_stride.cpp \
+					prefetch/stream_table_line.cpp \
+					prefetch/prefetcher_stream.cpp \
 					prefetch/prefetcher_disable.cpp
 
 SRC_LINE_USAGE_PREDICTOR =	line_usage_predictor/line_usage_predictor.cpp \
@@ -76,7 +78,6 @@ SRC_LINE_USAGE_PREDICTOR =	line_usage_predictor/line_usage_predictor.cpp \
 							line_usage_predictor/aht_line.cpp \
 							line_usage_predictor/dlec_metadata_line.cpp \
 							line_usage_predictor/line_usage_predictor_dlec.cpp \
-							line_usage_predictor/line_usage_predictor_lwp.cpp \
 							line_usage_predictor/line_usage_predictor_subblock_stats.cpp \
 							line_usage_predictor/line_usage_predictor_line_stats.cpp \
 							line_usage_predictor/line_usage_predictor_disable.cpp

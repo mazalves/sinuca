@@ -569,6 +569,28 @@ void sinuca_engine_t::initialize_cache_memory() {
 
                 prefetcher_ptr->set_prefetcher_type(PREFETCHER_DISABLE);
             }
+            else if (strcasecmp(cfg_prefetcher[ prefetcher_parameters.back() ], "STREAM") ==  0){
+                this->cache_memory_array[i]->prefetcher = new prefetch_stream_t;
+                prefetch_stream_t *prefetcher_ptr = static_cast<prefetch_stream_t*>(this->cache_memory_array[i]->prefetcher);
+
+                prefetcher_ptr->set_prefetcher_type(PREFETCHER_STREAM);
+
+                prefetcher_parameters.push_back("STREAM_TABLE_SIZE");
+                prefetcher_ptr->set_stream_table_size( cfg_prefetcher[ prefetcher_parameters.back() ] );
+
+                prefetcher_parameters.push_back("PREFETCH_DISTANCE");
+                prefetcher_ptr->set_prefetch_distance( cfg_prefetcher[ prefetcher_parameters.back() ] );
+
+                prefetcher_parameters.push_back("PREFETCH_DEGREE");
+                prefetcher_ptr->set_prefetch_degree( cfg_prefetcher[ prefetcher_parameters.back() ] );
+
+                prefetcher_parameters.push_back("SEARCH_DISTANCE");
+                prefetcher_ptr->set_search_distance( cfg_prefetcher[ prefetcher_parameters.back() ] );
+
+                prefetcher_parameters.push_back("LIFETIME_CYCLES");
+                prefetcher_ptr->set_lifetime_cycles( cfg_prefetcher[ prefetcher_parameters.back() ] );
+
+            }
             else {
                 ERROR_PRINTF("CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ prefetcher_parameters.back() ].c_str(), prefetcher_parameters.back());
             }
@@ -721,12 +743,6 @@ void sinuca_engine_t::initialize_cache_memory() {
                 else {
                     ERROR_PRINTF("CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
                 }
-            }
-            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "LWP") ==  0) {
-                this->cache_memory_array[i]->line_usage_predictor = new line_usage_predictor_lwp_t;
-                line_usage_predictor_lwp_t *line_usage_predictor_ptr = static_cast<line_usage_predictor_lwp_t*>(this->cache_memory_array[i]->line_usage_predictor);
-
-                line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_LWP);
             }
             else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "SUBBLOCK_STATS") ==  0) {
                 this->cache_memory_array[i]->line_usage_predictor = new line_usage_predictor_subblock_stats_t;

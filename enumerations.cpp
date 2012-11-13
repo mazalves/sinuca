@@ -242,6 +242,7 @@ const char *get_enum_inclusiveness_char(inclusiveness_t type) {
 const char *get_enum_prefetch_policy_char(prefetch_policy_t type) {
     switch (type) {
         case PREFETCHER_STRIDE:     return "STRIDE"; break;
+		case PREFETCHER_STREAM:		return "STREAM"; break;
         case PREFETCHER_DISABLE:    return "DISABLE"; break;
     };
     ERROR_PRINTF("Wrong PREFETCH_POLICY\n");
@@ -264,12 +265,26 @@ const char *get_enum_prefetch_stride_state_char(prefetch_stride_state_t type) {
 
 
 /// ============================================================================
+/// Prefetcher type
+const char *get_enum_prefetch_stream_state_char(prefetch_stream_state_t type) {
+    switch (type) {
+        case PREFETCHER_STREAM_STATE_INVALID:       return "INVALID"; break;
+        case PREFETCHER_STREAM_STATE_ALLOCATED:     return "ALLOCATED"; break;
+        case PREFETCHER_STREAM_STATE_TRAINING:      return "TRAINING"; break;
+        case PREFETCHER_STREAM_STATE_MONITOR_AND_REQUEST:       return "MONITOR_AND_REQUEST"; break;
+
+    };
+    ERROR_PRINTF("Wrong PREFETCHER_STREAM_STATE\n");
+    return "FAIL";
+};
+
+
+/// ============================================================================
 /// Line Usage Predictor type
 const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_policy_t type) {
     switch (type) {
         case LINE_USAGE_PREDICTOR_POLICY_DSBP:              return "DSBP";          break;
         case LINE_USAGE_PREDICTOR_POLICY_DLEC:              return "DLEC";          break;
-        case LINE_USAGE_PREDICTOR_POLICY_LWP:               return "LWP";           break;
         case LINE_USAGE_PREDICTOR_POLICY_SUBBLOCK_STATS:    return "SUBBLOCK_STATS";    break;
         case LINE_USAGE_PREDICTOR_POLICY_LINE_STATS:        return "LINE_STATS";    break;
         case LINE_USAGE_PREDICTOR_POLICY_DISABLE:           return "DISABLE";       break;
