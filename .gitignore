@@ -1,2 +1,6 @@
 *~
-jsdhfjksdhfjh
+interconnection/*.o
+memory_devices/*.o
+processor/*.o
+trace_reader/*.o
+*.o

@@ -95,7 +95,7 @@ const char *get_enum_protocol_status_char(protocol_status_t type);
 enum component_t {
     COMPONENT_PROCESSOR,
     COMPONENT_CACHE_MEMORY,
-    COMPONENT_MAIN_MEMORY,
+    COMPONENT_MEMORY_CONTROLLER,
     COMPONENT_INTERCONNECTION_ROUTER,
     COMPONENT_DIRECTORY_CONTROLLER,
     COMPONENT_INTERCONNECTION_CONTROLLER,
@@ -156,7 +156,8 @@ const char *get_enum_sync_char(sync_t type);
 /// Enumarates the selection policy to pick a sender or next to be treated.
 enum selection_t {
     SELECTION_RANDOM,
-    SELECTION_ROUND_ROBIN
+    SELECTION_ROUND_ROBIN,
+    SELECTION_BUFFER_LEVEL
 };
 const char *get_enum_selection_char(selection_t type);
 
@@ -172,10 +173,12 @@ const char *get_enum_routing_algorithm_char(routing_algorithm_t type);
 /// ============================================================================
 /// Cache replacement policy
 enum replacement_t {
-    REPLACEMENT_LRU,     /// way list order: MRU -> LRU
-    REPLACEMENT_RANDOM,  /// way list order: arbitrary
-    REPLACEMENT_FIFO,    /// way list order: oldest block -> newest block
-    REPLACEMENT_LRF      /// way list order: Least recently filled
+    REPLACEMENT_LRU,                /// way list order: MRU -> LRU
+    REPLACEMENT_DEAD_OR_LRU,        /// way list order: MRU -> LRU with DSBP line_usage_predictor
+    REPLACEMENT_INVALID_OR_LRU,     /// way list order: MRU -> LRU with priority to Invalid Lines
+    REPLACEMENT_RANDOM,             /// way list order: arbitrary
+    REPLACEMENT_FIFO,               /// way list order: oldest block -> newest block
+    REPLACEMENT_LRF                 /// way list order: Least recently filled
 };
 const char *get_enum_replacement_char(replacement_t type);
 
@@ -189,17 +192,52 @@ const char *get_enum_coherence_protocol_char(coherence_protocol_t type);
 /// ============================================================================
 /// Directory coherence protocol
 enum inclusiveness_t {
-    INCLUSIVENESS_NON_INCLUSIVE
+    INCLUSIVENESS_NON_INCLUSIVE,
+    INCLUSIVENESS_INCLUSIVE_LLC,
+    INCLUSIVENESS_INCLUSIVE_ALL
 };
 const char *get_enum_inclusiveness_char(inclusiveness_t type);
 
 /// ============================================================================
 /// Prefetcher type
 enum prefetch_policy_t {
-    PREFETCHER_STREAM,
+    PREFETCHER_STRIDE,
     PREFETCHER_DISABLE
 };
 const char *get_enum_prefetch_policy_char(prefetch_policy_t type);
+
+/// ============================================================================
+/// Prefetcher type
+enum prefetch_stride_state_t {
+    PREFETCHER_STRIDE_STATE_INIT,
+    PREFETCHER_STRIDE_STATE_TRANSIENT,
+    PREFETCHER_STRIDE_STATE_STEADY,
+    PREFETCHER_STRIDE_STATE_NO_PRED
+};
+const char *get_enum_prefetch_stride_state_char(prefetch_stride_state_t type);
+
+/// ============================================================================
+/// Line Usage Predictor type
+enum line_usage_predictor_policy_t {
+    LINE_USAGE_PREDICTOR_POLICY_DSBP,
+    LINE_USAGE_PREDICTOR_POLICY_DLEC,
+    LINE_USAGE_PREDICTOR_POLICY_LWP,
+    LINE_USAGE_PREDICTOR_POLICY_SUBBLOCK_STATS,
+    LINE_USAGE_PREDICTOR_POLICY_LINE_STATS,
+    LINE_USAGE_PREDICTOR_POLICY_DISABLE
+};
+const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_policy_t type);
+
+/// ============================================================================
+/// Valid Sub-Block Type
+enum line_sub_block_t {
+    LINE_SUB_BLOCK_DISABLE,
+    LINE_SUB_BLOCK_NORMAL,
+    LINE_SUB_BLOCK_LEARN,
+    LINE_SUB_BLOCK_WRONG_FIRST,
+    LINE_SUB_BLOCK_COPYBACK
+};
+const char *get_enum_line_sub_block_t_char(line_sub_block_t type);
 
 /// ============================================================================
 /// Prefetcher type
@@ -229,19 +267,20 @@ const char *get_enum_cache_mask_char(cache_mask_t type);
 
 /// ============================================================================
 /// How the main memory will create its address mask
-enum main_memory_mask_t {
-    MAIN_MEMORY_MASK_ROW_BANK_COLUMN,
-    MAIN_MEMORY_MASK_ROW_BANK_CHANNEL_COLUMN
+enum memory_controller_mask_t {
+    MEMORY_CONTROLLER_MASK_ROW_BANK_COLUMN,
+    MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLUMN,
+    MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLUMN
 };
-const char *get_enum_main_memory_mask_char(main_memory_mask_t type);
+const char *get_enum_memory_controller_mask_char(memory_controller_mask_t type);
 
 /// ============================================================================
 /// Policy to set the priority during the Row Buffer access
-enum row_buffer_t {
-    ROW_BUFFER_HITS_FIRST,
-    ROW_BUFFER_FIFO
+enum request_priority_t {
+    REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST,
+    REQUEST_PRIORITY_FIRST_COME_FIRST_SERVE
 };
-const char *get_enum_row_buffer_char(row_buffer_t type);
+const char *get_enum_request_priority_char(request_priority_t type);
 
 /// ============================================================================
 /// Policy to give privilege of some operations over others

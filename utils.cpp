@@ -26,12 +26,19 @@
 
 //==============================================================================
 uint64_t utils_t::get_power_of_two(uint64_t n) {
-    uint8_t i;
-    for (i = 0 ; i < 64 ; i++) {
-        if (n & (1 << i))
-            break;
+    if (n == 0) {
+        return 0;
     }
-    return i;
+
+    ERROR_ASSERT_PRINTF(check_if_power_of_two(n), "Trying to get a log2 of a non power of two number %"PRIu64".\n", n);
+    return log( n ) / log( 2 );
+// ~
+    // ~ uint64_t i;
+    // ~ for (i = 0 ; i < 64 ; i++) {
+        // ~ if (n & (1 << i))
+            // ~ break;
+    // ~ }
+    // ~ return i;
 };
 
 //==============================================================================
@@ -120,16 +127,16 @@ const char* utils_t::print_mask_of_bits(uint32_t line_size, uint32_t line_number
     index = get_power_of_two(line_number/assoc) + offset;
     for (i = 0 ; i < 64 ; i++) {
         if (i < 32) {
-            sprintf(a , "%s.", a);
+            strcat(a , ".");
         }
         else if (i < 64-index) {
-            sprintf(a , "%sT", a);
+            strcat(a , "T");
         }
         else if (i < 64-offset) {
-            sprintf(a , "%sI", a);
+            strcat(a , "I");
         }
         else {
-            sprintf(a , "%sO", a);
+            strcat(a , "O");
         }
     }
 
@@ -173,7 +180,7 @@ std::string utils_t::connections_pretty(cache_memory_t *cache_memory, uint32_t l
     }
 
     /// Find Processor
-    if (higher_level_cache->size() == 0) {
+    if (higher_level_cache->empty()) {
         for (uint32_t i = 0; i < sinuca_engine.get_processor_array_size(); i++) {
             processor_t *processor = sinuca_engine.processor_array[i];
             if (processor->get_data_cache() == cache_memory || processor->get_inst_cache() == cache_memory) {

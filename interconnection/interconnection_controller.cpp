@@ -47,6 +47,11 @@ routing_table_element_t::~routing_table_element_t(){
 /// interconnection_controller_t
 /// ============================================================================
 interconnection_controller_t::interconnection_controller_t() {
+    this->routing_algorithm = ROUTING_ALGORITHM_FLOYD_WARSHALL;
+
+    this->predecessor = NULL;
+    this->adjacency_matrix = NULL;
+    this->route_matrix = NULL;
 };
 
 /// ============================================================================
@@ -54,7 +59,7 @@ interconnection_controller_t::~interconnection_controller_t() {
     // De-Allocate memory to prevent memory leak
     utils_t::template_delete_matrix<routing_table_element_t>(route_matrix, sinuca_engine.get_interconnection_interface_array_size());
     utils_t::template_delete_matrix<edge_t>(adjacency_matrix, sinuca_engine.get_interconnection_interface_array_size());
-    utils_t::template_delete_matrix<interconnection_interface_t*>(pred, sinuca_engine.get_interconnection_interface_array_size());
+    utils_t::template_delete_matrix<interconnection_interface_t*>(predecessor, sinuca_engine.get_interconnection_interface_array_size());
 };
 
 /// ============================================================================
@@ -98,11 +103,44 @@ void interconnection_controller_t::clock(uint32_t subcycle) {
     INTERCONNECTION_CTRL_DEBUG_PRINTF("cycle() \n");
 };
 
+
 /// ============================================================================
-bool interconnection_controller_t::receive_package(memory_package_t *package, uint32_t input_port) {
-    ERROR_PRINTF("Received package %s into the input_port %u.\n", package->memory_to_string().c_str(), input_port);
+int32_t interconnection_controller_t::send_package(memory_package_t *package) {
+    ERROR_PRINTF("Send package %s.\n", package->content_to_string().c_str());
+    return POSITION_FAIL;
+};
+
+/// ============================================================================
+bool interconnection_controller_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
+    ERROR_PRINTF("Received package %s into the input_port %u, latency %u.\n", package->content_to_string().c_str(), input_port, transmission_latency);
     return FAIL;
 };
+
+/// ============================================================================
+/// Token Controller Methods
+/// ============================================================================
+void interconnection_controller_t::allocate_token_list() {
+    INTERCONNECTION_CTRL_DEBUG_PRINTF("allocate_token_list()\n");
+};
+
+/// ============================================================================
+bool interconnection_controller_t::check_token_list(memory_package_t *package) {
+    ERROR_PRINTF("check_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
+    return FAIL;
+};
+
+/// ============================================================================
+uint32_t interconnection_controller_t::check_token_space(memory_package_t *package) {
+    ERROR_PRINTF("check_token_space %s.\n", get_enum_memory_operation_char(package->memory_operation))
+    return 0;
+};
+
+/// ============================================================================
+void interconnection_controller_t::remove_token_list(memory_package_t *package) {
+    ERROR_PRINTF("remove_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
+};
+
+
 
 /// ============================================================================
 /// Create a graph using the interconnection components as Cache, Cache Ports, Router
@@ -172,14 +210,14 @@ void interconnection_controller_t::routing_algorithm_floyd_warshall() {
     INTERCONNECTION_CTRL_DEBUG_PRINTF("routing_algorithm_floyd_warshall()\n");
     uint32_t i, j, k;
 
-    this->pred = utils_t::template_allocate_initialize_matrix<interconnection_interface_t*>(sinuca_engine.get_interconnection_interface_array_size(), sinuca_engine.get_interconnection_interface_array_size(), NULL);
+    this->predecessor = utils_t::template_allocate_initialize_matrix<interconnection_interface_t*>(sinuca_engine.get_interconnection_interface_array_size(), sinuca_engine.get_interconnection_interface_array_size(), NULL);
     for (i = 0; i < sinuca_engine.get_interconnection_interface_array_size(); i++) {
         for (j = 0; j < sinuca_engine.get_interconnection_interface_array_size(); j++) {
             if (adjacency_matrix[i][j].weight != INFINITE && i != j) {
-                pred[i][j] = sinuca_engine.interconnection_interface_array[i];
+                predecessor[i][j] = sinuca_engine.interconnection_interface_array[i];
             }
             else {
-                pred[i][j] = NULL;
+                predecessor[i][j] = NULL;
             }
         }
     }
@@ -189,7 +227,7 @@ void interconnection_controller_t::routing_algorithm_floyd_warshall() {
             for (j = 0; j < sinuca_engine.get_interconnection_interface_array_size(); j++) {
                 if (adjacency_matrix[i][j].weight > adjacency_matrix[i][k].weight + adjacency_matrix[k][j].weight) {
                     adjacency_matrix[i][j].weight = adjacency_matrix[i][k].weight + adjacency_matrix[k][j].weight;
-                    pred[i][j] = pred[k][j];
+                    predecessor[i][j] = predecessor[k][j];
                 }
             }
         }
@@ -241,10 +279,10 @@ void interconnection_controller_t::create_route(interconnection_interface_t *src
 
     do {
         count++;
-        if (pred[src->get_id()][dst->get_id()] == src) {
+        if (predecessor[src->get_id()][dst->get_id()] == src) {
             found = 1;
         }
-        dst = pred[src->get_id()][dst->get_id()];
+        dst = predecessor[src->get_id()][dst->get_id()];
     } while (!found);
 
     INTERCONNECTION_CTRL_DEBUG_PRINTF("\tHops=%d\n", count);
@@ -260,11 +298,11 @@ void interconnection_controller_t::create_route(interconnection_interface_t *src
 
     do {
         count--;
-        if (pred[src->get_id()][dst->get_id()] == src) {
+        if (predecessor[src->get_id()][dst->get_id()] == src) {
             found = 1;
         }
             old_dst = dst;
-            dst = pred[src->get_id()][dst->get_id()];
+            dst = predecessor[src->get_id()][dst->get_id()];
 
 
         INTERCONNECTION_CTRL_DEBUG_PRINTF("\t\t%s[%u]<->%s[%u]\n", old_dst->get_label(), adjacency_matrix[old_dst->get_id()][dst->get_id()].src_port, dst->get_label(),  adjacency_matrix[old_dst->get_id()][dst->get_id()].dst_port);
@@ -294,26 +332,43 @@ void interconnection_controller_t::find_package_route(memory_package_t *package)
 };
 
 /// ============================================================================
-uint32_t interconnection_controller_t::find_package_route_latency(memory_package_t *package) {
+uint32_t interconnection_controller_t::find_package_route_latency(memory_package_t *package, interconnection_interface_t *src, interconnection_interface_t *dst){
+    uint32_t max_latency = 0;
+    uint32_t min_width = 0;
+
+    max_latency = src->get_interconnection_latency();
+    if (dst->get_interconnection_latency() > max_latency) {
+        max_latency = dst->get_interconnection_latency();
+    }
+
+    min_width = src->get_interconnection_width();
+    if (dst->get_interconnection_width() > min_width) {
+        min_width = dst->get_interconnection_width();
+    }
+
     switch (package->memory_operation) {
         case MEMORY_OPERATION_INST:
         case MEMORY_OPERATION_READ:
         case MEMORY_OPERATION_PREFETCH:
-            if (package->is_answer) {   /// BIG
-                return (package->memory_size / 8);
+            /// BIG
+            if (package->is_answer) {
+                return max_latency * ((package->memory_size / min_width) + 1 * ((package->memory_size % min_width) != 0));
             }
-            else {  /// SMALL
-                return 1;
+            /// SMALL
+            else {
+                return max_latency;
             }
         break;
 
         case MEMORY_OPERATION_WRITE:
         case MEMORY_OPERATION_COPYBACK:
-            if (package->is_answer) {   /// SMALL
-                return 1;
+            /// SMALL
+            if (package->is_answer) {
+                return max_latency;
             }
-            else {  /// BIG
-                return (package->memory_size / 8);
+            /// BIG
+            else {
+                return max_latency * ((package->memory_size / min_width) + 1 * ((package->memory_size % min_width) != 0));
             }
         break;
     }
@@ -344,7 +399,7 @@ void interconnection_controller_t::reset_statistics() {
 
 /// ============================================================================
 void interconnection_controller_t::print_statistics() {
-    char title[50] = "";
+    char title[100] = "";
     sprintf(title, "Statistics of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);
@@ -353,7 +408,7 @@ void interconnection_controller_t::print_statistics() {
 
 /// ============================================================================
 void interconnection_controller_t::print_configuration() {
-    char title[50] = "";
+    char title[100] = "";
     sprintf(title, "Configuration of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);

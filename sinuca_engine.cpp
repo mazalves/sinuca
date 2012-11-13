@@ -24,6 +24,18 @@
 #include "./sinuca.hpp"
 //==============================================================================
 sinuca_engine_t::sinuca_engine_t() {
+    this->arg_configuration_file_name = NULL;
+    this->arg_trace_file_name = NULL;
+    this->arg_result_file_name = NULL;
+    this->arg_warmup_instructions = 0;
+    this->arg_is_compressed = true;
+
+    this->interconnection_interface_array = NULL;
+    this->processor_array = NULL;
+    this->cache_memory_array = NULL;
+    this->memory_controller_array = NULL;
+    this->interconnection_router_array = NULL;
+
     this->stat_vm_start = 0.0;
     this->stat_rss_start = 0.0;
 
@@ -43,16 +55,22 @@ sinuca_engine_t::sinuca_engine_t() {
     this->interconnection_interface_array_size = 0;
     this->processor_array_size = 0;
     this->cache_memory_array_size = 0;
-    this->main_memory_array_size = 0;
+    this->memory_controller_array_size = 0;
     this->interconnection_router_array_size = 0;
 
     this->global_cycle = 0;
     this->global_line_size = 0;
+
     this->is_simulation_allocated = false;
+    this->is_processor_trace_eof = NULL;
     this->is_simulation_eof = false;
     this->is_runtime_debug = true;
+    this->is_warm_up = false;
 
     this->trace_reader = new trace_reader_t;
+    this->directory_controller = NULL;
+    this->interconnection_controller = NULL;
+
     utils_t::process_mem_usage(stat_vm_start, stat_rss_start);
 };
 
@@ -80,11 +98,11 @@ sinuca_engine_t::~sinuca_engine_t() {
         utils_t::template_delete_array<cache_memory_t*>(this->cache_memory_array);
     }
 
-    if (this->main_memory_array != NULL) {
-        for (uint32_t i = 0; i < this->get_main_memory_array_size(); ++i) {
-            utils_t::template_delete_variable<main_memory_t>(this->main_memory_array[i]);
+    if (this->memory_controller_array != NULL) {
+        for (uint32_t i = 0; i < this->get_memory_controller_array_size(); ++i) {
+            utils_t::template_delete_variable<memory_controller_t>(this->memory_controller_array[i]);
         }
-        utils_t::template_delete_array<main_memory_t*>(this->main_memory_array);
+        utils_t::template_delete_array<memory_controller_t*>(this->memory_controller_array);
     }
 
     if (this->interconnection_router_array != NULL) {
@@ -100,6 +118,24 @@ sinuca_engine_t::~sinuca_engine_t() {
     utils_t::template_delete_variable<directory_controller_t>(directory_controller);
     utils_t::template_delete_variable<interconnection_controller_t>(interconnection_controller);
 };
+
+//==============================================================================
+void sinuca_engine_t::set_global_line_size(uint32_t new_size) {
+    if (this->global_line_size == 0) {
+        this->global_line_size = new_size;
+        /// OFFSET MASK
+        for (uint32_t i = 0; i < utils_t::get_power_of_two(this->global_line_size); i++) {
+            this->global_offset_bits_mask |= 1 << i;
+        }
+    }
+    ERROR_ASSERT_PRINTF(this->get_global_line_size() == new_size, "All the line_size must be equal.\n")
+};
+
+//==============================================================================
+uint32_t sinuca_engine_t::get_global_line_size() {
+    return (this->global_line_size);
+};
+
 
 //==============================================================================
 void sinuca_engine_t::premature_termination() {
@@ -214,8 +250,7 @@ void sinuca_engine_t::global_reset_statistics() {
     }
 
     /// Save the variables after the warmup
-    this->set_stat_reset_cycle(this->global_cycle);
-
+    this->set_reset_cycle(this->global_cycle);
 
     /// Sinuca Reset Statistics
     for (uint32_t i = 0 ; i < this->get_interconnection_interface_array_size() ; i++) {
@@ -237,20 +272,20 @@ void sinuca_engine_t::write_statistics(const char *buffer) {
 
 //==============================================================================
 void sinuca_engine_t::write_statistics_small_separator() {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     sprintf(buffer, "#=======================================\n");
     this->write_statistics(buffer);
 };
 
 void sinuca_engine_t::write_statistics_big_separator() {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     sprintf(buffer, "#===============================================================================\n");
     this->write_statistics(buffer);
 };
 
 //==============================================================================
 void sinuca_engine_t::write_statistics_comments(const char *comment) {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     sprintf(buffer, "#%s\n", comment);
     this->write_statistics(buffer);
 };
@@ -258,37 +293,44 @@ void sinuca_engine_t::write_statistics_comments(const char *comment) {
 
 //==============================================================================
 void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, const char *value) {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     sprintf(buffer, "%s.%s.%s:%s\n", obj_type, obj_label, variable_name, value);
     this->write_statistics(buffer);
 };
 
+void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, bool value) {
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
+    sprintf(buffer, "%s.%s.%s:%s\n", obj_type, obj_label, variable_name, value ? "TRUE" : "FALSE");
+    this->write_statistics(buffer);
+};
+
+
 void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, uint32_t value) {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     sprintf(buffer, "%s.%s.%s:%u\n", obj_type, obj_label, variable_name, value);
     this->write_statistics(buffer);
 };
 
 void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, uint64_t value) {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     sprintf(buffer, "%s.%s.%s:%"PRIu64"\n", obj_type, obj_label, variable_name, value);
     this->write_statistics(buffer);
 };
 
 void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, float value) {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     sprintf(buffer, "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, value);
     this->write_statistics(buffer);
 };
 
 void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, double value) {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     sprintf(buffer, "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, value);
     this->write_statistics(buffer);
 };
 
 void sinuca_engine_t::write_statistics_value_percentage(const char *obj_type, const char *obj_label, const char *variable_name, uint64_t value, uint64_t total) {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     if (value != 0 || total != 0) {
         sprintf(buffer, "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (100.0 *value/total));
     }
@@ -299,7 +341,7 @@ void sinuca_engine_t::write_statistics_value_percentage(const char *obj_type, co
 };
 
 void sinuca_engine_t::write_statistics_value_ratio(const char *obj_type, const char *obj_label, const char *variable_name, uint64_t value, uint64_t total) {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     if (value != 0 || total != 0) {
         sprintf(buffer, "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (1.0 *value/total));
     }
@@ -310,7 +352,7 @@ void sinuca_engine_t::write_statistics_value_ratio(const char *obj_type, const c
 };
 
 void sinuca_engine_t::write_statistics_value_ratio(const char *obj_type, const char *obj_label, const char *variable_name, double value, uint64_t total) {
-    char buffer[TRACE_LINE_SIZE * 2] = "\0";
+    char buffer[TRACE_LINE_SIZE * 4] = "\0";
     if (value != 0 || total != 0) {
         sprintf(buffer, "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (1.0 *value/total));
     }
@@ -365,14 +407,18 @@ void sinuca_engine_t::global_print_statistics() {
     ///=========================================================================
     /// Total (with warm-up)
     this->write_statistics_small_separator();
+
     this->write_statistics_value(get_type_component_label(), get_label(), "global_cycle", global_cycle);
-    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_1_0ghz", global_cycle, 1000000000);
-    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_1_5ghz", global_cycle, 1500000000);
-    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_2_0ghz", global_cycle, 2000000000);
-    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_2_5ghz", global_cycle, 2500000000);
-    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_3_0ghz", global_cycle, 3000000000);
-    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_3_5ghz", global_cycle, 3500000000);
-    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_4_0ghz", global_cycle, 4000000000);
+    this->write_statistics_value(get_type_component_label(), get_label(), "reset_cycle", reset_cycle);
+
+    /// Use the LL in the end of the numbers to guarantee that 32bit compilers will not convert to a signed number
+    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_1_0ghz_warm", global_cycle - reset_cycle, 1000000000LL);
+    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_1_5ghz_warm", global_cycle - reset_cycle, 1500000000LL);
+    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_2_0ghz_warm", global_cycle - reset_cycle, 2000000000LL);
+    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_2_5ghz_warm", global_cycle - reset_cycle, 2500000000LL);
+    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_3_0ghz_warm", global_cycle - reset_cycle, 3000000000LL);
+    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_3_5ghz_warm", global_cycle - reset_cycle, 3500000000LL);
+    this->write_statistics_value_ratio(get_type_component_label(), get_label(), "global_cycle_4_0ghz_warm", global_cycle - reset_cycle, 4000000000LL);
 
     this->write_statistics_small_separator();
     double kilo_instructions_simulated = 0;
@@ -412,7 +458,7 @@ void sinuca_engine_t::global_print_configuration() {
     this->write_statistics_value(get_type_component_label(), get_label(), "arg_configuration_file_name", arg_configuration_file_name);
     this->write_statistics_value(get_type_component_label(), get_label(), "arg_trace_file_name", arg_trace_file_name);
     this->write_statistics_value(get_type_component_label(), get_label(), "arg_result_file_name", arg_result_file_name);
-    this->write_statistics_value(get_type_component_label(), get_label(), "arg_warmup_cycles", arg_warmup_cycles);
+    this->write_statistics_value(get_type_component_label(), get_label(), "arg_warmup_instructions", arg_warmup_instructions);
     this->write_statistics_value(get_type_component_label(), get_label(), "arg_is_compressed", arg_is_compressed ? "TRUE": "FALSE");
 
     this->write_statistics_small_separator();
@@ -432,7 +478,7 @@ void sinuca_engine_t::global_print_configuration() {
     this->write_statistics_value(get_type_component_label(), get_label(), "interconnection_interface_array_size", interconnection_interface_array_size);
     this->write_statistics_value(get_type_component_label(), get_label(), "processor_array_size", processor_array_size);
     this->write_statistics_value(get_type_component_label(), get_label(), "cache_memory_array_size", cache_memory_array_size);
-    this->write_statistics_value(get_type_component_label(), get_label(), "main_memory_array_size", main_memory_array_size);
+    this->write_statistics_value(get_type_component_label(), get_label(), "memory_controller_array_size", memory_controller_array_size);
     this->write_statistics_value(get_type_component_label(), get_label(), "interconnection_router_array_size", interconnection_router_array_size);
 
     for (uint32_t i = 0 ; i < this->get_interconnection_interface_array_size() ; i++) {

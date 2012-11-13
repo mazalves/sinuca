@@ -1,6 +1,6 @@
 TODO list:
 
-1st. Beat Rustam's simulator: 200.000 instructions/second with 1 core.
+1st. Beat Rustam's simulator: 200.000 instructions/second with 1 core. => DONE !
 
 ################ Cosmetics
 -- Use default variable names
@@ -15,26 +15,17 @@ TODO list:
 ################ Long Term
 TRACE_READER -- Remove string, use char instead
 TRACE_READER -- Multiple single threaded applications
-PREFETCHER -- Check increment/decrement into a real machine / simulator
+TRACE_READER -- Fast check on the trace / fast get trace size
 PROCESSOR -- One instruction can be between two instruction cache lines.
-PROCESSOR -- Split requests when the load/store are unaligned.
+PROCESSOR -- Split requests when the load/store are unaligned (between two cache lines).
 PROCESSOR -- Add field NEW_DATA into MEMORY_PACKAGE, always true after write, and propagate false for others. Processor may receive only NEW_DATA==true
 PROCESSOR -- TLB - Add processor bit, when multiple applications, to change the physical address
-DIRECTORY -- Write don't send answer
-DIRECTORY -- Deadlock if Associativity < Directory Line from the same set.
+DIRECTORY -- Deadlock if Associativity < Directory Lines from the same set. (Not proved)
 
 ################ Short Term
-SINUCA -- Start using Git to maintain the version control
-
-DIRECTORY -- Check the cache memory latency
-DIRECTORY -- Time to copyback from the higher level (Directory average)
-DIRECTORY -- Check the memory request/answer sizes
-
-STATISTICS -- Functional Unit statistics
 STATISTICS -- Average Instruction Size and Number of cache lines
 STATISTICS -- Average Memory Size and Number of cache lines
-STATISTICS -- Average Fetched Uops
-STATISTICS -- Average Decoded Opcodes / Uops
+STATISTICS -- Average Fetched Opcodes
 
 -- CHECK:
     -- cache state
@@ -44,9 +35,3 @@ STATISTICS -- Average Decoded Opcodes / Uops
     ok-- protocol (MOESI)
     ok-- lock (R/W/NULL)
     ok-- parallel requests
-
-################################################################
-TRACE_GENERATOR -- Remove code after last barrier from the threads (active wait)
-PROCESSOR -- Ask only the size which belongs to the cache line requested
-PREDICTION BUSINESS -- Check if READ/WRITE change the prediction
-

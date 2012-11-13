@@ -1,15 +1,15 @@
 #------------SPEC2006 (11)
 #-----MEDIUM
-wupwise;m;$BENCHMARK_SRC/OMPM2001/310.wupwise_m/exe/wupwise_base.x86_64-gcc44
-swim;m;$BENCHMARK_SRC/OMPM2001/312.swim_m/exe/swim_base.x86_64-gcc44 < $BENCHMARK_SRC/OMPM2001/312.swim_m/data/ref/input/swim.in
-mgrid;m;$BENCHMARK_SRC/OMPM2001/314.mgrid_m/exe/mgrid_base.x86_64-gcc44 < $BENCHMARK_SRC/OMPM2001/314.mgrid_m/data/ref/input/mgrid.in
-applu;m;$BENCHMARK_SRC/OMPM2001/316.applu_m/exe/applu_base.x86_64-gcc44 < $BENCHMARK_SRC/OMPM2001/316.applu_m/data/ref/input/applu.in
-galgel;m;$BENCHMARK_SRC/OMPM2001/318.galgel_m/exe/galgel_base.x86_64-gcc44 < $BENCHMARK_SRC/OMPM2001/318.galgel_m/data/ref/input/galgel.in
-equake;m;$BENCHMARK_SRC/OMPM2001/320.equake_m/exe/equake_base.x86_64-gcc44 < $BENCHMARK_SRC/OMPM2001/320.equake_m/data/ref/input/inp.in
-apsi;m;$BENCHMARK_SRC/OMPM2001/324.apsi_m/exe/apsi_base.x86_64-gcc44
-gafort;m;$BENCHMARK_SRC/OMPM2001/326.gafort_m/exe/gafort_base.x86_64-gcc44
-fma3d;m;$BENCHMARK_SRC/OMPM2001/328.fma3d_m/exe/fma3d_base.x86_64-gcc44
-art;m;$BENCHMARK_SRC/OMPM2001/330.art_m/exe/art_base.x86_64-gcc44 -scanfile c756hel.in -trainfile1 a10.img -trainfile2 hc.img -stride 1 -startx 110 -starty 220 -endx 172 -endy 260 -objects 1000
-ammp;m;$BENCHMARK_SRC/OMPM2001/332.ammp_m/exe/ammp_base.x86_64-gcc44 < $BENCHMARK_SRC/OMPM2001/332.ammp_m/data/ref/input/1irk.init.ammp
+art;m;art.M;        Simulation8CPU=0.03h
+galgel;m;galgel.M;  Simulation8CPU=0.72h
+apsi;m;apsi.M;      Simulation8CPU=2.45h
+mgrid;m;mgrid.M;    Simulation8CPU=3.83h
+fma3d;m;fma3d.M;    Simulation8CPU=4.24h
+swim;m;swim.M;      Simulation8CPU=5.71h
+ammp;m;ammp.M;      Simulation8CPU=0.64h
+equake;m;equake.M;  Simulation8CPU=2.46h
+gafort;m;gafort.M;  Simulation8CPU=3.93h
+applu;m;applu.M;    Simulation8CPU=5.31h
+wupwise;m;wupwise.M;Simulation8CPU=8.04h
 #-----LARGER
 #-----END OF FILE

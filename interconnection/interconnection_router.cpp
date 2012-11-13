@@ -32,26 +32,46 @@
 
 //==============================================================================
 interconnection_router_t::interconnection_router_t() {
-    this->ready_cycle = 0;
-    this->last_send = 0;
     this->set_type_component(COMPONENT_INTERCONNECTION_ROUTER);
+
+    this->selection_policy = SELECTION_ROUND_ROBIN;
+
+    this->input_buffer = NULL;
+    this->input_buffer_position_start = NULL;
+    this->input_buffer_position_end = NULL;
+    this->input_buffer_position_used = NULL;
+
+    this->send_ready_cycle = 0;
+    this->recv_ready_cycle = NULL;
+
+    this->last_selected = 0;
+
+    this->stat_transmitted_package_size = NULL;
 };
 
 // =============================================================================
 interconnection_router_t::~interconnection_router_t() {
     /// De-Allocate memory to prevent memory leak
+    utils_t::template_delete_array<uint64_t>(recv_ready_cycle);
+
     utils_t::template_delete_matrix<memory_package_t>(input_buffer, this->get_max_ports());
     utils_t::template_delete_array<uint32_t>(input_buffer_position_start);
     utils_t::template_delete_array<uint32_t>(input_buffer_position_end);
     utils_t::template_delete_array<uint32_t>(input_buffer_position_used);
+
+    utils_t::template_delete_array<uint64_t>(stat_transmitted_package_size);
 };
 
 //==============================================================================
 void interconnection_router_t::allocate() {
+    this->recv_ready_cycle = utils_t::template_allocate_initialize_array<uint64_t>(this->get_max_ports(), 0);
+
     this->input_buffer = utils_t::template_allocate_matrix<memory_package_t>(this->get_max_ports(), this->get_input_buffer_size());
     this->input_buffer_position_start = utils_t::template_allocate_initialize_array<uint32_t>(this->get_max_ports(), 0);
     this->input_buffer_position_end = utils_t::template_allocate_initialize_array<uint32_t>(this->get_max_ports(), 0);
     this->input_buffer_position_used = utils_t::template_allocate_initialize_array<uint32_t>(this->get_max_ports(), 0);
+
+    this->stat_transmitted_package_size = utils_t::template_allocate_initialize_array<uint64_t>(sinuca_engine.get_global_line_size() + 1, 0);
 };
 
 //==============================================================================
@@ -113,33 +133,50 @@ void interconnection_router_t::clock(uint32_t subcycle) {
 
     /// Stalls the Router / Select Package / Send Package
     /// Makes the router stalls after a package send.
-    if (this->ready_cycle <= sinuca_engine.get_global_cycle()) {
+    if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
         uint32_t port = 0;
         /// Select a port to be activated.
         switch (this->get_selection_policy()) {
             case SELECTION_RANDOM:
-                port = this->selectionRandom();
+                port = this->selection_random(this->get_max_ports());
             break;
 
             case SELECTION_ROUND_ROBIN:
-                port = this->selectionRoundRobin();
+                port = this->selection_round_robin(this->get_max_ports());
+            break;
+
+            case SELECTION_BUFFER_LEVEL:
+                port = this->selection_buffer_level(this->input_buffer, this->get_max_ports(), this->get_input_buffer_size());
             break;
         }
 
-        /// Send the oldest UNTREATED package.
-        uint32_t position = this->input_buffer_position_start[port];
-        if (this->input_buffer_position_used[port] != 0 &&
-        input_buffer[port][position].state == PACKAGE_STATE_UNTREATED &&
-        input_buffer[port][position].ready_cycle <= sinuca_engine.get_global_cycle()) {
-            ROUTER_DEBUG_PRINTF("SENDING INPUT_BUFFER[%d][%d]: %s\n", port, position, this->input_buffer[port][position].memory_to_string().c_str());
-            int32_t transmission_latency = send_package(&this->input_buffer[port][position]);
-            if (transmission_latency != POSITION_FAIL) {
-                this->set_ready_cycle(sinuca_engine.get_global_cycle() + transmission_latency);
-                this->input_buffer_remove(port);
-                this->add_stat_transmissions();
+        /// From the selected port find a non empty one.
+        for (uint32_t i = 0; i < this->get_max_ports(); i++) {
+            uint32_t position = this->input_buffer_position_start[port];
+
+            /// If NOT UNTREATED or NOT READY package
+            if (this->input_buffer_position_used[port] == 0 ||
+            input_buffer[port][position].state != PACKAGE_STATE_UNTREATED ||
+            input_buffer[port][position].ready_cycle > sinuca_engine.get_global_cycle()) {
+
+                port++;
+                if (port >= this->get_max_ports()) {
+                    port = 0;
+                }
+                this->last_selected = port;
             }
+
+            /// Send the oldest UNTREATED package.
             else {
-                this->input_buffer_reinsert(port);
+                ROUTER_DEBUG_PRINTF("SENDING INPUT_BUFFER[%d][%d]: %s\n", port, position, this->input_buffer[port][position].memory_to_string().c_str());
+                int32_t transmission_latency = send_package(&this->input_buffer[port][position]);
+                if (transmission_latency != POSITION_FAIL) {
+                    this->input_buffer_remove(port);
+                }
+                else {
+                    this->input_buffer_reinsert(port);
+                }
+                break;
             }
         }
     }
@@ -149,40 +186,87 @@ void interconnection_router_t::clock(uint32_t subcycle) {
 int32_t interconnection_router_t::send_package(memory_package_t *package) {
     ROUTER_DEBUG_PRINTF("send_package() package:%s\n", package->memory_to_string().c_str());
 
-    ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
-    uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
-    ERROR_ASSERT_PRINTF(output_port < this->get_max_ports(), "Output Port does not exist\n");
-    package->hop_count--;  /// Consume its own port
+    if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
+        ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
+        uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
+        ERROR_ASSERT_PRINTF(output_port < this->get_max_ports(), "Output Port does not exist\n");
+        package->hop_count--;  /// Consume its own port
 
-    bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port));
-    if (sent) {
-        ROUTER_DEBUG_PRINTF("\tSEND DATA OK\n");
-        uint32_t latency = sinuca_engine.interconnection_controller->find_package_route_latency(package);
-        return latency;
+        uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(package, this, this->get_interface_output_component(output_port));
+        bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port), transmission_latency);
+        if (sent) {
+            ROUTER_DEBUG_PRINTF("\tSEND DATA OK\n");
+            this->send_ready_cycle = sinuca_engine.get_global_cycle() + transmission_latency;
+
+            /// Statistics
+            this->add_stat_transmissions();
+            this->stat_transmitted_package_size[package->memory_size]++;
+            this->stat_total_send_size += package->memory_size;
+            this->stat_total_send_flits += package->memory_size / this->get_interconnection_width();
+
+            return transmission_latency;
+        }
+        else {
+            ROUTER_DEBUG_PRINTF("\tSEND DATA FAIL\n");
+            package->hop_count++;  /// Do not Consume its own port
+            return POSITION_FAIL;
+        }
     }
-    else {
-        ROUTER_DEBUG_PRINTF("\tSEND DATA FAIL\n");
-        package->hop_count++;  /// Do not Consume its own port
-        return POSITION_FAIL;
-    }
+    ROUTER_DEBUG_PRINTF("\tSEND DATA FAIL (BUSY)\n");
+    return POSITION_FAIL;
 };
 
 
 //==============================================================================
-bool interconnection_router_t::receive_package(memory_package_t *package, uint32_t input_port) {
-    ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Input Port does not exist on this Router !\n");
-    ERROR_ASSERT_PRINTF(package->id_dst != this->get_id(), "Final destination is a Router !\n");
-    ERROR_ASSERT_PRINTF(package->hops != NULL, "The package arrived without any routing information !\n");
+bool interconnection_router_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
 
-    /// Get the next position into the Circular Buffer
-    int32_t position = this->input_buffer_insert(input_port);
-    if (position != POSITION_FAIL) {
-        this->input_buffer[input_port][position] = *package;
-        uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(package);
-        this->input_buffer[input_port][position].package_untreated(transmission_latency);
-        return OK;
+    if (this->recv_ready_cycle[input_port] <= sinuca_engine.get_global_cycle()) {
+        ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Input Port does not exist on this Router !\n");
+        ERROR_ASSERT_PRINTF(package->id_dst != this->get_id(), "Final destination is a Router !\n");
+        ERROR_ASSERT_PRINTF(package->hops != NULL, "The package arrived without any routing information !\n");
+
+        /// Get the next position into the Circular Buffer
+        int32_t position = this->input_buffer_insert(input_port);
+        if (position != POSITION_FAIL) {
+            ROUTER_DEBUG_PRINTF("\tRECV DATA OK\n");
+            this->input_buffer[input_port][position] = *package;
+            this->input_buffer[input_port][position].package_untreated(1);
+
+            this->recv_ready_cycle[input_port] = sinuca_engine.get_global_cycle() + transmission_latency;
+
+            /// Statistics
+            this->stat_total_recv_size += package->memory_size;
+            this->stat_total_recv_flits += package->memory_size / this->get_interconnection_width();
+
+            return OK;
+        }
     }
+    ROUTER_DEBUG_PRINTF("\tRECV DATA FAIL (BUSY)\n");
     return FAIL;
+};
+
+/// ============================================================================
+/// Token Controller Methods
+/// ============================================================================
+void interconnection_router_t::allocate_token_list() {
+    ROUTER_DEBUG_PRINTF("allocate_token_list()\n");
+};
+
+/// ============================================================================
+bool interconnection_router_t::check_token_list(memory_package_t *package) {
+    ERROR_PRINTF("check_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
+    return FAIL;
+};
+
+/// ============================================================================
+uint32_t interconnection_router_t::check_token_space(memory_package_t *package) {
+    ERROR_PRINTF("check_token_space %s.\n", get_enum_memory_operation_char(package->memory_operation))
+    return 0;
+};
+
+/// ============================================================================
+void interconnection_router_t::remove_token_list(memory_package_t *package) {
+    ERROR_PRINTF("remove_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
 };
 
 
@@ -190,20 +274,40 @@ bool interconnection_router_t::receive_package(memory_package_t *package, uint32
 // Selection Strategies
 //==============================================================================
 /// Selection strategy: Random
-uint32_t interconnection_router_t::selectionRandom() {
+uint32_t interconnection_router_t::selection_random(uint32_t total_buffers) {
     unsigned int seed = sinuca_engine.get_global_cycle() % 1000;
-    uint32_t selected = (rand_r(&seed) % this->get_max_ports());
+    uint32_t selected = (rand_r(&seed) % total_buffers);
     return selected;
 };
 
 //==============================================================================
 /// Selection strategy: Round Robin
-uint32_t interconnection_router_t::selectionRoundRobin() {
-    this->last_send++;
-    if (this->last_send >= this->get_max_ports()) {
-        this->last_send = 0;
+uint32_t interconnection_router_t::selection_round_robin(uint32_t total_buffers) {
+    this->last_selected++;
+    if (this->last_selected >= total_buffers) {
+        this->last_selected = 0;
     }
-    return this->last_send;
+    return this->last_selected;
+};
+
+//==============================================================================
+/// Selection strategy: Buffer Level
+uint32_t interconnection_router_t::selection_buffer_level(memory_package_t **buffer, uint32_t total_buffers, uint32_t buffer_size){
+    uint32_t size_selected = 0;
+    uint32_t selected = 0;
+    for (uint32_t i = 0; i < total_buffers; i++) {
+        uint32_t total = 0;
+        for (uint32_t j = 0; j < buffer_size; j++) {
+            if (buffer[i][j].state != PACKAGE_STATE_FREE) {
+                total++;
+            }
+        }
+        if (total > size_selected) {
+            selected = i;
+            size_selected = total;
+        }
+    }
+    return selected;
 };
 
 //==============================================================================
@@ -226,33 +330,71 @@ void interconnection_router_t::periodic_check(){
 };
 
 //==============================================================================
-// STATISTICS
+/// STATISTICS
 //==============================================================================
 void interconnection_router_t::reset_statistics() {
     this->set_stat_transmissions(0);
+
+    this->set_stat_total_send_size(0);
+    this->set_stat_total_recv_size(0);
+
+    this->set_stat_total_send_flits(0);
+    this->set_stat_total_recv_flits(0);
+
+    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size() + 1; i++) {
+        this->stat_transmitted_package_size[i] = 0;
+    }
 };
 
 //==============================================================================
 void interconnection_router_t::print_statistics() {
-    char title[50] = "";
+    char title[100] = "";
     sprintf(title, "Statistics of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);
     sinuca_engine.write_statistics_big_separator();
 
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_transmissions", stat_transmissions);
+
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_total_send_size", this->stat_total_send_size);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_total_recv_size", this->stat_total_recv_size);
+
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "send_size_per_cycle_warm", stat_total_send_size,
+                                                                                                                       sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "recv_size_per_cycle_warm", this->stat_total_recv_size,
+                                                                                                                       sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_total_send_flits", this->stat_total_send_flits);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_total_recv_flits", this->stat_total_recv_flits);
+
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "send_flits_per_cycle_warm", stat_total_send_flits,
+                                                                                                                       sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "recv_flits_per_cycle_warm", this->stat_total_recv_flits,
+                                                                                                                       sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_small_separator();
+    char name[100];
+    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size() + 1; i++) {
+        sprintf(name, "stat_transmitted_package_size_%u", i);
+        sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), name, stat_transmitted_package_size[i]);
+    }
 };
 
 //==============================================================================
 void interconnection_router_t::print_configuration() {
-    char title[50] = "";
+    char title[100] = "";
     sprintf(title, "Configuration of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);
     sinuca_engine.write_statistics_big_separator();
 
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "interconnection_latency", this->get_interconnection_latency());
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "interconnection_width", this->get_interconnection_width());
+
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "input_buffer_size", input_buffer_size);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "selection_policy", get_enum_selection_char(selection_policy));
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "latency", latency);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "width", width);
 };
