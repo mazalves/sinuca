@@ -30,18 +30,18 @@ class prefetch_stream_t : public prefetch_t {
         /// ====================================================================
         /// Set by sinuca_configurator
         /// ====================================================================
-		uint32_t stream_table_size;
+        uint32_t stream_table_size;
 
         uint64_t prefetch_distance;          /// Prefetch Range to Detect Stream
         uint32_t prefetch_degree;            /// Maximum number of prefetchs ahead
-        uint32_t search_distance;            /// Search distance (upwards and downwards)  
-        
+        uint32_t search_distance;            /// Search distance (upwards and downwards)
+
         uint32_t lifetime_cycles;            /// Lifetime before a stream can be replaced, in cycles
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
-		
-		stream_table_line_t *stream_table;
+
+        stream_table_line_t *stream_table;
 
     public:
         /// ====================================================================
@@ -75,7 +75,7 @@ class prefetch_stream_t : public prefetch_t {
 
         void treat_prefetch(memory_package_t *package);
 
-		INSTANTIATE_GET_SET(uint32_t, stream_table_size)
+        INSTANTIATE_GET_SET(uint32_t, stream_table_size)
 
         INSTANTIATE_GET_SET(uint32_t, prefetch_distance)
         INSTANTIATE_GET_SET(uint32_t, prefetch_degree)

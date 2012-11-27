@@ -21,7 +21,7 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
 /// ============================================================================
-class reference_prediction_line_t {
+class stride_table_line_t {
     public:
         uint64_t last_opcode_address;           /// Last Opcode Request which matched into this stride
         uint64_t last_memory_address;           /// Last Memory Request which matched into this stride
@@ -35,11 +35,11 @@ class reference_prediction_line_t {
         /// ====================================================================
         /// Methods
         /// ====================================================================
-        reference_prediction_line_t();
-        ~reference_prediction_line_t();
+        stride_table_line_t();
+        ~stride_table_line_t();
 
         void clean();
         std::string content_to_string();
 
-        static std::string print_all(reference_prediction_line_t *input_array, uint32_t size_array);
+        static std::string print_all(stride_table_line_t *input_array, uint32_t size_array);
 };

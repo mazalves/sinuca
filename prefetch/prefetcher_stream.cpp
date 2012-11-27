@@ -58,9 +58,9 @@ prefetch_stream_t::~prefetch_stream_t() {
 void prefetch_stream_t::allocate() {
     prefetch_t::allocate();
 
-    ERROR_ASSERT_PRINTF(this->prefetch_degree != 0, "Prefetch degree should be at least 1.\n")
+    ERROR_ASSERT_PRINTF(this->prefetch_degree > 0, "Prefetch degree should be at least 1.\n")
     ERROR_ASSERT_PRINTF(this->prefetch_distance >= 2, "Address distance should be at least 2.\n")
-    ERROR_ASSERT_PRINTF(this->search_distance != 0, "Search distance should be at least 1.\n")
+    ERROR_ASSERT_PRINTF(this->search_distance > 0, "Search distance should be at least 1.\n")
     ERROR_ASSERT_PRINTF(this->lifetime_cycles >= 100, "Lifetime cycles should be reasonably large, recommended 10000.\n")
     this->stream_table = utils_t::template_allocate_array<stream_table_line_t>(this->get_stream_table_size());
 
@@ -161,7 +161,16 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
                         }
 
                     }
-                    this->stream_table[slot].ending_address += sinuca_engine.get_global_line_size() * this->prefetch_degree;
+                    /// The following update is to avoid the START become greater than END
+                    /// If the stride of the access is bigger than the prefetch degree ... update using the stride to update the ending address
+                    if (package->memory_address - this->stream_table[slot].starting_address >  sinuca_engine.get_global_line_size() * this->prefetch_degree) {
+                        this->stream_table[slot].ending_address += package->memory_address - this->stream_table[slot].starting_address;
+                    }
+                    /// Otherwise, use the prefetch degree to update the ending address
+                    else {
+                        this->stream_table[slot].ending_address += sinuca_engine.get_global_line_size() * this->prefetch_degree;
+                    }
+                    // ~ this->stream_table[slot].ending_address += sinuca_engine.get_global_line_size() * this->prefetch_degree;
                     this->stream_table[slot].starting_address = package->memory_address;
                     break;
                 }
@@ -212,7 +221,16 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
                             PREFETCHER_DEBUG_PRINTF("\t %s", this->request_buffer[position].content_to_string().c_str());
                         }
                     }
-                    this->stream_table[slot].ending_address -= sinuca_engine.get_global_line_size()*this->prefetch_degree;
+                    /// The following update is to avoid the START become greater than END
+                    /// If the stride of the access is bigger than the prefetch degree ... update using the stride to update the ending address
+                    if (this->stream_table[slot].starting_address - package->memory_address > sinuca_engine.get_global_line_size() * this->prefetch_degree) {
+                        this->stream_table[slot].ending_address -= this->stream_table[slot].starting_address - package->memory_address;
+                    }
+                    /// Otherwise, use the prefetch degree to update the ending address
+                    else {
+                        this->stream_table[slot].ending_address -= sinuca_engine.get_global_line_size() * this->prefetch_degree;
+                    }
+                    // ~ this->stream_table[slot].ending_address -= sinuca_engine.get_global_line_size() * this->prefetch_degree;
                     this->stream_table[slot].starting_address = package->memory_address;
                     break;
                 }

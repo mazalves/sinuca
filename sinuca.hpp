@@ -85,7 +85,7 @@ class directory_line_t;
 class directory_controller_t;
 /// Prefetch
 class prefetch_t;
-class reference_prediction_line_t;
+class stride_table_line_t;
 class prefetch_stride_t;
 class stream_table_line_t;
 class prefetch_stream_t;
@@ -320,7 +320,7 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 #include "./directory/directory_line.hpp"
 #include "./directory/directory_controller.hpp"
 
-#include "./prefetch/reference_prediction_line.hpp"
+#include "./prefetch/stride_table_line.hpp"
 #include "./prefetch/stream_table_line.hpp"
 
 #include "./prefetch/prefetcher.hpp"

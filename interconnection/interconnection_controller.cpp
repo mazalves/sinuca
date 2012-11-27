@@ -241,12 +241,30 @@ void interconnection_controller_t::routing_algorithm_floyd_warshall() {
         }
     }
 
+    printf("## Plot the graph of connection ready to Graphviz\n");
+    printf("## GV = {dot, neato, smyrna, lefty, dotty}\n");
+    printf("## $ dot -Tpdf -o graph.pdf graph.txt\n\n");
+    printf("digraph G\n");
+    printf("\t {\n");
+    printf("\t node [shape=box,style=filled];\n");
+    printf("\t overlap=scale;\n");
+    printf("\t splines=true;\n");
+    for (i = 0; i < sinuca_engine.get_interconnection_interface_array_size(); i++) {
+        for (j = 0; j < sinuca_engine.get_interconnection_interface_array_size(); j++) {
+            if (i != j && route_matrix[i][j].hop_count == 0) {
+                printf("\t%s -> %s;\n", sinuca_engine.interconnection_interface_array[i]->get_label(), sinuca_engine.interconnection_interface_array[j]->get_label());
+            }
+        }
+    }
+    printf("}\n");
+
 #ifdef INTERCONNECTION_CTRL_DEBUG
     INTERCONNECTION_CTRL_DEBUG_PRINTF("-------------------------------------------------------------\n");
     for (i = 0; i < sinuca_engine.get_interconnection_interface_array_size(); i++) {
         for (j = 0; j < sinuca_engine.get_interconnection_interface_array_size(); j++) {
             if (i != j) {
                 INTERCONNECTION_CTRL_DEBUG_PRINTF("%s to %s:\n", sinuca_engine.interconnection_interface_array[i]->get_label(), sinuca_engine.interconnection_interface_array[j]->get_label());
+                printf("\t%s -> %s\n", sinuca_engine.interconnection_interface_array[i]->get_label(), sinuca_engine.interconnection_interface_array[j]->get_label());
                 for (k = 0; k <= route_matrix[i][j].hop_count; k++) {
                     INTERCONNECTION_CTRL_DEBUG_PRINTF("\t[%d]\n", route_matrix[i][j].hops[k])
                 }

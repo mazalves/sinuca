@@ -29,7 +29,7 @@ class prefetch_stride_t : public prefetch_t {
         /// ====================================================================
         /// Set by sinuca_configurator
         /// ====================================================================
-        uint32_t reference_prediction_table_size;   /// Prefetch Stream Detector Table Size
+        uint32_t stride_table_size;   /// Prefetch Stream Detector Table Size
         uint32_t address_distance;                  /// Prefetch Range to Detect Stream
 
         uint32_t prefetch_degree;                   /// Maximum number of prefetchs ahead
@@ -38,7 +38,7 @@ class prefetch_stride_t : public prefetch_t {
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
-        reference_prediction_line_t *reference_prediction_table;
+        stride_table_line_t *stride_table;
 
         /// ====================================================================
         /// Statistics related
@@ -79,7 +79,7 @@ class prefetch_stride_t : public prefetch_t {
 
         void treat_prefetch(memory_package_t *package);
 
-        INSTANTIATE_GET_SET(uint32_t, reference_prediction_table_size)
+        INSTANTIATE_GET_SET(uint32_t, stride_table_size)
 
         INSTANTIATE_GET_SET(uint32_t, prefetch_degree)
         INSTANTIATE_GET_SET(uint32_t, wait_between_requests)

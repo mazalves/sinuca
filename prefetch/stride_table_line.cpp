@@ -25,16 +25,16 @@
 #include <string>
 
 /// ============================================================================
-reference_prediction_line_t::reference_prediction_line_t() {
+stride_table_line_t::stride_table_line_t() {
     this->clean();
 };
 
 /// ============================================================================
-reference_prediction_line_t::~reference_prediction_line_t() {
+stride_table_line_t::~stride_table_line_t() {
 };
 
 /// ============================================================================
-void reference_prediction_line_t::clean() {
+void stride_table_line_t::clean() {
     this->last_opcode_address = 0;
     this->last_memory_address = 0;
     this->memory_address_difference = 0;
@@ -45,7 +45,7 @@ void reference_prediction_line_t::clean() {
 }
 
 /// ============================================================================
-std::string reference_prediction_line_t::content_to_string() {
+std::string stride_table_line_t::content_to_string() {
     std::string content_string;
     content_string = "";
 
@@ -56,12 +56,12 @@ std::string reference_prediction_line_t::content_to_string() {
     content_string = content_string + " Prefetch Ahead:" + utils_t::uint32_to_char(this->prefetch_ahead);
     content_string = content_string + " Cycle Last Activation:" + utils_t::uint64_to_char(this->cycle_last_activation);
     content_string = content_string + " Cycle Last Request:" + utils_t::uint64_to_char(this->cycle_last_request);
-    content_string = content_string + " Stride State:" + get_enum_prefetch_stride_state_char(this->stride_state);    
+    content_string = content_string + " Stride State:" + get_enum_prefetch_stride_state_char(this->stride_state);
     return content_string;
 };
 
 /// ============================================================================
-std::string reference_prediction_line_t::print_all(reference_prediction_line_t *input_array, uint32_t size_array) {
+std::string stride_table_line_t::print_all(stride_table_line_t *input_array, uint32_t size_array) {
     std::string content_string;
     std::string final_string;
 

@@ -69,9 +69,9 @@ class prefetch_disable_t : public prefetch_t {
         void request_buffer_remove();
 
         /// TABLE =====================================================
-        void reference_prediction_table_line_clean(uint32_t stride_buffer_line);
-        std::string reference_prediction_table_line_to_string(uint32_t stride_buffer_line);
-        std::string reference_prediction_table_print_all();
+        void stride_table_line_clean(uint32_t stride_buffer_line);
+        std::string stride_table_line_to_string(uint32_t stride_buffer_line);
+        std::string stride_table_print_all();
         /// ====================================================================
 
         void treat_prefetch(memory_package_t *package);

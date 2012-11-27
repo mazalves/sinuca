@@ -48,6 +48,10 @@ for i in *8t.tid0.stat.out.gz; do
     mv cmp_jnz.txt $k.pause.txt
 done
 
+#Check the footprint of a memory trace
+zcat art.M_1t.tid0.mem.out.gz | awk '{print rshift($3,6)}' | sort | uniq | wc -l
+for i in `ls *_8t.tid*.mem*` ; do echo $i >> FOOTPRINT.txt ; time zcat $i | awk '{print rshift($3,6)}' | sort -n | uniq | wc -l >> FOOTPRINT.txt; done
+
 # Check the progress of multiple simulations
 for i in `ls ~/Experiment/benchmarks/results/*/*.log`; do tail -n16 $i | grep 'CPU  0' | grep -v 100.000%| grep IPC -m1 ; done
 ## Shows the benchmarks which failed.
@@ -60,10 +64,9 @@ for i in *pdf ; do echo $i ; pdfcrop $i $i; done
 ## VALIDATION x86_64 - SPEC CPU 2000 and 2006
 ########################################################################
 
-# Run the Base and DSBP for all SPEC2000 and SPEC2006
-rm ~/Experiment/benchmarks/results/spec_cpu2000/*Validation*
-rm ~/Experiment/benchmarks/results/spec_cpu2006/*Validation*
-rm ~/Experiment/benchmarks/results/spec_cpu2000_x86_32/*Validation*
+# Run the Validation for all SPEC2000 and SPEC2006
+rm ~/Experiment/benchmarks/results/spec_cpu2000/*Validation_x86_64*
+rm ~/Experiment/benchmarks/results/spec_cpu2006/*Validation_x86_64*
 rm ~/Experiment/benchmarks/results/spec_cpu2006_x86_32/*Validation*
 for i in `seq 1 29` ; do
     byobu -p$i -X stuff "reset ; \
@@ -78,6 +81,24 @@ cd ~/Experiment/SiNUCA/scripts
 rm ~/Experiment/benchmarks/plots/*
 python plot.py parameters_validation.cfg
 python plot.py parameters_validation_x86_32.cfg
+
+#$ lstopo
+#$ export GOMP_CPU_AFFINITY=0,2,4,6,1,3,5,7
+
+# Run the Validation for all NPB_OMP 1, 2, 4, 8 threads.
+rm ~/Experiment/benchmarks/results/nas_npb/*S.Validation*
+for i in `seq 19 27` ; do
+    byobu -p$i -X stuff "reset ; \
+    cd ~/Experiment/SiNUCA/scripts ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Nehalem_2x4cores/main_8cores_8cachel2_2cacheL3.cfg npb_omp Validation_1t 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Nehalem_2x4cores/main_8cores_8cachel2_2cacheL3.cfg npb_omp Validation_2t 0 2 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Nehalem_2x4cores/main_8cores_8cachel2_2cacheL3.cfg npb_omp Validation_4t 0 4 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Nehalem_2x4cores/main_8cores_8cachel2_2cacheL3.cfg npb_omp Validation_8t 0 8 $i $i ; \
+    $(echo -ne '\r')";
+done
+cd ~/Experiment/SiNUCA/scripts
+rm ~/Experiment/benchmarks/plots/*
+python plot.py parameters_validation_multithreaded.cfg
 
 ########################################################################
 ## Motivation ISPASS
@@ -302,42 +323,69 @@ python create_pin_points_trace.py parallel_trace spec_omp2001 8 1 11 ; \
 $(echo -ne '\r')";
 
 
-# Create pin_point traces for all NPB_OMP and SPEC_OMP2001 - 1,2,4,8 Threads
+# Create pin_point traces for all NPB_OMP (A) and SPEC_OMP2001 - 1,2,4,8,16 Threads
 byobu -p0 -X stuff \
 "reset ; \
 cd ~/Experiment/SiNUCA/trace_generator/source/tools/sinuca_tracer/scripts ; \
 python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
 python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
-python create_pin_points_trace.py parallel_trace npb_omp 1 1 11 ; \
+python create_pin_points_trace.py parallel_trace npb_omp 1 1 9 ; \
 python create_pin_points_trace.py clean spec_omp2001 1 0 0 ; \
 python create_pin_points_trace.py prepare spec_omp2001 1 0 0 ; \
 python create_pin_points_trace.py parallel_trace spec_omp2001 1 1 11 ; \
 reset;
 python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
 python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
-python create_pin_points_trace.py parallel_trace npb_omp 2 1 11 ; \
+python create_pin_points_trace.py parallel_trace npb_omp 2 1 9 ; \
 python create_pin_points_trace.py clean spec_omp2001 1 0 0 ; \
 python create_pin_points_trace.py prepare spec_omp2001 1 0 0 ; \
 python create_pin_points_trace.py parallel_trace spec_omp2001 2 1 11 ; \
 reset;
 python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
 python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
-python create_pin_points_trace.py parallel_trace npb_omp 4 1 11 ; \
+python create_pin_points_trace.py parallel_trace npb_omp 4 1 9 ; \
 python create_pin_points_trace.py clean spec_omp2001 1 0 0 ; \
 python create_pin_points_trace.py prepare spec_omp2001 1 0 0 ; \
 python create_pin_points_trace.py parallel_trace spec_omp2001 4 1 11 ; \
 reset;
 python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
 python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
-python create_pin_points_trace.py parallel_trace npb_omp 8 1 11 ; \
+python create_pin_points_trace.py parallel_trace npb_omp 8 1 9 ; \
 python create_pin_points_trace.py clean spec_omp2001 1 0 0 ; \
 python create_pin_points_trace.py prepare spec_omp2001 1 0 0 ; \
 python create_pin_points_trace.py parallel_trace spec_omp2001 8 1 11 ; \
 reset;
 python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
 python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
-python create_pin_points_trace.py parallel_trace npb_omp 16 1 11 ; \
+python create_pin_points_trace.py parallel_trace npb_omp 16 1 9 ; \
 python create_pin_points_trace.py clean spec_omp2001 1 0 0 ; \
 python create_pin_points_trace.py prepare spec_omp2001 1 0 0 ; \
 python create_pin_points_trace.py parallel_trace spec_omp2001 16 1 11 ; \
 $(echo -ne '\r')";
+
+# Create pin_point traces for all NPB_OMP (S) - 1,2,4,8 Threads
+byobu -p0 -X stuff \
+"reset ; \
+cd ~/Experiment/SiNUCA/trace_generator/source/tools/sinuca_tracer/scripts ; \
+python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
+python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
+python create_pin_points_trace.py parallel_trace npb_omp 1 19 27 ; \
+echo `uname -a`--`date`--TRACE_1t_READY >> ~/Dropbox/TRACE.READY ; \
+reset;
+python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
+python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
+python create_pin_points_trace.py parallel_trace npb_omp 2 19 27 ; \
+echo `uname -a`--`date`--TRACE_2t_READY >> ~/Dropbox/TRACE.READY ; \
+reset;
+python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
+python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
+python create_pin_points_trace.py parallel_trace npb_omp 4 19 27 ; \
+echo `uname -a`--`date`--TRACE_4t_READY >> ~/Dropbox/TRACE.READY ; \
+reset;
+python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
+python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
+python create_pin_points_trace.py parallel_trace npb_omp 8 19 27 ; \
+echo `uname -a`--`date`--TRACE_8t_READY >> ~/Dropbox/TRACE.READY ; \
+echo `uname -a`--`date`--ALL_CLEAR >> ~/Dropbox/TRACE.READY ; \
+$(echo -ne '\r')";
+

@@ -554,8 +554,8 @@ void sinuca_engine_t::initialize_cache_memory() {
 
                 prefetcher_ptr->set_prefetcher_type(PREFETCHER_STRIDE);
 
-                prefetcher_parameters.push_back("REFERENCE_PREDICTION_TABLE_SIZE");
-                prefetcher_ptr->set_reference_prediction_table_size( cfg_prefetcher[ prefetcher_parameters.back() ] );
+                prefetcher_parameters.push_back("STRIDE_TABLE_SIZE");
+                prefetcher_ptr->set_stride_table_size( cfg_prefetcher[ prefetcher_parameters.back() ] );
 
                 prefetcher_parameters.push_back("PREFETCH_DEGREE");
                 prefetcher_ptr->set_prefetch_degree( cfg_prefetcher[ prefetcher_parameters.back() ] );
