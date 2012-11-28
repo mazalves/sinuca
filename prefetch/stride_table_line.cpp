@@ -40,7 +40,6 @@ void stride_table_line_t::clean() {
     this->memory_address_difference = 0;
     this->prefetch_ahead = 0;
     this->cycle_last_activation = 0;
-    this->cycle_last_request = 0;
     this->stride_state = PREFETCHER_STRIDE_STATE_NO_PRED;
 }
 
@@ -55,7 +54,6 @@ std::string stride_table_line_t::content_to_string() {
     content_string = content_string + " Address Difference:" + utils_t::int64_to_char(this->memory_address_difference);
     content_string = content_string + " Prefetch Ahead:" + utils_t::uint32_to_char(this->prefetch_ahead);
     content_string = content_string + " Cycle Last Activation:" + utils_t::uint64_to_char(this->cycle_last_activation);
-    content_string = content_string + " Cycle Last Request:" + utils_t::uint64_to_char(this->cycle_last_request);
     content_string = content_string + " Stride State:" + get_enum_prefetch_stride_state_char(this->stride_state);
     return content_string;
 };

@@ -83,7 +83,7 @@ class memory_package_t {
         static void find_old_rqst_ans_state_ready(memory_package_t *input_array, uint32_t size_array, package_state_t state, int32_t &position_rqst, int32_t &position_ans);
         static int32_t find_old_request_state_ready(memory_package_t *input_array, uint32_t size_array, package_state_t state);
         static int32_t find_old_answer_state_ready(memory_package_t *input_array, uint32_t size_array, package_state_t state);
-        static int32_t find_state_mem_address(memory_package_t *input_array, uint32_t size_array, package_state_t state, uint64_t address);
+        static int32_t find_state_mem_address(memory_package_t *input_array, uint32_t size_array, package_state_t state, uint64_t uop_number, uint64_t address);
 
         // ~ static std::string print(memory_package_t input_package);
         static std::string print_all(memory_package_t *input_array, uint32_t size_array);

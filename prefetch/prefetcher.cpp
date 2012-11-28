@@ -82,6 +82,7 @@ int32_t prefetch_t::request_buffer_insert() {
         }
     }
     else {
+        this->add_stat_full_buffer();
         switch (this->full_buffer_type) {
             case FULL_BUFFER_OVERRIDE:
                 valid_position = this->request_buffer_position_end;
@@ -93,8 +94,6 @@ int32_t prefetch_t::request_buffer_insert() {
                 if (this->request_buffer_position_start >= this->request_buffer_size) {
                     this->request_buffer_position_start = 0;
                 }
-                /// Statistics
-                this->add_stat_deleted_prefetches();
             break;
 
             case FULL_BUFFER_STOP:
@@ -199,7 +198,9 @@ void prefetch_t::reset_statistics() {
 
     this->stat_created_prefetches = 0;
     this->stat_dropped_prefetches = 0;
-    this->stat_deleted_prefetches = 0;
+
+    this->stat_full_buffer = 0;
+
     this->stat_upstride_prefetches = 0;
     this->stat_downstride_prefetches = 0;
     this->stat_request_matches = 0;
@@ -215,7 +216,7 @@ void prefetch_t::print_statistics() {
 
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_created_prefetches", stat_created_prefetches);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_dropped_prefetches", stat_dropped_prefetches);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_deleted_prefetches", stat_deleted_prefetches);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_buffer", stat_full_buffer);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_upstride_prefetches", stat_upstride_prefetches);

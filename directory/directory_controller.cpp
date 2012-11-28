@@ -613,7 +613,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                         break;
                     }
 
-                    /// Need CopyBack ?
+                    /// Need CopyBack ? (May have received some dirty line from High Levels)
                     if (coherence_need_copyback(cache, cache_line)) {
                         // =============================================================
                         // Line Usage Prediction (Tag different from actual)
@@ -761,7 +761,7 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
     cache_line_t *cache_line = cache->find_line(package->memory_address, index, way);
 
     /// ================================================================================
-    /// THIS cache level generated the request (PREFETCH / COPYBACK)
+    /// THIS cache level generated the request (PREFETCH)
     if (directory_line->id_owner == cache->get_id()) {
         /// Erase the directory_entry
         DIRECTORY_CTRL_DEBUG_PRINTF("\t Erasing Directory Line:%s\n", directory_line->directory_line_to_string().c_str())
@@ -883,11 +883,9 @@ package_state_t directory_controller_t::treat_cache_request_sent(uint32_t cache_
                 this->directory_lines->erase(this->directory_lines->begin() + directory_line_number);
                 /// Erase the package
                 DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (Requester = This)\n")
-                return PACKAGE_STATE_FREE;
+
             }
-            else {
-                return PACKAGE_STATE_FREE;
-            }
+            return PACKAGE_STATE_FREE;
         break;
     }
 
@@ -1032,26 +1030,16 @@ protocol_status_t directory_controller_t::find_copyback_higher_levels(cache_memo
                 switch (this_cache_line->status) {
                     case PROTOCOL_STATUS_M:
                     case PROTOCOL_STATUS_O: {
-                        // =============================================================
-                        // Line Usage Prediction
-                        // ~ bool is_sub_block_hit = cache_memory->line_usage_predictor->check_sub_block_is_hit(package, index, way);
-                        // ~ if (is_sub_block_hit) {
-                            /// This Level stays with a normal copy
-                            cache_memory->change_status(this_cache_line, PROTOCOL_STATUS_S);
-                            /// Lower level becomes the owner
-                            return PROTOCOL_STATUS_O;
-                        // ~ }
+                        /// This Level stays with a normal copy
+                        cache_memory->change_status(this_cache_line, PROTOCOL_STATUS_S);
+                        /// Lower level becomes the owner
+                        return PROTOCOL_STATUS_O;
                     }
                     break;
 
                     case PROTOCOL_STATUS_E:
                     case PROTOCOL_STATUS_S: {
-                        // =============================================================
-                        // Line Usage Prediction
-                        // ~ bool is_sub_block_hit = cache_memory->line_usage_predictor->check_sub_block_is_hit(package, index, way);
-                        // ~ if (is_sub_block_hit) {
-                            return PROTOCOL_STATUS_S;
-                        // ~ }
+                        return PROTOCOL_STATUS_S;
                     }
                     break;
 
@@ -1074,22 +1062,34 @@ protocol_status_t directory_controller_t::find_copyback_higher_levels(cache_memo
                 switch (return_type) {
                     case PROTOCOL_STATUS_M:
                     case PROTOCOL_STATUS_O:
-                        switch (this->inclusiveness_type) {
-                            case INCLUSIVENESS_NON_INCLUSIVE:
-                            case INCLUSIVENESS_INCLUSIVE_LLC:
-                            case INCLUSIVENESS_INCLUSIVE_ALL:
-                                /// Allocate in this level only if line already exist
-                                if (this_cache_line != NULL) {
-                                    cache_memory->change_status(this_cache_line, PROTOCOL_STATUS_S);
-                                }
-                                return PROTOCOL_STATUS_O;
-                            break;
-                        }
+                        // =============================================================
+                        // Line Usage Prediction
+                        // ~ bool is_sub_block_hit = cache_memory->line_usage_predictor->check_sub_block_is_hit(package, index, way);
+                        // ~ if (is_sub_block_hit) {
+                            switch (this->inclusiveness_type) {
+                                case INCLUSIVENESS_NON_INCLUSIVE:
+                                case INCLUSIVENESS_INCLUSIVE_LLC:
+                                case INCLUSIVENESS_INCLUSIVE_ALL:
+                                    /// Allocate in this level only if line already exist
+                                    if (this_cache_line != NULL) {
+                                        cache_memory->change_status(this_cache_line, PROTOCOL_STATUS_S);
+                                    }
+                                    return PROTOCOL_STATUS_O;
+                                break;
+
+                            }
+                        // ~ }
                     break;
 
                     case PROTOCOL_STATUS_E:
                     case PROTOCOL_STATUS_S:
+                        // =============================================================
+                        // Line Usage Prediction
+                        // ~ bool is_sub_block_hit = cache_memory->line_usage_predictor->check_sub_block_is_hit(package, index, way);
+                        // ~ if (is_sub_block_hit) {
+
                         return PROTOCOL_STATUS_S;
+                        // ~ }
                     break;
 
                     case PROTOCOL_STATUS_I:
@@ -1261,6 +1261,7 @@ bool directory_controller_t::coherence_is_hit(cache_line_t *cache_line,  memory_
             switch (memory_operation) {
                 case MEMORY_OPERATION_READ:
                 case MEMORY_OPERATION_INST:
+                case MEMORY_OPERATION_WRITE:
                 case MEMORY_OPERATION_PREFETCH:
                     switch (cache_line->status) {
                         case PROTOCOL_STATUS_M:
@@ -1272,21 +1273,6 @@ bool directory_controller_t::coherence_is_hit(cache_line_t *cache_line,  memory_
 
                         case PROTOCOL_STATUS_I:
                             return FAIL;
-                        break;
-                    }
-                break;
-
-                case MEMORY_OPERATION_WRITE:
-                    switch (cache_line->status) {
-                        case PROTOCOL_STATUS_M:
-                        case PROTOCOL_STATUS_O:
-                        case PROTOCOL_STATUS_E:
-                        case PROTOCOL_STATUS_S:
-                                return OK;
-                        break;
-
-                        case PROTOCOL_STATUS_I:
-                                return FAIL;
                         break;
                     }
                 break;
@@ -1305,7 +1291,6 @@ bool directory_controller_t::coherence_is_hit(cache_line_t *cache_line,  memory_
 
             }
         break;
-
     }
     ERROR_PRINTF("Invalid protocol status\n");
     return FAIL;
@@ -1454,7 +1439,6 @@ void directory_controller_t::coherence_new_operation(cache_memory_t *cache, cach
                         cache->update_last_access(cache_line);
                         cache_line->status = PROTOCOL_STATUS_S;
                     }
-
                 break;
             }
         break;

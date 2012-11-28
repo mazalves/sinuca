@@ -265,7 +265,10 @@ class processor_t : public interconnection_interface_t {
         }
 
         inline bool is_busy() {
-            return (trace_over == false || reorder_buffer_position_used != 0);
+            return (trace_over == false ||
+                    fetch_buffer_position_used != 0 ||
+                    decode_buffer_position_used != 0 ||
+                    reorder_buffer_position_used != 0);
         }
 
         /// Fetch Buffer =======================================================

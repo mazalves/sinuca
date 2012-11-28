@@ -36,7 +36,6 @@ prefetch_stride_t::prefetch_stride_t() {
 
     this->stride_table_size = 0;
     this->prefetch_degree = 0;
-    this->wait_between_requests = 0;
     this->stride_table = NULL;
 };
 
@@ -60,77 +59,6 @@ void prefetch_stride_t::clock(uint32_t subcycle) {
     PREFETCHER_DEBUG_PRINTF("==================== ");
     PREFETCHER_DEBUG_PRINTF("====================\n");
     PREFETCHER_DEBUG_PRINTF("cycle() \n");
-
-    for (uint32_t slot = 0 ; slot < this->stride_table_size ; slot++) {
-        /// Something interesting to be requested. Check if can do a new request
-        if (this->stride_table[slot].stride_state == PREFETCHER_STRIDE_STATE_STEADY &&
-        this->stride_table[slot].prefetch_ahead < this->prefetch_degree &&
-        this->stride_table[slot].cycle_last_request <= sinuca_engine.get_global_cycle() - this->wait_between_requests) {
-
-            /// Check if it will request different cache line (already requested)
-            uint64_t last_memory_address = this->stride_table[slot].last_memory_address +
-                                    ( this->stride_table[slot].prefetch_ahead * this->stride_table[slot].memory_address_difference);
-
-            uint64_t memory_address = this->stride_table[slot].last_memory_address +
-                                    ( (this->stride_table[slot].prefetch_ahead + 1) * this->stride_table[slot].memory_address_difference);
-
-            PREFETCHER_DEBUG_PRINTF("New Prefetch found BUFFER[%u] %s\n", slot, this->stride_table[slot].content_to_string().c_str());
-            if (!this->cmp_index_tag(this->stride_table[slot].last_memory_address, memory_address) &&
-            !this->cmp_index_tag(last_memory_address, memory_address)) {
-                int32_t position = this->request_buffer_insert();
-                if (position != POSITION_FAIL) {
-
-                    this->stride_table[slot].prefetch_ahead++;
-                    this->stride_table[slot].cycle_last_request = sinuca_engine.get_global_cycle();
-
-                    /// Statistics
-                    this->add_stat_created_prefetches();
-                    if (this->stride_table[slot].memory_address_difference > 0) {
-                        this->add_stat_upstride_prefetches();
-                    }
-                    else {
-                        this->add_stat_downstride_prefetches();
-                    }
-
-                    uint64_t opcode_address = this->stride_table[slot].last_opcode_address;
-
-                    this->request_buffer[position].packager(
-                                                        0,                                          /// Request Owner
-                                                        0,                                          /// Opcode. Number
-                                                        opcode_address,                             /// Opcode. Address
-                                                        0,                                          /// Uop. Number
-
-                                                        memory_address,                             /// Mem. Address
-                                                        sinuca_engine.get_global_line_size(),       /// Block Size
-
-                                                        PACKAGE_STATE_UNTREATED,                    /// Pack. State
-                                                        0,                                          /// Ready Cycle
-
-                                                        MEMORY_OPERATION_PREFETCH,                  /// Mem. Operation
-                                                        false,                                      /// Is Answer
-
-                                                        0,                                          /// Src ID
-                                                        0,                                          /// Dst ID
-                                                        NULL,                                       /// *Hops
-                                                        0                                           /// Hop Counter
-                                                        );
-                    PREFETCHER_DEBUG_PRINTF("\t INSERTED on PREFETCHER_BUFFER[%d]\n", position);
-                    PREFETCHER_DEBUG_PRINTF("\t %s", this->request_buffer[position].content_to_string().c_str());
-                }
-                break;
-            }
-            /// Request was in the same cache line (already requested)
-            else {
-                this->stride_table[slot].prefetch_ahead++;
-                this->stride_table[slot].cycle_last_request = sinuca_engine.get_global_cycle();
-
-                /// Statistics
-                this->add_stat_dropped_prefetches();
-                PREFETCHER_DEBUG_PRINTF("\t DROPPED PREFETCH\n");
-                break;
-            }
-        }
-    }
 };
 
 //======================================================================
@@ -140,8 +68,9 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
     /// Try to match the request with some Stream
     for (slot = 0; slot < this->stride_table_size; slot++) {
         if (this->stride_table[slot].last_opcode_address == package->opcode_address) {
-            uint64_t next_address = this->stride_table[slot].last_memory_address + this->stride_table[slot].memory_address_difference;
-            bool is_stride_match = (next_address == package->memory_address);
+
+            int64_t address_difference = package->memory_address - this->stride_table[slot].last_memory_address;
+            bool is_stride_match = (address_difference == this->stride_table[slot].memory_address_difference && address_difference != 0);
 
             /// Statistics
             if (is_stride_match) {
@@ -156,18 +85,16 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
                         this->stride_table[slot].last_memory_address = package->memory_address;
                         this->stride_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
                         this->stride_table[slot].stride_state = PREFETCHER_STRIDE_STATE_STEADY;
-
-                        /// Statistics
                         this->add_stat_steady_state();
                     }
                     else {
-                        uint64_t address_difference = package->memory_address - this->stride_table[slot].last_memory_address;
                         this->stride_table[slot].memory_address_difference = address_difference;
 
                         this->stride_table[slot].prefetch_ahead = 0;
                         this->stride_table[slot].last_memory_address = package->memory_address;
                         this->stride_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
                         this->stride_table[slot].stride_state = PREFETCHER_STRIDE_STATE_TRANSIENT;
+                        this->add_stat_transient_state();
                     }
                 break;
 
@@ -179,39 +106,123 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
                         this->stride_table[slot].last_memory_address = package->memory_address;
                         this->stride_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
                         this->stride_table[slot].stride_state = PREFETCHER_STRIDE_STATE_STEADY;
-
-                        /// Statistics
                         this->add_stat_steady_state();
                     }
                     else {
-                        uint64_t address_difference = package->memory_address - this->stride_table[slot].last_memory_address;
                         this->stride_table[slot].memory_address_difference = address_difference;
 
                         this->stride_table[slot].prefetch_ahead = 0;
                         this->stride_table[slot].last_memory_address = package->memory_address;
                         this->stride_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
                         this->stride_table[slot].stride_state = PREFETCHER_STRIDE_STATE_NO_PRED;
+                        this->add_stat_no_pred_state();
                     }
                 break;
 
                 /// Indicates that the prediction should be stable for a while.
                 case PREFETCHER_STRIDE_STATE_STEADY:
                     if (is_stride_match) {
+                        /// Reduce the number of prefetchs ahead
                         if (this->stride_table[slot].prefetch_ahead > 0) {
                             this->stride_table[slot].prefetch_ahead--;
                         }
+                        /////////////////////////////////////////////////////
+                        // ~ else {
+                            // ~ printf("\n--\n");
+                        // ~ }
+                        /////////////////////////////////////////////////////
                         this->stride_table[slot].last_memory_address = package->memory_address;
                         this->stride_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
                         this->stride_table[slot].stride_state = PREFETCHER_STRIDE_STATE_STEADY;
-
-                        /// Statistics
                         this->add_stat_steady_state();
+
+                        /// Generate the prefetches
+                        for (uint32_t index = 1; index <= this->prefetch_degree; index++) {
+                            /// Check if can generate one more prefetch
+                            if (this->stride_table[slot].prefetch_ahead >= this->prefetch_degree) {
+                                break;
+                            }
+
+                            /// Check if it will request different cache line (already requested)
+                            uint64_t last_request_address = package->memory_address +
+                                                    ( this->stride_table[slot].prefetch_ahead * this->stride_table[slot].memory_address_difference);
+
+                            uint64_t new_request_address = last_request_address + this->stride_table[slot].memory_address_difference;
+
+                            /////////////////////////////////////////////////////
+                            // ~ printf("Slot:%d Opcode:%"PRIu64" Diff:%"PRIu64" PackAddr:%"PRIu64" New:%"PRIu64" \n",
+                                    // ~ slot,
+                                    // ~ this->stride_table[slot].last_opcode_address,
+                                    // ~ this->stride_table[slot].memory_address_difference,
+                                    // ~ package->memory_address,
+                                    // ~ new_request_address);
+                            /////////////////////////////////////////////////////
+
+                            PREFETCHER_DEBUG_PRINTF("New Prefetch found BUFFER[%u] %s\n", slot, this->stride_table[slot].content_to_string().c_str());
+                            if (!this->cmp_index_tag(package->memory_address, new_request_address) &&
+                            !this->cmp_index_tag(last_request_address, new_request_address)) {
+
+                                /// Find free position into the request buffer
+                                int32_t position = this->request_buffer_insert();
+                                if (position != POSITION_FAIL) {
+
+                                    /// Statistics
+                                    this->add_stat_created_prefetches();
+                                    if (this->stride_table[slot].memory_address_difference > 0) {
+                                        this->add_stat_upstride_prefetches();
+                                    }
+                                    else {
+                                        this->add_stat_downstride_prefetches();
+                                    }
+
+                                    uint64_t opcode_address = this->stride_table[slot].last_opcode_address;
+
+                                    this->request_buffer[position].packager(
+                                                                        0,                                          /// Request Owner
+                                                                        0,                                          /// Opcode. Number
+                                                                        opcode_address,                             /// Opcode. Address
+                                                                        0,                                          /// Uop. Number
+
+                                                                        new_request_address,                        /// Mem. Address
+                                                                        sinuca_engine.get_global_line_size(),       /// Block Size
+
+                                                                        PACKAGE_STATE_UNTREATED,                    /// Pack. State
+                                                                        0,                                          /// Ready Cycle
+
+                                                                        MEMORY_OPERATION_PREFETCH,                  /// Mem. Operation
+                                                                        false,                                      /// Is Answer
+
+                                                                        0,                                          /// Src ID
+                                                                        0,                                          /// Dst ID
+                                                                        NULL,                                       /// *Hops
+                                                                        0                                           /// Hop Counter
+                                                                        );
+                                    PREFETCHER_DEBUG_PRINTF("\t INSERTED on PREFETCHER_BUFFER[%d]\n", position);
+                                    PREFETCHER_DEBUG_PRINTF("\t %s", this->request_buffer[position].content_to_string().c_str());
+                                }
+                                /// Cannot insert a new request
+                                else {
+                                    break;
+                                }
+                            }
+                            /// Request was in the same cache line (already requested)
+                            else {
+                                /// Statistics
+                                this->add_stat_dropped_prefetches();
+                                PREFETCHER_DEBUG_PRINTF("\t DROPPED PREFETCH\n");
+                                ////////////////////////////////////////////////
+                                // ~ printf("\t DROPPED PREFETCH\n");
+                                ////////////////////////////////////////////////
+                            }
+                            this->stride_table[slot].prefetch_ahead++;
+                        }
                     }
                     else {
                         this->stride_table[slot].prefetch_ahead = 0;
                         this->stride_table[slot].last_memory_address = package->memory_address;
                         this->stride_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
                         this->stride_table[slot].stride_state = PREFETCHER_STRIDE_STATE_INIT;
+                        this->add_stat_init_state();
                     }
                 break;
 
@@ -222,15 +233,16 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
                         this->stride_table[slot].last_memory_address = package->memory_address;
                         this->stride_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
                         this->stride_table[slot].stride_state = PREFETCHER_STRIDE_STATE_TRANSIENT;
+                        this->add_stat_transient_state();
                     }
                     else {
-                        uint64_t address_difference = package->memory_address - this->stride_table[slot].last_memory_address;
                         this->stride_table[slot].memory_address_difference = address_difference;
 
                         this->stride_table[slot].prefetch_ahead = 0;
                         this->stride_table[slot].last_memory_address = package->memory_address;
                         this->stride_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
                         this->stride_table[slot].stride_state = PREFETCHER_STRIDE_STATE_NO_PRED;
+                        this->add_stat_no_pred_state();
                     }
                 break;
             }
@@ -258,7 +270,7 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
     this->stride_table[slot].last_memory_address = package->memory_address;
     this->stride_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
     this->stride_table[slot].stride_state = PREFETCHER_STRIDE_STATE_INIT;
-
+    this->add_stat_init_state();
 
     /// Could not insert the STRIDE
     if (slot >= this->stride_table_size) {
@@ -297,7 +309,12 @@ void prefetch_stride_t::periodic_check(){
 void prefetch_stride_t::reset_statistics() {
     prefetch_t::reset_statistics();
 
+    this->stat_init_state = 0;
+    this->stat_transient_state = 0;
     this->stat_steady_state = 0;
+    this->stat_no_pred_state = 0;
+
+
     this->stat_allocate_stride_ok = 0;
     this->stat_allocate_stride_fail = 0;
 };
@@ -307,7 +324,10 @@ void prefetch_stride_t::print_statistics() {
     prefetch_t::print_statistics();
 
     sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_init_state", stat_init_state);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_transient_state", stat_transient_state);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_steady_state", stat_steady_state);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_no_pred_state", stat_no_pred_state);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_allocate_stride_ok", stat_allocate_stride_ok);
@@ -321,5 +341,4 @@ void prefetch_stride_t::print_configuration() {
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stride_table_size", stride_table_size);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "prefetch_degree", prefetch_degree);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "wait_between_requests", wait_between_requests);
 };

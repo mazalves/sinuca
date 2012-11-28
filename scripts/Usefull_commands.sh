@@ -49,13 +49,27 @@ for i in *8t.tid0.stat.out.gz; do
 done
 
 #Check the footprint of a memory trace
-zcat art.M_1t.tid0.mem.out.gz | awk '{print rshift($3,6)}' | sort | uniq | wc -l
+# zcat art.M_1t.tid0.mem.out.gz | awk '{print rshift($3,6)}' | sort | uniq | wc -l
 for i in `ls *_8t.tid*.mem*` ; do echo $i >> FOOTPRINT.txt ; time zcat $i | awk '{print rshift($3,6)}' | sort -n | uniq | wc -l >> FOOTPRINT.txt; done
+
+# Check the average memory reuse of a memory trace
+# awk '{tot += $1; count++} END { print tot/count}'
+for i in `ls *_8t.tid*.mem*` ; do echo $i >> REUSE.txt ; time zcat $i | awk '{print rshift($3,6)}' | sort -n | uniq -c | awk '{tot += $1; count++} END { print tot/count}' >> REUSE.txt; done
+
+# Check the average difference between the addresses
+# awk 's{print ((s>$3)?s-$3:$3-s)}{s=$3}'
+for i in `ls *_8t.tid*.mem*` ; do echo $i >> DIFF.txt ; time zcat $i | awk '{print rshift($3,6)}' | sort -n | uniq -c | awk 's{print ((s>$0)?s-$0:$0-s)}{s=$0}' | awk '{tot += $1; count++} END { print tot/count}' >> DIFF.txt; done
+
+
+
 
 # Check the progress of multiple simulations
 for i in `ls ~/Experiment/benchmarks/results/*/*.log`; do tail -n16 $i | grep 'CPU  0' | grep -v 100.000%| grep IPC -m1 ; done
 ## Shows the benchmarks which failed.
 for i in `ls ~/Experiment/benchmarks/results/*/*.log | sed 's/log//g'`; do ls $i*result | grep "No such"; done
+
+
+
 
 ## Crop the pdf figures to insert into paper
 for i in *pdf ; do echo $i ; pdfcrop $i $i; done
@@ -71,9 +85,15 @@ rm ~/Experiment/benchmarks/results/spec_cpu2006_x86_32/*Validation*
 for i in `seq 1 29` ; do
     byobu -p$i -X stuff "reset ; \
     cd ~/Experiment/SiNUCA/scripts ; \
-    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1core.cfg spec_cpu2000 Validation_x86_64 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1core.cfg spec_cpu2006 Validation_x86_64 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1core.cfg spec_cpu2006_x86_32 Validation_x86_32 0 1 $i $i ; \
+    echo spec_cpu2006
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core/Core2Duo_1core.cfg spec_cpu2006 Validation_x86_64 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core_BIG/Core2Duo_1core.cfg spec_cpu2006 Validation_x86_64 0 1 $i $i ; \
+    echo spec_cpu2000
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core/Core2Duo_1core.cfg spec_cpu2000 Validation_x86_64 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core_BIG/Core2Duo_1core.cfg spec_cpu2000 Validation_x86_64 0 1 $i $i ; \
+    echo spec_cpu2006_x86_32
+    echo python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core/Core2Duo_1core.cfg spec_cpu2006_x86_32 Validation_x86_32 0 1 $i $i ; \
+    echo python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core_BIG/Core2Duo_1core.cfg spec_cpu2006_x86_32 Validation_x86_32 0 1 $i $i ; \
     $(echo -ne '\r')";
 done
 

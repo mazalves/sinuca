@@ -31,9 +31,7 @@ class prefetch_stride_t : public prefetch_t {
         /// ====================================================================
         uint32_t stride_table_size;   /// Prefetch Stream Detector Table Size
         uint32_t address_distance;                  /// Prefetch Range to Detect Stream
-
         uint32_t prefetch_degree;                   /// Maximum number of prefetchs ahead
-        uint32_t wait_between_requests;             /// Wait time between prefetch generation
 
         /// ====================================================================
         /// Set by this->allocate()
@@ -43,7 +41,11 @@ class prefetch_stride_t : public prefetch_t {
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
+        uint64_t stat_init_state;
+        uint64_t stat_transient_state;
         uint64_t stat_steady_state;
+        uint64_t stat_no_pred_state;
+
         uint64_t stat_allocate_stride_ok;
         uint64_t stat_allocate_stride_fail;
 
@@ -80,14 +82,16 @@ class prefetch_stride_t : public prefetch_t {
         void treat_prefetch(memory_package_t *package);
 
         INSTANTIATE_GET_SET(uint32_t, stride_table_size)
-
         INSTANTIATE_GET_SET(uint32_t, prefetch_degree)
-        INSTANTIATE_GET_SET(uint32_t, wait_between_requests)
 
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_init_state)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_transient_state)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_steady_state)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_no_pred_state)
+
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_allocate_stride_ok)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_allocate_stride_fail)
 };

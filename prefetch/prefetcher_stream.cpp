@@ -224,7 +224,7 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
                     /// The following update is to avoid the START become greater than END
                     /// If the stride of the access is bigger than the prefetch degree ... update using the stride to update the ending address
                     if (this->stream_table[slot].starting_address - package->memory_address > sinuca_engine.get_global_line_size() * this->prefetch_degree) {
-                        this->stream_table[slot].ending_address -= this->stream_table[slot].starting_address - package->memory_address;
+                        this->stream_table[slot].ending_address += package->memory_address - this->stream_table[slot].starting_address;
                     }
                     /// Otherwise, use the prefetch degree to update the ending address
                     else {

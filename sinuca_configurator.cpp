@@ -560,8 +560,6 @@ void sinuca_engine_t::initialize_cache_memory() {
                 prefetcher_parameters.push_back("PREFETCH_DEGREE");
                 prefetcher_ptr->set_prefetch_degree( cfg_prefetcher[ prefetcher_parameters.back() ] );
 
-                prefetcher_parameters.push_back("WAIT_BETWEEN_REQUESTS");
-                prefetcher_ptr->set_wait_between_requests( cfg_prefetcher[ prefetcher_parameters.back() ] );
             }
             else if (strcasecmp(cfg_prefetcher[ prefetcher_parameters.back() ], "DISABLE") ==  0) {
                 this->cache_memory_array[i]->prefetcher = new prefetch_disable_t;

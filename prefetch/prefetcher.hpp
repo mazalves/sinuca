@@ -48,7 +48,7 @@ class prefetch_t : public interconnection_interface_t {
         /// ====================================================================
         uint64_t stat_created_prefetches;
         uint64_t stat_dropped_prefetches;
-        uint64_t stat_deleted_prefetches;
+        uint64_t stat_full_buffer;
 
         uint64_t stat_upstride_prefetches;
         uint64_t stat_downstride_prefetches;
@@ -116,7 +116,9 @@ class prefetch_t : public interconnection_interface_t {
         /// ====================================================================
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_created_prefetches);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_dropped_prefetches);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_deleted_prefetches);
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_buffer);
+
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_upstride_prefetches);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_downstride_prefetches);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_request_matches);

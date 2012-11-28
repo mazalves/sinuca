@@ -338,7 +338,9 @@ void cache_memory_t::clock(uint32_t subcycle) {
                 this->mshr_born_ordered->erase(this->mshr_born_ordered->begin() + i);
             }
             else {
-                 /// PREFETCH
+                /// =============================================================
+                /// SEND TO PREFETCH
+                /// =============================================================
                 CACHE_DEBUG_PRINTF("\t Treat REQUEST this->mshr_born_ordered[%d] %s\n", i, this->mshr_born_ordered[0][i]->content_to_string().c_str());
                 if (this->mshr_born_ordered[0][i]->id_owner != this->get_id() &&
                 this->mshr_born_ordered[0][i]->memory_operation != MEMORY_OPERATION_COPYBACK) {
@@ -350,40 +352,17 @@ void cache_memory_t::clock(uint32_t subcycle) {
         }
     }
 
-    // =================================================================
-    // PREFETCHER
-    // =================================================================
+    /// =================================================================
+    /// GET FROM PREFETCHER
+    /// =================================================================
     memory_package_t* memory_package = this->prefetcher->request_buffer_get_older();
     if (memory_package != NULL) {
         CACHE_DEBUG_PRINTF("\t Has New Prefetch.\n");
 
-        /// Check if the same address has been already requested
-        bool already_requested = false;
-        for (uint32_t i = 0; i < this->mshr_born_ordered->size(); i++){
-            if (this->cmp_tag_index_bank(this->mshr_born_ordered[0][i]->memory_address, memory_package->memory_address)) {
-                already_requested = true;
-                break;
-            }
-        }
-
-        /// Already requested => Drop Resquest
-        if (already_requested == true) {
-            CACHE_DEBUG_PRINTF("\t\t Dropping PREFETCH\n");
+        int32_t slot = this->allocate_prefetch(memory_package);
+        if (slot != POSITION_FAIL) {
+            CACHE_DEBUG_PRINTF("\t\t Allocating PREFETCH into MSHR\n");
             this->prefetcher->request_buffer_remove();
-        }
-        /// Not requested => Allocate the Resquest
-        else {
-            /// Identity information
-            memory_package->id_owner = this->get_id();
-            memory_package->id_src = this->get_id();
-            memory_package->id_dst = this->get_id();
-            memory_package->package_untreated(0);
-
-            int32_t slot = this->allocate_prefetch(memory_package);
-            if (slot != POSITION_FAIL) {
-                CACHE_DEBUG_PRINTF("\t\t Allocating PREFETCH\n");
-                this->prefetcher->request_buffer_remove();
-            }
         }
     }
 };
@@ -438,15 +417,24 @@ int32_t cache_memory_t::allocate_copyback(memory_package_t* package){
 /// ============================================================================
 int32_t cache_memory_t::allocate_prefetch(memory_package_t* package){
 
-    int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size, this->mshr_buffer_prefetch_reserved_size);
+    int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size,
+                                                this->mshr_buffer_prefetch_reserved_size);
     if (slot != POSITION_FAIL) {
         slot += this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size;
+
         CACHE_DEBUG_PRINTF("\t NEW PREFETCH\n");
+
         this->mshr_buffer[slot] = *package;
+        /// Add Identity information
+        this->mshr_buffer[slot].id_owner = this->get_id();
+        this->mshr_buffer[slot].id_src = this->get_id();
+        this->mshr_buffer[slot].id_dst = this->get_id();
+        this->mshr_buffer[slot].package_untreated(0);
+
         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
     }
     else {
-        add_stat_full_mshr_buffer_copyback();
+        add_stat_full_mshr_buffer_prefetch();
     }
     return slot;
 };
@@ -594,7 +582,8 @@ void cache_memory_t::allocate_token_list() {
 bool cache_memory_t::check_token_list(memory_package_t *package) {
     ERROR_ASSERT_PRINTF(package->is_answer == false, "check_token_list received a Answer.\n")
     uint32_t token = 0;
-    /// Find any previous token
+
+    /// 1. Check if the name is already in the guest list.
     container_token_t *local_token_list = this->get_token_list();
     for (token = 0; token < local_token_list[0].size(); token++) {
         /// Requested Address Found
@@ -607,7 +596,7 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
         }
     }
 
-    /// No token found
+    /// 2. Name is not in the guest list, lets add it.
     if (token == local_token_list[0].size()) {
         /// Allocate the new token
         token_t new_token;
@@ -620,10 +609,14 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
         local_token_list[0].push_back(new_token);
     }
 
+    /// 3. Check if the guest can come now, or it needs to wait for free space.
     if (token < this->check_token_space(package)) {
+        /// Lets party !
         return OK;
     }
     else {
+        /// Hold on !
+        add_stat_full_mshr_buffer_request();
         return FAIL;
     }
 };

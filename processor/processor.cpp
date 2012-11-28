@@ -462,6 +462,32 @@ void processor_t::stage_fetch() {
         }
     }
 
+/*
+    /// Request into a instruction granularity.
+    /// Doing in a cache line basis, as faster is the cache, as more accesses to the cache itself would be generated.
+    /// This happens because every new request we would check into the prefetch buffer to see if the same line was already requested.
+    /// In the case the request is removed from the buffer too fast, a new would be sent to the L1 cache.
+    /// 2nd. Fetch_Buffer => Inst.Cache
+    for (i = 0; i < this->stage_fetch_width ; i++) {
+        position_buffer = this->fetch_buffer_find_opcode_number(this->fetch_opcode_counter);
+        if (position_buffer == POSITION_FAIL ||
+            this->fetch_buffer[position_buffer].state != PACKAGE_STATE_UNTREATED ||
+            this->fetch_buffer[position_buffer].ready_cycle > sinuca_engine.get_global_cycle()) {
+                break;
+        }
+        PROCESSOR_DEBUG_PRINTF("\t Sending INST package:%s\n", this->fetch_buffer[position_buffer].content_to_string().c_str());
+
+        int32_t transmission_latency = this->send_instruction_package(this->fetch_buffer + position_buffer);
+        if (transmission_latency != POSITION_FAIL) {  /// Try to send to the IC.
+            fetch_buffer[position_buffer].package_wait(transmission_latency);
+        }
+        else {  /// Inst. Cache cannot receive, stall the fetch for one cycle.
+            break;
+        }
+        this->fetch_opcode_counter++;
+    }
+*/
+
 
     /// 2nd. Fetch_Buffer => Inst.Cache
     for (i = 0; i < this->stage_fetch_width ; i++) {
@@ -477,13 +503,13 @@ void processor_t::stage_fetch() {
         /// Check if the package still WAITING
         for (uint32_t k = 0; k < this->fetch_buffer_position_used; k++) {
             /// Update the FETCH BUFFER position
-            uint32_t i = this->fetch_buffer_position_start + k;
-            if (i >= this->fetch_buffer_size) {
-                i -= this->fetch_buffer_size;
+            uint32_t j = this->fetch_buffer_position_start + k;
+            if (j >= this->fetch_buffer_size) {
+                j -= this->fetch_buffer_size;
             }
 
-            if (this->fetch_buffer[i].state == PACKAGE_STATE_WAIT &&
-            this->cmp_index_tag(this->fetch_buffer[i].opcode_address, this->fetch_buffer[position_buffer].opcode_address)) {
+            if (this->fetch_buffer[j].state == PACKAGE_STATE_WAIT &&
+            this->cmp_index_tag(this->fetch_buffer[j].opcode_address, this->fetch_buffer[position_buffer].opcode_address)) {
                 waiting = true;
                 break;
             }
@@ -500,7 +526,7 @@ void processor_t::stage_fetch() {
             fetch_buffer[position_buffer].package_ready(1);
         }
         else {
-            int32_t transmission_latency = this->send_instruction_package(this->fetch_buffer+position_buffer);
+            int32_t transmission_latency = this->send_instruction_package(this->fetch_buffer + position_buffer);
             if (transmission_latency != POSITION_FAIL) {  /// Try to send to the IC.
                 fetch_buffer[position_buffer].package_wait(transmission_latency);
             }
@@ -1184,7 +1210,7 @@ void processor_t::stage_commit() {
 
             this->commit_uop_counter++;
             PROCESSOR_DEBUG_PRINTF("\t Commiting package:%s\n", this->rob_line_to_string(position_buffer).c_str());
-            this->add_stat_instruction_read_completed(this->reorder_buffer[position_buffer].uop.born_cycle);
+            // ~ this->add_stat_instruction_read_completed(this->reorder_buffer[position_buffer].uop.born_cycle);
 
             switch (this->reorder_buffer[position_buffer].uop.uop_operation) {
                 // INTEGERS ALU
@@ -1336,36 +1362,67 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
         int32_t slot = POSITION_FAIL;
 
         switch (package->memory_operation) {
-            case MEMORY_OPERATION_INST:
+            case MEMORY_OPERATION_INST: {
                 ERROR_ASSERT_PRINTF(input_port == PROCESSOR_PORT_INST_CACHE, "Receiving instruction package from a wrong port.\n");
 
+// Cache line granularity
                 /// Add to the buffer the whole line fetched
                 this->fetch_opcode_address_line_buffer = package->memory_address;
 
                 /// Find packages WAITING
                 for (uint32_t k = 0; k < this->fetch_buffer_position_used; k++) {
                     /// Update the FETCH BUFFER position
-                    uint32_t i = this->fetch_buffer_position_start + k;
-                    if (i >= this->fetch_buffer_size) {
-                        i -= this->fetch_buffer_size;
+                    uint32_t j = this->fetch_buffer_position_start + k;
+                    if (j >= this->fetch_buffer_size) {
+                        j -= this->fetch_buffer_size;
                     }
 
                     /// Wake up ALL instructions waiting
-                    if (this->fetch_buffer[i].state == PACKAGE_STATE_WAIT && this->cmp_index_tag(this->fetch_buffer[i].opcode_address, package->memory_address)) {
+                    if (this->fetch_buffer[j].state == PACKAGE_STATE_WAIT && this->cmp_index_tag(this->fetch_buffer[j].opcode_address, package->memory_address)) {
+                        this->add_stat_instruction_read_completed(this->fetch_buffer[j].born_cycle);
                         PROCESSOR_DEBUG_PRINTF("\t WANTED INSTRUCTION\n");
-                        this->fetch_buffer[i].package_ready(transmission_latency);
-                        slot = i;
+                        this->fetch_buffer[j].package_ready(transmission_latency);
+                        slot = j;
                     }
                 }
                 ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read Instruction done, but it is not on the fetch-buffer anymore.\n")
                 this->recv_ready_cycle[input_port] = sinuca_engine.get_global_cycle() + transmission_latency;
                 return OK;
+
+
+// Instruction Granularity
+/*
+                /// Find packages WAITING
+                for (uint32_t k = 0; k < this->fetch_buffer_position_used; k++) {
+                    /// Update the FETCH BUFFER position
+                    uint32_t j = this->fetch_buffer_position_start + k;
+                    if (j >= this->fetch_buffer_size) {
+                        j -= this->fetch_buffer_size;
+                    }
+
+                    if (this->fetch_buffer[j].state == PACKAGE_STATE_WAIT &&
+                    this->fetch_buffer[j].opcode_number == package->opcode_number &&
+                    // ~ this->fetch_buffer[j].opcode_address == package->memory_address &&
+                    this->cmp_index_tag(this->fetch_buffer[j].opcode_address, package->memory_address)
+                    ) {
+                        this->add_stat_instruction_read_completed(this->fetch_buffer[j].born_cycle);
+                        PROCESSOR_DEBUG_PRINTF("\t WANTED INSTRUCTION\n");
+                        this->fetch_buffer[j].package_ready(transmission_latency);
+                        slot = j;
+                    }
+                }
+
+                ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read Instruction done, but it is not on the fetch-buffer anymore.\n")
+                this->recv_ready_cycle[input_port] = sinuca_engine.get_global_cycle() + transmission_latency;
+                return OK;
+*/
+            }
             break;
 
             case MEMORY_OPERATION_READ:
                 ERROR_ASSERT_PRINTF(input_port == PROCESSOR_PORT_DATA_CACHE, "Receiving read package from a wrong port.\n");
 
-                slot = memory_package_t::find_state_mem_address(this->read_buffer, this->read_buffer_size, PACKAGE_STATE_WAIT, package->memory_address);
+                slot = memory_package_t::find_state_mem_address(this->read_buffer, this->read_buffer_size, PACKAGE_STATE_WAIT, package->uop_number, package->memory_address);
                 ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read done, but it is not on the read-buffer anymore.\n")
 
                 PROCESSOR_DEBUG_PRINTF("\t WANTED READ.\n");

@@ -212,15 +212,15 @@ std::string memory_package_t::sub_blocks_to_string() {
             return content_string;
         }
     #endif
-    
+
     content_string = content_string + " SUB_BLOCKS:[";
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
         if (i % 4 == 0) {
-            content_string = content_string + "|"; 
+            content_string = content_string + "|";
         }
         content_string = content_string + utils_t::uint32_to_char(this->sub_blocks[i]);
     }
-    content_string = content_string + "]\n"; 
+    content_string = content_string + "]\n";
     return content_string;
 };
 
@@ -279,11 +279,12 @@ int32_t memory_package_t::find_old_answer_state_ready(memory_package_t *input_ar
 };
 
 /// ============================================================================
-int32_t memory_package_t::find_state_mem_address(memory_package_t *input_array, uint32_t size_array, package_state_t state, uint64_t address) {
+int32_t memory_package_t::find_state_mem_address(memory_package_t *input_array, uint32_t size_array, package_state_t state, uint64_t uop_number, uint64_t address) {
 
     for (uint32_t i = 0; i < size_array ; i++) {
         if (input_array[i].state == state &&
         input_array[i].ready_cycle <= sinuca_engine.get_global_cycle() &&
+        input_array[i].uop_number == uop_number &&
         input_array[i].memory_address == address) {
             return i;
         }

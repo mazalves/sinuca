@@ -20,16 +20,16 @@ RM = rm -f
 # ~ LDFLAGS = -ggdb  -lefence
 
 # ~ ## DEBUG DEEP FAST
-# ~ FLAGS =  -Wall -O2 -ggdb  -Werror -lefence
-# ~ LDFLAGS = -ggdb  -lefence
+FLAGS =  -Wall -O2 -ggdb  -Werror -lefence
+LDFLAGS = -ggdb  -lefence
 
 ## DEBUG NORMAL
 # ~ FLAGS =  -Wall -O1 -ggdb -Werror
 # ~ LDFLAGS = -ggdb
 
 # ~ ## EXECUTION
-FLAGS =   -O3 -ggdb -Wall -Wextra -Werror
-LDFLAGS = -ggdb
+# ~ FLAGS =   -O3 -ggdb -Wall -Wextra -Werror
+# ~ LDFLAGS = -ggdb
 
 
 ########################################################
