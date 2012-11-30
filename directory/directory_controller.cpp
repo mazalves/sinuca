@@ -137,6 +137,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     int32_t directory_line_number = POSITION_FAIL;
     if (cache->get_hierarchy_level() != 1 && cache->get_id() != package->id_owner) { /// If NOT Cache L1 (New directory line may be created)
         directory_line_number = find_directory_line(package);
+    }
+
+    if (directory_line_number != POSITION_FAIL) {
         ERROR_ASSERT_PRINTF(directory_line != NULL, "Higher level REQUEST must have a directory_line.\n. cache_id:%u, package:%s\n", cache->get_id(), package->content_to_string().c_str())
         directory_line = this->directory_lines[0][directory_line_number];
     }
@@ -171,9 +174,17 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 }
             }
         }
+    }
+
+
+    /// If L1 or create on this cache
+    if (cache->get_hierarchy_level() == 1 || cache->get_id() == package->id_owner) {
         /// Fill the Sub-Blocks into the package
         cache->line_usage_predictor->fill_package_sub_blocks(package);
         ERROR_ASSERT_PRINTF(directory_line == NULL, "This level REQUEST must not have a directory_line.\n cache_id:%u, package:%s\n", cache->get_id(), package->content_to_string().c_str())
+    }
+    else {
+        ERROR_ASSERT_PRINTF(directory_line != NULL, "Higher level REQUEST must have a directory_line.\n. cache_id:%u, package:%s\n", cache->get_id(), package->content_to_string().c_str())
     }
 
     /// Get CACHE_LINE
