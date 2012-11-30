@@ -8,6 +8,18 @@ for i in `seq 1 30` ; do
                                 teste $(echo -ne '\r')";
 done
 
+
+# CREATE Fake Trace
+echo \#FAKE_TRACE > fake_trace.tid0.mem.out
+for i in `seq 1 10`; do for i in `seq 64 64 6400000`; do echo W 8 $i 1 >> fake_trace.tid0.mem.out; done ; done
+
+echo \#FAKE_TRACE > fake_trace.tid0.dyn.out
+for i in `seq 8 8 800000`; do echo 1 >> fake_trace.tid0.dyn.out; done
+
+echo \#FAKE_TRACE > fake_trace.tid0.stat.out
+echo \@1 >> fake_trace.tid0.stat.out
+for i in `seq 64 64 640`; do echo MOV 9 0x00$i 16 0 0 0 0 1 0 0 0 >> fake_trace.tid0.stat.out; done
+
 ## Run the CPPCHECK on all the source code with all flags enabled
 cppcheck  --enable=all -f  *.hpp *.cpp */*.cpp */*.hpp 2> err.txt
 

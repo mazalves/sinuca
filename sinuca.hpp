@@ -158,11 +158,11 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define BRANCH_PREDICTOR_DEBUG
     // ~ #define CACHE_DEBUG
     // ~ #define PREFETCHER_DEBUG
-    #define LINE_USAGE_PREDICTOR_DEBUG
+    // ~ #define LINE_USAGE_PREDICTOR_DEBUG
     // ~ #define MEMORY_CONTROLLER_DEBUG
     // ~ #define ROUTER_DEBUG
     // ~ #define INTERCONNECTION_CTRL_DEBUG
-    #define DIRECTORY_CTRL_DEBUG
+    // ~ #define DIRECTORY_CTRL_DEBUG
     // ~ #define SHOW_FREE_PACKAGE
     #define DEBUG_PRINTF(...)   {\
                                     if (sinuca_engine.get_is_runtime_debug()) {\

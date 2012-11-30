@@ -437,7 +437,6 @@ void processor_t::stage_fetch() {
             }
         }
 
-
         position_buffer = this->fetch_buffer_insert();
         if (position_buffer == POSITION_FAIL) {
             break;

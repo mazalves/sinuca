@@ -137,8 +137,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     int32_t directory_line_number = POSITION_FAIL;
     if (cache->get_hierarchy_level() != 1 && cache->get_id() != package->id_owner) { /// If NOT Cache L1 (New directory line may be created)
         directory_line_number = find_directory_line(package);
-    }
-    if (directory_line_number != POSITION_FAIL) {
+        ERROR_ASSERT_PRINTF(directory_line != NULL, "Higher level REQUEST must have a directory_line.\n. cache_id:%u, package:%s\n", cache->get_id(), package->content_to_string().c_str())
         directory_line = this->directory_lines[0][directory_line_number];
     }
     /// ================================================================================
@@ -172,16 +171,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 }
             }
         }
-    }
-
-    /// If L1 or create on this cache
-    if (cache->get_hierarchy_level() == 1 || cache->get_id() == package->id_owner) {
         /// Fill the Sub-Blocks into the package
         cache->line_usage_predictor->fill_package_sub_blocks(package);
         ERROR_ASSERT_PRINTF(directory_line == NULL, "This level REQUEST must not have a directory_line.\n cache_id:%u, package:%s\n", cache->get_id(), package->content_to_string().c_str())
-    }
-    else {
-        ERROR_ASSERT_PRINTF(directory_line != NULL, "Higher level REQUEST must have a directory_line.\n. cache_id:%u, package:%s\n", cache->get_id(), package->content_to_string().c_str())
     }
 
     /// Get CACHE_LINE
@@ -206,7 +198,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             }
             ///=================================================================
             /// Cache Line Hit
-            if (is_line_hit && is_sub_block_hit) {
+            if (is_sub_block_hit) {
                 // =============================================================
                 // Line Usage Prediction
                 cache->line_usage_predictor->line_hit(package, index, way);
@@ -258,7 +250,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             }
             ///=================================================================
             /// Cache Line Hit
-            if (is_line_hit && is_sub_block_hit) {
+            if (is_sub_block_hit) {
                 // =============================================================
                 // Line Usage Prediction
                 cache->line_usage_predictor->line_hit(package, index, way);
@@ -268,9 +260,11 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
                 /// THIS cache level started the request (PREFETCH)
                 if (package->id_owner == cache->get_id()) {
+                    /// Add Latency
+                    package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read();
                     /// Erase the answer
                     DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (Requester = This)\n")
-                    return PACKAGE_STATE_FREE;
+                    return PACKAGE_STATE_READY;
                 }
                 /// Need to send answer to higher level
                 else {
@@ -280,7 +274,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                         package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_write();
                         /// Erase the package
                         DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (WRITE Done)\n")
-                        return PACKAGE_STATE_FREE;
+                        return PACKAGE_STATE_READY;
                     }
                     else {
                         /// Add Latency
@@ -708,13 +702,13 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
             /// Erase the package
             DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (WRITE Done)\n")
-            return PACKAGE_STATE_FREE;
+            return PACKAGE_STATE_READY;
         }
         break;
     }
 
     ERROR_PRINTF("Could not treat the cache request\n")
-    return PACKAGE_STATE_FREE;
+    return PACKAGE_STATE_UNTREATED;
 };
 
 
@@ -772,7 +766,7 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
         this->coherence_new_operation(cache, cache_line, package, false);
         /// Erase the package
         DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (Requester = This)\n")
-        return PACKAGE_STATE_FREE;
+        return PACKAGE_STATE_READY;
     }
     /// Need to send answer to higher level
     else {
@@ -801,7 +795,7 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
             if (package->memory_operation == MEMORY_OPERATION_WRITE) {
                 /// Erase the package
                 DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (WRITE Done)\n")
-                return PACKAGE_STATE_FREE;
+                return PACKAGE_STATE_READY;
             }
             else {
                 /// Send the package answer
@@ -829,7 +823,7 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
     }
 
     ERROR_PRINTF("Could not treat the cache answer\n")
-    return PACKAGE_STATE_FREE;
+    return PACKAGE_STATE_UNTREATED;
 };
 
 
@@ -885,12 +879,12 @@ package_state_t directory_controller_t::treat_cache_request_sent(uint32_t cache_
                 DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (Requester = This)\n")
 
             }
-            return PACKAGE_STATE_FREE;
+            return PACKAGE_STATE_READY;
         break;
     }
 
     ERROR_PRINTF("Could not treat the cache answer\n")
-    return PACKAGE_STATE_FREE;
+    return PACKAGE_STATE_UNTREATED;
 };
 
 
