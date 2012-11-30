@@ -140,7 +140,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     }
 
     if (directory_line_number != POSITION_FAIL) {
-        ERROR_ASSERT_PRINTF(directory_line != NULL, "Higher level REQUEST must have a directory_line.\n. cache_id:%u, package:%s\n", cache->get_id(), package->content_to_string().c_str())
         directory_line = this->directory_lines[0][directory_line_number];
     }
     /// ================================================================================
