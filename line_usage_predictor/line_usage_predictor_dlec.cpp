@@ -33,6 +33,10 @@
 line_usage_predictor_dlec_t::line_usage_predictor_dlec_t() {
     this->line_usage_predictor_type = LINE_USAGE_PREDICTOR_POLICY_DLEC;
 
+    this->early_eviction = true;
+    this->early_copyback = true;
+    this->turnoff_dead_lines = true;
+
     this->access_counter_bits = 0;
     this->access_counter_max = 0;
 

@@ -343,10 +343,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                     }
                 }
 
-                ///=============================================================
-                /// Free space for the new line is ready
-                ///=============================================================
-
                 /// Reserve the evicted line for the new address
                 cache->change_address(cache_line, package->memory_address);
                 /// Coherence Invalidate
@@ -443,9 +439,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 }
             }
 
-            ///=================================================================
-            /// Free space for the new line is ready
-            ///=================================================================
             // =============================================================
             // Line Usage Prediction
             // ~ cache->line_usage_predictor->line_eviction(index, way);
@@ -469,7 +462,8 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                     cache->cache_evict(true);
                     /// Update Coherence Status and Last Access Time
                     this->coherence_new_operation(cache, cache_line, package, false);
-
+                    /// Update Statistics
+                    this->new_statistics(cache, package, true);
                     // =============================================================
                     // Line Usage Prediction (Tag different from actual)
                     cache->line_usage_predictor->line_send_copyback(package, index, way);
@@ -761,7 +755,7 @@ bool directory_controller_t::inclusiveness_new_eviction(cache_memory_t *cache, c
     /// TAKES CARE ABOUT INCLUSIVENESS
     ///=====================================================
 
-    /// Need CopyBack ?
+    /// Need CopyBack This Level
     if (coherence_need_copyback(cache, cache_line)) {
         if (this->create_cache_copyback(cache, cache_line, index, way)) {
             /// Add statistics to the cache
@@ -778,6 +772,7 @@ bool directory_controller_t::inclusiveness_new_eviction(cache_memory_t *cache, c
         }
     }
     else {
+        /// Need CopyBack Higher Level
         /// Check if some higher level has DIRTY line
         switch (this->inclusiveness_type) {
             /// Nothing need to be done
@@ -860,6 +855,8 @@ bool directory_controller_t::inclusiveness_new_eviction(cache_memory_t *cache, c
 
         /// If this is Any Level => INVALIDATE Higher levels
         case INCLUSIVENESS_INCLUSIVE_ALL: {
+            // =============================================================
+            // Line Usage Prediction (Will call the line_usage_predictor->line_eviction)
             this->coherence_evict_higher_levels(cache, cache_line->tag);
         }
         break;

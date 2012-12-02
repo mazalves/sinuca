@@ -230,7 +230,6 @@ processor_stage_t branch_predictor_two_level_t::predict_branch(opcode_package_t 
         uint64_t next_sequential_address = actual_opcode.opcode_address + actual_opcode.opcode_size;
         bool is_taken = (next_sequential_address != next_opcode.opcode_address);
 
-
         BRANCH_PREDICTOR_DEBUG_PRINTF("BRANCH OPCODE FOUND TAKEN?(%d) - ", is_taken);
 
         bool is_btb_hit = this->btb_find_update_address(actual_opcode.opcode_address);
@@ -238,7 +237,13 @@ processor_stage_t branch_predictor_two_level_t::predict_branch(opcode_package_t 
 
         if (is_btb_hit == FAIL) {
             BRANCH_PREDICTOR_DEBUG_PRINTF("BTB NOT FOUND => PROCESSOR_STAGE_EXECUTION\n");
-            solve_stage = PROCESSOR_STAGE_EXECUTION;
+            /// If NOT TAKEN, it will not generate extra latency
+            if (!is_taken){
+                solve_stage = PROCESSOR_STAGE_FETCH;
+            }
+            else {
+                solve_stage = PROCESSOR_STAGE_EXECUTION;
+            }
         }
         else {
             BRANCH_PREDICTOR_DEBUG_PRINTF("BTB FOUND - ");
@@ -259,11 +264,6 @@ processor_stage_t branch_predictor_two_level_t::predict_branch(opcode_package_t 
         }
         else {
             this->add_stat_branch_predictor_miss();
-        }
-
-        /// If NOT TAKEN, it will never generate extra latency
-        if (!is_taken){
-            solve_stage = PROCESSOR_STAGE_FETCH;
         }
     }
 
@@ -309,7 +309,7 @@ void branch_predictor_two_level_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_btb_accesses", stat_btb_accesses);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_btb_hit", stat_btb_hit);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_btb_miss", stat_btb_miss);
-    sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_btb_miss_ratio", stat_btb_miss, stat_btb_hit + stat_btb_miss);
+    sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_btb_miss_ratio", stat_btb_miss, stat_btb_accesses);
 
 };
 
