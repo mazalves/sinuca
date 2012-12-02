@@ -105,6 +105,8 @@ int32_t prefetch_t::request_buffer_insert() {
 };
 
 /// ============================================================================
+/*! Return the position of the oldest package, to try to insert into the MSHR
+ */
 memory_package_t* prefetch_t::request_buffer_get_older() {
     if (this->request_buffer_position_used > 0) {
         return (&this->request_buffer[this->request_buffer_position_start]);

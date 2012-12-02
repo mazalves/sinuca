@@ -72,6 +72,7 @@ class interconnection_controller_t : public interconnection_interface_t {
         void print_statistics();
         void print_configuration();
         /// ====================================================================
+        void print_graph();
 
         void create_route(interconnection_interface_t *src, interconnection_interface_t *dst);
         void find_package_route(memory_package_t *package);

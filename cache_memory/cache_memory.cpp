@@ -252,9 +252,9 @@ void cache_memory_t::clock(uint32_t subcycle) {
 
     this->prefetcher->clock(subcycle);
 
-    // =================================================================
-    // MSHR_BUFFER - REMOVE THE READY PACKAGES
-    // =================================================================
+    /// =================================================================
+    /// MSHR_BUFFER - REMOVE THE READY PACKAGES
+    /// =================================================================
     for (int32_t i = this->mshr_born_ordered->size() - 1; i >= 0 ; i--){
         if (mshr_born_ordered[0][i]->state == PACKAGE_STATE_READY &&
         this->mshr_born_ordered[0][i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
@@ -264,9 +264,9 @@ void cache_memory_t::clock(uint32_t subcycle) {
     }
 
 
-    // =================================================================
-    // MSHR_BUFFER - TRANSMISSION
-    // =================================================================
+    /// =================================================================
+    /// MSHR_BUFFER - TRANSMISSION
+    /// =================================================================
     for (uint32_t i = 0; i < this->mshr_born_ordered->size(); i++){
         if (mshr_born_ordered[0][i]->state == PACKAGE_STATE_TRANSMIT &&
         this->mshr_born_ordered[0][i]->is_answer == true &&
@@ -276,8 +276,6 @@ void cache_memory_t::clock(uint32_t subcycle) {
             int32_t transmission_latency = send_package(mshr_born_ordered[0][i]);
             if (transmission_latency != POSITION_FAIL) {
                 this->mshr_born_ordered[0][i]->package_ready(transmission_latency);
-                // ~ this->mshr_born_ordered[0][i]->package_clean();
-                // ~ this->mshr_born_ordered->erase(this->mshr_born_ordered->begin() + i);
             }
             break;
         }
@@ -307,9 +305,9 @@ void cache_memory_t::clock(uint32_t subcycle) {
     }
 
 
-    // =================================================================
-    // MSHR_BUFFER - UNTREATED
-    // =================================================================
+    /// =================================================================
+    /// MSHR_BUFFER - UNTREATED
+    /// =================================================================
     for (uint32_t i = 0; i < this->mshr_born_ordered->size(); i++){
         if (mshr_born_ordered[0][i]->state == PACKAGE_STATE_UNTREATED &&
         this->mshr_born_ordered[0][i]->is_answer == true &&
@@ -325,10 +323,6 @@ void cache_memory_t::clock(uint32_t subcycle) {
                 this->mshr_born_ordered->erase(this->mshr_born_ordered->begin() + i);
                 this->insert_mshr_born_ordered(package);
             }
-            // ~ else if (this->mshr_born_ordered[0][i]->state == PACKAGE_STATE_FREE) {
-                // ~ this->mshr_born_ordered[0][i]->package_clean();
-                // ~ this->mshr_born_ordered->erase(this->mshr_born_ordered->begin() + i);
-            // ~ }
             break;
         }
     }
@@ -338,21 +332,18 @@ void cache_memory_t::clock(uint32_t subcycle) {
         this->mshr_born_ordered[0][i]->is_answer == false &&
         this->mshr_born_ordered[0][i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
 
-
             this->mshr_born_ordered[0][i]->state = sinuca_engine.directory_controller->treat_cache_request(this->get_cache_id(), this->mshr_born_ordered[0][i]);
             ERROR_ASSERT_PRINTF(this->mshr_born_ordered[0][i]->state != PACKAGE_STATE_FREE, "Must not receive back a FREE, should receive READY + Latency")
             /// Could not treat, then restart born_cycle (change priority)
-            if (this->mshr_born_ordered[0][i]->state == PACKAGE_STATE_UNTREATED) {
+            /// If (is_answer == true) means that higher level had the cache line.
+            if (this->mshr_born_ordered[0][i]->state == PACKAGE_STATE_UNTREATED &&
+            this->mshr_born_ordered[0][i]->is_answer == false) {
                 this->mshr_born_ordered[0][i]->born_cycle = sinuca_engine.get_global_cycle();
 
                 memory_package_t *package = this->mshr_born_ordered[0][i];
                 this->mshr_born_ordered->erase(this->mshr_born_ordered->begin() + i);
                 this->insert_mshr_born_ordered(package);
             }
-            // ~ else if (this->mshr_born_ordered[0][i]->state == PACKAGE_STATE_FREE) {
-                // ~ this->mshr_born_ordered[0][i]->package_clean();
-                // ~ this->mshr_born_ordered->erase(this->mshr_born_ordered->begin() + i);
-            // ~ }
             else {
                 /// =============================================================
                 /// SEND TO PREFETCH

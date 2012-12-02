@@ -241,22 +241,7 @@ void interconnection_controller_t::routing_algorithm_floyd_warshall() {
         }
     }
 
-    printf("## Plot the graph of connection ready to Graphviz\n");
-    printf("## GV = {dot, neato, smyrna, lefty, dotty}\n");
-    printf("## $ dot -Tpdf -o graph.pdf graph.txt\n\n");
-    printf("digraph G\n");
-    printf("\t {\n");
-    printf("\t node [shape=box,style=filled];\n");
-    printf("\t overlap=scale;\n");
-    printf("\t splines=true;\n");
-    for (i = 0; i < sinuca_engine.get_interconnection_interface_array_size(); i++) {
-        for (j = 0; j < sinuca_engine.get_interconnection_interface_array_size(); j++) {
-            if (i != j && route_matrix[i][j].hop_count == 0) {
-                printf("\t%s -> %s;\n", sinuca_engine.interconnection_interface_array[i]->get_label(), sinuca_engine.interconnection_interface_array[j]->get_label());
-            }
-        }
-    }
-    printf("}\n");
+
 
 #ifdef INTERCONNECTION_CTRL_DEBUG
     INTERCONNECTION_CTRL_DEBUG_PRINTF("-------------------------------------------------------------\n");
@@ -432,3 +417,39 @@ void interconnection_controller_t::print_configuration() {
     sinuca_engine.write_statistics_comments(title);
     sinuca_engine.write_statistics_big_separator();
 };
+
+/// ============================================================================
+void interconnection_controller_t::print_graph() {
+    char title[100] = "";
+    sprintf(title, "## Plot the graph of connection ready to Graphviz");
+    sinuca_engine.write_graph(title);
+    sprintf(title, "## GV = {dot, neato, smyrna, lefty, dotty}\n");
+    sinuca_engine.write_graph(title);
+    sprintf(title, "## $ dot -Tpdf -o graph.pdf graph.txt\n\n");
+    sinuca_engine.write_graph(title);
+
+
+    sprintf(title, "digraph G\n");
+    sinuca_engine.write_graph(title);
+    sprintf(title, "\t {\n");
+    sinuca_engine.write_graph(title);
+    sprintf(title, "\t node [shape=box,style=filled];\n");
+    sinuca_engine.write_graph(title);
+    sprintf(title, "\t overlap=scale;\n");
+    sinuca_engine.write_graph(title);
+    sprintf(title, "\t splines=true;\n");
+    sinuca_engine.write_graph(title);
+
+    for (uint32_t i = 0; i < sinuca_engine.get_interconnection_interface_array_size(); i++) {
+        for (uint32_t j = 0; j < sinuca_engine.get_interconnection_interface_array_size(); j++) {
+            if (i != j && route_matrix[i][j].hop_count == 0) {
+                sprintf(title, "\t%s -> %s;\n", sinuca_engine.interconnection_interface_array[i]->get_label(), sinuca_engine.interconnection_interface_array[j]->get_label());
+                sinuca_engine.write_graph(title);
+            }
+        }
+    }
+
+    sprintf(title, "}\n");
+    sinuca_engine.write_graph(title);
+};
+

@@ -11,10 +11,10 @@ done
 
 # CREATE Fake Trace
 echo \#FAKE_TRACE > fake_trace.tid0.mem.out
-for i in `seq 1 10`; do for i in `seq 64 64 6400000`; do echo W 8 $i 1 >> fake_trace.tid0.mem.out; done ; done
+for i in `seq 1 10`; do for i in `seq 64 64 640000`; do echo W 8 $i 1 >> fake_trace.tid0.mem.out; done ; done
 
 echo \#FAKE_TRACE > fake_trace.tid0.dyn.out
-for i in `seq 8 8 800000`; do echo 1 >> fake_trace.tid0.dyn.out; done
+for i in `seq 8 8 80000`; do echo 1 >> fake_trace.tid0.dyn.out; done
 
 echo \#FAKE_TRACE > fake_trace.tid0.stat.out
 echo \@1 >> fake_trace.tid0.stat.out
@@ -80,8 +80,10 @@ for i in `ls ~/Experiment/benchmarks/results/*/*.log`; do tail -n16 $i | grep 'C
 ## Shows the benchmarks which failed.
 for i in `ls ~/Experiment/benchmarks/results/*/*.log | sed 's/log//g'`; do ls $i*result | grep "No such"; done
 
-
-
+# Split multiple results to different files
+for i in *.result ; do cat $i | awk '/Configuration of SINUCA_ENGINE/{n++}{print > $i_ n}' ; done
+for i in *.result ; do echo $i ; awk '/Configuration\ of\ SINUCA\_ENGINE/{n++}{print > f n}' f=$i $i; done
+awk '/Configuration of SINUCA_ENGINE/{n++}{print > f n}' f=*.result
 
 ## Crop the pdf figures to insert into paper
 for i in *pdf ; do echo $i ; pdfcrop $i $i; done
@@ -99,19 +101,20 @@ for i in `seq 1 29` ; do
     cd ~/Experiment/SiNUCA/scripts ; \
     echo spec_cpu2006
     python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core/Core2Duo_1core.cfg spec_cpu2006 Validation_x86_64 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core_BIG/Core2Duo_1core.cfg spec_cpu2006 Validation_x86_64 0 1 $i $i ; \
+    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core_BIG/Core2Duo_1core.cfg spec_cpu2006 BigValidation_x86_64 0 1 $i $i ; \
     echo spec_cpu2000
-    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core/Core2Duo_1core.cfg spec_cpu2000 Validation_x86_64 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core_BIG/Core2Duo_1core.cfg spec_cpu2000 Validation_x86_64 0 1 $i $i ; \
+    echo python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core/Core2Duo_1core.cfg spec_cpu2000 Validation_x86_64 0 1 $i $i ; \
+    echo python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core_BIG/Core2Duo_1core.cfg spec_cpu2000 BigValidation_x86_64 0 1 $i $i ; \
     echo spec_cpu2006_x86_32
     echo python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core/Core2Duo_1core.cfg spec_cpu2006_x86_32 Validation_x86_32 0 1 $i $i ; \
-    echo python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core_BIG/Core2Duo_1core.cfg spec_cpu2006_x86_32 Validation_x86_32 0 1 $i $i ; \
+    echo python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core_BIG/Core2Duo_1core.cfg spec_cpu2006_x86_32 BigValidation_x86_32 0 1 $i $i ; \
     $(echo -ne '\r')";
 done
 
 cd ~/Experiment/SiNUCA/scripts
 rm ~/Experiment/benchmarks/plots/*
 python plot.py parameters_validation.cfg
+python plot.py parameters_big_validation.cfg
 python plot.py parameters_validation_x86_32.cfg
 
 #$ lstopo

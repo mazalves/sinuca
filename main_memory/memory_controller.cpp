@@ -421,12 +421,12 @@ void memory_controller_t::clock(uint32_t subcycle) {
                                     this->add_stat_read_completed(this->channels[channel].read_buffer[bank][read_cas].born_cycle);
                                 break;
 
-                                case MEMORY_OPERATION_INST:
-                                    this->add_stat_instruction_completed(this->channels[channel].read_buffer[bank][read_cas].born_cycle);
-                                break;
-
                                 case MEMORY_OPERATION_PREFETCH:
                                     this->add_stat_prefetch_completed(this->channels[channel].read_buffer[bank][read_cas].born_cycle);
+                                break;
+
+                                case MEMORY_OPERATION_INST:
+                                    this->add_stat_instruction_completed(this->channels[channel].read_buffer[bank][read_cas].born_cycle);
                                 break;
 
                                 case MEMORY_OPERATION_WRITE:
@@ -457,12 +457,12 @@ void memory_controller_t::clock(uint32_t subcycle) {
                             /// Statistics
                             this->add_stat_accesses();
                             switch (this->channels[channel].write_buffer[bank][write_cas].memory_operation) {
-                                case MEMORY_OPERATION_WRITE:
-                                    this->add_stat_write_completed(this->channels[channel].write_buffer[bank][write_cas].born_cycle);
-                                break;
-
                                 case MEMORY_OPERATION_COPYBACK:
                                     this->add_stat_copyback_completed(this->channels[channel].write_buffer[bank][write_cas].born_cycle);
+                                break;
+
+                                case MEMORY_OPERATION_WRITE:
+                                    this->add_stat_write_completed(this->channels[channel].write_buffer[bank][write_cas].born_cycle);
                                 break;
 
                                 case MEMORY_OPERATION_READ:
@@ -664,8 +664,8 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
 
     switch (package->memory_operation) {
         case MEMORY_OPERATION_READ:
-        case MEMORY_OPERATION_INST:
         case MEMORY_OPERATION_PREFETCH:
+        case MEMORY_OPERATION_INST:
             if (this->recv_read_ready_cycle[channel] <= sinuca_engine.get_global_cycle()) {
                 slot = memory_package_t::find_free(this->channels[channel].read_buffer[bank], this->read_buffer_size);
                 if (slot != POSITION_FAIL) {
@@ -687,8 +687,8 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
             return FAIL;
         break;
 
-        case MEMORY_OPERATION_WRITE:
         case MEMORY_OPERATION_COPYBACK:
+        case MEMORY_OPERATION_WRITE:
             if (this->recv_write_ready_cycle[channel] <= sinuca_engine.get_global_cycle()) {
                 slot = memory_package_t::find_free(this->channels[channel].write_buffer[bank], this->write_buffer_size);
                 if (slot != POSITION_FAIL) {
@@ -734,13 +734,13 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
 
     switch (package->memory_operation) {
         case MEMORY_OPERATION_READ:
-        case MEMORY_OPERATION_INST:
         case MEMORY_OPERATION_PREFETCH:
+        case MEMORY_OPERATION_INST:
             buffer = (2 * channel * this->banks_per_channel) + bank + (0 * this->banks_per_channel);
         break;
 
-        case MEMORY_OPERATION_WRITE:
         case MEMORY_OPERATION_COPYBACK:
+        case MEMORY_OPERATION_WRITE:
             buffer = (2 * channel * this->banks_per_channel) + bank + (1 * this->banks_per_channel);
         break;
     }
@@ -792,13 +792,13 @@ uint32_t memory_controller_t::check_token_space(memory_package_t *package) {
 
     switch (package->memory_operation) {
         case MEMORY_OPERATION_READ:
-        case MEMORY_OPERATION_INST:
         case MEMORY_OPERATION_PREFETCH:
+        case MEMORY_OPERATION_INST:
             free_space = memory_package_t::count_free(this->channels[channel].read_buffer[bank], this->read_buffer_size);
         break;
 
-        case MEMORY_OPERATION_WRITE:
         case MEMORY_OPERATION_COPYBACK:
+        case MEMORY_OPERATION_WRITE:
             free_space = memory_package_t::count_free(this->channels[channel].write_buffer[bank], this->write_buffer_size);
         break;
     }
@@ -815,13 +815,13 @@ void memory_controller_t::remove_token_list(memory_package_t *package) {
 
     switch (package->memory_operation) {
         case MEMORY_OPERATION_READ:
-        case MEMORY_OPERATION_INST:
         case MEMORY_OPERATION_PREFETCH:
+        case MEMORY_OPERATION_INST:
             buffer = (2 * channel * this->banks_per_channel) + bank + (0 * this->banks_per_channel);
         break;
 
-        case MEMORY_OPERATION_WRITE:
         case MEMORY_OPERATION_COPYBACK:
+        case MEMORY_OPERATION_WRITE:
             buffer = (2 * channel * this->banks_per_channel) + bank + (1 * this->banks_per_channel);
         break;
     }

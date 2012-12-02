@@ -32,8 +32,10 @@ class sinuca_engine_t {
         char *arg_result_file_name;
         uint32_t arg_warmup_instructions;
         bool arg_is_compressed;
+        char *arg_graph_file_name;
 
         std::ofstream result_file;
+        std::ofstream graph_file;
 
         /// Array of components
         interconnection_interface_t* *interconnection_interface_array;
@@ -151,6 +153,8 @@ class sinuca_engine_t {
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
+        void write_graph(const char *buffer);
+
         void write_statistics(const char *buffer);
 
         void write_statistics_small_separator();
@@ -172,6 +176,7 @@ class sinuca_engine_t {
         void global_reset_statistics();
         void global_print_statistics();
         void global_print_configuration();
+        void global_print_graph();
 
         /// Memory Usage statistics
         /// virtual memory

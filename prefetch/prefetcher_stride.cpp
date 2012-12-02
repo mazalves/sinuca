@@ -252,7 +252,7 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
 
     /// Could not find a STRIDE, Evict the LRU position to create a new stride.
     uint64_t old_position = this->stride_table_size;
-    uint64_t old_cycle = sinuca_engine.get_global_cycle();
+    uint64_t old_cycle = sinuca_engine.get_global_cycle() + 1;
     for (slot = 0 ; slot < this->stride_table_size ; slot++) {
         /// Free slot
         if (old_cycle > this->stride_table[slot].cycle_last_activation) {
@@ -262,6 +262,8 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
     }
 
     slot = old_position;
+    ERROR_ASSERT_PRINTF(slot < this->stride_table_size, "Could not insert this stride on the stride_table.\n");
+
     this->add_stat_allocate_stride_ok();
     PREFETCHER_DEBUG_PRINTF("Prefetcher: No stride found... Allocating it.\n");
 
@@ -271,13 +273,6 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
     this->stride_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
     this->stride_table[slot].stride_state = PREFETCHER_STRIDE_STATE_INIT;
     this->add_stat_init_state();
-
-    /// Could not insert the STRIDE
-    if (slot >= this->stride_table_size) {
-        this->add_stat_allocate_stride_fail();
-        PREFETCHER_DEBUG_PRINTF("Prefetcher: Cannot insert this stride on the stride_table.\n");
-    }
-
 };
 
 /// ============================================================================

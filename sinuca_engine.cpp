@@ -242,6 +242,33 @@ void sinuca_engine_t::global_clock() {
 };
 
 //==============================================================================
+void sinuca_engine_t::global_print_graph() {
+    /// Open the statistics file
+    if (this->graph_file.is_open() == false && this->arg_graph_file_name != NULL) {
+        this->graph_file.open(this->arg_graph_file_name, std::ofstream::app);
+        ERROR_ASSERT_PRINTF(this->graph_file.is_open() == true, "Could not open the graph file.\n")
+    }
+
+    this->interconnection_controller->print_graph();
+
+    /// Close the statistics file
+    if (this->graph_file.is_open() == true && this->arg_graph_file_name != NULL) {
+        this->graph_file.close();
+    }
+};
+
+
+//==============================================================================
+void sinuca_engine_t::write_graph(const char *buffer) {
+    if (this->graph_file.is_open() == true && this->arg_graph_file_name != NULL) {
+        this->graph_file.write(buffer, strlen(buffer));
+    }
+    else {
+        SINUCA_PRINTF("%s", buffer);
+    }
+};
+
+//==============================================================================
 void sinuca_engine_t::global_reset_statistics() {
     if (global_cycle == 0) {
         utils_t::process_mem_usage(this->stat_vm_allocate, this->stat_rss_allocate);

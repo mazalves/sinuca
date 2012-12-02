@@ -40,6 +40,7 @@ static void display_use() {
     strcat(usage_str, "\t -result     \t FILE          \t Output result file name. Default is \"stdout\".\n");
     strcat(usage_str, "\t -warmup     \t INSTRUCTIONS  \t Warm-up instructions (opcodes) before start statistics. Default is 0.\n");
     strcat(usage_str, "\t -compressed \t BOOL          \t Set between the compressed (true) and uncompressed (false) trace file. Default is true.\n");
+    strcat(usage_str, "\t -graph      \t FILE          \t Output graph file name to be used with GraphViz. Default is \"stdout\".\n");
 
     SINUCA_PRINTF("%s\n", usage_str);
     exit(EXIT_FAILURE);
@@ -54,6 +55,7 @@ static void process_argv(int argc, char **argv) {
     sinuca_engine.arg_result_file_name = NULL;
     sinuca_engine.arg_warmup_instructions = 0;
     sinuca_engine.arg_is_compressed = true;
+    sinuca_engine.arg_graph_file_name = NULL;
 
     while (argc > 0) {
         if (strcmp(*argv, "-conf") == 0) {
@@ -98,6 +100,14 @@ static void process_argv(int argc, char **argv) {
             }
         }
 
+        else if (strcmp(*argv, "-graph") == 0) {
+            argc--;
+            argv++;
+            sinuca_engine.arg_graph_file_name = *argv;
+            args_processed++;
+        }
+
+
         else if (strncmp(*argv, "-", 1) == 0) {
             SINUCA_PRINTF("Unknown option %s\n", *argv);
             display_use();
@@ -116,6 +126,7 @@ static void process_argv(int argc, char **argv) {
     SINUCA_PRINTF("RESULT FILE:             \t %s\n", sinuca_engine.arg_result_file_name           != NULL ? sinuca_engine.arg_result_file_name        : "MISSING");
     SINUCA_PRINTF("WARM-UP INSTRUCTIONS:    \t %u\n", sinuca_engine.arg_warmup_instructions);
     SINUCA_PRINTF("COMPRESSED TRACE:        \t %s\n", sinuca_engine.arg_is_compressed ? "TRUE" : "FALSE");
+    SINUCA_PRINTF("GRAPH FILE:              \t %s\n", sinuca_engine.arg_graph_file_name             != NULL ? sinuca_engine.arg_graph_file_name        : "MISSING");
 
     if (args_processed < 2) {
         display_use();
@@ -220,6 +231,7 @@ int main(int argc, char **argv) {
 
     sinuca_engine.global_print_configuration();
     sinuca_engine.global_print_statistics();
+    sinuca_engine.global_print_graph();
 
     exit(EXIT_SUCCESS);
 };
