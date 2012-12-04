@@ -201,9 +201,9 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
                                     PREFETCHER_DEBUG_PRINTF("\t %s", this->request_buffer[position].content_to_string().c_str());
                                 }
                                 /// Cannot insert a new request
-                                else {
-                                    break;
-                                }
+                                // ~ else {
+                                    // ~ break;
+                                // ~ }
                             }
                             /// Request was in the same cache line (already requested)
                             else {

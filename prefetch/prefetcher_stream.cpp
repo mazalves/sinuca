@@ -159,7 +159,6 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
                             PREFETCHER_DEBUG_PRINTF("\t %s", this->request_buffer[position].content_to_string().c_str());
                             PREFETCHER_DEBUG_PRINTF("\t INSERTED on PREFETCHER_BUFFER[%d]\n", position);
                         }
-
                     }
                     /// The following update is to avoid the START become greater than END
                     /// If the stride of the access is bigger than the prefetch degree ... update using the stride to update the ending address

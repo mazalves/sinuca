@@ -19,12 +19,12 @@ mg;W;mg.W
 sp;W;sp.W
 ua;W;ua.W
 ## NAS S -- 19 - 27
-bt;S;bt.S
-cg;S;cg.S
-ep;S;ep.S
-ft;S;ft.S
-is;S;is.S
-lu;S;lu.S
-mg;S;mg.S
-sp;S;sp.S
-ua;S;ua.S
+bt;S;bt.S;19
+cg;S;cg.S;20FAIL_SYNC
+ep;S;ep.S;21
+ft;S;ft.S;22FAIL_SYNC
+is;S;is.S;23
+lu;S;lu.S;24
+mg;S;mg.S;25
+sp;S;sp.S;26
+ua;S;ua.S;27

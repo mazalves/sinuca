@@ -278,30 +278,35 @@ void processor_t::synchronize(sync_t new_sync) {
             SYNC_DEBUG_PRINTF("SYNC_CRITICAL_END => ");
 
             /// System should not be here, but it may be recoverable
+            /// If the system is here, the critical_end was already propagated.
             if (this->sync_status != SYNC_CRITICAL_START) {
                 WARNING_PRINTF("While processor[%u] synchronize[%s], found on processor[%d] sync_status[%s]\n",
                                 this->get_core_id(), get_enum_sync_char(this->sync_status), this->get_core_id(), get_enum_sync_char(new_sync));
+                this->sync_status = SYNC_FREE;
+                this->sync_status_time = sinuca_engine.get_global_cycle();
             }
+            /// System is normal, propagate the critical_end
+            else {
+                this->sync_status = SYNC_FREE;
+                this->sync_status_time = sinuca_engine.get_global_cycle();
 
-            this->sync_status = SYNC_FREE;
-            this->sync_status_time = sinuca_engine.get_global_cycle();
-
-            bool found_wait_critical_start = false;
-            uint32_t older_wait_critical_start = this->get_core_id();
-            uint64_t cycle_older_wait_critical_start = this->sync_status_time;
-            for (uint32_t proc = 0; proc < sinuca_engine.get_processor_array_size(); proc++) {
-                if (sinuca_processor[proc]->sync_status == SYNC_WAIT_CRITICAL_START) {
-                    found_wait_critical_start = true;
-                    if (sinuca_processor[proc]->sync_status_time < cycle_older_wait_critical_start) {
-                        older_wait_critical_start = proc;
-                        cycle_older_wait_critical_start = sinuca_processor[proc]->sync_status_time;
+                bool found_wait_critical_start = false;
+                uint32_t older_wait_critical_start = this->get_core_id();
+                uint64_t cycle_older_wait_critical_start = this->sync_status_time;
+                for (uint32_t proc = 0; proc < sinuca_engine.get_processor_array_size(); proc++) {
+                    if (sinuca_processor[proc]->sync_status == SYNC_WAIT_CRITICAL_START) {
+                        found_wait_critical_start = true;
+                        if (sinuca_processor[proc]->sync_status_time < cycle_older_wait_critical_start) {
+                            older_wait_critical_start = proc;
+                            cycle_older_wait_critical_start = sinuca_processor[proc]->sync_status_time;
+                        }
                     }
-                }
 
-                ERROR_ASSERT_PRINTF(sinuca_processor[proc]->sync_status != SYNC_CRITICAL_START &&
-                                    sinuca_processor[proc]->sync_status != SYNC_CRITICAL_END,
-                                    "While processor[%d] synchronize[%s], found on processor[%d] sync_status[%s]\n",
-                                    this->get_core_id(), get_enum_sync_char(new_sync), proc, get_enum_sync_char(sinuca_processor[proc]->sync_status));
+                    ERROR_ASSERT_PRINTF(sinuca_processor[proc]->sync_status != SYNC_CRITICAL_START &&
+                                        sinuca_processor[proc]->sync_status != SYNC_CRITICAL_END,
+                                        "While processor[%d] synchronize[%s], found on processor[%d] sync_status[%s]\n",
+                                        this->get_core_id(), get_enum_sync_char(new_sync), proc, get_enum_sync_char(sinuca_processor[proc]->sync_status));
+                    }
             }
 
             /// Wakeup some other processor waiting
@@ -319,11 +324,14 @@ void processor_t::synchronize(sync_t new_sync) {
         case SYNC_BARRIER: {
             SYNC_DEBUG_PRINTF("SYNC_BARRIER => ");
             /// System should not be here, but it may be recoverable
+            /// The trace has:      atomic_start    -> barrier      -> atomic_end
+            /// Now treating as:    atomic_start    -> atomic_end   -> barrier
             if (this->sync_status != SYNC_FREE) {
                 WARNING_PRINTF("While processor[%u] synchronize[%s], found on processor[%d] sync_status[%s]\n",
                                 this->get_core_id(), get_enum_sync_char(this->sync_status), this->get_core_id(), get_enum_sync_char(new_sync));
                 switch (this->sync_status) {
                     case SYNC_CRITICAL_START:
+                        /// Propagate the critical_end
                         WARNING_PRINTF("Propagating synchronize[%s] to avoid dead-lock.\n", get_enum_sync_char(SYNC_CRITICAL_END));
                         this->synchronize(SYNC_CRITICAL_END);
                     break;

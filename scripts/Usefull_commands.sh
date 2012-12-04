@@ -8,6 +8,9 @@ for i in `seq 1 30` ; do
                                 teste $(echo -ne '\r')";
 done
 
+# Highlight the source code
+highlight -i printable_directory.cpp -o printable_directory.html -S cpp -l -doc --style seashell
+
 
 # CREATE Fake Trace
 echo \#FAKE_TRACE > fake_trace.tid0.mem.out
@@ -73,8 +76,6 @@ for i in `ls *_8t.tid*.mem*` ; do echo $i >> REUSE.txt ; time zcat $i | awk '{pr
 for i in `ls *_8t.tid*.mem*` ; do echo $i >> DIFF.txt ; time zcat $i | awk '{print rshift($3,6)}' | sort -n | uniq -c | awk 's{print ((s>$0)?s-$0:$0-s)}{s=$0}' | awk '{tot += $1; count++} END { print tot/count}' >> DIFF.txt; done
 
 
-
-
 # Check the progress of multiple simulations
 for i in `ls ~/Experiment/benchmarks/results/*/*.log`; do tail -n16 $i | grep 'CPU  0' | grep -v 100.000%| grep IPC -m1 ; done
 ## Shows the benchmarks which failed.
@@ -93,35 +94,34 @@ for i in *pdf ; do echo $i ; pdfcrop $i $i; done
 ########################################################################
 
 # Run the Validation for all SPEC2000 and SPEC2006
-rm ~/Experiment/benchmarks/results/spec_cpu2000/*Validation_x86_64*
-rm ~/Experiment/benchmarks/results/spec_cpu2006/*Validation_x86_64*
-rm ~/Experiment/benchmarks/results/spec_cpu2006_x86_32/*Validation*
+# ~ rm ~/Experiment/benchmarks/results/spec_cpu2000/*Validation_x86_64*
+# ~ rm ~/Experiment/benchmarks/results/spec_cpu2006/*Validation_x86_64*
+# ~ rm ~/Experiment/benchmarks/results/spec_cpu2006_x86_32/*Validation*
 for i in `seq 1 29` ; do
     byobu -p$i -X stuff "reset ; \
     cd ~/Experiment/SiNUCA/scripts ; \
     echo spec_cpu2006
-    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core/Core2Duo_1core.cfg spec_cpu2006 Validation_x86_64 0 1 $i $i ; \
-    python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core_BIG/Core2Duo_1core.cfg spec_cpu2006 BigValidation_x86_64 0 1 $i $i ; \
+        python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core/Core2Duo_1core.cfg spec_cpu2006 Validation_x86_64 0 1 $i $i ; \
+        python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core_stride/Core2Duo_1core.cfg spec_cpu2006 Validation_x86_64_stride 0 1 $i $i ; \
     echo spec_cpu2000
-    echo python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core/Core2Duo_1core.cfg spec_cpu2000 Validation_x86_64 0 1 $i $i ; \
-    echo python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core_BIG/Core2Duo_1core.cfg spec_cpu2000 BigValidation_x86_64 0 1 $i $i ; \
+        python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core/Core2Duo_1core.cfg spec_cpu2000 Validation_x86_64 0 1 $i $i ; \
+        python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core_stride/Core2Duo_1core.cfg spec_cpu2000 Validation_x86_64_stride 0 1 $i $i ; \
     echo spec_cpu2006_x86_32
-    echo python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core/Core2Duo_1core.cfg spec_cpu2006_x86_32 Validation_x86_32 0 1 $i $i ; \
-    echo python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core_BIG/Core2Duo_1core.cfg spec_cpu2006_x86_32 BigValidation_x86_32 0 1 $i $i ; \
+        python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core/Core2Duo_1core.cfg spec_cpu2006_x86_32 Validation_x86_32 0 1 $i $i ; \
+        python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Core2Duo_1Core_stride/Core2Duo_1core.cfg spec_cpu2006_x86_32 Validation_x86_32_stride 0 1 $i $i ; \
     $(echo -ne '\r')";
 done
 
 cd ~/Experiment/SiNUCA/scripts
 rm ~/Experiment/benchmarks/plots/*
 python plot.py parameters_validation.cfg
-python plot.py parameters_big_validation.cfg
-python plot.py parameters_validation_x86_32.cfg
+python plot.py parameters_validation_stride.cfg
 
 #$ lstopo
 #$ export GOMP_CPU_AFFINITY=0,2,4,6,1,3,5,7
 
-# Run the Validation for all NPB_OMP 1, 2, 4, 8 threads.
-rm ~/Experiment/benchmarks/results/nas_npb/*S.Validation*
+# Run the Validation for all NPB_OMP 1, 2, 4, 8 threads for size S.
+# ~ rm ~/Experiment/benchmarks/results/nas_npb/*S.Validation*
 for i in `seq 19 27` ; do
     byobu -p$i -X stuff "reset ; \
     cd ~/Experiment/SiNUCA/scripts ; \

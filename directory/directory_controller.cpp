@@ -120,7 +120,12 @@ void directory_controller_t::remove_token_list(memory_package_t *package) {
 
 
 /// ====================================================================================
-// Remember: The package latency is defined as 1 automatically by the interconnection_controller if the package !is_answer
+/*! This method will take care about the inclusiveness and the cache coherence for all
+ *  the cache operations.
+ *  Remember: The transmission latency is defined as 1 automatically by the
+ *  interconnection_controller if the package !is_answer it does not matter the
+ *  package size
+ */
 package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, memory_package_t *package) {
     DIRECTORY_CTRL_DEBUG_PRINTF("new_cache_request() cache_id:%u, package:%s\n", cache_id, package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(cache_id < sinuca_engine.get_cache_memory_array_size(), "Wrong cache_id.\n")
@@ -135,9 +140,11 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     /// Find the existing directory line
     directory_line_t *directory_line = NULL;
     int32_t directory_line_number = POSITION_FAIL;
-    if (cache->get_hierarchy_level() != 1 && cache->get_id() != package->id_owner) { /// If NOT Cache L1 (New directory line may be created)
+    /// If NOT Cache L1 (New directory line may be created)
+    if (cache->get_hierarchy_level() != 1 && cache->get_id() != package->id_owner) {
         directory_line_number = find_directory_line(package);
-        ERROR_ASSERT_PRINTF(directory_line_number != POSITION_FAIL, "High level RQST must have a directory_line.\n. cache_id:%u, package:%s\n",
+        ERROR_ASSERT_PRINTF(directory_line_number != POSITION_FAIL,
+                            "High level RQST must have a directory_line.\n. cache_id:%u, package:%s\n",
                             cache->get_id(), package->content_to_string().c_str())
         directory_line = this->directory_lines[0][directory_line_number];
     }
@@ -159,9 +166,13 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 }
             }
         }
-        /// Fill the Sub-Blocks into the package
+        // =============================================================
+        // Line Usage Prediction
+        // Fill the Sub-Blocks into the package
+        // Should not be used here, because the baseline suffer sending bigger packages
         cache->line_usage_predictor->fill_package_sub_blocks(package);
-        ERROR_ASSERT_PRINTF(directory_line == NULL, "This level RQST must not have a directory_line.\n cache_id:%u, package:%s\n",
+        ERROR_ASSERT_PRINTF(directory_line == NULL,
+                            "This level RQST must not have a directory_line.\n cache_id:%u, package:%s\n",
                             cache->get_id(), package->content_to_string().c_str())
     }
 
@@ -180,6 +191,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             // =============================================================
             // Line Usage Prediction
             // Consider that the missing sub-blocks were requested.
+            // I think it should be treated as line hit which happened after the miss
+            // the problem is that the statistics between the cache and our mechanism
+            // will be different
             cache->line_usage_predictor->line_miss(package, index, way);
 
             /// No Directory_line yet => create
@@ -216,9 +230,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             /// Inspect IS_HIT
             bool is_line_hit = this->coherence_is_hit(cache_line, package->memory_operation);
             bool is_sub_block_hit = false;
-            // =============================================================
-            // Line Usage Prediction
             if (is_line_hit) {
+                // =============================================================
+                // Line Usage Prediction
                 is_sub_block_hit = cache->line_usage_predictor->check_sub_block_is_hit(package, index, way);
             }
             ///=================================================================
@@ -716,9 +730,6 @@ bool directory_controller_t::create_cache_copyback(cache_memory_t *cache, cache_
     }
     memory_package_t *cache_mshr_buffer = cache->get_mshr_buffer();
     memory_package_t *package = &cache_mshr_buffer[slot];
-    // ~ cache->change_status(cache_line, PROTOCOL_STATUS_I);
-    // ~ cache->change_address(cache_line, 0);
-
 
     ///=========================================================================
     /// Allocate CopyBack at the Directory_Line + LOCK
