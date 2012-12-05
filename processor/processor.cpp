@@ -306,14 +306,13 @@ void processor_t::synchronize(sync_t new_sync) {
                                         sinuca_processor[proc]->sync_status != SYNC_CRITICAL_END,
                                         "While processor[%d] synchronize[%s], found on processor[%d] sync_status[%s]\n",
                                         this->get_core_id(), get_enum_sync_char(new_sync), proc, get_enum_sync_char(sinuca_processor[proc]->sync_status));
-                    }
-            }
-
-            /// Wakeup some other processor waiting
-            if (found_wait_critical_start) {
-                SYNC_DEBUG_PRINTF("FOUND WAIT");
-                sinuca_processor[older_wait_critical_start]->sync_status = SYNC_CRITICAL_START;
-                sinuca_processor[older_wait_critical_start]->sync_status_time = sinuca_engine.get_global_cycle();
+                }
+                /// Wakeup some other processor waiting
+                if (found_wait_critical_start) {
+                    SYNC_DEBUG_PRINTF("FOUND WAIT");
+                    sinuca_processor[older_wait_critical_start]->sync_status = SYNC_CRITICAL_START;
+                    sinuca_processor[older_wait_critical_start]->sync_status_time = sinuca_engine.get_global_cycle();
+                }
             }
         }
         break;

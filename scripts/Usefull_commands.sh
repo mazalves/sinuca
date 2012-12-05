@@ -8,6 +8,9 @@ for i in `seq 1 30` ; do
                                 teste $(echo -ne '\r')";
 done
 
+# Redirect the python script into a file
+python 3>&1 4>&2 >foo.txt 2>&1
+
 # Highlight the source code
 highlight -i printable_directory.cpp -o printable_directory.html -S cpp -l -doc --style seashell
 
@@ -131,6 +134,7 @@ for i in `seq 19 27` ; do
     python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Nehalem_2x4cores/main_8cores_8cachel2_2cacheL3.cfg npb_omp Validation_8t 0 8 $i $i ; \
     $(echo -ne '\r')";
 done
+
 cd ~/Experiment/SiNUCA/scripts
 rm ~/Experiment/benchmarks/plots/*
 python plot.py parameters_validation_multithreaded.cfg
@@ -401,6 +405,7 @@ $(echo -ne '\r')";
 # Create pin_point traces for all NPB_OMP (S) - 1,2,4,8 Threads
 byobu -p0 -X stuff \
 "reset ; \
+export GOMP_CPU_AFFINITY=0,2,4,6,1,3,5,7; \
 cd ~/Experiment/SiNUCA/trace_generator/source/tools/sinuca_tracer/scripts ; \
 python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
 python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
