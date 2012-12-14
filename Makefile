@@ -33,13 +33,9 @@ LDFLAGS = -ggdb
 
 
 ########################################################
-MACHINE=$(shell uname -m)
+# ~ MACHINE=$(shell uname -m)
 
-ifeq ($(MACHINE),x86_64)
-	LIBRARY = -L./libs/64bits -lz -lconfig++
-else
-	LIBRARY = -L./libs/32bits -lz -lconfig++
-endif
+LIBRARY = -L./extra_libs/lib/ -lz -lconfig++  -Wl,-rpath,./extra_libs/lib/
 
 SRC_BASIC =			enumerations.cpp \
 			 		utils.cpp
@@ -93,20 +89,12 @@ SRC_CORE = sinuca.cpp sinuca_engine.cpp sinuca_configurator.cpp \
 			 $(SRC_DIRECTORY) $(SRC_PREFETCH) $(SRC_LINE_USAGE_PREDICTOR) $(SRC_CACHE_MEMORY) $(SRC_MAIN_MEMORY)
 
 ########################################################
-
-OBJS_CORE_ = ${SRC_CORE:.cpp=.o}
-OBJS_CORE = ${OBJS_CORE_:.c=.o}
-
+OBJS_CORE = ${SRC_CORE:.cpp=.o}
 OBJS = $(OBJS_CORE)
-
 ########################################################
 # implicit rules
-
-%.o : %.c
-	$(CC) -c $(CFLAGS) $< $(LIBRARY) -o $@
-
 %.o : %.cpp
-	$(CPP) -c $(CPPFLAGS) $< $(LIBRARY) -o $@
+	$(CPP) -c $(CPPFLAGS) $< -o $@
 
 ########################################################
 
@@ -116,9 +104,29 @@ all: sinuca
 	@echo
 	@echo Enjoy!
 
-sinuca: $(OBJS_CORE)
+sinuca: extra_libs/lib/libconfig++.a  extra_libs/lib/libz.a $(OBJS_CORE)
 	@echo SiNUCA compiled!
 	@echo
+
+extra_libs/lib/libconfig++.a:
+	@mkdir -p extra_libs/lib
+	@echo Building libconfig
+	cd extra_libs/src/; \
+	tar xzf libconfig-*.tar.gz; \
+	cd libconfig-*; \
+	./configure --prefix=$(CURDIR)/extra_libs/; \
+	make; \
+	make install
+
+extra_libs/lib/libz.a:
+	@mkdir -p extra_libs/lib
+	@echo Building zlib
+	cd extra_libs/src/; \
+	tar xzf zlib-*.tar.gz; \
+	cd zlib-*; \
+	./configure --prefix=$(CURDIR)/extra_libs/; \
+	make; \
+	make install
 
 clean:
 	-$(RM) $(OBJS)
@@ -126,3 +134,15 @@ clean:
 	@echo SiNUCA cleaned!
 	@echo
 
+distclean: clean
+	-$(RM) extra_libs/lib/* -R
+	-$(RM) extra_libs/include/* -R
+	-$(RM) extra_libs/share/* -R
+	@echo Cleaning libconfig
+	cd extra_libs/src/libconfig-*; \
+	make distclean
+	@echo Cleaning zlib
+	cd extra_libs/src/zlib-*; \
+	make distclean
+	@echo SiNUCA cleaned!
+	@echo

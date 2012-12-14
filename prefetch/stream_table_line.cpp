@@ -36,16 +36,15 @@ stream_table_line_t::~stream_table_line_t() {
 
 /// ============================================================================
 void stream_table_line_t::clean() {
-     this->starting_address = 0;           
-     this->ending_address = 0;			
-     this->direction = 0;           
-     this->lifetime = 0;			 
-     
+     this->starting_address = 0;
+     this->ending_address = 0;
+     this->direction = 0;
+
      this->cycle_last_activation = 0;         /// Last time a Memory Request matched into this stream
      this->cycle_last_request = 0;            /// Last prefetch done
      this->last_memory_address = 0;
-     
-     this->state = PREFETCHER_STREAM_STATE_INVALID;						 	
+
+     this->state = PREFETCHER_STREAM_STATE_INVALID;
 }
 
 /// ============================================================================
@@ -56,12 +55,11 @@ std::string stream_table_line_t::content_to_string() {
     content_string = content_string + " STREAM: Starting Address:" + utils_t::uint64_to_char(this->starting_address);
     content_string = content_string + " STREAM: Ending Address:" + utils_t::uint64_to_char(this->ending_address);
     content_string = content_string + " Stream Direction:" + utils_t::uint32_to_char(this->direction);
-    content_string = content_string + " Stream Lifetime:" + utils_t::int32_to_char(this->lifetime);
-    
+
     content_string = content_string + " Stream Last Activation:" + utils_t::int64_to_char(this->cycle_last_activation);
     content_string = content_string + " Stream Last Request:" + utils_t::uint64_to_char(this->cycle_last_request);
     content_string = content_string + " Stream Last Address:" + utils_t::uint64_to_char(this->last_memory_address);
-    
+
     content_string = content_string + " Stream State:" + get_enum_prefetch_stream_state_char(this->state);
     return content_string;
 };

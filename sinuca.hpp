@@ -52,8 +52,8 @@
 #include <string>
 
 /// Embedded Libraries
-#include "./libs/include/zlib.h"
-#include "./libs/include/libconfig.h++"
+#include "./extra_libs/include/zlib.h"
+#include "./extra_libs/include/libconfig.h++"
 
 /// ============================================================================
 /// Classes

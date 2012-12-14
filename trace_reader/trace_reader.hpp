@@ -69,7 +69,7 @@ class trace_reader_t {
         uint32_t trace_next_dynamic(uint32_t cpuid, sync_t *sync_found);
         std::string trace_next_memory(uint32_t cpuid);
         bool trace_fetch(uint32_t cpuid, opcode_package_t *m);
-        void genenate_static_dictionary();
+        void generate_static_dictionary();
         void check_static_dictionary();
 
         /// Progress

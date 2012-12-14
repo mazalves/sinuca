@@ -92,7 +92,7 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t ncpus) {
         ERROR_ASSERT_PRINTF(StaticTraceFile.good(), "Could not open the file.\n%s\n", stat_file_name);
     }
     TRACE_READER_DEBUG_PRINTF("Static File = %s => READY !\n", stat_file_name);
-    this->genenate_static_dictionary();
+    this->generate_static_dictionary();
 
     // =======================================================================
     // Dynamic Trace Files
@@ -431,7 +431,7 @@ bool trace_reader_t::trace_fetch(uint32_t cpuid, opcode_package_t *m) {
 };
 
 // =============================================================================
-void trace_reader_t::genenate_static_dictionary() {
+void trace_reader_t::generate_static_dictionary() {
     bool file_eof = false;
     static_dictionary.clear();                  /// Vector[BBL] => Deques of Opcodes
 

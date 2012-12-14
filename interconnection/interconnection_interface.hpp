@@ -58,7 +58,7 @@ class interconnection_interface_t {
         /// Methods
         /// ====================================================================
         interconnection_interface_t();
-        ~interconnection_interface_t();
+        virtual ~interconnection_interface_t();
 
         inline const char* get_type_component_label() {
             return get_enum_component_char(this->get_type_component());

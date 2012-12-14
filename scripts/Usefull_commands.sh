@@ -92,6 +92,68 @@ awk '/Configuration of SINUCA_ENGINE/{n++}{print > f n}' f=*.result
 ## Crop the pdf figures to insert into paper
 for i in *pdf ; do echo $i ; pdfcrop $i $i; done
 
+## Real time for validation of the simulator - Size S
+rm -f npb_S_1t.txt npb_S_2t.txt npb_S_4t.txt npb_S_8t.txt ;
+for i in `ls *S.x` ; do
+    echo $i >> npb_S_1t.txt;
+    echo $i >> npb_S_2t.txt;
+    echo $i >> npb_S_4t.txt;
+    echo $i >> npb_S_8t.txt;
+    for j in `seq 0 9` ; do
+        sudo GOMP_CPU_AFFINITY=0 OMP_NUM_THREADS=1 perf stat -x " " -a -A -e cycles -o npb_S_1t.txt --append ./$i > /dev/null;
+        sudo GOMP_CPU_AFFINITY=0,2 OMP_NUM_THREADS=2 perf stat -x " " -a -A -e cycles -o npb_S_2t.txt --append ./$i > /dev/null;
+        sudo GOMP_CPU_AFFINITY=0,2,4,6 OMP_NUM_THREADS=4 perf stat -x " " -a -A -e cycles -o npb_S_4t.txt --append ./$i > /dev/null;
+        sudo GOMP_CPU_AFFINITY=0,2,4,6,1,3,5,7 OMP_NUM_THREADS=8 perf stat -x " " -a -A -e cycles -o npb_S_8t.txt --append ./$i > /dev/null;
+    done ;
+done;
+for i in `ls npb_S_*t.txt` ; do
+    sed -i -e 's/CPU0 //' -e 's/CPU1 //' -e 's/CPU2 //' -e 's/CPU3 //' -e 's/CPU4 //' -e 's/CPU5 //' -e 's/CPU6 //' -e 's/CPU7 //' $i;
+    sed -i -e 's/ cycles//' $i;
+    sed -i '/#/d' $i;
+done;
+
+## Real time for validation of the simulator - Size W
+rm -f npb_W_1t.txt npb_W_2t.txt npb_W_4t.txt npb_W_8t.txt ;
+for i in `ls *W.x` ; do
+    echo $i >> npb_W_1t.txt;
+    echo $i >> npb_W_2t.txt;
+    echo $i >> npb_W_4t.txt;
+    echo $i >> npb_W_8t.txt;
+    for j in `seq 0 9` ; do
+        sudo GOMP_CPU_AFFINITY=0 OMP_NUM_THREADS=1 perf stat -x " " -a -A -e cycles -o npb_W_1t.txt --append ./$i > /dev/null;
+        sudo GOMP_CPU_AFFINITY=0,2 OMP_NUM_THREADS=2 perf stat -x " " -a -A -e cycles -o npb_W_2t.txt --append ./$i > /dev/null;
+        sudo GOMP_CPU_AFFINITY=0,2,4,6 OMP_NUM_THREADS=4 perf stat -x " " -a -A -e cycles -o npb_W_4t.txt --append ./$i > /dev/null;
+        sudo GOMP_CPU_AFFINITY=0,2,4,6,1,3,5,7 OMP_NUM_THREADS=8 perf stat -x " " -a -A -e cycles -o npb_W_8t.txt --append ./$i > /dev/null;
+    done ;
+done;
+for i in `ls npb_W_*t.txt` ; do
+    sed -i -e 's/CPU0 //' -e 's/CPU1 //' -e 's/CPU2 //' -e 's/CPU3 //' -e 's/CPU4 //' -e 's/CPU5 //' -e 's/CPU6 //' -e 's/CPU7 //' $i;
+    sed -i -e 's/ cycles//' $i;
+    sed -i '/#/d' $i;
+done;
+
+## Real time for validation of the simulator - Size A
+rm -f npb_A_1t.txt npb_A_2t.txt npb_A_4t.txt npb_A_8t.txt ;
+for i in `ls *A.x` ; do
+    echo $i >> npb_A_1t.txt;
+    echo $i >> npb_A_2t.txt;
+    echo $i >> npb_A_4t.txt;
+    echo $i >> npb_A_8t.txt;
+    for j in `seq 0 9` ; do
+        sudo GOMP_CPU_AFFINITY=0 OMP_NUM_THREADS=1 perf stat -x " " -a -A -e cycles -o npb_A_1t.txt --append ./$i > /dev/null;
+        sudo GOMP_CPU_AFFINITY=0,2 OMP_NUM_THREADS=2 perf stat -x " " -a -A -e cycles -o npb_A_2t.txt --append ./$i > /dev/null;
+        sudo GOMP_CPU_AFFINITY=0,2,4,6 OMP_NUM_THREADS=4 perf stat -x " " -a -A -e cycles -o npb_A_4t.txt --append ./$i > /dev/null;
+        sudo GOMP_CPU_AFFINITY=0,2,4,6,1,3,5,7 OMP_NUM_THREADS=8 perf stat -x " " -a -A -e cycles -o npb_A_8t.txt --append ./$i > /dev/null;
+    done ;
+done;
+for i in `ls npb_A_*t.txt` ; do
+    sed -i -e 's/CPU0 //' -e 's/CPU1 //' -e 's/CPU2 //' -e 's/CPU3 //' -e 's/CPU4 //' -e 's/CPU5 //' -e 's/CPU6 //' -e 's/CPU7 //' $i;
+    sed -i -e 's/ cycles//' $i;
+    sed -i '/#/d' $i;
+done;
+
+
+
 ########################################################################
 ## VALIDATION x86_64 - SPEC CPU 2000 and 2006
 ########################################################################
@@ -124,8 +186,14 @@ python plot.py parameters_validation_stride.cfg
 #$ export GOMP_CPU_AFFINITY=0,2,4,6,1,3,5,7
 
 # Run the Validation for all NPB_OMP 1, 2, 4, 8 threads for size S.
-# ~ rm ~/Experiment/benchmarks/results/nas_npb/*S.Validation*
+# ~ rm ~/Experiment/benchmarks/results/npb_omp/*S.Validation*
 for i in `seq 19 27` ; do
+
+# ~ rm ~/Experiment/benchmarks/results/npb_omp/*W.Validation*
+for i in `seq 10 18` ; do
+
+# ~ rm ~/Experiment/benchmarks/results/npb_omp/*A.Validation*
+for i in `seq 1 9` ; do
     byobu -p$i -X stuff "reset ; \
     cd ~/Experiment/SiNUCA/scripts ; \
     python execute.py ~/Experiment/SiNUCA/examples/configurations/validation/Nehalem_2x4cores/main_8cores_8cachel2_2cacheL3.cfg npb_omp Validation_1t 0 1 $i $i ; \
@@ -402,29 +470,32 @@ python create_pin_points_trace.py prepare spec_omp2001 1 0 0 ; \
 python create_pin_points_trace.py parallel_trace spec_omp2001 16 1 11 ; \
 $(echo -ne '\r')";
 
-# Create pin_point traces for all NPB_OMP (S) - 1,2,4,8 Threads
+# Create pin_point traces for all NPB_OMP (W) - 1,2,4,8 Threads
 byobu -p0 -X stuff \
 "reset ; \
-export GOMP_CPU_AFFINITY=0,2,4,6,1,3,5,7; \
+export GOMP_CPU_AFFINITY=0; \
 cd ~/Experiment/SiNUCA/trace_generator/source/tools/sinuca_tracer/scripts ; \
 python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
 python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
-python create_pin_points_trace.py parallel_trace npb_omp 1 19 27 ; \
+python create_pin_points_trace.py parallel_trace npb_omp 1 10 18 ; \
 echo `uname -a`--`date`--TRACE_1t_READY >> ~/Dropbox/TRACE.READY ; \
 reset;
+export GOMP_CPU_AFFINITY=0,2; \
 python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
 python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
-python create_pin_points_trace.py parallel_trace npb_omp 2 19 27 ; \
+python create_pin_points_trace.py parallel_trace npb_omp 2 10 18 ; \
 echo `uname -a`--`date`--TRACE_2t_READY >> ~/Dropbox/TRACE.READY ; \
 reset;
+export GOMP_CPU_AFFINITY=0,2,4,6; \
 python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
 python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
-python create_pin_points_trace.py parallel_trace npb_omp 4 19 27 ; \
+python create_pin_points_trace.py parallel_trace npb_omp 4 10 18 ; \
 echo `uname -a`--`date`--TRACE_4t_READY >> ~/Dropbox/TRACE.READY ; \
 reset;
+export GOMP_CPU_AFFINITY=0,2,4,6,1,3,5,7; \
 python create_pin_points_trace.py clean npb_omp 1 0 0 ; \
 python create_pin_points_trace.py prepare npb_omp 1 0 0 ; \
-python create_pin_points_trace.py parallel_trace npb_omp 8 19 27 ; \
+python create_pin_points_trace.py parallel_trace npb_omp 8 10 18 ; \
 echo `uname -a`--`date`--TRACE_8t_READY >> ~/Dropbox/TRACE.READY ; \
 echo `uname -a`--`date`--ALL_CLEAR >> ~/Dropbox/TRACE.READY ; \
 $(echo -ne '\r')";

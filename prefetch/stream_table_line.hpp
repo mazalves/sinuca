@@ -24,16 +24,15 @@
 /// ============================================================================
 class stream_table_line_t {
     public:
-        uint64_t starting_address;           /// Starting address for this stream
-        uint64_t ending_address;             /// Last address for this stream
-        uint32_t direction;           /// Direction of this stream (0 downstream, 1 upstream)
-        int32_t lifetime;            /// When should the stream be evicted (i.e. if this gets to 0, evict the stream)
+        uint64_t starting_address;          /// Starting address for this stream
+        uint64_t ending_address;            /// Last address for this stream
+        uint32_t direction;                 /// Direction of this stream (0 downstream, 1 upstream)
 
-        int64_t cycle_last_activation;         /// Last time a Memory Request matched into this stream
-        uint64_t cycle_last_request;            /// Last prefetch done
+        uint64_t cycle_last_activation;     /// Last time a Memory Request matched into this stream
+        uint64_t cycle_last_request;        /// Last prefetch done
         uint64_t last_memory_address;
 
-        prefetch_stream_state_t state;                       /// Slot state ( Invalid, Allocated, Training,or  Monitor and Request)
+        prefetch_stream_state_t state;      /// Slot state ( Invalid, Allocated, Training,or  Monitor and Request)
 
         /// ====================================================================
         /// Methods

@@ -48,7 +48,7 @@ static void display_use() {
 
 //==============================================================================
 static void process_argv(int argc, char **argv) {
-    uint32_t args_processed = 0;
+    uint32_t req_args_processed = 0;
 
     sinuca_engine.arg_configuration_file_name = NULL;
     sinuca_engine.arg_trace_file_name = NULL;
@@ -62,28 +62,26 @@ static void process_argv(int argc, char **argv) {
             argc--;
             argv++;
             sinuca_engine.arg_configuration_file_name = *argv;
-            args_processed++;
+            req_args_processed++;
         }
 
         else if (strcmp(*argv, "-trace") == 0) {
             argc--;
             argv++;
             sinuca_engine.arg_trace_file_name = *argv;
-            args_processed++;
+            req_args_processed++;
         }
 
         else if (strcmp(*argv, "-result") == 0) {
             argc--;
             argv++;
             sinuca_engine.arg_result_file_name = *argv;
-            args_processed++;
         }
 
         else if (strcmp(*argv, "-warmup") == 0) {
             argc--;
             argv++;
             sinuca_engine.arg_warmup_instructions = atoi(*argv);
-            args_processed++;
         }
 
         else if (strcmp(*argv, "-compressed") == 0) {
@@ -104,7 +102,6 @@ static void process_argv(int argc, char **argv) {
             argc--;
             argv++;
             sinuca_engine.arg_graph_file_name = *argv;
-            args_processed++;
         }
 
 
@@ -128,7 +125,7 @@ static void process_argv(int argc, char **argv) {
     SINUCA_PRINTF("COMPRESSED TRACE:        \t %s\n", sinuca_engine.arg_is_compressed ? "TRUE" : "FALSE");
     SINUCA_PRINTF("GRAPH FILE:              \t %s\n", sinuca_engine.arg_graph_file_name             != NULL ? sinuca_engine.arg_graph_file_name        : "MISSING");
 
-    if (args_processed < 2) {
+    if (req_args_processed < 2) {
         display_use();
     }
 };
