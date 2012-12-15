@@ -118,11 +118,17 @@ static void process_argv(int argc, char **argv) {
 
     }
 
-    SINUCA_PRINTF("CONFIGURATION FILE:      \t %s\n", sinuca_engine.arg_configuration_file_name    != NULL ? sinuca_engine.arg_configuration_file_name : "MISSING");
-    SINUCA_PRINTF("TRACE FILE:              \t %s\n", sinuca_engine.arg_trace_file_name            != NULL ? sinuca_engine.arg_trace_file_name         : "MISSING");
-    SINUCA_PRINTF("RESULT FILE:             \t %s\n", sinuca_engine.arg_result_file_name           != NULL ? sinuca_engine.arg_result_file_name        : "MISSING");
+    uint32_t configuration_file_size;
+    configuration_file_size = strlen(sinuca_engine.arg_configuration_file_name) + 1;
+    sinuca_engine.arg_configuration_path = utils_t::template_allocate_array<char>(configuration_file_size);
+    utils_t::get_path(sinuca_engine.arg_configuration_path, sinuca_engine.arg_configuration_file_name);
+
+    SINUCA_PRINTF("CONFIGURATION FILE:      \t %s\n", sinuca_engine.arg_configuration_file_name     != NULL ? sinuca_engine.arg_configuration_file_name : "MISSING");
+    SINUCA_PRINTF("CONFIGURATION PATH:      \t %s\n", sinuca_engine.arg_configuration_path          != NULL ? sinuca_engine.arg_configuration_path      : "MISSING");
+    SINUCA_PRINTF("TRACE FILE:              \t %s\n", sinuca_engine.arg_trace_file_name             != NULL ? sinuca_engine.arg_trace_file_name         : "MISSING");
+    SINUCA_PRINTF("RESULT FILE:             \t %s\n", sinuca_engine.arg_result_file_name            != NULL ? sinuca_engine.arg_result_file_name        : "MISSING");
     SINUCA_PRINTF("WARM-UP INSTRUCTIONS:    \t %u\n", sinuca_engine.arg_warmup_instructions);
-    SINUCA_PRINTF("COMPRESSED TRACE:        \t %s\n", sinuca_engine.arg_is_compressed ? "TRUE" : "FALSE");
+    SINUCA_PRINTF("COMPRESSED TRACE:        \t %s\n", sinuca_engine.arg_is_compressed                       ? "TRUE" : "FALSE");
     SINUCA_PRINTF("GRAPH FILE:              \t %s\n", sinuca_engine.arg_graph_file_name             != NULL ? sinuca_engine.arg_graph_file_name        : "MISSING");
 
     if (req_args_processed < 2) {

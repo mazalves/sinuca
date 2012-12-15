@@ -36,6 +36,8 @@ void sinuca_engine_t::initialize() {
     // Read the file. If there is an error, report it and exit.
     // =========================================================================
     libconfig::Config cfg;
+    cfg.setIncludeDir(this->arg_configuration_path);
+
     try {
         cfg.readFile(this->arg_configuration_file_name);
     }
@@ -146,6 +148,7 @@ void sinuca_engine_t::initialize() {
 /// ============================================================================
 void sinuca_engine_t::initialize_processor() {
     libconfig::Config cfg;
+    cfg.setIncludeDir(this->arg_configuration_path);
     cfg.readFile(this->arg_configuration_file_name);
 
     libconfig::Setting &cfg_root = cfg.getRoot();
@@ -431,6 +434,7 @@ void sinuca_engine_t::initialize_processor() {
 /// ============================================================================
 void sinuca_engine_t::initialize_cache_memory() {
     libconfig::Config cfg;
+    cfg.setIncludeDir(this->arg_configuration_path);
     cfg.readFile(this->arg_configuration_file_name);
 
     libconfig::Setting &cfg_root = cfg.getRoot();
@@ -864,6 +868,7 @@ void sinuca_engine_t::initialize_cache_memory() {
 /// ============================================================================
 void sinuca_engine_t::initialize_memory_controller() {
     libconfig::Config cfg;
+    cfg.setIncludeDir(this->arg_configuration_path);
     cfg.readFile(this->arg_configuration_file_name);
 
     libconfig::Setting &cfg_root = cfg.getRoot();
@@ -1033,6 +1038,7 @@ void sinuca_engine_t::initialize_memory_controller() {
 /// ============================================================================
 void sinuca_engine_t::initialize_interconnection_router() {
     libconfig::Config cfg;
+    cfg.setIncludeDir(this->arg_configuration_path);
     cfg.readFile(this->arg_configuration_file_name);
 
     libconfig::Setting &cfg_root = cfg.getRoot();
@@ -1110,6 +1116,7 @@ void sinuca_engine_t::initialize_interconnection_router() {
 /// ============================================================================
 void sinuca_engine_t::initialize_directory_controller() {
     libconfig::Config cfg;
+    cfg.setIncludeDir(this->arg_configuration_path);
     cfg.readFile(this->arg_configuration_file_name);
 
     libconfig::Setting &cfg_root = cfg.getRoot();
@@ -1176,6 +1183,7 @@ void sinuca_engine_t::initialize_directory_controller() {
 /// ============================================================================
 void sinuca_engine_t::initialize_interconnection_controller() {
     libconfig::Config cfg;
+    cfg.setIncludeDir(this->arg_configuration_path);
     cfg.readFile(this->arg_configuration_file_name);
 
     libconfig::Setting &cfg_root = cfg.getRoot();
@@ -1233,6 +1241,7 @@ void sinuca_engine_t::initialize_interconnection_controller() {
 /// ============================================================================
 void sinuca_engine_t::make_connections() {
     libconfig::Config cfg;
+    cfg.setIncludeDir(this->arg_configuration_path);
     cfg.readFile(this->arg_configuration_file_name);
     libconfig::Setting &cfg_root = cfg.getRoot();
 

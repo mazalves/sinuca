@@ -120,6 +120,8 @@ class utils_t {
             return var;
         };
 
+        static void get_path(char *path, char *file_path);
+
         static uint64_t get_power_of_two(uint64_t n);
         static uint8_t check_if_power_of_two(uint64_t n);
         static uint64_t hash_function(hash_function_t type, uint64_t input1, uint64_t input2, uint64_t bit_size);

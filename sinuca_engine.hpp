@@ -28,6 +28,7 @@ class sinuca_engine_t {
     public:
         /// Program input
         char *arg_configuration_file_name;
+        char *arg_configuration_path;
         char *arg_trace_file_name;
         char *arg_result_file_name;
         uint32_t arg_warmup_instructions;

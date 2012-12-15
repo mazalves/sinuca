@@ -25,6 +25,23 @@
 #include <string>
 
 //==============================================================================
+void utils_t::get_path(char *path, char *file_path) {
+    char *posp;
+
+    strcpy (path, file_path);
+    printf("PATH+FILE:%s\n", path);
+
+    posp = strrchr(path, '/');
+    if (posp == NULL) {
+        strcpy (path, "./");
+    }
+    else {
+        *(posp+1) = '\0';
+    }
+    printf("PATH:%s\n", path);
+}
+
+//==============================================================================
 uint64_t utils_t::get_power_of_two(uint64_t n) {
     if (n == 0) {
         return 0;
