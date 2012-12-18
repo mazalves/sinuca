@@ -35,7 +35,7 @@ LDFLAGS = -ggdb
 ########################################################
 # ~ MACHINE=$(shell uname -m)
 
-LIBRARY = -L./extra_libs/lib -Wl,-rpath,./extra_libs/lib -lz -lconfig++
+LIBRARY = -L$(CURDIR)/extra_libs/lib -Wl,-rpath,$(CURDIR)/extra_libs/lib -lz -lconfig++
 
 SRC_BASIC =			enumerations.cpp \
 			 		utils.cpp
