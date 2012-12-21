@@ -120,6 +120,77 @@ void uop_package_t::opcode_to_uop(uint64_t uop_number, instruction_operation_t u
         this->write_regs.push_back(opcode.write_regs[i]);
     }
 
+/*
+    /// ========================================================================
+    /// Optimistic about the Registers dependency
+    switch (uop_operation) {
+        /// NOP
+        case INSTRUCTION_OPERATION_NOP:
+        /// INTEGERS
+        case INSTRUCTION_OPERATION_INT_ALU:
+        case INSTRUCTION_OPERATION_INT_MUL:
+        case INSTRUCTION_OPERATION_INT_DIV:
+        /// FLOAT POINT
+        case INSTRUCTION_OPERATION_FP_ALU:
+        case INSTRUCTION_OPERATION_FP_MUL:
+        case INSTRUCTION_OPERATION_FP_DIV:
+        /// BRANCHES
+        case INSTRUCTION_OPERATION_BRANCH:
+        /// NOT INDENTIFIED
+        case INSTRUCTION_OPERATION_OTHER:
+            /// Read all except Base and Index
+            /// Write all except Base and Index
+            this->read_regs.clear();
+            for (uint32_t i = 0; i < opcode.read_regs.size(); i++) {
+                if (opcode.read_regs[i] != opcode.base_reg && opcode.read_regs[i] != opcode.index_reg) {
+                    this->read_regs.push_back(opcode.read_regs[i]);
+                }
+            }
+
+            this->write_regs.clear();
+            for (uint32_t i = 0; i < opcode.write_regs.size(); i++) {
+                if (opcode.write_regs[i] != opcode.base_reg && opcode.write_regs[i] != opcode.index_reg) {
+                    this->write_regs.push_back(opcode.write_regs[i]);
+                }
+            }
+
+        break;
+
+        /// MEMORY OPERATIONS
+        case INSTRUCTION_OPERATION_MEM_LOAD:
+            /// Read only Base and Index
+            /// Write all except Base and Index
+            this->read_regs.clear();
+            this->read_regs.push_back(opcode.base_reg);
+            this->read_regs.push_back(opcode.index_reg);
+
+            this->write_regs.clear();
+            for (uint32_t i = 0; i < opcode.write_regs.size(); i++) {
+                if (opcode.write_regs[i] != opcode.base_reg && opcode.write_regs[i] != opcode.index_reg) {
+                    this->write_regs.push_back(opcode.write_regs[i]);
+                }
+            }
+        break;
+
+        case INSTRUCTION_OPERATION_MEM_STORE:
+            /// Read all
+            /// Write none
+            this->read_regs.clear();
+            for (uint32_t i = 0; i < opcode.read_regs.size(); i++) {
+                this->read_regs.push_back(opcode.read_regs[i]);
+            }
+
+            this->write_regs.clear();
+        break;
+
+        /// SYNCRONIZATION
+        case INSTRUCTION_OPERATION_BARRIER:
+            ERROR_PRINTF("Invalid instruction BARRIER being decoded.\n");
+        break;
+
+    }
+*/
+
     this->uop_operation = uop_operation;
     this->memory_address = memory_address;
     this->memory_size = memory_size;
@@ -198,7 +269,7 @@ std::string uop_package_t::content_to_string() {
     PackageString = PackageString + " SIZE:" + utils_t::utils_t::uint32_to_char(this->opcode_size);
 
     PackageString = PackageString + " | " + get_enum_instruction_operation_char(this->uop_operation);
-    PackageString = PackageString + " R1 0x" + utils_t::uint64_to_char(this->memory_address);
+    PackageString = PackageString + " MEM:0x" + utils_t::uint64_to_char(this->memory_address);
     PackageString = PackageString + " SIZE:" + utils_t::uint32_to_char(this->memory_size);
 
     PackageString = PackageString + " | " + get_enum_package_state_char(this->state);

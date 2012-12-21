@@ -37,6 +37,9 @@ class opcode_package_t {
         container_register_t read_regs;
         container_register_t write_regs;
 
+        uint32_t base_reg;
+        uint32_t index_reg;
+
         bool is_read;
         uint64_t read_address;
         uint32_t read_size;

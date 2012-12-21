@@ -189,7 +189,7 @@ void processor_t::allocate() {
     this->reorder_buffer_position_used = 0;
 
     /// Register Alias Table for Renaming
-    this->register_alias_table_size = 256; /// Number of registers on the trace
+    this->register_alias_table_size = 260; /// Number of registers on the trace (258 is used for SiNUCA only maintain the dependency between uops)
     this->register_alias_table = utils_t::template_allocate_initialize_array<reorder_buffer_line_t*>(this->register_alias_table_size, NULL);
 
     /// Memory Map for Renaming
@@ -608,6 +608,9 @@ int32_t processor_t::send_instruction_package(opcode_package_t *inst_package) {
     return POSITION_FAIL;
 };
 
+
+
+
 /// ============================================================================
 /// Divide the opcode into
 ///  1st. uop READ MEM. + unaligned
@@ -615,9 +618,23 @@ int32_t processor_t::send_instruction_package(opcode_package_t *inst_package) {
 ///  3rd. uop BRANCH
 ///  4th. uop ALU
 ///  5th. uop WRITE MEM. + unaligned
+/// ============================================================================
+/// To maintain the right dependencies between the uops and opcodes
+/// If the opcode generates multiple uops, they must be in this format:
+///
+/// READ    ReadRegs    = BaseRegs + IndexRegs
+///         WriteRegs   = 258 (Aux Register)
+///
+/// ALU     ReadRegs    = * + 258 (Aux Register) (if is_read)
+///         WriteRegs   = * + 258 (Aux Register) (if is_write)
+///
+/// WRITE   ReadRegs    = * + 258 (Aux Register)
+///         WriteRegs   = NULL
+/// ============================================================================
 void processor_t::stage_decode() {
     PROCESSOR_DEBUG_PRINTF("stage_decode()\n");
     int32_t position_buffer = POSITION_FAIL;
+    uop_package_t *uop_ptr = NULL;
 
     /// Fetch_Buffer => (Decode) => Decode_Buffer
     for (uint32_t i = 0; i < this->stage_decode_width ; i++) {
@@ -636,13 +653,53 @@ void processor_t::stage_decode() {
         ERROR_ASSERT_PRINTF(this->decode_opcode_counter == this->fetch_buffer[fetch_buffer_position_start].opcode_number, "Renaming out-of-order.\n")
         this->decode_opcode_counter++;
 
-        /// DECODE WRITE ===================================================
-        if (this->fetch_buffer[fetch_buffer_position_start].is_write) {
+        /// DECODE READ ====================================================
+        if (this->fetch_buffer[fetch_buffer_position_start].is_read) {
             position_buffer = this->decode_buffer_insert();
             ERROR_ASSERT_PRINTF(position_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
-            this->decode_buffer[position_buffer].opcode_to_uop(this->decode_uop_counter++, INSTRUCTION_OPERATION_MEM_STORE,
-                                                                        this->fetch_buffer[fetch_buffer_position_start].write_address, this->fetch_buffer[fetch_buffer_position_start].write_size,
+            this->decode_buffer[position_buffer].opcode_to_uop(this->decode_uop_counter++, INSTRUCTION_OPERATION_MEM_LOAD,
+                                                                        this->fetch_buffer[fetch_buffer_position_start].read_address, this->fetch_buffer[fetch_buffer_position_start].read_size,
                                                                         this->fetch_buffer[fetch_buffer_position_start]);
+
+            /// Fix the dependencies between uops
+            /// READ    ReadRegs    = BaseRegs + IndexRegs
+            ///         WriteRegs   = 258 (Aux Register)
+
+            uop_ptr = &this->decode_buffer[position_buffer];
+            if (this->fetch_buffer[fetch_buffer_position_start].opcode_operation != INSTRUCTION_OPERATION_MEM_LOAD){
+                    uop_ptr->read_regs.clear();
+                    uop_ptr->read_regs.push_back(this->fetch_buffer[fetch_buffer_position_start].base_reg);
+                    uop_ptr->read_regs.push_back(this->fetch_buffer[fetch_buffer_position_start].index_reg);
+
+                    uop_ptr->write_regs.clear();
+                    uop_ptr->write_regs.push_back(258);
+            }
+
+            this->decode_buffer[position_buffer].package_ready(this->stage_decode_cycles);
+            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, this->decode_buffer[position_buffer].content_to_string().c_str());
+        }
+
+        /// DECODE READ 2 ==================================================
+        if (this->fetch_buffer[fetch_buffer_position_start].is_read2) {
+            position_buffer = this->decode_buffer_insert();
+            ERROR_ASSERT_PRINTF(position_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
+            this->decode_buffer[position_buffer].opcode_to_uop(this->decode_uop_counter++, INSTRUCTION_OPERATION_MEM_LOAD,
+                                                                        this->fetch_buffer[fetch_buffer_position_start].read2_address, this->fetch_buffer[fetch_buffer_position_start].read2_size,
+                                                                        this->fetch_buffer[fetch_buffer_position_start]);
+
+            /// Fix the dependencies between uops
+            /// READ    ReadRegs    = BaseRegs + IndexRegs
+            ///         WriteRegs   = 258 (Aux Register)
+            uop_ptr = &this->decode_buffer[position_buffer];
+            if (this->fetch_buffer[fetch_buffer_position_start].opcode_operation != INSTRUCTION_OPERATION_MEM_LOAD){
+                    uop_ptr->read_regs.clear();
+                    uop_ptr->read_regs.push_back(this->fetch_buffer[fetch_buffer_position_start].base_reg);
+                    uop_ptr->read_regs.push_back(this->fetch_buffer[fetch_buffer_position_start].index_reg);
+
+                    uop_ptr->write_regs.clear();
+                    uop_ptr->write_regs.push_back(258);
+            }
+
             this->decode_buffer[position_buffer].package_ready(this->stage_decode_cycles);
             PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, this->decode_buffer[position_buffer].content_to_string().c_str());
         }
@@ -656,6 +713,18 @@ void processor_t::stage_decode() {
             this->decode_buffer[position_buffer].opcode_to_uop(this->decode_uop_counter++, this->fetch_buffer[fetch_buffer_position_start].opcode_operation,
                                                                         0, 0,
                                                                         this->fetch_buffer[fetch_buffer_position_start]);
+
+            /// Fix the dependencies between uops
+            /// ALU     ReadRegs    = * + 258 (Aux Register) (if is_read)
+            ///         WriteRegs   = * + 258 (Aux Register) (if is_write)
+            uop_ptr = &this->decode_buffer[position_buffer];
+            if (this->fetch_buffer[fetch_buffer_position_start].is_read || this->fetch_buffer[fetch_buffer_position_start].is_read2){
+                uop_ptr->read_regs.push_back(258);
+            }
+            if (this->fetch_buffer[fetch_buffer_position_start].is_write){
+                uop_ptr->write_regs.push_back(258);
+            }
+
             this->decode_buffer[position_buffer].package_ready(this->stage_decode_cycles);
             PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, this->decode_buffer[position_buffer].content_to_string().c_str());
         }
@@ -667,6 +736,18 @@ void processor_t::stage_decode() {
             this->decode_buffer[position_buffer].opcode_to_uop(this->decode_uop_counter++, INSTRUCTION_OPERATION_BRANCH,
                                                                         0, 0,
                                                                         this->fetch_buffer[fetch_buffer_position_start]);
+
+            /// Fix the dependencies between uops
+            /// ALU     ReadRegs    = * + 258 (Aux Register) (if is_read)
+            ///         WriteRegs   = * + 258 (Aux Register) (if is_write)
+            uop_ptr = &this->decode_buffer[position_buffer];
+            if (this->fetch_buffer[fetch_buffer_position_start].is_read || this->fetch_buffer[fetch_buffer_position_start].is_read2){
+                uop_ptr->read_regs.push_back(258);
+            }
+            if (this->fetch_buffer[fetch_buffer_position_start].is_write){
+                uop_ptr->write_regs.push_back(258);
+            }
+
             this->decode_buffer[position_buffer].package_ready(this->stage_decode_cycles);
             PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, this->decode_buffer[position_buffer].content_to_string().c_str());
 
@@ -674,27 +755,28 @@ void processor_t::stage_decode() {
             this->solve_branch(this->fetch_buffer[fetch_buffer_position_start].opcode_number, PROCESSOR_STAGE_DECODE);
         }
 
-        /// DECODE READ 2 ==================================================
-        if (this->fetch_buffer[fetch_buffer_position_start].is_read2) {
+
+        /// DECODE WRITE ===================================================
+        if (this->fetch_buffer[fetch_buffer_position_start].is_write) {
             position_buffer = this->decode_buffer_insert();
             ERROR_ASSERT_PRINTF(position_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
-            this->decode_buffer[position_buffer].opcode_to_uop(this->decode_uop_counter++, INSTRUCTION_OPERATION_MEM_LOAD,
-                                                                        this->fetch_buffer[fetch_buffer_position_start].read2_address, this->fetch_buffer[fetch_buffer_position_start].read2_size,
+            this->decode_buffer[position_buffer].opcode_to_uop(this->decode_uop_counter++, INSTRUCTION_OPERATION_MEM_STORE,
+                                                                        this->fetch_buffer[fetch_buffer_position_start].write_address, this->fetch_buffer[fetch_buffer_position_start].write_size,
                                                                         this->fetch_buffer[fetch_buffer_position_start]);
+
+            /// Fix the dependencies between uops
+            /// WRITE   ReadRegs    = * + 258 (Aux Register)
+            ///         WriteRegs   = NULL
+            uop_ptr = &this->decode_buffer[position_buffer];
+            if (this->fetch_buffer[fetch_buffer_position_start].opcode_operation != INSTRUCTION_OPERATION_MEM_STORE){
+                uop_ptr->read_regs.push_back(258);
+                uop_ptr->write_regs.clear();
+            }
+
             this->decode_buffer[position_buffer].package_ready(this->stage_decode_cycles);
             PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, this->decode_buffer[position_buffer].content_to_string().c_str());
         }
 
-        /// DECODE READ ====================================================
-        if (this->fetch_buffer[fetch_buffer_position_start].is_read) {
-            position_buffer = this->decode_buffer_insert();
-            ERROR_ASSERT_PRINTF(position_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
-            this->decode_buffer[position_buffer].opcode_to_uop(this->decode_uop_counter++, INSTRUCTION_OPERATION_MEM_LOAD,
-                                                                        this->fetch_buffer[fetch_buffer_position_start].read_address, this->fetch_buffer[fetch_buffer_position_start].read_size,
-                                                                        this->fetch_buffer[fetch_buffer_position_start]);
-            this->decode_buffer[position_buffer].package_ready(this->stage_decode_cycles);
-            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, this->decode_buffer[position_buffer].content_to_string().c_str());
-        }
         /// Remove the oldest OPCODE (just decoded) from the fetch buffer
         this->fetch_buffer_remove();
     }
@@ -738,15 +820,39 @@ void processor_t::stage_rename() {
         /// Solve the Branch Prediction
         this->solve_branch(this->reorder_buffer[position_buffer].uop.opcode_number, PROCESSOR_STAGE_RENAME);
 
+
+
         /// Control the Memory Dependency - READ
         if (this->reorder_buffer[position_buffer].uop.uop_operation == INSTRUCTION_OPERATION_MEM_LOAD) {
             position_mmt = POSITION_FAIL;
+
+            ////////
+            uint64_t new_read_start = this->reorder_buffer[position_buffer].uop.memory_address;
+            uint64_t new_read_end = new_read_start + this->reorder_buffer[position_buffer].uop.memory_size;
+            ////////
+
             /// Find the Last Write to the same address
             for (uint32_t j = 0; j < this->reorder_buffer_size; j++) {
-                if (this->memory_map_table[j] != NULL &&
-                    cmp_index_tag(this->memory_map_table[j]->uop.memory_address, this->reorder_buffer[position_buffer].uop.memory_address)) {
-                        position_mmt = j;
-                        break;
+                // Check the whole cache line
+                // ~ if (this->memory_map_table[j] != NULL &&
+                    // ~ cmp_index_tag(this->memory_map_table[j]->uop.memory_address, this->reorder_buffer[position_buffer].uop.memory_address)) {
+
+
+                    ////////////
+
+                if (this->memory_map_table[j] != NULL) {
+                    uint64_t last_write_start = this->memory_map_table[j]->uop.memory_address;
+                    if (new_read_end < last_write_start) {
+                        continue;
+                    }
+                    uint64_t last_write_end = new_read_start + this->memory_map_table[j]->uop.memory_size;
+                    if (last_write_end < new_read_start) {
+                        continue;
+                    }
+                    ////////////
+
+                    position_mmt = j;
+                    break;
                 }
             }
             if (position_mmt != POSITION_FAIL) {
@@ -803,7 +909,7 @@ void processor_t::stage_rename() {
         /// Control the Register Dependency - WRITE
         for (uint32_t k = 0; k < this->reorder_buffer[position_buffer].uop.write_regs.size(); k++) {
             uint32_t write_register = this->reorder_buffer[position_buffer].uop.write_regs[k];
-            ERROR_ASSERT_PRINTF(write_register < this->register_alias_table_size, "Read Register (%d) > Register Alias Table Size (%d)\n", write_register, this->register_alias_table_size);
+            ERROR_ASSERT_PRINTF(write_register < this->register_alias_table_size, "Write Register (%d) > Register Alias Table Size (%d)\n", write_register, this->register_alias_table_size);
             this->register_alias_table[write_register] = &this->reorder_buffer[position_buffer];
         }
     }

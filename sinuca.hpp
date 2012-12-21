@@ -128,6 +128,7 @@ extern sinuca_engine_t sinuca_engine;
 /// ============================================================================
 #define HEART_BEAT      1000000  /// Period to inform the Progress
 #define MAX_ALIVE_TIME   100000  /// Max Time for a request to be solved
+// ~ #define PERIODIC_CHECK   1  /// Period between the Periodic Check
 #define PERIODIC_CHECK   100000  /// Period between the Periodic Check
 
 #define INITIALIZE_DEBUG 0//200000    /// Cycle to start the DEBUG_PRINTF (0 to disable)

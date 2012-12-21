@@ -42,6 +42,10 @@ opcode_package_t &opcode_package_t::operator=(const opcode_package_t &package) {
         this->write_regs.push_back(package.write_regs[i]);
     }
 
+    this->base_reg = package.base_reg;
+    this->index_reg = package.index_reg;
+
+    /// Flags
     this->is_read = package.is_read;
     this->read_address = package.read_address;
     this->read_size = package.read_size;
@@ -86,6 +90,9 @@ bool opcode_package_t::operator==(const opcode_package_t &package) {
         if (this->write_regs[i] != package.write_regs[i]) return FAIL;
     }
 
+    if (this->base_reg != package.base_reg) return FAIL;
+    if (this->index_reg != package.index_reg) return FAIL;
+
     if (this->is_read != package.is_read) return FAIL;
     if (this->read_address != package.read_address) return FAIL;
     if (this->read_size != package.read_size) return FAIL;
@@ -122,6 +129,9 @@ void opcode_package_t::package_clean() {
 
     this->read_regs.clear();
     this->write_regs.clear();
+
+    this->base_reg = 0;
+    this->index_reg = 0;
 
     this->is_read = false;
     this->read_address = 0;
@@ -240,6 +250,9 @@ std::string opcode_package_t::opcode_to_trace_string() {
         traceString = traceString + " " + utils_t::uint32_to_char(this->write_regs[i]);
     }
 
+    traceString = traceString + " " + utils_t::uint32_to_char(this->base_reg);
+    traceString = traceString + " " + utils_t::uint32_to_char(this->index_reg);
+
     if (this->is_read == true)
         traceString = traceString + " 1";
     else
@@ -286,29 +299,37 @@ void opcode_package_t::opcode_to_trace_char(char *trace_line) {
 
     strcpy(trace_line, this->opcode_assembly);
 
-    sprintf(tmp_str, " %u", this->opcode_operation);
+    sprintf(tmp_str, " %"PRIu32"", this->opcode_operation);
     strcat(trace_line, tmp_str);
 
     sprintf(tmp_str, " 0x%"PRIu64"", this->opcode_address);
     strcat(trace_line, tmp_str);
 
-    sprintf(tmp_str, " %u", this->opcode_size);
+    sprintf(tmp_str, " %"PRIu32"", this->opcode_size);
     strcat(trace_line, tmp_str);
 
-    sprintf(tmp_str, " %u", uint32_t(this->read_regs.size()));
+    sprintf(tmp_str, " %"PRIu32"", uint32_t(this->read_regs.size()));
     strcat(trace_line, tmp_str);
     for (i = 0; i < this->read_regs.size(); i++) {
-        sprintf(tmp_str, " %u", this->read_regs[i]);
+        sprintf(tmp_str, " %"PRIu32"", this->read_regs[i]);
         strcat(trace_line, tmp_str);
     }
 
-    sprintf(tmp_str, " %u", uint32_t(this->write_regs.size()));
+    sprintf(tmp_str, " %"PRIu32"", uint32_t(this->write_regs.size()));
     strcat(trace_line, tmp_str);
     for (i = 0; i < this->write_regs.size(); i++) {
-        sprintf(tmp_str, " %u", this->write_regs[i]);
+        sprintf(tmp_str, " %"PRIu32"", this->write_regs[i]);
         strcat(trace_line, tmp_str);
     }
 
+    /// Base and Index Registers
+    sprintf(tmp_str, " %"PRIu32"", this->base_reg);
+    strcat(trace_line, tmp_str);
+
+    sprintf(tmp_str, " %"PRIu32"", this->index_reg);
+    strcat(trace_line, tmp_str);
+
+    /// Flags
     if (this->is_read == true)
         strcat(trace_line, " 1");
     else
@@ -607,61 +628,74 @@ void opcode_package_t::trace_string_to_opcode(std::string input_string) {
                             else
                                 field = 9;  /// Next Field
                         break;
-
+                /// Base and Index Registers
                 case 9:
+                    this->base_reg = strtoull(sub_string.c_str(), NULL, 10);
+                    field = 10;  /// Next Field
+                break;
+
+
+                case 10:
+                    this->index_reg = strtoull(sub_string.c_str(), NULL, 10);
+                    field = 11;  /// Next Field
+                break;
+
+                /// Flags
+                case 11:
                     if (sub_string == "1")
                         this->is_read = true;
                     else
                         this->is_read = false;
-                    field = 10;  /// Next Field
-                break;
-
-                case 10:
-                    if (sub_string == "1")
-                        this->is_read2 = true;
-                    else
-                        this->is_read2 = false;
-                    field = 11;  /// Next Field
-                break;
-
-                case 11:
-                    if (sub_string == "1")
-                        this->is_write = true;
-                    else
-                        this->is_write = false;
                     field = 12;  /// Next Field
                 break;
 
                 case 12:
                     if (sub_string == "1")
-                        this->is_branch = true;
+                        this->is_read2 = true;
                     else
-                        this->is_branch = false;
+                        this->is_read2 = false;
                     field = 13;  /// Next Field
                 break;
 
                 case 13:
                     if (sub_string == "1")
-                        this->is_predicated = true;
+                        this->is_write = true;
                     else
-                        this->is_predicated = false;
+                        this->is_write = false;
                     field = 14;  /// Next Field
                 break;
 
                 case 14:
                     if (sub_string == "1")
-                        this->is_prefetch = true;
+                        this->is_branch = true;
                     else
-                        this->is_prefetch = false;
+                        this->is_branch = false;
                     field = 15;  /// Next Field
                 break;
 
+                case 15:
+                    if (sub_string == "1")
+                        this->is_predicated = true;
+                    else
+                        this->is_predicated = false;
+                    field = 16;  /// Next Field
+                break;
+
+                case 16:
+                    if (sub_string == "1")
+                        this->is_prefetch = true;
+                    else
+                        this->is_prefetch = false;
+                    field = 17;  /// Next Field
+                break;
+
                 default:
-                    ERROR_ASSERT_PRINTF(false, "Error converting Text to Instruction (Wrong  number of fields) - %s\n", sub_string.c_str())
+                    ERROR_ASSERT_PRINTF(false, "Error converting Text to Instruction (More fields than wanted) - %s\n", sub_string.c_str())
                 break;
             }
         }
     }
+    ERROR_ASSERT_PRINTF(field == 17, "Error converting Text to Instruction (Less fields than wanted) - %d\n", field)
 };
 
 //==============================================================================
