@@ -64,8 +64,8 @@ class trace_reader_t {
         };
 
         uint64_t trace_size(uint32_t cpuid);
-        void gzgetline(gzFile file, char* new_line);
-        void gzgetline(gzFile file, std::string& new_line);
+        void gzgetline(const gzFile& file, char* new_line);
+        void gzgetline(const gzFile& file, std::string& new_line);
         uint32_t trace_next_dynamic(uint32_t cpuid, sync_t *sync_found);
         std::string trace_next_memory(uint32_t cpuid);
         bool trace_fetch(uint32_t cpuid, opcode_package_t *m);

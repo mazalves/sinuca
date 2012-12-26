@@ -130,7 +130,7 @@ void line_usage_predictor_disable_t::line_miss(memory_package_t *package, uint32
     (void)way;
 
     // Modify the package->sub_blocks (next level request)
-    package->memory_size = sinuca_engine.get_global_line_size();
+    // ~ package->memory_size = sinuca_engine.get_global_line_size();
 };
 
 
@@ -145,7 +145,7 @@ void line_usage_predictor_disable_t::sub_block_miss(memory_package_t *package, u
     (void)way;
 
     // Modify the package->sub_blocks (next level request)
-    package->memory_size = sinuca_engine.get_global_line_size();
+    // ~ package->memory_size = sinuca_engine.get_global_line_size();
 };
 
 

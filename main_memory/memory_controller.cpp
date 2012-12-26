@@ -332,12 +332,12 @@ void memory_controller_t::clock(uint32_t subcycle) {
         uint32_t bank = 0;
         /// Select a port to be activated.
         switch (this->get_bank_selection_policy()) {
-            case SELECTION_RANDOM:
-                bank = this->selection_bank_random(this->get_banks_per_channel());
-            break;
-
             case SELECTION_ROUND_ROBIN:
                 bank = this->selection_bank_round_robin(channel, this->get_banks_per_channel());
+            break;
+
+            case SELECTION_RANDOM:
+                bank = this->selection_bank_random(this->get_banks_per_channel());
             break;
 
             case SELECTION_BUFFER_LEVEL:
@@ -354,7 +354,7 @@ void memory_controller_t::clock(uint32_t subcycle) {
             ///     TRANSMIT    ==> Row opened not ready (waiting to transmit)
             /// ========================================================================
 
-            /// If the last operations is over
+            /// If the last operation is over
             if (this->channels[channel].row_buffer[bank].state == PACKAGE_STATE_READY &&
             this->channels[channel].row_buffer[bank].ready_cycle <= sinuca_engine.get_global_cycle()) {
                 int32_t read_cas = POSITION_FAIL;

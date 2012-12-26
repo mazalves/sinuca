@@ -19,6 +19,10 @@ RM = rm -f
 # ~ FLAGS =  -Wall -O0 -ggdb  -Werror -lefence
 # ~ LDFLAGS = -ggdb  -lefence
 
+# ~ ## DEBUG PROFILE
+# ~ FLAGS =  -Wall -O2 -ggdb  -Werror -pg
+# ~ LDFLAGS = -ggdb  -pg
+
 # ~ ## DEBUG DEEP FAST
 # ~ FLAGS =  -Wall -O2 -ggdb  -Werror -lefence
 # ~ LDFLAGS = -ggdb  -lefence

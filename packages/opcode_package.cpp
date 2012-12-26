@@ -370,7 +370,7 @@ void opcode_package_t::opcode_to_trace_char(char *trace_line) {
 ///     Ex:     W 8 0x140735291283448
 ///             W 8 0x140735291283440
 ///             W 8 0x140735291283432
-void opcode_package_t::trace_string_to_read(std::string input_string, uint32_t actual_bbl) {
+void opcode_package_t::trace_string_to_read(const std::string& input_string, uint32_t actual_bbl) {
     int32_t start_pos = 0;
     uint32_t end_pos = 0;
     uint32_t field = 1;
@@ -451,7 +451,7 @@ void opcode_package_t::trace_string_to_read(std::string input_string, uint32_t a
 };
 
 //==============================================================================
-void opcode_package_t::trace_string_to_read2(std::string input_string, uint32_t actual_bbl) {
+void opcode_package_t::trace_string_to_read2(const std::string& input_string, uint32_t actual_bbl) {
     int32_t start_pos = 0;
     uint32_t end_pos = 0;
     uint32_t field = 1;
@@ -493,7 +493,7 @@ void opcode_package_t::trace_string_to_read2(std::string input_string, uint32_t 
 };
 
 //==============================================================================
-void opcode_package_t::trace_string_to_write(std::string input_string, uint32_t actual_bbl) {
+void opcode_package_t::trace_string_to_write(const std::string& input_string, uint32_t actual_bbl) {
     int32_t start_pos = 0;
     uint32_t end_pos = 0;
     uint32_t field = 1;
@@ -537,7 +537,7 @@ void opcode_package_t::trace_string_to_write(std::string input_string, uint32_t 
 
 //==============================================================================
 /// Convert Static Trace line into Instruction
-void opcode_package_t::trace_string_to_opcode(std::string input_string) {
+void opcode_package_t::trace_string_to_opcode(const std::string& input_string) {
 /// Field N.:   01                 |   02                | 03           | 04        |   05      |    06   |   07        |     08        |     09
 /// Type:    opcode_operation | instruction_address | Inst. Size   | N.Rregs   | read_regs | N.Wregs | write_regs  | IsPredicated  | IsPrefetch
 /// Static File Example:
@@ -642,50 +642,32 @@ void opcode_package_t::trace_string_to_opcode(std::string input_string) {
 
                 /// Flags
                 case 11:
-                    if (sub_string == "1")
-                        this->is_read = true;
-                    else
-                        this->is_read = false;
+                    this->is_read = (sub_string == "1");
                     field = 12;  /// Next Field
                 break;
 
                 case 12:
-                    if (sub_string == "1")
-                        this->is_read2 = true;
-                    else
-                        this->is_read2 = false;
+                    this->is_read2 = (sub_string == "1");
                     field = 13;  /// Next Field
                 break;
 
                 case 13:
-                    if (sub_string == "1")
-                        this->is_write = true;
-                    else
-                        this->is_write = false;
+                    this->is_write = (sub_string == "1");
                     field = 14;  /// Next Field
                 break;
 
                 case 14:
-                    if (sub_string == "1")
-                        this->is_branch = true;
-                    else
-                        this->is_branch = false;
+                    this->is_branch = (sub_string == "1");
                     field = 15;  /// Next Field
                 break;
 
                 case 15:
-                    if (sub_string == "1")
-                        this->is_predicated = true;
-                    else
-                        this->is_predicated = false;
+                    this->is_predicated = (sub_string == "1");
                     field = 16;  /// Next Field
                 break;
 
                 case 16:
-                    if (sub_string == "1")
-                        this->is_prefetch = true;
-                    else
-                        this->is_prefetch = false;
+                    this->is_prefetch = (sub_string == "1");
                     field = 17;  /// Next Field
                 break;
 

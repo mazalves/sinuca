@@ -213,6 +213,15 @@ void processor_t::allocate() {
 
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(sinuca_engine.get_global_line_size()), "Wrong line_size.\n")
 
+    /// FETCH OFFSET MASK
+    this->fetch_offset_bits_mask = 0;
+    this->not_fetch_offset_bits_mask = 0;
+    for (uint32_t i = 0; i < utils_t::get_power_of_two(this->fetch_block_size); i++) {
+        this->fetch_offset_bits_mask |= 1 << i;
+    }
+    this->not_fetch_offset_bits_mask = ~fetch_offset_bits_mask;
+
+
     /// OFFSET MASK
     this->offset_bits_mask = 0;
     this->not_offset_bits_mask = 0;
@@ -468,33 +477,6 @@ void processor_t::stage_fetch() {
         }
     }
 
-/*
-    /// Request into a instruction granularity.
-    /// Doing in a cache line basis, as faster is the cache, as more accesses to the cache itself would be generated.
-    /// This happens because every new request we would check into the prefetch buffer to see if the same line was already requested.
-    /// In the case the request is removed from the buffer too fast, a new would be sent to the L1 cache.
-    /// 2nd. Fetch_Buffer => Inst.Cache
-    for (i = 0; i < this->stage_fetch_width ; i++) {
-        position_buffer = this->fetch_buffer_find_opcode_number(this->fetch_opcode_counter);
-        if (position_buffer == POSITION_FAIL ||
-            this->fetch_buffer[position_buffer].state != PACKAGE_STATE_UNTREATED ||
-            this->fetch_buffer[position_buffer].ready_cycle > sinuca_engine.get_global_cycle()) {
-                break;
-        }
-        PROCESSOR_DEBUG_PRINTF("\t Sending INST package:%s\n", this->fetch_buffer[position_buffer].content_to_string().c_str());
-
-        int32_t transmission_latency = this->send_instruction_package(this->fetch_buffer + position_buffer);
-        if (transmission_latency != POSITION_FAIL) {  /// Try to send to the IC.
-            fetch_buffer[position_buffer].package_wait(transmission_latency);
-        }
-        else {  /// Inst. Cache cannot receive, stall the fetch for one cycle.
-            break;
-        }
-        this->fetch_opcode_counter++;
-    }
-*/
-
-
     /// 2nd. Fetch_Buffer => Inst.Cache
     for (i = 0; i < this->stage_fetch_width ; i++) {
         position_buffer = this->fetch_buffer_find_opcode_number(this->fetch_opcode_counter);
@@ -515,7 +497,7 @@ void processor_t::stage_fetch() {
             }
 
             if (this->fetch_buffer[j].state == PACKAGE_STATE_WAIT &&
-            this->cmp_index_tag(this->fetch_buffer[j].opcode_address, this->fetch_buffer[position_buffer].opcode_address)) {
+            this->cmp_fetch_block(this->fetch_buffer[j].opcode_address, this->fetch_buffer[position_buffer].opcode_address)) {
                 waiting = true;
                 break;
             }
@@ -527,7 +509,7 @@ void processor_t::stage_fetch() {
             fetch_buffer[position_buffer].package_wait(1);
         }
         /// Line Buffer
-        else if (this->cmp_index_tag(this->fetch_buffer[position_buffer].opcode_address, this->fetch_opcode_address_line_buffer)) {
+        else if (this->cmp_fetch_block(this->fetch_buffer[position_buffer].opcode_address, this->fetch_opcode_address_line_buffer)) {
             PROCESSOR_DEBUG_PRINTF("\t FOUND INTO FETCH BUFFER (READY)\n");
             fetch_buffer[position_buffer].package_ready(1);
         }
@@ -587,8 +569,8 @@ int32_t processor_t::send_instruction_package(opcode_package_t *inst_package) {
             0,                                  /// uop Number
 
             /// Request the whole line
-            inst_package->opcode_address & this->not_offset_bits_mask,     /// Mem. Address
-            sinuca_engine.get_global_line_size(),               /// Instruction Size
+            inst_package->opcode_address & this->not_fetch_offset_bits_mask,     /// Mem. Address
+            this->fetch_block_size,             /// Instruction Size
 
             PACKAGE_STATE_TRANSMIT,             /// Pack. State
             0,                                  /// Ready Cycle Latency
@@ -812,7 +794,7 @@ void processor_t::stage_rename() {
 
         this->rename_uop_counter++;
         this->reorder_buffer[position_buffer].stage = PROCESSOR_STAGE_RENAME;
-        this->reorder_buffer[position_buffer].uop.package_ready(this->stage_rename_cycles);
+        this->reorder_buffer[position_buffer].uop.package_ready(this->stage_rename_cycles + this->stage_dispatch_cycles);
 
         /// Insert into the reservation station
         this->unified_reservation_station.push_back(&this->reorder_buffer[position_buffer]);
@@ -826,30 +808,29 @@ void processor_t::stage_rename() {
         if (this->reorder_buffer[position_buffer].uop.uop_operation == INSTRUCTION_OPERATION_MEM_LOAD) {
             position_mmt = POSITION_FAIL;
 
-            ////////
+            /// Address of the new load
             uint64_t new_read_start = this->reorder_buffer[position_buffer].uop.memory_address;
-            uint64_t new_read_end = new_read_start + this->reorder_buffer[position_buffer].uop.memory_size;
-            ////////
+            uint64_t new_read_end = new_read_start + this->reorder_buffer[position_buffer].uop.memory_size - 1;
 
             /// Find the Last Write to the same address
             for (uint32_t j = 0; j < this->reorder_buffer_size; j++) {
-                // Check the whole cache line
-                // ~ if (this->memory_map_table[j] != NULL &&
-                    // ~ cmp_index_tag(this->memory_map_table[j]->uop.memory_address, this->reorder_buffer[position_buffer].uop.memory_address)) {
-
-
-                    ////////////
-
                 if (this->memory_map_table[j] != NULL) {
+
+                    /// No overlap
+                    /// | XX        | New Read
+                    /// |     XX    | Last Write
                     uint64_t last_write_start = this->memory_map_table[j]->uop.memory_address;
                     if (new_read_end < last_write_start) {
                         continue;
                     }
-                    uint64_t last_write_end = new_read_start + this->memory_map_table[j]->uop.memory_size;
+
+                    /// No overlap
+                    /// |     XX    | New Read
+                    /// | XX        | Last Write
+                    uint64_t last_write_end = last_write_start + this->memory_map_table[j]->uop.memory_size - 1;
                     if (last_write_end < new_read_start) {
                         continue;
                     }
-                    ////////////
 
                     position_mmt = j;
                     break;
@@ -965,7 +946,7 @@ void processor_t::stage_dispatch() {
                         this->fu_int_alu++;
                         dispatched = true;
                         reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                        reorder_buffer_line->uop.package_ready(this->stage_dispatch_cycles + this->latency_fu_int_alu);
+                        reorder_buffer_line->uop.package_ready(this->latency_fu_int_alu);
                     }
                 break;
                 /// INTEGERS MUL ===============================================
@@ -976,7 +957,7 @@ void processor_t::stage_dispatch() {
                         this->fu_int_mul++;
                         dispatched = true;
                         reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                        reorder_buffer_line->uop.package_ready(this->stage_dispatch_cycles + this->latency_fu_int_mul);
+                        reorder_buffer_line->uop.package_ready(this->latency_fu_int_mul);
                     }
                 break;
                 /// INTEGERS DIV ===============================================
@@ -987,7 +968,7 @@ void processor_t::stage_dispatch() {
                         this->fu_int_div++;
                         dispatched = true;
                         reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                        reorder_buffer_line->uop.package_ready(this->stage_dispatch_cycles + this->latency_fu_int_div);
+                        reorder_buffer_line->uop.package_ready(this->latency_fu_int_div);
                     }
                 break;
 
@@ -1000,7 +981,7 @@ void processor_t::stage_dispatch() {
                         this->fu_fp_alu++;
                         dispatched = true;
                         reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                        reorder_buffer_line->uop.package_ready(this->stage_dispatch_cycles + this->latency_fu_fp_alu);
+                        reorder_buffer_line->uop.package_ready(this->latency_fu_fp_alu);
                     }
                 break;
                 /// FLOAT POINT MUL ============================================
@@ -1011,7 +992,7 @@ void processor_t::stage_dispatch() {
                         this->fu_fp_mul++;
                         dispatched = true;
                         reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                        reorder_buffer_line->uop.package_ready(this->stage_dispatch_cycles + this->latency_fu_fp_mul);
+                        reorder_buffer_line->uop.package_ready(this->latency_fu_fp_mul);
                     }
                 break;
                 /// FLOAT POINT DIV ============================================
@@ -1022,7 +1003,7 @@ void processor_t::stage_dispatch() {
                         this->fu_fp_div++;
                         dispatched = true;
                         reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                        reorder_buffer_line->uop.package_ready(this->stage_dispatch_cycles + this->latency_fu_fp_div);
+                        reorder_buffer_line->uop.package_ready(this->latency_fu_fp_div);
                     }
                 break;
 
@@ -1035,7 +1016,7 @@ void processor_t::stage_dispatch() {
                         this->fu_mem_load++;
                         dispatched = true;
                         reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                        reorder_buffer_line->uop.package_ready(this->stage_dispatch_cycles + this->latency_fu_mem_load);
+                        reorder_buffer_line->uop.package_ready(this->latency_fu_mem_load);
                     }
                 break;
                 case INSTRUCTION_OPERATION_MEM_STORE:
@@ -1045,7 +1026,7 @@ void processor_t::stage_dispatch() {
                         this->fu_mem_store++;
                         dispatched = true;
                         reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                        reorder_buffer_line->uop.package_ready(this->stage_dispatch_cycles + this->latency_fu_mem_store);
+                        reorder_buffer_line->uop.package_ready(this->latency_fu_mem_store);
                     }
                 break;
 
@@ -1088,7 +1069,32 @@ void processor_t::stage_execution() {
         this->read_buffer[position_mem].package_clean();
     }
 
-    /// READ_BUFFER(PACKAGE_STATE_TO_LOWER) =>  send_data_package()
+
+    /// READ_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_data_package()
+    position_mem = memory_package_t::find_old_request_state_ready(this->read_buffer, this->read_buffer_size, PACKAGE_STATE_TRANSMIT);
+    if (position_mem != POSITION_FAIL) {
+
+        /// Look for parallel request
+        int32_t parallel_position_mem = POSITION_FAIL;
+        parallel_position_mem = memory_package_t::find_state_mem_address(this->read_buffer, this->read_buffer_size, PACKAGE_STATE_WAIT,
+                                                                                this->read_buffer[position_mem].memory_address, this->read_buffer[position_mem].memory_size);
+
+        /// No parallel request found
+        if (parallel_position_mem == POSITION_FAIL) {
+            int32_t transmission_latency = this->send_data_package(&this->read_buffer[position_mem]);
+            if (transmission_latency != POSITION_FAIL) {  /// Try to send to the DC.
+                this->read_buffer[position_mem].package_wait(transmission_latency);
+            }
+        }
+        /// Parallel request found
+        else {
+            this->read_buffer[position_mem].package_wait(0);
+        }
+    }
+
+
+/*
+    /// READ_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_data_package()
     position_mem = memory_package_t::find_old_request_state_ready(this->read_buffer, this->read_buffer_size, PACKAGE_STATE_TRANSMIT);
     if (position_mem != POSITION_FAIL) {
         int32_t transmission_latency = this->send_data_package(&this->read_buffer[position_mem]);
@@ -1096,7 +1102,7 @@ void processor_t::stage_execution() {
             this->read_buffer[position_mem].package_wait(transmission_latency);
         }
     }
-
+*/
     /// ========================================================================
     /// MEMORY OPERATIONS - WRITE
     /// ========================================================================
@@ -1106,7 +1112,7 @@ void processor_t::stage_execution() {
         this->write_buffer[position_mem].package_clean();
     }
 
-    /// WRITE_BUFFER(PACKAGE_STATE_TO_LOWER) =>  send_data_package()
+    /// WRITE_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_data_package()
     position_mem = memory_package_t::find_old_request_state_ready(this->write_buffer, this->write_buffer_size, PACKAGE_STATE_TRANSMIT);
     if (position_mem != POSITION_FAIL) {
         int32_t transmission_latency = this->send_data_package(&this->write_buffer[position_mem]);
@@ -1477,7 +1483,6 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
             case MEMORY_OPERATION_INST: {
                 ERROR_ASSERT_PRINTF(input_port == PROCESSOR_PORT_INST_CACHE, "Receiving instruction package from a wrong port.\n");
 
-// Cache line granularity
                 /// Add to the buffer the whole line fetched
                 this->fetch_opcode_address_line_buffer = package->memory_address;
 
@@ -1490,7 +1495,7 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
                     }
 
                     /// Wake up ALL instructions waiting
-                    if (this->fetch_buffer[j].state == PACKAGE_STATE_WAIT && this->cmp_index_tag(this->fetch_buffer[j].opcode_address, package->memory_address)) {
+                    if (this->fetch_buffer[j].state == PACKAGE_STATE_WAIT && this->cmp_fetch_block(this->fetch_buffer[j].opcode_address, package->memory_address)) {
                         this->add_stat_instruction_read_completed(this->fetch_buffer[j].born_cycle);
                         PROCESSOR_DEBUG_PRINTF("\t WANTED INSTRUCTION\n");
                         this->fetch_buffer[j].package_ready(transmission_latency);
@@ -1500,47 +1505,26 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
                 ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read Instruction done, but it is not on the fetch-buffer anymore.\n")
                 this->recv_ready_cycle[input_port] = sinuca_engine.get_global_cycle() + transmission_latency;
                 return OK;
-
-
-// Instruction Granularity
-/*
-                /// Find packages WAITING
-                for (uint32_t k = 0; k < this->fetch_buffer_position_used; k++) {
-                    /// Update the FETCH BUFFER position
-                    uint32_t j = this->fetch_buffer_position_start + k;
-                    if (j >= this->fetch_buffer_size) {
-                        j -= this->fetch_buffer_size;
-                    }
-
-                    if (this->fetch_buffer[j].state == PACKAGE_STATE_WAIT &&
-                    this->fetch_buffer[j].opcode_number == package->opcode_number &&
-                    // ~ this->fetch_buffer[j].opcode_address == package->memory_address &&
-                    this->cmp_index_tag(this->fetch_buffer[j].opcode_address, package->memory_address)
-                    ) {
-                        this->add_stat_instruction_read_completed(this->fetch_buffer[j].born_cycle);
-                        PROCESSOR_DEBUG_PRINTF("\t WANTED INSTRUCTION\n");
-                        this->fetch_buffer[j].package_ready(transmission_latency);
-                        slot = j;
-                    }
-                }
-
-                ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read Instruction done, but it is not on the fetch-buffer anymore.\n")
-                this->recv_ready_cycle[input_port] = sinuca_engine.get_global_cycle() + transmission_latency;
-                return OK;
-*/
             }
             break;
 
             case MEMORY_OPERATION_READ:
                 ERROR_ASSERT_PRINTF(input_port == PROCESSOR_PORT_DATA_CACHE, "Receiving read package from a wrong port.\n");
 
-                slot = memory_package_t::find_state_mem_address(this->read_buffer, this->read_buffer_size, PACKAGE_STATE_WAIT, package->uop_number, package->memory_address);
-                ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read done, but it is not on the read-buffer anymore.\n")
-
-                PROCESSOR_DEBUG_PRINTF("\t WANTED READ.\n");
-                this->read_buffer[slot].is_answer = true;
-                this->read_buffer[slot].package_ready(transmission_latency);
-                this->recv_ready_cycle[input_port] = sinuca_engine.get_global_cycle() + transmission_latency;
+                for (uint32_t k = 0; k < this->read_buffer_size; k++) {
+                    slot = memory_package_t::find_state_mem_address(this->read_buffer, this->read_buffer_size, PACKAGE_STATE_WAIT, package->memory_address, package->memory_size);
+                    ERROR_ASSERT_PRINTF(slot != POSITION_FAIL || k != 0, "Processor Read done, but no request in the read-buffer found.\npackage:%s\n",
+                                                                        package->content_to_string().c_str());
+                    if (slot != POSITION_FAIL) {
+                        PROCESSOR_DEBUG_PRINTF("\t WANTED READ.\n");
+                        this->read_buffer[slot].is_answer = true;
+                        this->read_buffer[slot].package_ready(transmission_latency);
+                        this->recv_ready_cycle[input_port] = sinuca_engine.get_global_cycle() + transmission_latency;
+                    }
+                    else {
+                        break;
+                    }
+                }
                 return OK;
             break;
 

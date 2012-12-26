@@ -259,7 +259,7 @@ uint64_t trace_reader_t::trace_size(uint32_t cpuid) {
 };
 
 // =============================================================================
-void trace_reader_t::gzgetline(gzFile file, std::string& new_line) {
+void trace_reader_t::gzgetline(const gzFile& file, std::string& new_line) {
     char line[TRACE_LINE_SIZE];
     gzgets(file, line, TRACE_LINE_SIZE);
     new_line = line;
@@ -268,8 +268,15 @@ void trace_reader_t::gzgetline(gzFile file, std::string& new_line) {
 // =============================================================================
 uint32_t trace_reader_t::trace_next_dynamic(uint32_t cpuid, sync_t *new_sync) {
     uint32_t BBL = 0;
-    std::string line_dynamic;
-    std::string sync_dynamic;
+
+    /// Auxiliar strings
+    static std::string line_dynamic;
+    line_dynamic.clear();
+
+    static std::string sync_dynamic;
+    sync_dynamic.clear();
+
+
     bool valid_dynamic = false;
     sync_t &sync_found = *new_sync;
 
@@ -316,7 +323,11 @@ uint32_t trace_reader_t::trace_next_dynamic(uint32_t cpuid, sync_t *new_sync) {
 
 // =============================================================================
 std::string trace_reader_t::trace_next_memory(uint32_t cpuid) {
-    std::string line_memory;
+
+    /// Auxiliar strings
+    static std::string line_memory;
+    line_memory.clear();
+
     bool valid_memory = false;
 
     while (!valid_memory) {
@@ -338,7 +349,10 @@ std::string trace_reader_t::trace_next_memory(uint32_t cpuid) {
 
 // =============================================================================
 bool trace_reader_t::trace_fetch(uint32_t cpuid, opcode_package_t *m) {
-    std::string line_memory;
+    /// Auxiliar strings
+    static std::string line_memory;
+    line_memory.clear();
+
     opcode_package_t NewOpcode;
     sync_t sync_found = SYNC_FREE;
 
@@ -435,11 +449,11 @@ void trace_reader_t::generate_static_dictionary() {
     bool file_eof = false;
     static_dictionary.clear();                  /// Vector[BBL] => Deques of Opcodes
 
-    container_opcode_package_t NewBBL;   /// Deques of Opcodes
+    container_opcode_package_t NewBBL;          /// Deques of Opcodes
     NewBBL.clear();
 
     uint32_t BBL = 0;                           /// Actual BBL (Index of the Vector)
-    opcode_package_t NewOpcode;       /// Actual Opcode
+    opcode_package_t NewOpcode;                 /// Actual Opcode
     NewOpcode.package_clean();
     std::string line_static;                    /// Actual String Line
 

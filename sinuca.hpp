@@ -129,7 +129,7 @@ extern sinuca_engine_t sinuca_engine;
 #define HEART_BEAT      1000000  /// Period to inform the Progress
 #define MAX_ALIVE_TIME   100000  /// Max Time for a request to be solved
 // ~ #define PERIODIC_CHECK   1  /// Period between the Periodic Check
-#define PERIODIC_CHECK   100000  /// Period between the Periodic Check
+#define PERIODIC_CHECK  1000000  /// Period between the Periodic Check
 
 #define INITIALIZE_DEBUG 0//200000    /// Cycle to start the DEBUG_PRINTF (0 to disable)
 #define FINALIZE_DEBUG 0      /// Cycle to stop the DEBUG_PRINTF (0 to disable)
@@ -154,7 +154,7 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define CONFIGURATOR_DEBUG
     // ~ #define TRACE_READER_DEBUG
     // ~ #define TRACE_GENERATOR_DEBUG
-    // ~ #define PROCESSOR_DEBUG
+    #define PROCESSOR_DEBUG
     // ~ #define SYNC_DEBUG
     // ~ #define BRANCH_PREDICTOR_DEBUG
     // ~ #define CACHE_DEBUG
@@ -254,7 +254,7 @@ typedef std::vector <container_opcode_package_t>    container_static_dictionary_
 
 typedef std::vector <memory_package_t*>             container_ptr_memory_package_t;
 typedef std::vector <reorder_buffer_line_t*>        container_ptr_reorder_buffer_line_t;
-typedef std::vector <directory_line_t*>  container_ptr_directory_line_t;
+typedef std::vector <directory_line_t*>             container_ptr_directory_line_t;
 typedef std::vector <cache_memory_t*>               container_ptr_cache_memory_t;
 typedef std::vector <memory_controller_t*>          container_ptr_memory_controller_t;
 

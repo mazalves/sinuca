@@ -88,12 +88,17 @@ class processor_t : public interconnection_interface_t {
         uint32_t read_buffer_size;
         uint32_t write_buffer_size;
 
+        uint32_t fetch_block_size;
         uint32_t branch_per_fetch;
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
         uint64_t offset_bits_mask;      /// Offset mask
         uint64_t not_offset_bits_mask;  /// Offset mask
+
+        ///
+        uint64_t fetch_offset_bits_mask;      /// Offset mask
+        uint64_t not_fetch_offset_bits_mask;  /// Offset mask
 
         /// Interconnection controls
         uint64_t send_instruction_ready_cycle;
@@ -260,6 +265,11 @@ class processor_t : public interconnection_interface_t {
         void solve_data_forward(reorder_buffer_line_t *rob_line);
         void stage_commit();
 
+        inline bool cmp_fetch_block(uint64_t memory_addressA, uint64_t memory_addressB) {
+            return (memory_addressA & this->not_fetch_offset_bits_mask) == (memory_addressB & this->not_fetch_offset_bits_mask);
+        }
+
+
         inline bool cmp_index_tag(uint64_t memory_addressA, uint64_t memory_addressB) {
             return (memory_addressA & this->not_offset_bits_mask) == (memory_addressB & this->not_offset_bits_mask);
         }
@@ -351,6 +361,7 @@ class processor_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(cache_memory_t*, data_cache)
         INSTANTIATE_GET_SET(cache_memory_t*, inst_cache)
 
+        INSTANTIATE_GET_SET(uint32_t, fetch_block_size)
         INSTANTIATE_GET_SET(uint32_t, branch_per_fetch)
 
         /// Processor Synchronization

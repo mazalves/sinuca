@@ -79,10 +79,10 @@ class opcode_package_t {
         void opcode_to_trace_char(char *trace_line);
 
         std::string opcode_to_trace_string();
-        void trace_string_to_opcode(std::string input_string);
-        void trace_string_to_read(std::string input_string, uint32_t actual_bbl);
-        void trace_string_to_read2(std::string input_string, uint32_t actual_bbl);
-        void trace_string_to_write(std::string input_string, uint32_t actual_bbl);
+        void trace_string_to_opcode(const std::string& input_string);
+        void trace_string_to_read(const std::string& input_string, uint32_t actual_bbl);
+        void trace_string_to_read2(const std::string& input_string, uint32_t actual_bbl);
+        void trace_string_to_write(const std::string& input_string, uint32_t actual_bbl);
 
         opcode_package_t & operator=(const opcode_package_t &package);
         bool operator==(const opcode_package_t &package);
