@@ -248,16 +248,23 @@ void sinuca_engine_t::initialize_processor() {
             this->processor_array[i]->set_number_fu_int_alu( cfg_processor[ processor_parameters.back() ] );
             processor_parameters.push_back("LATENCY_FU_INT_ALU");
             this->processor_array[i]->set_latency_fu_int_alu( cfg_processor[ processor_parameters.back() ] );
+            processor_parameters.push_back("WAIT_BETWEEN_FU_INT_ALU");
+            this->processor_array[i]->set_wait_between_fu_int_alu( cfg_processor[ processor_parameters.back() ] );
 
             processor_parameters.push_back("NUMBER_FU_INT_MUL");
             this->processor_array[i]->set_number_fu_int_mul( cfg_processor[ processor_parameters.back() ] );
             processor_parameters.push_back("LATENCY_FU_INT_MUL");
             this->processor_array[i]->set_latency_fu_int_mul( cfg_processor[ processor_parameters.back() ] );
+            processor_parameters.push_back("WAIT_BETWEEN_FU_INT_MUL");
+            this->processor_array[i]->set_wait_between_fu_int_mul( cfg_processor[ processor_parameters.back() ] );
+
 
             processor_parameters.push_back("NUMBER_FU_INT_DIV");
             this->processor_array[i]->set_number_fu_int_div( cfg_processor[ processor_parameters.back() ] );
             processor_parameters.push_back("LATENCY_FU_INT_DIV");
             this->processor_array[i]->set_latency_fu_int_div( cfg_processor[ processor_parameters.back() ] );
+            processor_parameters.push_back("WAIT_BETWEEN_FU_INT_DIV");
+            this->processor_array[i]->set_wait_between_fu_int_div( cfg_processor[ processor_parameters.back() ] );
 
             /// ================================================================
             /// Floating Point Funcional Units
@@ -266,16 +273,23 @@ void sinuca_engine_t::initialize_processor() {
             this->processor_array[i]->set_number_fu_fp_alu( cfg_processor[ processor_parameters.back() ] );
             processor_parameters.push_back("LATENCY_FU_FP_ALU");
             this->processor_array[i]->set_latency_fu_fp_alu( cfg_processor[ processor_parameters.back() ] );
+            processor_parameters.push_back("WAIT_BETWEEN_FU_FP_ALU");
+            this->processor_array[i]->set_wait_between_fu_fp_alu( cfg_processor[ processor_parameters.back() ] );
 
             processor_parameters.push_back("NUMBER_FU_FP_MUL");
             this->processor_array[i]->set_number_fu_fp_mul( cfg_processor[ processor_parameters.back() ] );
             processor_parameters.push_back("LATENCY_FU_FP_MUL");
             this->processor_array[i]->set_latency_fu_fp_mul( cfg_processor[ processor_parameters.back() ] );
+            processor_parameters.push_back("WAIT_BETWEEN_FU_FP_MUL");
+            this->processor_array[i]->set_wait_between_fu_fp_mul( cfg_processor[ processor_parameters.back() ] );
+
 
             processor_parameters.push_back("NUMBER_FU_FP_DIV");
             this->processor_array[i]->set_number_fu_fp_div( cfg_processor[ processor_parameters.back() ] );
             processor_parameters.push_back("LATENCY_FU_FP_DIV");
             this->processor_array[i]->set_latency_fu_fp_div( cfg_processor[ processor_parameters.back() ] );
+            processor_parameters.push_back("WAIT_BETWEEN_FU_FP_DIV");
+            this->processor_array[i]->set_wait_between_fu_fp_div( cfg_processor[ processor_parameters.back() ] );
 
             /// ================================================================
             /// Memory Funcional Units
@@ -284,11 +298,17 @@ void sinuca_engine_t::initialize_processor() {
             this->processor_array[i]->set_number_fu_mem_load( cfg_processor[ processor_parameters.back() ] );
             processor_parameters.push_back("LATENCY_FU_MEM_LOAD");
             this->processor_array[i]->set_latency_fu_mem_load( cfg_processor[ processor_parameters.back() ] );
+            processor_parameters.push_back("WAIT_BETWEEN_FU_MEM_LOAD");
+            this->processor_array[i]->set_wait_between_fu_mem_load( cfg_processor[ processor_parameters.back() ] );
 
             processor_parameters.push_back("NUMBER_FU_MEM_STORE");
             this->processor_array[i]->set_number_fu_mem_store( cfg_processor[ processor_parameters.back() ] );
             processor_parameters.push_back("LATENCY_FU_MEM_STORE");
             this->processor_array[i]->set_latency_fu_mem_store( cfg_processor[ processor_parameters.back() ] );
+            processor_parameters.push_back("WAIT_BETWEEN_FU_MEM_STORE");
+            this->processor_array[i]->set_wait_between_fu_mem_store( cfg_processor[ processor_parameters.back() ] );
+
+
 
             processor_parameters.push_back("READ_BUFFER_SIZE");
             this->processor_array[i]->set_read_buffer_size( cfg_processor[ processor_parameters.back() ] );

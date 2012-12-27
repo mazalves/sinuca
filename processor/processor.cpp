@@ -91,39 +91,39 @@ processor_t::processor_t() {
     this->stage_commit_width = 0;
 
     /// Integer Funcional Units
-    this->fu_int_alu = 0;
     this->number_fu_int_alu = 0;
     this->latency_fu_int_alu = 0;
+    this->wait_between_fu_int_alu = 0;
 
-    this->fu_int_mul = 0;
     this->number_fu_int_mul = 0;
     this->latency_fu_int_mul = 0;
+    this->wait_between_fu_int_mul = 0;
 
-    this->fu_int_div = 0;
     this->number_fu_int_div = 0;
     this->latency_fu_int_div = 0;
+    this->wait_between_fu_int_div = 0;
 
     /// Floating Point Functional Units
-    this->fu_fp_alu = 0;
     this->number_fu_fp_alu = 0;
     this->latency_fu_fp_alu = 0;
+    this->wait_between_fu_fp_alu = 0;
 
-    this->fu_fp_mul = 0;
     this->number_fu_fp_mul = 0;
     this->latency_fu_fp_mul = 0;
+    this->wait_between_fu_fp_mul = 0;
 
-    this->fu_fp_div = 0;
     this->number_fu_fp_div = 0;
     this->latency_fu_fp_div = 0;
+    this->wait_between_fu_fp_div = 0;
 
     /// Memory Functional Units
-    this->fu_mem_load = 0;
     this->number_fu_mem_load = 0;
     this->latency_fu_mem_load = 0;
+    this->wait_between_fu_mem_load = 0;
 
-    this->fu_mem_store = 0;
     this->number_fu_mem_store = 0;
     this->latency_fu_mem_store = 0;
+    this->wait_between_fu_mem_store = 0;
 
     this->recv_ready_cycle = NULL;
 
@@ -165,6 +165,35 @@ void processor_t::allocate() {
     this->trace_next_opcode.package_clean();
 
     this->recv_ready_cycle = utils_t::template_allocate_initialize_array<uint64_t>(this->get_max_ports(), 0);
+
+    ERROR_ASSERT_PRINTF(this->number_fu_int_alu > 0 && this->wait_between_fu_int_alu > 0, "Functional units / Wait betweeen requests should be bigger than zero.\n");
+    ERROR_ASSERT_PRINTF(this->number_fu_int_mul > 0 && this->wait_between_fu_int_mul > 0, "Functional units / Wait betweeen requests should be bigger than zero.\n");
+    ERROR_ASSERT_PRINTF(this->number_fu_int_div > 0 && this->wait_between_fu_int_div > 0, "Functional units / Wait betweeen requests should be bigger than zero.\n");
+
+    ERROR_ASSERT_PRINTF(this->number_fu_fp_alu > 0 && this->wait_between_fu_fp_alu > 0, "Functional units / Wait betweeen requests should be bigger than zero.\n");
+    ERROR_ASSERT_PRINTF(this->number_fu_fp_mul > 0 && this->wait_between_fu_fp_mul > 0, "Functional units / Wait betweeen requests should be bigger than zero.\n");
+    ERROR_ASSERT_PRINTF(this->number_fu_fp_div > 0 && this->wait_between_fu_fp_div > 0, "Functional units / Wait betweeen requests should be bigger than zero.\n");
+
+    ERROR_ASSERT_PRINTF(this->number_fu_mem_load > 0 && this->wait_between_fu_mem_load > 0, "Functional units / Wait betweeen requests should be bigger than zero.\n");
+    ERROR_ASSERT_PRINTF(this->number_fu_mem_store > 0 && this->wait_between_fu_mem_store > 0, "Functional units / Wait betweeen requests should be bigger than zero.\n");
+
+    /// ====================================================================
+    /// Integer Functional Units
+    this->ready_cycle_fu_int_alu = utils_t::template_allocate_initialize_array<uint64_t>(this->number_fu_int_alu, 0);
+    this->ready_cycle_fu_int_mul = utils_t::template_allocate_initialize_array<uint64_t>(this->number_fu_int_mul, 0);
+    this->ready_cycle_fu_int_div = utils_t::template_allocate_initialize_array<uint64_t>(this->number_fu_int_div, 0);
+
+    /// ====================================================================
+    /// Floating Point Functional Units
+    this->ready_cycle_fu_fp_alu = utils_t::template_allocate_initialize_array<uint64_t>(this->number_fu_fp_alu, 0);
+    this->ready_cycle_fu_fp_mul = utils_t::template_allocate_initialize_array<uint64_t>(this->number_fu_fp_mul, 0);
+    this->ready_cycle_fu_fp_div = utils_t::template_allocate_initialize_array<uint64_t>(this->number_fu_fp_div, 0);
+
+    /// ====================================================================
+    /// Memory Functional Units
+    this->ready_cycle_fu_mem_load = utils_t::template_allocate_initialize_array<uint64_t>(this->number_fu_mem_load, 0);
+    this->ready_cycle_fu_mem_store = utils_t::template_allocate_initialize_array<uint64_t>(this->number_fu_mem_store, 0);
+
 
     /// Fetch Buffer
     this->fetch_buffer = utils_t::template_allocate_array<opcode_package_t>(this->fetch_buffer_size);
@@ -901,17 +930,28 @@ void processor_t::stage_dispatch() {
     PROCESSOR_DEBUG_PRINTF("stage_dispatch()\n");
 
     /// Reset the number of instructions dispatched in this cycle
-    uint32_t total_dispatched = 0;
-    this->fu_int_alu = 0;
-    this->fu_int_mul = 0;
-    this->fu_int_div = 0;
+    static uint32_t total_dispatched;
+    total_dispatched = 0;
 
-    this->fu_fp_alu = 0;
-    this->fu_fp_mul = 0;
-    this->fu_fp_div = 0;
+    /// Control the total dispatched
+    static uint32_t fu_int_alu;
+    static uint32_t fu_int_mul;
+    static uint32_t fu_int_div;
+    fu_int_alu = 0;
+    fu_int_mul = 0;
+    fu_int_div = 0;
 
-    this->fu_mem_load = 0;
-    this->fu_mem_store = 0;
+    static uint32_t fu_fp_alu;
+    static uint32_t fu_fp_mul;
+    static uint32_t fu_fp_div;
+    fu_fp_alu = 0;
+    fu_fp_mul = 0;
+    fu_fp_div = 0;
+
+    static uint32_t fu_mem_load;
+    static uint32_t fu_mem_store;
+    fu_mem_load = 0;
+    fu_mem_store = 0;
 
     for (uint32_t k = 0; k < this->unified_reservation_station.size(); k++) {
         reorder_buffer_line_t* reorder_buffer_line = this->unified_reservation_station[k];
@@ -940,93 +980,141 @@ void processor_t::stage_dispatch() {
                 case INSTRUCTION_OPERATION_NOP:
                 /// NOT INDENTIFIED
                 case INSTRUCTION_OPERATION_OTHER:
-                    if (this->fu_int_alu < this->number_fu_int_alu) {
-                        this->stat_dispatch_cycles_fu_int_alu += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                    if (fu_int_alu < this->number_fu_int_alu) {
+                        for (uint32_t i = 0; i < this->number_fu_int_alu; i++) {
+                            if (this->ready_cycle_fu_int_alu[i] <= sinuca_engine.get_global_cycle()) {
+                                this->ready_cycle_fu_int_alu[i] = sinuca_engine.get_global_cycle() + this->wait_between_fu_int_alu;
 
-                        this->fu_int_alu++;
-                        dispatched = true;
-                        reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                        reorder_buffer_line->uop.package_ready(this->latency_fu_int_alu);
+                                fu_int_alu++;
+                                dispatched = true;
+                                reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
+                                reorder_buffer_line->uop.package_ready(this->latency_fu_int_alu);
+                                this->stat_dispatch_cycles_fu_int_alu += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                                break;
+                            }
+                        }
                     }
                 break;
                 /// INTEGERS MUL ===============================================
                 case INSTRUCTION_OPERATION_INT_MUL:
-                    if (this->fu_int_mul < this->number_fu_int_mul) {
-                        this->stat_dispatch_cycles_fu_int_mul += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                    if (fu_int_mul < this->number_fu_int_mul) {
+                        for (uint32_t i = 0; i < this->number_fu_int_mul; i++) {
+                            if (this->ready_cycle_fu_int_mul[i] <= sinuca_engine.get_global_cycle()) {
+                                this->ready_cycle_fu_int_mul[i] = sinuca_engine.get_global_cycle() + this->wait_between_fu_int_mul;
 
-                        this->fu_int_mul++;
-                        dispatched = true;
-                        reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                        reorder_buffer_line->uop.package_ready(this->latency_fu_int_mul);
+                                fu_int_mul++;
+                                dispatched = true;
+                                reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
+                                reorder_buffer_line->uop.package_ready(this->latency_fu_int_mul);
+                                this->stat_dispatch_cycles_fu_int_mul += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                                break;
+                            }
+                        }
                     }
                 break;
                 /// INTEGERS DIV ===============================================
                 case INSTRUCTION_OPERATION_INT_DIV:
-                    if (this->fu_int_div < this->number_fu_int_div) {
-                        this->stat_dispatch_cycles_fu_int_div += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                    if (fu_int_div < this->number_fu_int_div) {
+                        for (uint32_t i = 0; i < this->number_fu_int_div; i++) {
+                            if (this->ready_cycle_fu_int_div[i] <= sinuca_engine.get_global_cycle()) {
+                                this->ready_cycle_fu_int_div[i] = sinuca_engine.get_global_cycle() + this->wait_between_fu_int_div;
 
-                        this->fu_int_div++;
-                        dispatched = true;
-                        reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                        reorder_buffer_line->uop.package_ready(this->latency_fu_int_div);
+                                fu_int_div++;
+                                dispatched = true;
+                                reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
+                                reorder_buffer_line->uop.package_ready(this->latency_fu_int_div);
+                                this->stat_dispatch_cycles_fu_int_div += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                                break;
+                            }
+                        }
                     }
                 break;
 
                 ///=============================================================
                 /// FLOAT POINT ALU ============================================
                 case INSTRUCTION_OPERATION_FP_ALU:
-                    if (this->fu_fp_alu < this->number_fu_fp_alu) {
-                        this->stat_dispatch_cycles_fu_fp_alu += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                    if (fu_fp_alu < this->number_fu_fp_alu) {
+                        for (uint32_t i = 0; i < this->number_fu_fp_alu; i++) {
+                            if (this->ready_cycle_fu_fp_alu[i] <= sinuca_engine.get_global_cycle()) {
+                                this->ready_cycle_fu_fp_alu[i] = sinuca_engine.get_global_cycle() + this->wait_between_fu_fp_alu;
 
-                        this->fu_fp_alu++;
-                        dispatched = true;
-                        reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                        reorder_buffer_line->uop.package_ready(this->latency_fu_fp_alu);
+                                fu_fp_alu++;
+                                dispatched = true;
+                                reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
+                                reorder_buffer_line->uop.package_ready(this->latency_fu_fp_alu);
+                                this->stat_dispatch_cycles_fu_fp_alu += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                                break;
+                            }
+                        }
                     }
                 break;
                 /// FLOAT POINT MUL ============================================
                 case INSTRUCTION_OPERATION_FP_MUL:
-                    if (this->fu_fp_mul < this->number_fu_fp_mul) {
-                        this->stat_dispatch_cycles_fu_fp_mul += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                    if (fu_fp_mul < this->number_fu_fp_mul) {
+                        for (uint32_t i = 0; i < this->number_fu_fp_mul; i++) {
+                            if (this->ready_cycle_fu_fp_mul[i] <= sinuca_engine.get_global_cycle()) {
+                                this->ready_cycle_fu_fp_mul[i] = sinuca_engine.get_global_cycle() + this->wait_between_fu_fp_mul;
 
-                        this->fu_fp_mul++;
-                        dispatched = true;
-                        reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                        reorder_buffer_line->uop.package_ready(this->latency_fu_fp_mul);
+                                fu_fp_mul++;
+                                dispatched = true;
+                                reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
+                                reorder_buffer_line->uop.package_ready(this->latency_fu_fp_mul);
+                                this->stat_dispatch_cycles_fu_fp_mul += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                                break;
+                            }
+                        }
                     }
                 break;
                 /// FLOAT POINT DIV ============================================
                 case INSTRUCTION_OPERATION_FP_DIV:
-                    if (this->fu_fp_div < this->number_fu_fp_div) {
-                        this->stat_dispatch_cycles_fu_fp_div += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                    if (fu_fp_div < this->number_fu_fp_div) {
+                        for (uint32_t i = 0; i < this->number_fu_fp_div; i++) {
+                            if (this->ready_cycle_fu_fp_div[i] <= sinuca_engine.get_global_cycle()) {
+                                this->ready_cycle_fu_fp_div[i] = sinuca_engine.get_global_cycle() + this->wait_between_fu_fp_div;
 
-                        this->fu_fp_div++;
-                        dispatched = true;
-                        reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                        reorder_buffer_line->uop.package_ready(this->latency_fu_fp_div);
+                                fu_fp_div++;
+                                dispatched = true;
+                                reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
+                                reorder_buffer_line->uop.package_ready(this->latency_fu_fp_div);
+                                this->stat_dispatch_cycles_fu_fp_div += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                                break;
+                            }
+                        }
                     }
                 break;
 
                 ///=============================================================
                 /// MEMORY OPERATIONS ==========================================
                 case INSTRUCTION_OPERATION_MEM_LOAD:
-                    if (this->fu_mem_load < this->number_fu_mem_load) {
-                        this->stat_dispatch_cycles_fu_mem_load += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                    if (fu_mem_load < this->number_fu_mem_load) {
+                        for (uint32_t i = 0; i < this->number_fu_mem_load; i++) {
+                            if (this->ready_cycle_fu_mem_load[i] <= sinuca_engine.get_global_cycle()) {
+                                this->ready_cycle_fu_mem_load[i] = sinuca_engine.get_global_cycle() + this->wait_between_fu_mem_load;
 
-                        this->fu_mem_load++;
-                        dispatched = true;
-                        reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                        reorder_buffer_line->uop.package_ready(this->latency_fu_mem_load);
+                                fu_mem_load++;
+                                dispatched = true;
+                                reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
+                                reorder_buffer_line->uop.package_ready(this->latency_fu_mem_load);
+                                this->stat_dispatch_cycles_fu_mem_load += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                                break;
+                            }
+                        }
                     }
                 break;
                 case INSTRUCTION_OPERATION_MEM_STORE:
-                    if (this->fu_mem_store < this->number_fu_mem_store) {
-                        this->stat_dispatch_cycles_fu_mem_store += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                    if (fu_mem_store < this->number_fu_mem_store) {
+                        for (uint32_t i = 0; i < this->number_fu_mem_store; i++) {
+                            if (this->ready_cycle_fu_mem_store[i] <= sinuca_engine.get_global_cycle()) {
+                                this->ready_cycle_fu_mem_store[i] = sinuca_engine.get_global_cycle() + this->wait_between_fu_mem_store;
 
-                        this->fu_mem_store++;
-                        dispatched = true;
-                        reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                        reorder_buffer_line->uop.package_ready(this->latency_fu_mem_store);
+                                fu_mem_store++;
+                                dispatched = true;
+                                reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
+                                reorder_buffer_line->uop.package_ready(this->latency_fu_mem_store);
+                                this->stat_dispatch_cycles_fu_mem_store += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                                break;
+                            }
+                        }
                     }
                 break;
 
@@ -1092,17 +1180,6 @@ void processor_t::stage_execution() {
         }
     }
 
-
-/*
-    /// READ_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_data_package()
-    position_mem = memory_package_t::find_old_request_state_ready(this->read_buffer, this->read_buffer_size, PACKAGE_STATE_TRANSMIT);
-    if (position_mem != POSITION_FAIL) {
-        int32_t transmission_latency = this->send_data_package(&this->read_buffer[position_mem]);
-        if (transmission_latency != POSITION_FAIL) {  /// Try to send to the DC.
-            this->read_buffer[position_mem].package_wait(transmission_latency);
-        }
-    }
-*/
     /// ========================================================================
     /// MEMORY OPERATIONS - WRITE
     /// ========================================================================
@@ -1823,36 +1900,49 @@ void processor_t::print_configuration() {
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "number_fu_int_alu", number_fu_int_alu);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "latency_fu_int_alu", latency_fu_int_alu);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "wait_between_fu_int_alu", wait_between_fu_int_alu);
 
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "number_fu_int_mul", number_fu_int_mul);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "latency_fu_int_mul", latency_fu_int_mul);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "wait_between_fu_int_mul", wait_between_fu_int_mul);
 
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "number_fu_int_div", number_fu_int_div);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "latency_fu_int_div", latency_fu_int_div);
-
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "wait_between_fu_int_div", wait_between_fu_int_div);
 
     /// Floating Point Functional Units
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "number_fu_fp_alu", number_fu_fp_alu);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "latency_fu_fp_alu", latency_fu_fp_alu);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "wait_between_fu_fp_alu", wait_between_fu_fp_alu);
 
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "number_fu_fp_mul", number_fu_fp_mul);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "latency_fu_fp_mul", latency_fu_fp_mul);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "wait_between_fu_fp_mul", wait_between_fu_fp_mul);
 
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "number_fu_fp_div", number_fu_fp_div);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "latency_fu_fp_div", latency_fu_fp_div);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "wait_between_fu_fp_div", wait_between_fu_fp_div);
 
     /// Memory Functional Units
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "number_fu_mem_load", number_fu_mem_load);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "latency_fu_mem_load", latency_fu_mem_load);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "wait_between_fu_mem_load", wait_between_fu_mem_load);
 
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "number_fu_mem_store", number_fu_mem_store);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "latency_fu_mem_store", latency_fu_mem_store);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "wait_between_fu_mem_store", wait_between_fu_mem_store);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "read_buffer_size", read_buffer_size);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "write_buffer_size", write_buffer_size);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "fetch_block_size", this->fetch_block_size);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "fetch_offset_bits_mask", utils_t::address_to_binary(this->fetch_offset_bits_mask).c_str());
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "not_fetch_offset_bits_mask", utils_t::address_to_binary(this->not_fetch_offset_bits_mask).c_str());
+
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "offset_bits_mask", utils_t::address_to_binary(this->offset_bits_mask).c_str());

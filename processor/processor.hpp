@@ -58,32 +58,43 @@ class processor_t : public interconnection_interface_t {
         uint32_t stage_execution_width;
         uint32_t stage_commit_width;
 
-        /// Integer Funcional Units
+        /// ====================================================================
+        /// Integer Functional Units
         uint32_t number_fu_int_alu;
         uint32_t latency_fu_int_alu;
+        uint32_t wait_between_fu_int_alu;
 
         uint32_t number_fu_int_mul;
         uint32_t latency_fu_int_mul;
+        uint32_t wait_between_fu_int_mul;
 
         uint32_t number_fu_int_div;
         uint32_t latency_fu_int_div;
+        uint32_t wait_between_fu_int_div;
 
+        /// ====================================================================
         /// Floating Point Functional Units
         uint32_t number_fu_fp_alu;
         uint32_t latency_fu_fp_alu;
+        uint32_t wait_between_fu_fp_alu;
 
         uint32_t number_fu_fp_mul;
         uint32_t latency_fu_fp_mul;
+        uint32_t wait_between_fu_fp_mul;
 
         uint32_t number_fu_fp_div;
         uint32_t latency_fu_fp_div;
+        uint32_t wait_between_fu_fp_div;
 
+        /// ====================================================================
         /// Memory Functional Units
         uint32_t number_fu_mem_load;
         uint32_t latency_fu_mem_load;
+        uint32_t wait_between_fu_mem_load;
 
         uint32_t number_fu_mem_store;
         uint32_t latency_fu_mem_store;
+        uint32_t wait_between_fu_mem_store;
 
         uint32_t read_buffer_size;
         uint32_t write_buffer_size;
@@ -96,7 +107,6 @@ class processor_t : public interconnection_interface_t {
         uint64_t offset_bits_mask;      /// Offset mask
         uint64_t not_offset_bits_mask;  /// Offset mask
 
-        ///
         uint64_t fetch_offset_bits_mask;      /// Offset mask
         uint64_t not_fetch_offset_bits_mask;  /// Offset mask
 
@@ -148,22 +158,23 @@ class processor_t : public interconnection_interface_t {
         /// Containers to fast the execution, with pointers of UOPs ready.
         container_ptr_reorder_buffer_line_t unified_reservation_station;    /// dispatch->execute
         container_ptr_reorder_buffer_line_t unified_functional_units;       /// execute->commit
+
         /// ====================================================================
         /// Integer Functional Units
-        uint32_t fu_int_alu;
-        uint32_t fu_int_mul;
-        uint32_t fu_int_div;
+        uint64_t *ready_cycle_fu_int_alu;
+        uint64_t *ready_cycle_fu_int_mul;
+        uint64_t *ready_cycle_fu_int_div;
 
         /// ====================================================================
         /// Floating Point Functional Units
-        uint32_t fu_fp_alu;
-        uint32_t fu_fp_mul;
-        uint32_t fu_fp_div;
+        uint64_t *ready_cycle_fu_fp_alu;
+        uint64_t *ready_cycle_fu_fp_mul;
+        uint64_t *ready_cycle_fu_fp_div;
 
         /// ====================================================================
         /// Memory Functional Units
-        uint32_t fu_mem_load;
-        uint32_t fu_mem_store;
+        uint64_t *ready_cycle_fu_mem_load;
+        uint64_t *ready_cycle_fu_mem_store;
 
         memory_package_t *read_buffer;
         memory_package_t *write_buffer;
@@ -336,24 +347,38 @@ class processor_t : public interconnection_interface_t {
         /// Integer Funcional Units
         INSTANTIATE_GET_SET(uint32_t, number_fu_int_alu)
         INSTANTIATE_GET_SET(uint32_t, latency_fu_int_alu)
+        INSTANTIATE_GET_SET(uint32_t, wait_between_fu_int_alu)
+
         INSTANTIATE_GET_SET(uint32_t, number_fu_int_mul)
         INSTANTIATE_GET_SET(uint32_t, latency_fu_int_mul)
+        INSTANTIATE_GET_SET(uint32_t, wait_between_fu_int_mul)
+
         INSTANTIATE_GET_SET(uint32_t, number_fu_int_div)
         INSTANTIATE_GET_SET(uint32_t, latency_fu_int_div)
+        INSTANTIATE_GET_SET(uint32_t, wait_between_fu_int_div)
 
         /// Floating Point Functional Units
         INSTANTIATE_GET_SET(uint32_t, number_fu_fp_alu)
         INSTANTIATE_GET_SET(uint32_t, latency_fu_fp_alu)
+        INSTANTIATE_GET_SET(uint32_t, wait_between_fu_fp_alu)
+
         INSTANTIATE_GET_SET(uint32_t, number_fu_fp_mul)
         INSTANTIATE_GET_SET(uint32_t, latency_fu_fp_mul)
+        INSTANTIATE_GET_SET(uint32_t, wait_between_fu_fp_mul)
+
         INSTANTIATE_GET_SET(uint32_t, number_fu_fp_div)
         INSTANTIATE_GET_SET(uint32_t, latency_fu_fp_div)
+        INSTANTIATE_GET_SET(uint32_t, wait_between_fu_fp_div)
 
         /// Memory Functional Units
         INSTANTIATE_GET_SET(uint32_t, number_fu_mem_load)
         INSTANTIATE_GET_SET(uint32_t, latency_fu_mem_load)
+        INSTANTIATE_GET_SET(uint32_t, wait_between_fu_mem_load)
+
         INSTANTIATE_GET_SET(uint32_t, number_fu_mem_store)
         INSTANTIATE_GET_SET(uint32_t, latency_fu_mem_store)
+        INSTANTIATE_GET_SET(uint32_t, wait_between_fu_mem_store)
+
 
         INSTANTIATE_GET_SET(uint32_t, read_buffer_size)
         INSTANTIATE_GET_SET(uint32_t, write_buffer_size)

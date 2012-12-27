@@ -75,8 +75,6 @@ class memory_package_t {
                     memory_operation_t memory_operation, bool is_answer,
                     uint32_t id_src, uint32_t id_dst, uint32_t *hops, uint32_t hop_count);
 
-
-
         static int32_t find_free(memory_package_t *input_array, uint32_t size_array);
         static uint32_t count_free(memory_package_t *input_array, uint32_t size_array);
 
@@ -84,7 +82,6 @@ class memory_package_t {
         static int32_t find_old_request_state_ready(memory_package_t *input_array, uint32_t size_array, package_state_t state);
         static int32_t find_old_answer_state_ready(memory_package_t *input_array, uint32_t size_array, package_state_t state);
         static int32_t find_state_mem_address(memory_package_t *input_array, uint32_t size_array, package_state_t state, uint64_t address, uint32_t size);
-        // ~ static int32_t find_state_full_mem_address(memory_package_t *input_array, uint32_t size_array, package_state_t state, uint64_t address, uint32_t size);
 
         static std::string print_all(memory_package_t *input_array, uint32_t size_array);
         static std::string print_all(memory_package_t **input_matrix, uint32_t size_x_matrix, uint32_t size_y_matrix);

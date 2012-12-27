@@ -279,22 +279,6 @@ int32_t memory_package_t::find_old_answer_state_ready(memory_package_t *input_ar
     return old_pos;
 };
 
-/// ============================================================================
-// ~ int32_t memory_package_t::find_state_mem_address(memory_package_t *input_array, uint32_t size_array, package_state_t state, uint64_t address) {
-// ~
-// ~
-// ~
-    // ~ for (uint32_t i = 0; i < size_array ; i++) {
-        // ~ if (input_array[i].state == state &&
-        // ~ input_array[i].ready_cycle <= sinuca_engine.get_global_cycle() &&
-        // ~ input_array[i].uop_number == uop_number &&
-        // ~ input_array[i].memory_address == address) {
-            // ~ return i;
-        // ~ }
-    // ~ }
-    // ~ return POSITION_FAIL;
-// ~ };
-
 
 /// ============================================================================
 int32_t memory_package_t::find_state_mem_address(memory_package_t *input_array, uint32_t size_array, package_state_t state, uint64_t address, uint32_t size) {
