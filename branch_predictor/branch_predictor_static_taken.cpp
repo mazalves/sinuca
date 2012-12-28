@@ -166,7 +166,7 @@ bool branch_predictor_static_taken_t::btb_find_update_address(uint64_t opcode_ad
 
 /// CASE 5: Not Branch (Not Predicted as Branch)                                                - OK
 /// CASE 6: Not Branch (Predicted as Branch)                                                    - NEVER HAPPENS
-processor_stage_t branch_predictor_static_taken_t::predict_branch(opcode_package_t actual_opcode, opcode_package_t next_opcode) {
+processor_stage_t branch_predictor_static_taken_t::predict_branch(const opcode_package_t& actual_opcode, const opcode_package_t& next_opcode) {
     processor_stage_t solve_stage = PROCESSOR_STAGE_FETCH;
 
     if (actual_opcode.opcode_operation != INSTRUCTION_OPERATION_BRANCH) {

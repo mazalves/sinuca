@@ -66,7 +66,7 @@ class branch_predictor_disable_t : public branch_predictor_t {
         void print_configuration();
         /// ====================================================================
 
-        processor_stage_t predict_branch(opcode_package_t actual_opcode, opcode_package_t next_opcode);
+        processor_stage_t predict_branch(const opcode_package_t& actual_opcode, const opcode_package_t& next_opcode);
         /// ====================================================================
         /// Statistics related
         /// ====================================================================

@@ -73,7 +73,7 @@ class branch_predictor_t : public interconnection_interface_t {
         void print_configuration();
         /// ====================================================================
 
-        virtual processor_stage_t predict_branch(opcode_package_t actual_opcode, opcode_package_t next_opcode)=0;
+        virtual processor_stage_t predict_branch(const opcode_package_t& actual_opcode, const opcode_package_t& next_opcode)=0;
 
         INSTANTIATE_GET_SET(branch_predictor_policy_t, branch_predictor_type)
 

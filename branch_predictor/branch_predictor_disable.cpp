@@ -46,7 +46,7 @@ void branch_predictor_disable_t::allocate() {
 
 /// ============================================================================
 /// Always consider as it is NOT_TAKEN
-processor_stage_t branch_predictor_disable_t::predict_branch(opcode_package_t actual_opcode, opcode_package_t next_opcode) {
+processor_stage_t branch_predictor_disable_t::predict_branch(const opcode_package_t& actual_opcode, const opcode_package_t& next_opcode) {
     processor_stage_t solve_stage = PROCESSOR_STAGE_FETCH;
 
     if (actual_opcode.opcode_operation == INSTRUCTION_OPERATION_BRANCH) {

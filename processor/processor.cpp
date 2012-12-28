@@ -988,8 +988,8 @@ void processor_t::stage_dispatch() {
                                 fu_int_alu++;
                                 dispatched = true;
                                 reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                                reorder_buffer_line->uop.package_ready(this->latency_fu_int_alu);
                                 this->stat_dispatch_cycles_fu_int_alu += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                                reorder_buffer_line->uop.package_ready(this->latency_fu_int_alu);
                                 break;
                             }
                         }
@@ -1005,8 +1005,8 @@ void processor_t::stage_dispatch() {
                                 fu_int_mul++;
                                 dispatched = true;
                                 reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                                reorder_buffer_line->uop.package_ready(this->latency_fu_int_mul);
                                 this->stat_dispatch_cycles_fu_int_mul += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                                reorder_buffer_line->uop.package_ready(this->latency_fu_int_mul);
                                 break;
                             }
                         }
@@ -1022,8 +1022,8 @@ void processor_t::stage_dispatch() {
                                 fu_int_div++;
                                 dispatched = true;
                                 reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                                reorder_buffer_line->uop.package_ready(this->latency_fu_int_div);
                                 this->stat_dispatch_cycles_fu_int_div += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                                reorder_buffer_line->uop.package_ready(this->latency_fu_int_div);
                                 break;
                             }
                         }
@@ -1041,8 +1041,8 @@ void processor_t::stage_dispatch() {
                                 fu_fp_alu++;
                                 dispatched = true;
                                 reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                                reorder_buffer_line->uop.package_ready(this->latency_fu_fp_alu);
                                 this->stat_dispatch_cycles_fu_fp_alu += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                                reorder_buffer_line->uop.package_ready(this->latency_fu_fp_alu);
                                 break;
                             }
                         }
@@ -1058,8 +1058,8 @@ void processor_t::stage_dispatch() {
                                 fu_fp_mul++;
                                 dispatched = true;
                                 reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                                reorder_buffer_line->uop.package_ready(this->latency_fu_fp_mul);
                                 this->stat_dispatch_cycles_fu_fp_mul += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                                reorder_buffer_line->uop.package_ready(this->latency_fu_fp_mul);
                                 break;
                             }
                         }
@@ -1075,8 +1075,8 @@ void processor_t::stage_dispatch() {
                                 fu_fp_div++;
                                 dispatched = true;
                                 reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                                reorder_buffer_line->uop.package_ready(this->latency_fu_fp_div);
                                 this->stat_dispatch_cycles_fu_fp_div += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                                reorder_buffer_line->uop.package_ready(this->latency_fu_fp_div);
                                 break;
                             }
                         }
@@ -1094,8 +1094,8 @@ void processor_t::stage_dispatch() {
                                 fu_mem_load++;
                                 dispatched = true;
                                 reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                                reorder_buffer_line->uop.package_ready(this->latency_fu_mem_load);
                                 this->stat_dispatch_cycles_fu_mem_load += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                                reorder_buffer_line->uop.package_ready(this->latency_fu_mem_load);
                                 break;
                             }
                         }
@@ -1110,8 +1110,8 @@ void processor_t::stage_dispatch() {
                                 fu_mem_store++;
                                 dispatched = true;
                                 reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                                reorder_buffer_line->uop.package_ready(this->latency_fu_mem_store);
                                 this->stat_dispatch_cycles_fu_mem_store += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
+                                reorder_buffer_line->uop.package_ready(this->latency_fu_mem_store);
                                 break;
                             }
                         }
@@ -1164,11 +1164,13 @@ void processor_t::stage_execution() {
 
         /// Look for parallel request
         int32_t parallel_position_mem = POSITION_FAIL;
+        PROCESSOR_DEBUG_PRINTF("\t Check Parallel Requests:%s", this->read_buffer[position_mem].content_to_string().c_str());
         parallel_position_mem = memory_package_t::find_state_mem_address(this->read_buffer, this->read_buffer_size, PACKAGE_STATE_WAIT,
                                                                                 this->read_buffer[position_mem].memory_address, this->read_buffer[position_mem].memory_size);
 
         /// No parallel request found
         if (parallel_position_mem == POSITION_FAIL) {
+            PROCESSOR_DEBUG_PRINTF("- NOT FOUND\n")
             int32_t transmission_latency = this->send_data_package(&this->read_buffer[position_mem]);
             if (transmission_latency != POSITION_FAIL) {  /// Try to send to the DC.
                 this->read_buffer[position_mem].package_wait(transmission_latency);
@@ -1176,6 +1178,7 @@ void processor_t::stage_execution() {
         }
         /// Parallel request found
         else {
+            PROCESSOR_DEBUG_PRINTF("- FOUND\n")
             this->read_buffer[position_mem].package_wait(0);
         }
     }

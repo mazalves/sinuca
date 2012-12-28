@@ -104,8 +104,8 @@ class branch_predictor_two_level_t : public branch_predictor_t {
             return (addr & this->btb_index_bits_mask) >> this->btb_index_bits_shift;
         }
 
-        bool bht_find_update_prediction(opcode_package_t actual_opcode, opcode_package_t next_opcode);
-        processor_stage_t predict_branch(opcode_package_t actual_opcode, opcode_package_t next_opcode);
+        bool bht_find_update_prediction(const opcode_package_t& actual_opcode, const opcode_package_t& next_opcode);
+        processor_stage_t predict_branch(const opcode_package_t& actual_opcode, const opcode_package_t& next_opcode);
 
 
         INSTANTIATE_GET_SET(branch_predictor_policy_t, branch_predictor_two_level_type)

@@ -91,7 +91,7 @@ class branch_predictor_static_taken_t : public branch_predictor_t {
             return (addr & this->btb_index_bits_mask) >> this->btb_index_bits_shift;
         }
 
-        processor_stage_t predict_branch(opcode_package_t actual_opcode, opcode_package_t next_opcode);
+        processor_stage_t predict_branch(const opcode_package_t& actual_opcode, const opcode_package_t& next_opcode);
 
         INSTANTIATE_GET_SET(uint32_t, btb_line_number)
         INSTANTIATE_GET_SET(uint32_t, btb_associativity)
