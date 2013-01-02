@@ -128,10 +128,10 @@ extern sinuca_engine_t sinuca_engine;
 /// ============================================================================
 #define HEART_BEAT      1000000  /// Period to inform the Progress
 #define MAX_ALIVE_TIME   100000  /// Max Time for a request to be solved
-#define PERIODIC_CHECK   1  /// Period between the Periodic Check
-// ~ #define PERIODIC_CHECK  1000000  /// Period between the Periodic Check
+// ~ #define PERIODIC_CHECK   1  /// Period between the Periodic Check
+#define PERIODIC_CHECK  1000000  /// Period between the Periodic Check
 
-#define INITIALIZE_DEBUG 0//200000    /// Cycle to start the DEBUG_PRINTF (0 to disable)
+#define INITIALIZE_DEBUG 0//3000000    /// Cycle to start the DEBUG_PRINTF (0 to disable)
 #define FINALIZE_DEBUG 0      /// Cycle to stop the DEBUG_PRINTF (0 to disable)
 
 /// Class specific definitions
@@ -149,19 +149,19 @@ extern sinuca_engine_t sinuca_engine;
 #define SINUCA_PRINTF(...) printf(__VA_ARGS__);
 
 /// DEBUG DESCRIPTION: Lots of details do help during the debug phase.
-#define SINUCA_DEBUG
+// ~ #define SINUCA_DEBUG
 #ifdef SINUCA_DEBUG
     // ~ #define CONFIGURATOR_DEBUG
     // ~ #define TRACE_READER_DEBUG
     // ~ #define TRACE_GENERATOR_DEBUG
     #define PROCESSOR_DEBUG
     // ~ #define SYNC_DEBUG
-    #define BRANCH_PREDICTOR_DEBUG
-    // ~ #define CACHE_DEBUG
+    // ~ #define BRANCH_PREDICTOR_DEBUG
+    #define CACHE_DEBUG
     // ~ #define PREFETCHER_DEBUG
     // ~ #define LINE_USAGE_PREDICTOR_DEBUG
-    // ~ #define MEMORY_CONTROLLER_DEBUG
-    // ~ #define ROUTER_DEBUG
+    #define MEMORY_CONTROLLER_DEBUG
+    #define ROUTER_DEBUG
     // ~ #define INTERCONNECTION_CTRL_DEBUG
     // ~ #define DIRECTORY_CTRL_DEBUG
     // ~ #define SHOW_FREE_PACKAGE

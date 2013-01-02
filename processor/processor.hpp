@@ -110,9 +110,6 @@ class processor_t : public interconnection_interface_t {
         uint64_t fetch_offset_bits_mask;      /// Offset mask
         uint64_t not_fetch_offset_bits_mask;  /// Offset mask
 
-        /// Interconnection controls
-        uint64_t send_instruction_ready_cycle;
-        uint64_t send_data_ready_cycle;
         uint64_t *recv_ready_cycle;
 
         /// Synchronization Control Variables

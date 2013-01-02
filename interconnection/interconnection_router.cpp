@@ -168,7 +168,7 @@ void interconnection_router_t::clock(uint32_t subcycle) {
 
             /// Send the oldest UNTREATED package.
             else {
-                ROUTER_DEBUG_PRINTF("SENDING INPUT_BUFFER[%d][%d]: %s\n", port, position, this->input_buffer[port][position].memory_to_string().c_str());
+                ROUTER_DEBUG_PRINTF("SENDING INPUT_BUFFER[%d][%d]: %s\n", port, position, this->input_buffer[port][position].content_to_string().c_str());
                 int32_t transmission_latency = send_package(&this->input_buffer[port][position]);
                 if (transmission_latency != POSITION_FAIL) {
                     this->input_buffer_remove(port);
@@ -184,7 +184,7 @@ void interconnection_router_t::clock(uint32_t subcycle) {
 
 //==============================================================================
 int32_t interconnection_router_t::send_package(memory_package_t *package) {
-    ROUTER_DEBUG_PRINTF("send_package() package:%s\n", package->memory_to_string().c_str());
+    ROUTER_DEBUG_PRINTF("send_package() package:%s\n", package->content_to_string().c_str());
 
     if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
         ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");

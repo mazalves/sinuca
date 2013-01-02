@@ -74,7 +74,9 @@ class cache_memory_t : public interconnection_interface_t {
 
         container_ptr_memory_package_t *mshr_born_ordered;
 
-        uint64_t send_ready_cycle;
+        uint64_t send_ans_ready_cycle;
+        uint64_t send_rqst_ready_cycle;
+
         uint64_t recv_ans_ready_cycle;            /// Ready to receive new READ
         uint64_t recv_rqst_read_ready_cycle;            /// Ready to receive new READ
         uint64_t recv_rqst_write_ready_cycle;           /// Ready to receive new WRITE

@@ -65,7 +65,9 @@ cache_memory_t::cache_memory_t() {
 
     this->mshr_born_ordered = new container_ptr_memory_package_t;
 
-    this->send_ready_cycle = 0;
+    this->send_ans_ready_cycle = 0;
+    this->send_rqst_ready_cycle = 0;
+
     this->recv_ans_ready_cycle = 0;
     this->recv_rqst_read_ready_cycle = 0;
     this->recv_rqst_write_ready_cycle = 0;
@@ -138,33 +140,33 @@ void cache_memory_t::allocate() {
 
 /// ============================================================================
 uint64_t cache_memory_t::get_fake_address(uint32_t index, uint32_t way){
-    CACHE_DEBUG_PRINTF("index:%d way:%d\n", index, way);
-    CACHE_DEBUG_PRINTF("tag:%"PRIu64" index:%"PRIu64" bank:%"PRIu64" offset:%"PRIu64"\n", tag_bits_shift, index_bits_shift, bank_bits_shift, offset_bits_shift );
+    // ~ CACHE_DEBUG_PRINTF("index:%d way:%d\n", index, way);
+    // ~ CACHE_DEBUG_PRINTF("tag:%"PRIu64" index:%"PRIu64" bank:%"PRIu64" offset:%"PRIu64"\n", tag_bits_shift, index_bits_shift, bank_bits_shift, offset_bits_shift );
 
 
     uint64_t final_address = 0;
     switch (this->get_address_mask_type()) {
         case CACHE_MASK_TAG_INDEX_BANK_OFFSET:
-            CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+            // ~ CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
 
             final_address = (way << this->tag_bits_shift);
-            CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+            // ~ CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
 
             final_address += (index << this->index_bits_shift);
-            CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+            // ~ CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
 
             final_address += (this->get_bank_number() << this->bank_bits_shift);
-            CACHE_DEBUG_PRINTF("%"PRIu64"\n", final_address);
+            // ~ CACHE_DEBUG_PRINTF("%"PRIu64"\n", final_address);
         break;
 
         case CACHE_MASK_TAG_INDEX_OFFSET:
-            CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+            // ~ CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
 
             final_address = (way << this->tag_bits_shift);
-            CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+            // ~ CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
 
             final_address += (index << this->index_bits_shift);
-            CACHE_DEBUG_PRINTF("%"PRIu64"\n", final_address);
+            // ~ CACHE_DEBUG_PRINTF("%"PRIu64"\n", final_address);
         break;
     }
     ERROR_ASSERT_PRINTF(index == get_index(final_address), "Wrong Index into the Fake Address.\n")
@@ -451,33 +453,65 @@ int32_t cache_memory_t::send_package(memory_package_t *package) {
     CACHE_DEBUG_PRINTF("send_package() package:%s\n", package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
 
-    if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
-        /// Check if FINAL DESTINATION has FREE SPACE available.
-        if (package->is_answer == false &&
-            sinuca_engine.interconnection_interface_array[package->id_dst]->check_token_list(package) == false) {
-            CACHE_DEBUG_PRINTF("\tSEND FAIL (NO TOKENS)\n");
-            return POSITION_FAIL;
-        }
+    /// NEW ANSWER
+    if (package->is_answer) {
+        ///Answer never checks for tokens
 
-        sinuca_engine.interconnection_controller->find_package_route(package);
-        ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
-        uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
-        ERROR_ASSERT_PRINTF(output_port < this->get_max_ports(), "Output Port does not exist\n");
-        package->hop_count--;  /// Consume its own port
+        if (this->send_ans_ready_cycle <= sinuca_engine.get_global_cycle()) {
+            sinuca_engine.interconnection_controller->find_package_route(package);
+            ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
+            uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
+            ERROR_ASSERT_PRINTF(output_port < this->get_max_ports(), "Output Port does not exist\n");
+            package->hop_count--;  /// Consume its own port
 
-        uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(package, this, this->get_interface_output_component(output_port));
-        bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port), transmission_latency);
-        if (sent) {
-            CACHE_DEBUG_PRINTF("\tSEND OK\n");
-            this->send_ready_cycle = sinuca_engine.get_global_cycle() + transmission_latency;
-            return transmission_latency;
+            uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(package, this, this->get_interface_output_component(output_port));
+            bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port), transmission_latency);
+            if (sent) {
+                CACHE_DEBUG_PRINTF("\tSEND OK\n");
+                this->send_ans_ready_cycle = sinuca_engine.get_global_cycle() + transmission_latency;
+                return transmission_latency;
+            }
+            else {
+                CACHE_DEBUG_PRINTF("\tSEND FAIL\n");
+                package->hop_count++;  /// Do not Consume its own port
+                return POSITION_FAIL;
+            }
         }
-        else {
-            CACHE_DEBUG_PRINTF("\tSEND FAIL\n");
-            package->hop_count++;  /// Do not Consume its own port
-            return POSITION_FAIL;
-        }
+        CACHE_DEBUG_PRINTF("\tSEND ANS DATA FAIL (BUSY)\n");
+        return POSITION_FAIL;
     }
+    /// NEW REQUEST
+    else {
+        if (this->send_rqst_ready_cycle <= sinuca_engine.get_global_cycle()) {
+            /// Check if DESTINATION has FREE SPACE available.
+            if (sinuca_engine.interconnection_interface_array[package->id_dst]->check_token_list(package) == false) {
+                CACHE_DEBUG_PRINTF("\tSEND FAIL (NO TOKENS)\n");
+                return POSITION_FAIL;
+            }
+
+            sinuca_engine.interconnection_controller->find_package_route(package);
+            ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
+            uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
+            ERROR_ASSERT_PRINTF(output_port < this->get_max_ports(), "Output Port does not exist\n");
+            package->hop_count--;  /// Consume its own port
+
+            uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(package, this, this->get_interface_output_component(output_port));
+            bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port), transmission_latency);
+            if (sent) {
+                CACHE_DEBUG_PRINTF("\tSEND OK\n");
+                this->send_rqst_ready_cycle = sinuca_engine.get_global_cycle() + transmission_latency;
+                return transmission_latency;
+            }
+            else {
+                CACHE_DEBUG_PRINTF("\tSEND FAIL\n");
+                package->hop_count++;  /// Do not Consume its own port
+                return POSITION_FAIL;
+            }
+        }
+        CACHE_DEBUG_PRINTF("\tSEND RQST DATA FAIL (BUSY)\n");
+        return POSITION_FAIL;
+    }
+
     CACHE_DEBUG_PRINTF("\tSEND FAIL (BUSY)\n");
     return POSITION_FAIL;
 };
@@ -526,12 +560,13 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
             case MEMORY_OPERATION_PREFETCH:
             {
                 if (this->recv_rqst_read_ready_cycle <= sinuca_engine.get_global_cycle()) {
+                    this->recv_rqst_read_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
+
                     slot = memory_package_t::find_free(this->mshr_buffer, this->mshr_buffer_request_reserved_size);
                     if (slot != POSITION_FAIL) {
                         CACHE_DEBUG_PRINTF("\t RECEIVED READ REQUEST\n");
                         this->mshr_buffer[slot] = *package;
                         this->mshr_buffer[slot].package_untreated(1);
-                        this->recv_rqst_read_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
 
                         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
                         this->remove_token_list(package);
@@ -551,12 +586,13 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
             case MEMORY_OPERATION_COPYBACK:
             {
                 if (this->recv_rqst_write_ready_cycle <= sinuca_engine.get_global_cycle()) {
+                    this->recv_rqst_write_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
+
                     slot = memory_package_t::find_free(this->mshr_buffer, this->mshr_buffer_request_reserved_size);
                     if (slot != POSITION_FAIL) {
                         CACHE_DEBUG_PRINTF("\t RECEIVED WRITE REQUEST\n");
                         this->mshr_buffer[slot] = *package;
                         this->mshr_buffer[slot].package_untreated(1);
-                        this->recv_rqst_write_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
 
                         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
                         this->remove_token_list(package);

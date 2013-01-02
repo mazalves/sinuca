@@ -45,9 +45,6 @@ processor_t::processor_t() {
     this->sync_status_time = 0;             /// Last time the sync changed
     this->trace_over = false;
 
-    this->send_instruction_ready_cycle = 0;
-    this->send_data_ready_cycle = 0;
-
     /// Branch Prediction Control Variables
     this->branch_solve_stage = PROCESSOR_STAGE_FETCH;
     this->branch_opcode_number = 0;
@@ -477,6 +474,7 @@ void processor_t::stage_fetch() {
         /// If the instruction is a branch
         if (this->trace_next_opcode.opcode_operation == INSTRUCTION_OPERATION_BRANCH) {
             count_branches++;
+
             if (count_branches > this->branch_per_fetch){
                 break;
             }
@@ -563,60 +561,32 @@ void processor_t::stage_fetch() {
 ///         Get and Return the Latency
 ///     Else
 ///         Return POSITION_FAIL
-/*
-            const ADDRINT highAddr = addr + size;
-            const ADDRINT lineSize = GetLineSize();
-            const ADDRINT notLineMask = ~(lineSize - 1);
-
-            ADDRINT tag=0;
-            UINT32 setIndex=0;
-            UINT32 setOffSet=0;
-            UINT32 sizeNow=0;
-
-            do {
-                SplitAddress(addr, tag, setIndex, setOffSet);
-                //!If the size ends on the next line...
-                sizeNow = size;                               //SizeNow = |......xxxxx.|
-                if (setOffSet+size > this->_lineSize) {
-                    sizeNow = this->_lineSize - setOffSet;    //SizeNow = |.........xxx|xx
-                    size = size-sizeNow;
-                }
-                addr = (addr & notLineMask) + lineSize; // start of next cache line request
-            }
-            while (addr < highAddr); or  MAX_LINE_ACCESS
-*/
-
 int32_t processor_t::send_instruction_package(opcode_package_t *inst_package) {
     PROCESSOR_DEBUG_PRINTF("send_instruction_package() package:%s\n", inst_package->content_to_string().c_str());
 
-    if (this->send_instruction_ready_cycle <= sinuca_engine.get_global_cycle()) {
-        memory_package_t package;
-        package.packager(
-            this->get_id(),                     /// Request Owner Id
-            inst_package->opcode_number,        /// opcode Number
-            inst_package->opcode_address,       /// opcode Address
-            0,                                  /// uop Number
+    memory_package_t package;
+    package.packager(
+        this->get_id(),                     /// Request Owner Id
+        inst_package->opcode_number,        /// opcode Number
+        inst_package->opcode_address,       /// opcode Address
+        0,                                  /// uop Number
 
-            /// Request the whole line
-            inst_package->opcode_address & this->not_fetch_offset_bits_mask,     /// Mem. Address
-            this->fetch_block_size,             /// Instruction Size
+        /// Request the whole line
+        inst_package->opcode_address & this->not_fetch_offset_bits_mask,     /// Mem. Address
+        this->fetch_block_size,             /// Instruction Size
 
-            PACKAGE_STATE_TRANSMIT,             /// Pack. State
-            0,                                  /// Ready Cycle Latency
+        PACKAGE_STATE_TRANSMIT,             /// Pack. State
+        0,                                  /// Ready Cycle Latency
 
-            MEMORY_OPERATION_INST,              /// Mem Op. Type
-            false,                              /// Is Answer
+        MEMORY_OPERATION_INST,              /// Mem Op. Type
+        false,                              /// Is Answer
 
-            this->get_id(),                                                                 /// Src ID
-            this->get_interface_output_component(PROCESSOR_PORT_INST_CACHE)->get_id(),      /// Dst ID
-            NULL,                               /// *Hops
-            POSITION_FAIL                       /// Hop Counter
-        );
-
-
-        return send_package(&package);
-    }
-    return POSITION_FAIL;
+        this->get_id(),                                                                 /// Src ID
+        this->get_interface_output_component(PROCESSOR_PORT_INST_CACHE)->get_id(),      /// Dst ID
+        NULL,                               /// *Hops
+        POSITION_FAIL                       /// Hop Counter
+    );
+    return send_package(&package);
 };
 
 
@@ -920,6 +890,7 @@ void processor_t::stage_rename() {
         for (uint32_t k = 0; k < this->reorder_buffer[position_buffer].uop.write_regs.size(); k++) {
             uint32_t write_register = this->reorder_buffer[position_buffer].uop.write_regs[k];
             ERROR_ASSERT_PRINTF(write_register < this->register_alias_table_size, "Write Register (%d) > Register Alias Table Size (%d)\n", write_register, this->register_alias_table_size);
+
             this->register_alias_table[write_register] = &this->reorder_buffer[position_buffer];
         }
     }
@@ -1146,19 +1117,25 @@ void processor_t::stage_execution() {
     /// MEMORY OPERATIONS - READ
     /// ========================================================================
     /// READ_BUFFER(PACKAGE_STATE_READY) =>  REORDER_BUFFER
-    int32_t position_mem = memory_package_t::find_old_answer_state_ready(this->read_buffer, this->read_buffer_size, PACKAGE_STATE_READY);
-    if (position_mem != POSITION_FAIL) {
-        int32_t position_buffer = rob_find_uop_number(this->read_buffer[position_mem].uop_number);
-        ERROR_ASSERT_PRINTF(position_buffer != POSITION_FAIL, "Instruction is executed but it is not on the reorder buffer anymore.\n");
-        PROCESSOR_DEBUG_PRINTF("\t Executing package:%s\n", this->reorder_buffer[position_buffer].uop.content_to_string().c_str());
-        this->reorder_buffer[position_buffer].stage = PROCESSOR_STAGE_COMMIT;
-        this->reorder_buffer[position_buffer].uop.package_ready(this->stage_execution_cycles + this->stage_commit_cycles);
-        this->solve_data_forward(&this->reorder_buffer[position_buffer]);
-        this->read_buffer[position_mem].package_clean();
+    int32_t position_mem;
+    for (uint32_t k = 0; k < this->read_buffer_size; k++){
+        position_mem = memory_package_t::find_old_answer_state_ready(this->read_buffer, this->read_buffer_size, PACKAGE_STATE_READY);
+        if (position_mem != POSITION_FAIL) {
+            int32_t position_buffer = rob_find_uop_number(this->read_buffer[position_mem].uop_number);
+            ERROR_ASSERT_PRINTF(position_buffer != POSITION_FAIL, "Instruction is executed but it is not on the reorder buffer anymore.\n");
+            PROCESSOR_DEBUG_PRINTF("\t Executing package:%s\n", this->reorder_buffer[position_buffer].uop.content_to_string().c_str());
+            this->reorder_buffer[position_buffer].stage = PROCESSOR_STAGE_COMMIT;
+            this->reorder_buffer[position_buffer].uop.package_ready(this->stage_commit_cycles);
+            this->solve_data_forward(&this->reorder_buffer[position_buffer]);
+            this->read_buffer[position_mem].package_clean();
+        }
+        else {
+            break;
+        }
     }
 
 
-    /// READ_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_data_package()
+    /// READ_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_package()
     position_mem = memory_package_t::find_old_request_state_ready(this->read_buffer, this->read_buffer_size, PACKAGE_STATE_TRANSMIT);
     if (position_mem != POSITION_FAIL) {
 
@@ -1171,7 +1148,7 @@ void processor_t::stage_execution() {
         /// No parallel request found
         if (parallel_position_mem == POSITION_FAIL) {
             PROCESSOR_DEBUG_PRINTF("- NOT FOUND\n")
-            int32_t transmission_latency = this->send_data_package(&this->read_buffer[position_mem]);
+            int32_t transmission_latency = this->send_package(&this->read_buffer[position_mem]);
             if (transmission_latency != POSITION_FAIL) {  /// Try to send to the DC.
                 this->read_buffer[position_mem].package_wait(transmission_latency);
             }
@@ -1183,19 +1160,53 @@ void processor_t::stage_execution() {
         }
     }
 
+    //======================================================
+    // Solve dependencies after insert into the write buffer
+    //======================================================
+    // ~ /// ========================================================================
+    // ~ /// MEMORY OPERATIONS - WRITE
+    // ~ /// ========================================================================
+    // ~ /// WRITE_BUFFER(PACKAGE_STATE_READY) =>  free()
+    // ~ position_mem = memory_package_t::find_old_answer_state_ready(this->write_buffer, this->write_buffer_size, PACKAGE_STATE_READY);
+    // ~ if (position_mem != POSITION_FAIL) {
+        // ~ this->write_buffer[position_mem].package_clean();
+    // ~ }
+// ~
+    // ~ /// WRITE_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_data_package()
+    // ~ position_mem = memory_package_t::find_old_request_state_ready(this->write_buffer, this->write_buffer_size, PACKAGE_STATE_TRANSMIT);
+    // ~ if (position_mem != POSITION_FAIL) {
+        // ~ int32_t transmission_latency = this->send_package(&this->write_buffer[position_mem]);
+        // ~ if (transmission_latency != POSITION_FAIL) {  /// Try to send to the DC.
+            // ~ /// Never wait for answer after SEND a WRITE
+            // ~ this->write_buffer[position_mem].is_answer = true;
+            // ~ this->write_buffer[position_mem].package_ready(transmission_latency);
+        // ~ }
+    // ~ }
+
+
+    //======================================================
+    // Solve dependencies after send to cache
+    //======================================================
     /// ========================================================================
     /// MEMORY OPERATIONS - WRITE
     /// ========================================================================
     /// WRITE_BUFFER(PACKAGE_STATE_READY) =>  free()
     position_mem = memory_package_t::find_old_answer_state_ready(this->write_buffer, this->write_buffer_size, PACKAGE_STATE_READY);
     if (position_mem != POSITION_FAIL) {
+        int32_t position_buffer = rob_find_uop_number(this->write_buffer[position_mem].uop_number);
+        ERROR_ASSERT_PRINTF(position_buffer != POSITION_FAIL, "Instruction is executed but it is not on the reorder buffer anymore.\n");
+        PROCESSOR_DEBUG_PRINTF("\t Executing package:%s\n", this->reorder_buffer[position_buffer].uop.content_to_string().c_str());
+
+        this->reorder_buffer[position_buffer].stage = PROCESSOR_STAGE_COMMIT;
+        this->reorder_buffer[position_buffer].uop.package_ready(this->stage_commit_cycles);
+        this->solve_data_forward(&this->reorder_buffer[position_buffer]);
         this->write_buffer[position_mem].package_clean();
     }
 
-    /// WRITE_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_data_package()
+    /// WRITE_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_package()
     position_mem = memory_package_t::find_old_request_state_ready(this->write_buffer, this->write_buffer_size, PACKAGE_STATE_TRANSMIT);
     if (position_mem != POSITION_FAIL) {
-        int32_t transmission_latency = this->send_data_package(&this->write_buffer[position_mem]);
+        int32_t transmission_latency = this->send_package(&this->write_buffer[position_mem]);
         if (transmission_latency != POSITION_FAIL) {  /// Try to send to the DC.
             /// Never wait for answer after SEND a WRITE
             this->write_buffer[position_mem].is_answer = true;
@@ -1269,7 +1280,7 @@ void processor_t::stage_execution() {
                             reorder_buffer_line->uop.memory_size,        /// Block Size
 
                             PACKAGE_STATE_TRANSMIT,                                 /// Pack. State
-                            0,                                                      /// Ready Cycle
+                            this->stage_execution_cycles,                           /// Stall Cycles
 
                             MEMORY_OPERATION_READ,                                  /// Mem. Operation
                             false,                                                  /// Is Answer
@@ -1308,7 +1319,7 @@ void processor_t::stage_execution() {
                             reorder_buffer_line->uop.memory_size,       /// Block Size
 
                             PACKAGE_STATE_TRANSMIT,                                 /// Pack. State
-                            0,                                                      /// Ready Cycle
+                            this->stage_execution_cycles,                           /// Stall Cycles
 
                             MEMORY_OPERATION_WRITE,                                 /// Mem. Operation
                             false,                                                  /// Is Answer
@@ -1318,16 +1329,30 @@ void processor_t::stage_execution() {
                             NULL,                           /// *Hops
                             POSITION_FAIL                   /// Hop Counter
                         );
-
-                        // INSERTED ON WRITE_BUFFER - reorder_buffer => READY
-                        PROCESSOR_DEBUG_PRINTF("\t Executing package:%s\n", reorder_buffer_line->uop.content_to_string().c_str());
-                        reorder_buffer_line->stage = PROCESSOR_STAGE_COMMIT;
-                        reorder_buffer_line->uop.package_ready(this->stage_execution_cycles + this->stage_commit_cycles);
-                        this->solve_data_forward(reorder_buffer_line);
+                        //======================================================
+                        // Solve dependencies after send to cache
+                        //======================================================
+                        reorder_buffer_line->uop.state = PACKAGE_STATE_WAIT;
                         total_executed++;
                         /// Remove from the Functional Units
                         this->unified_functional_units.erase(this->unified_functional_units.begin() + k);
                         k--;
+
+                        //======================================================
+                        // Solve dependencies after insert into the write buffer
+                        //======================================================
+                        // ~ // INSERTED ON WRITE_BUFFER - reorder_buffer => READY
+                        // ~ PROCESSOR_DEBUG_PRINTF("\t Executing package:%s\n", reorder_buffer_line->uop.content_to_string().c_str());
+                        // ~ reorder_buffer_line->stage = PROCESSOR_STAGE_COMMIT;
+                        // ~ reorder_buffer_line->uop.package_ready(this->stage_execution_cycles + this->stage_commit_cycles);
+                        // ~ this->solve_data_forward(reorder_buffer_line);
+                        // ~ total_executed++;
+                        // ~ /// Remove from the Functional Units
+                        // ~ this->unified_functional_units.erase(this->unified_functional_units.begin() + k);
+                        // ~ k--;
+
+
+
                     }
                 break;
 
@@ -1339,21 +1364,6 @@ void processor_t::stage_execution() {
     }
 };
 
-/// ============================================================================
-/// Get the route
-/// Try to send
-///     If OK
-///         Get and Return the Latency
-///     Else
-///         Return POSITION_FAIL
-int32_t processor_t::send_data_package(memory_package_t *package) {
-    PROCESSOR_DEBUG_PRINTF("send_data_package() package:%s\n", package->content_to_string().c_str());
-
-    if (this->send_data_ready_cycle <= sinuca_engine.get_global_cycle()) {
-        return send_package(package);
-    }
-    return POSITION_FAIL;
-};
 
 /// ============================================================================
 void processor_t::solve_data_forward(reorder_buffer_line_t *rob_line) {
@@ -1384,6 +1394,16 @@ void processor_t::solve_data_forward(reorder_buffer_line_t *rob_line) {
             rob_line->deps_ptr_array[j]->wait_deps_number--;
             /// This update the ready cycle, and it is usefull to compute the time each instruction waits for the functional unit
             rob_line->deps_ptr_array[j]->uop.ready_cycle = sinuca_engine.get_global_cycle();
+
+        ////    Simulates the data desambiguation Store-to-Load
+        // ~ if (rob_line->uop.uop_operation == INSTRUCTION_OPERATION_MEM_STORE &&
+            // ~ rob_line->deps_ptr_array[j]->uop.uop_operation == INSTRUCTION_OPERATION_MEM_LOAD &&
+            // ~ rob_line->uop.memory_address ==  rob_line->deps_ptr_array[j]->uop.memory_address &&
+            // ~ rob_line->uop.memory_size ==  rob_line->deps_ptr_array[j]->uop.memory_size) {
+            // ~ rob_line->deps_ptr_array[j]->uop.uop_operation = INSTRUCTION_OPERATION_NOP;
+        // ~ }
+        ////    =============================
+
             rob_line->deps_ptr_array[j] = NULL;
         }
         /// All the dependencies are solved
@@ -1519,10 +1539,10 @@ void processor_t::clock(uint32_t subcycle) {
 
 /// ============================================================================
 int32_t processor_t::send_package(memory_package_t *package) {
+    ERROR_ASSERT_PRINTF(!package->is_answer, "Processor is trying to send an answer.\n")
 
-    /// Check if FINAL DESTINATION has FREE SPACE available.
-    if (package->is_answer == false &&
-        sinuca_engine.interconnection_interface_array[package->id_dst]->check_token_list(package) == false) {
+    /// Check if DESTINATION has FREE SPACE available.
+    if (sinuca_engine.interconnection_interface_array[package->id_dst]->check_token_list(package) == false) {
         PROCESSOR_DEBUG_PRINTF("\tSEND FAIL (NO TOKENS)\n");
         return POSITION_FAIL;
     }
@@ -1536,15 +1556,17 @@ int32_t processor_t::send_package(memory_package_t *package) {
     uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(package, this, this->get_interface_output_component(output_port));
     bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port), transmission_latency);
     if (sent) {
-        PROCESSOR_DEBUG_PRINTF("\tSEND PACKAGE OK\n");
-        this->send_data_ready_cycle = sinuca_engine.get_global_cycle() + transmission_latency;
+        PROCESSOR_DEBUG_PRINTF("\tSEND OK\n");
         return transmission_latency;
     }
     else {
-        PROCESSOR_DEBUG_PRINTF("\tSEND PACKAGE FAIL\n");
+        PROCESSOR_DEBUG_PRINTF("\tSEND FAIL\n");
         package->hop_count++;  /// Do not Consume its own port
         return POSITION_FAIL;
     }
+
+    PROCESSOR_DEBUG_PRINTF("\tSEND READ DATA FAIL (BUSY)\n");
+    return POSITION_FAIL;
 };
 
 /// ============================================================================
@@ -1659,18 +1681,6 @@ void processor_t::print_structures() {
 
     SINUCA_PRINTF("%s REORDER_BUFFER START:%d  END:%d  SIZE:%d\n", this->get_label(), this->reorder_buffer_position_start, this->reorder_buffer_position_end, this->reorder_buffer_position_used);
     SINUCA_PRINTF("%s REORDER_BUFFER:\n%s",  this->get_label(), rob_print_all().c_str());
-
-    /// Integer Functional Units
-    // ~ SINUCA_PRINTF("FUNC_UNIT_INT_ALU:\n%s", uop_package_t::print_all(this->fu_int_alu, this->number_fu_int_alu, latency_fu_int_alu).c_str());
-    // ~ SINUCA_PRINTF("FUNC_UNIT_INT_MUL:\n%s", uop_package_t::print_all(this->fu_int_mul, this->number_fu_int_mul, latency_fu_int_mul).c_str());
-    // ~ SINUCA_PRINTF("FUNC_UNIT_INT_DIV:\n%s", uop_package_t::print_all(this->fu_int_div, this->number_fu_int_div, latency_fu_int_div).c_str());
-    /// Floating Point Functional Units
-    // ~ SINUCA_PRINTF("FUNC_UNIT_FP_ALU:\n%s", uop_package_t::print_all(this->fu_fp_alu, this->number_fu_fp_alu, latency_fu_fp_alu).c_str());
-    // ~ SINUCA_PRINTF("FUNC_UNIT_FP_MUL:\n%s", uop_package_t::print_all(this->fu_fp_mul, this->number_fu_fp_mul, latency_fu_fp_mul).c_str());
-    // ~ SINUCA_PRINTF("FUNC_UNIT_FP_DIV:\n%s", uop_package_t::print_all(this->fu_fp_div, this->number_fu_fp_div, latency_fu_fp_div).c_str());
-    /// Memory Functional Units
-    // ~ SINUCA_PRINTF("FUNC_UNIT_MEM_LOAD:\n%s", uop_package_t::print_all(this->fu_mem_load, this->number_fu_mem_load, latency_fu_mem_load).c_str());
-    // ~ SINUCA_PRINTF("FUNC_UNIT_MEM_STORE:\n%s", uop_package_t::print_all(this->fu_mem_store, this->number_fu_mem_store, latency_fu_mem_store).c_str());
 
     SINUCA_PRINTF("%s READ_BUFFER:\n%s", this->get_label(), memory_package_t::print_all(this->read_buffer, this->read_buffer_size).c_str());
     SINUCA_PRINTF("%s WRITE_BUFFER:\n%s", this->get_label(), memory_package_t::print_all(this->write_buffer, this->write_buffer_size).c_str());
