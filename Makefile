@@ -35,7 +35,6 @@ RM = rm -f
 FLAGS =   -O3 -ggdb -Wall -Wextra -Werror
 LDFLAGS = -ggdb
 
-
 ########################################################
 # ~ MACHINE=$(shell uname -m)
 
