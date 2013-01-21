@@ -443,6 +443,12 @@ void processor_t::stage_fetch() {
     uint32_t count_branches = 0;
 
     for (i = 0; i < this->stage_fetch_width; i++) {
+        /// If the trace is over
+        // ~ if (this->trace_over) {
+            // ~ this->synchronize(SYNC_BARRIER);
+            // ~ break;
+        // ~ }
+
         /// If must wait Branch miss prediction
         if (this->branch_solve_stage != PROCESSOR_STAGE_FETCH) {
             add_stat_branch_stall_cycles();
@@ -455,6 +461,7 @@ void processor_t::stage_fetch() {
             break;
         }
 
+        /// Get the next opcode
         if (this->trace_next_opcode.state == PACKAGE_STATE_FREE) {
             valid_opcode = sinuca_engine.trace_reader->trace_fetch(this->core_id, &this->trace_next_opcode);
             if (!valid_opcode) {

@@ -113,6 +113,7 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t ncpus) {
                 sprintf(dyn_file_name , "/tmp/NULL_%d.dyn.out.gz", i);
                 WARNING_PRINTF("=> CREATED %s.\n", dyn_file_name);
                 gzDynamicTraceFile[i] = gzopen(dyn_file_name, "wo");    /// Open the .gz file
+                gzwrite(gzDynamicTraceFile[i], "#Empty Trace\n", strlen("#Empty Trace\n"));
                 gzclose(gzDynamicTraceFile[i]);
             }
 
@@ -164,6 +165,7 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t ncpus) {
                 sprintf(mem_file_name , "/tmp/NULL_%d.mem.out.gz", i);
                 WARNING_PRINTF("=> CREATED %s.\n", mem_file_name);
                 gzMemoryTraceFile[i] = gzopen(mem_file_name, "wo");    /// Open the .gz file
+                gzwrite(gzMemoryTraceFile[i], "#Empty Trace\n", strlen("#Empty Trace\n"));
                 gzclose(gzMemoryTraceFile[i]);
             }
 
@@ -234,7 +236,7 @@ uint64_t trace_reader_t::trace_size(uint32_t cpuid) {
         if (!line_dynamic.empty() &&
         line_dynamic[0] != '#' &&
         line_dynamic[0] != '$') {
-            BBL = atoi(line_dynamic.c_str());
+            BBL = (uint32_t)strtoul(line_dynamic.c_str(), NULL, 10);
             trace_size += static_dictionary[BBL].size();
         }
     }
@@ -276,7 +278,6 @@ uint32_t trace_reader_t::trace_next_dynamic(uint32_t cpuid, sync_t *new_sync) {
     static std::string sync_dynamic;
     sync_dynamic.clear();
 
-
     bool valid_dynamic = false;
     sync_t &sync_found = *new_sync;
 
@@ -305,14 +306,14 @@ uint32_t trace_reader_t::trace_next_dynamic(uint32_t cpuid, sync_t *new_sync) {
         }
         else if (line_dynamic[0] == '$') {
             sync_dynamic = line_dynamic.substr(1, sync_dynamic.length() + 1);
-            sync_found = sync_t(atoi(sync_dynamic.c_str()));
+            sync_found = (sync_t)strtoul(sync_dynamic.c_str(), NULL, 10);
             return FAIL;
         }
         else {
             /// BBL is always greater than 0
-            /// If atoi==0 the line could not be converted.
+            /// If strtoul==0 the line could not be converted.
             TRACE_READER_DEBUG_PRINTF("cpu[%d] BBL = %s\n", cpuid, line_dynamic.c_str());
-            BBL = atoi(line_dynamic.c_str());
+            BBL = (uint32_t)strtoul(line_dynamic.c_str(), NULL, 10);
             if (BBL != 0) {
                 valid_dynamic = true;
             }
@@ -332,11 +333,11 @@ std::string trace_reader_t::trace_next_memory(uint32_t cpuid) {
 
     while (!valid_memory) {
         if (is_compressed_trace_file) {
-            ERROR_ASSERT_PRINTF(!gzeof(this->gzDynamicTraceFile[cpuid]), "MemoryTraceFile EOF- cpu id %d\n", cpuid);
+            ERROR_ASSERT_PRINTF(!gzeof(this->gzDynamicTraceFile[cpuid]), "MemoryTraceFile EOF - cpu id %d\n", cpuid);
             gzgetline(this->gzMemoryTraceFile[cpuid], line_memory);
         }
         else {
-            ERROR_ASSERT_PRINTF(!this->MemoryTraceFile[cpuid].eof(), "MemoryTraceFile EOF- cpu id %d\n", cpuid);
+            ERROR_ASSERT_PRINTF(!this->MemoryTraceFile[cpuid].eof(), "MemoryTraceFile EOF - cpu id %d\n", cpuid);
             std::getline(this->MemoryTraceFile[cpuid], line_memory);
         }
 
@@ -398,7 +399,7 @@ bool trace_reader_t::trace_fetch(uint32_t cpuid, opcode_package_t *m) {
     this->actual_bbl_opcode[cpuid]++;
     if (this->actual_bbl_opcode[cpuid] >= deque_size) {
         this->insideBBL[cpuid] = false;
-        //~ this->actual_bbl[cpuid] = 0;
+        // ~ this->actual_bbl[cpuid] = 0; /// CHANGED HERE =======================================
         this->actual_bbl_opcode[cpuid] = 0;
     }
 
@@ -495,7 +496,7 @@ void trace_reader_t::generate_static_dictionary() {
             NewBBL.clear();
 
             line_static = line_static.substr(1, line_static.length());
-            BBL = atoi(line_static.c_str());
+            BBL = (uint32_t)strtoul(line_static.c_str(), NULL, 10);
         }
         else {                                                  /// If Inside BBL
             NewOpcode.trace_string_to_opcode(line_static);

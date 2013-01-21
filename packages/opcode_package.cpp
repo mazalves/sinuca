@@ -376,41 +376,6 @@ void opcode_package_t::trace_string_to_read(const std::string& input_string, uin
     uint32_t field = 1;
     std::string sub_string;
 
-/*
-    // THE FOLLOWING CODE IS SLOWER
-
-
-    // ~ int32_t end_pos = 0;
-
-    // 1st field
-    end_pos = input_string.find_first_of(' ',  end_pos);
-    sub_string = input_string.substr(start_pos, end_pos - start_pos);
-    /// Read or Write (Check the Instruction Type and the Memory Type)
-    ERROR_ASSERT_PRINTF(sub_string.compare("R") == 0, "MemoryTraceFile Wrong Type. Type (R) expected.\n Inst: %s\n Mem:%s\n", this->content_to_string().c_str(), input_string.c_str())
-
-    // 2nd field
-    start_pos = end_pos;
-    end_pos = input_string.find_first_of(' ',  end_pos + 1);
-    sub_string = input_string.substr(start_pos, end_pos - start_pos);
-    /// Load/Store Size
-    this->read_size = strtoull(sub_string.c_str(), NULL, 10);
-
-    // 3rd field
-    start_pos = end_pos;
-    end_pos = input_string.find_first_of(' ',  end_pos + 1);
-    sub_string = input_string.substr(start_pos, end_pos - start_pos);
-    /// Memory Address
-    this->read_address = strtoull(sub_string.c_str(), NULL, 10);
-
-    // 4th field
-    start_pos = end_pos;
-    end_pos = input_string.find_first_of(' ',  end_pos + 1);
-    sub_string = input_string.substr(start_pos, end_pos - start_pos);
-    /// Basic Block Number
-    ERROR_ASSERT_PRINTF((uint32_t)strtoul(sub_string.c_str(), NULL, 10) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%u)\n", actual_bbl, (uint32_t)strtoul(sub_string.c_str(), NULL, 10))
-*/
-
-
     for (end_pos = 0 ; end_pos <= input_string.length() ; end_pos++) {
         if (input_string[end_pos] == ' ' || end_pos == input_string.length()) {
             sub_string = input_string.substr(start_pos, end_pos - start_pos);
