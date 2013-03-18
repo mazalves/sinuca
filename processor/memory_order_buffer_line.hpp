@@ -21,28 +21,23 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
 /// ============================================================================
-class reorder_buffer_line_t {
+class memory_order_buffer_line_t {
     public:
-        uop_package_t uop;                          /// uOP stored
-        processor_stage_t stage;                    /// Stage of the uOP
-        /// Register Dependencies Control
-        uint32_t wait_reg_deps_number;                  /// Must wait BEFORE execution
-        reorder_buffer_line_t* *reg_deps_ptr_array;     /// Elements to wake-up AFTER execution
+        memory_package_t memory_request;                /// memory_request stored
+        reorder_buffer_line_t* rob_ptr;                 /// rob pointer
 
-        /// Memory Dependencies Control
-        uint32_t wait_mem_deps_number;                  /// Must wait BEFORE execution
-        reorder_buffer_line_t* *mem_deps_ptr_array;     /// Elements to wake-up AFTER execution
-
-        memory_order_buffer_line_t* mob_ptr;                 /// mob pointer
         /// ====================================================================
         /// Methods
         /// ====================================================================
-        reorder_buffer_line_t();
-        ~reorder_buffer_line_t();
+        memory_order_buffer_line_t();
+        ~memory_order_buffer_line_t();
+
         void package_clean();
         std::string content_to_string();
 
-        static std::string print_all(reorder_buffer_line_t *input_array, uint32_t size_array);
-        static bool check_age(reorder_buffer_line_t *input_array, uint32_t size_array);
-
+        static int32_t find_free(memory_order_buffer_line_t *input_array, uint32_t size_array);
+        static int32_t find_old_request_state_ready(memory_order_buffer_line_t *input_array, uint32_t size_array, package_state_t state);
+        static int32_t find_uop_number(memory_order_buffer_line_t *input_array, uint32_t size_array, uint64_t uop_number);
+        static std::string print_all(memory_order_buffer_line_t *input_array, uint32_t size_array);
+        static bool check_age(memory_order_buffer_line_t *input_array, uint32_t size_array);
 };

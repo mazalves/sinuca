@@ -33,8 +33,8 @@ class uop_package_t {
         uint64_t opcode_address;
         uint32_t opcode_size;
 
-        container_register_t read_regs;
-        container_register_t write_regs;
+        int32_t read_regs[MAX_REGISTERS];
+        int32_t write_regs[MAX_REGISTERS];
 
         instruction_operation_t uop_operation;
         uint64_t memory_address;

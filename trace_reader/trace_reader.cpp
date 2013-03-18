@@ -399,7 +399,6 @@ bool trace_reader_t::trace_fetch(uint32_t cpuid, opcode_package_t *m) {
     this->actual_bbl_opcode[cpuid]++;
     if (this->actual_bbl_opcode[cpuid] >= deque_size) {
         this->insideBBL[cpuid] = false;
-        // ~ this->actual_bbl[cpuid] = 0; /// CHANGED HERE =======================================
         this->actual_bbl_opcode[cpuid] = 0;
     }
 
@@ -455,7 +454,6 @@ void trace_reader_t::generate_static_dictionary() {
 
     uint32_t BBL = 0;                           /// Actual BBL (Index of the Vector)
     opcode_package_t NewOpcode;                 /// Actual Opcode
-    NewOpcode.package_clean();
     std::string line_static;                    /// Actual String Line
 
     if (is_compressed_trace_file) {
@@ -513,8 +511,6 @@ void trace_reader_t::generate_static_dictionary() {
 void trace_reader_t::check_static_dictionary() {
     bool file_eof = false;
     opcode_package_t TraceOpcode, DicOpcode;  /// Actual Opcode
-    TraceOpcode.package_clean();
-    DicOpcode.package_clean();
     std::string line_static;                  /// Actual String Line
     line_static.clear();
 

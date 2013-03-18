@@ -15,15 +15,15 @@ RM = rm -f
 # Find Extra Errors: -pedantic -Wextra
 ################################################################################
 
-# ~ ## DEBUG DEEP
+## DEBUG DEEP
 # ~ FLAGS =  -Wall -O0 -ggdb  -Werror -lefence
 # ~ LDFLAGS = -ggdb  -lefence
 
-# ~ ## DEBUG PROFILE
+## DEBUG PROFILE
 # ~ FLAGS =  -Wall -O2 -ggdb  -Werror -pg
 # ~ LDFLAGS = -ggdb  -pg
 
-# ~ ## DEBUG DEEP FAST
+## DEBUG DEEP FAST
 # ~ FLAGS =  -Wall -O2 -ggdb  -Werror -lefence
 # ~ LDFLAGS = -ggdb  -lefence
 
@@ -55,6 +55,8 @@ SRC_BRANCH_PREDICTOR =	 	branch_predictor/branch_predictor.cpp \
 							branch_predictor/branch_predictor_disable.cpp
 
 SRC_PROCESSOR =	 	processor/processor.cpp \
+					processor/reorder_buffer_line.cpp \
+					processor/memory_order_buffer_line.cpp
 
 SRC_INTERCONNECTION =  	interconnection/interconnection_router.cpp \
 						interconnection/interconnection_controller.cpp \

@@ -118,6 +118,10 @@ static void process_argv(int argc, char **argv) {
 
     }
 
+    if (req_args_processed < 2) {
+        display_use();
+    }
+
     uint32_t configuration_file_size;
     configuration_file_size = strlen(sinuca_engine.arg_configuration_file_name) + 1;
     sinuca_engine.arg_configuration_path = utils_t::template_allocate_array<char>(configuration_file_size);
@@ -131,9 +135,6 @@ static void process_argv(int argc, char **argv) {
     SINUCA_PRINTF("COMPRESSED TRACE:        \t %s\n", sinuca_engine.arg_is_compressed                       ? "TRUE" : "FALSE");
     SINUCA_PRINTF("GRAPH FILE:              \t %s\n", sinuca_engine.arg_graph_file_name             != NULL ? sinuca_engine.arg_graph_file_name        : "MISSING");
 
-    if (req_args_processed < 2) {
-        display_use();
-    }
 };
 
 //==============================================================================

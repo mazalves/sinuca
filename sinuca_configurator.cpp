@@ -308,12 +308,25 @@ void sinuca_engine_t::initialize_processor() {
             processor_parameters.push_back("WAIT_BETWEEN_FU_MEM_STORE");
             this->processor_array[i]->set_wait_between_fu_mem_store( cfg_processor[ processor_parameters.back() ] );
 
+            processor_parameters.push_back("MEMORY_ORDER_BUFFER_READ_SIZE");
+            this->processor_array[i]->set_memory_order_buffer_read_size( cfg_processor[ processor_parameters.back() ] );
 
+            processor_parameters.push_back("MEMORY_ORDER_BUFFER_WRITE_SIZE");
+            this->processor_array[i]->set_memory_order_buffer_write_size( cfg_processor[ processor_parameters.back() ] );
 
-            processor_parameters.push_back("READ_BUFFER_SIZE");
-            this->processor_array[i]->set_read_buffer_size( cfg_processor[ processor_parameters.back() ] );
-            processor_parameters.push_back("WRITE_BUFFER_SIZE");
-            this->processor_array[i]->set_write_buffer_size( cfg_processor[ processor_parameters.back() ] );
+            processor_parameters.push_back("DISAMBIGUATION_TYPE");
+            if (strcasecmp(cfg_processor[ processor_parameters.back() ], "PERFECT") ==  0) {
+                this->processor_array[i]->set_disambiguation_type(DISAMBIGUATION_PERFECT);
+            }
+            else if (strcasecmp(cfg_processor[ processor_parameters.back() ], "DISABLE") ==  0) {
+                this->processor_array[i]->set_disambiguation_type(DISAMBIGUATION_DISABLE);
+            }
+            else {
+                ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_processor[ processor_parameters.back() ].c_str(), processor_parameters.back());
+            }
+
+            processor_parameters.push_back("DISAMBIGUATION_BLOCK_SIZE");
+            this->processor_array[i]->set_disambiguation_block_size( cfg_processor[ processor_parameters.back() ] );
 
             processor_parameters.push_back("BRANCH_PER_FETCH");
             this->processor_array[i]->set_branch_per_fetch( cfg_processor[ processor_parameters.back() ] );

@@ -34,8 +34,8 @@ class opcode_package_t {
         uint64_t opcode_address;
         uint32_t opcode_size;
 
-        container_register_t read_regs;
-        container_register_t write_regs;
+        int32_t read_regs[MAX_REGISTERS];
+        int32_t write_regs[MAX_REGISTERS];
 
         uint32_t base_reg;
         uint32_t index_reg;
@@ -66,14 +66,8 @@ class opcode_package_t {
         /// ====================================================================
         /// Methods
         /// ====================================================================
-        opcode_package_t() {
-            this->package_clean();
-        };
-        ~opcode_package_t() {
-            this->read_regs.clear();
-            this->write_regs.clear();
-        };
-
+        opcode_package_t();
+        ~opcode_package_t();
 
         std::string content_to_string();
         void opcode_to_trace_char(char *trace_line);

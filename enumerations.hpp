@@ -153,6 +153,15 @@ enum sync_t {
 const char *get_enum_sync_char(sync_t type);
 
 /// ============================================================================
+/// Enumarates the way to treat memory dependencies.
+enum disambiguation_t {
+    DISAMBIGUATION_PERFECT,
+    DISAMBIGUATION_DISABLE
+};
+const char *get_enum_disambiguation_char(disambiguation_t type);
+
+
+/// ============================================================================
 /// Enumarates the selection policy to pick a sender or next to be treated.
 enum selection_t {
     SELECTION_RANDOM,
@@ -202,7 +211,7 @@ const char *get_enum_inclusiveness_char(inclusiveness_t type);
 /// Prefetcher type
 enum prefetch_policy_t {
     PREFETCHER_STRIDE,
-	PREFETCHER_STREAM,
+    PREFETCHER_STREAM,
     PREFETCHER_DISABLE
 };
 const char *get_enum_prefetch_policy_char(prefetch_policy_t type);

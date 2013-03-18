@@ -247,7 +247,7 @@ uint32_t memory_package_t::count_free(memory_package_t *input_array, uint32_t si
 /// ============================================================================
 int32_t memory_package_t::find_old_request_state_ready(memory_package_t *input_array, uint32_t size_array, package_state_t state) {
     int32_t old_pos = POSITION_FAIL;
-    uint64_t old_cycle = sinuca_engine.get_global_cycle() + 1;
+    uint64_t old_cycle = std::numeric_limits<uint64_t>::max();
 
     for (uint32_t i = 0; i < size_array ; i++) {
         if (input_array[i].state == state &&
@@ -265,7 +265,7 @@ int32_t memory_package_t::find_old_request_state_ready(memory_package_t *input_a
 /// ============================================================================
 int32_t memory_package_t::find_old_answer_state_ready(memory_package_t *input_array, uint32_t size_array, package_state_t state) {
     int32_t old_pos = POSITION_FAIL;
-    uint64_t old_cycle = sinuca_engine.get_global_cycle() + 1;
+    uint64_t old_cycle = std::numeric_limits<uint64_t>::max();
 
     for (uint32_t i = 0; i < size_array ; i++) {
         if (input_array[i].state == state &&
@@ -278,21 +278,6 @@ int32_t memory_package_t::find_old_answer_state_ready(memory_package_t *input_ar
     }
     return old_pos;
 };
-
-
-/// ============================================================================
-int32_t memory_package_t::find_state_mem_address(memory_package_t *input_array, uint32_t size_array, package_state_t state, uint64_t address, uint32_t size) {
-
-    for (uint32_t i = 0; i < size_array ; i++) {
-        if (input_array[i].state == state &&
-        input_array[i].memory_address == address &&
-        input_array[i].memory_size == size) {
-            return i;
-        }
-    }
-    return POSITION_FAIL;
-};
-
 
 /// ============================================================================
 std::string memory_package_t::print_all(memory_package_t *input_array, uint32_t size_array) {

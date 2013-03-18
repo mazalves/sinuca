@@ -50,6 +50,7 @@
 #include <limits>
 #include <vector>
 #include <string>
+#include <boost/circular_buffer.hpp>
 
 /// Embedded Libraries
 #include "./extra_libs/include/zlib.h"
@@ -78,6 +79,7 @@ class branch_predictor_two_level_t;
 class branch_predictor_static_taken_t;
 class branch_predictor_disable_t;
 /// Processor
+class memory_order_buffer_line_t;
 class reorder_buffer_line_t;
 class processor_t;
 /// Directory
@@ -139,6 +141,7 @@ extern sinuca_engine_t sinuca_engine;
 #define UNDESIRABLE (sinuca_engine.get_processor_array_size() * 10) /// interconnection_controller_t
 #define TRACE_LINE_SIZE 512     /// trace_reader_t (should not be smaller than on trace line)
 #define MAX_UOP_DECODED 5       /// processor_t (Max number of uops from one opcode)
+#define MAX_REGISTERS 6       /// opcode_package_t uop_package_t  (Max number of register (read or write) for one opcode/uop)
 
 #define POSITION_FAIL -1        /// FAIL when return is int32_t
 #define FAIL 0                  /// FAIL when return is uint32_t
@@ -291,6 +294,7 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 #include "./branch_predictor/branch_predictor_static_taken.hpp"
 #include "./branch_predictor/branch_predictor_disable.hpp"
 
+#include "./processor/memory_order_buffer_line.hpp"
 #include "./processor/reorder_buffer_line.hpp"
 #include "./processor/processor.hpp"
 

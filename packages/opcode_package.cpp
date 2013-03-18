@@ -25,6 +25,14 @@
 #include <string>
 
 //==============================================================================
+opcode_package_t::opcode_package_t() {
+    this->package_clean();
+};
+//==============================================================================
+opcode_package_t::~opcode_package_t(){
+};
+
+//==============================================================================
 opcode_package_t &opcode_package_t::operator=(const opcode_package_t &package) {
     /// TRACE Variables
     strncpy(this->opcode_assembly, package.opcode_assembly, sizeof(this->opcode_assembly));
@@ -32,14 +40,13 @@ opcode_package_t &opcode_package_t::operator=(const opcode_package_t &package) {
     this->opcode_address = package.opcode_address;
     this->opcode_size = package.opcode_size;
 
-    this->read_regs.clear();
-    for (uint32_t i = 0; i < package.read_regs.size(); i++) {
-        this->read_regs.push_back(package.read_regs[i]);
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
+        this->read_regs[i] = package.read_regs[i];
     }
 
-    this->write_regs.clear();
-    for (uint32_t i = 0; i < package.write_regs.size(); i++) {
-        this->write_regs.push_back(package.write_regs[i]);
+
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
+        this->write_regs[i] = package.write_regs[i];
     }
 
     this->base_reg = package.base_reg;
@@ -80,13 +87,13 @@ bool opcode_package_t::operator==(const opcode_package_t &package) {
     if (this->opcode_address != package.opcode_address) return FAIL;
     if (this->opcode_size != package.opcode_size) return FAIL;
 
-    if (this->read_regs.size() != package.read_regs.size()) return FAIL;
-    for (uint32_t i = 0; i < package.read_regs.size(); i++) {
+
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
         if (this->read_regs[i] != package.read_regs[i]) return FAIL;
     }
 
-    if (this->write_regs.size() != package.write_regs.size()) return FAIL;
-    for (uint32_t i = 0; i < package.write_regs.size(); i++) {
+
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
         if (this->write_regs[i] != package.write_regs[i]) return FAIL;
     }
 
@@ -127,8 +134,15 @@ void opcode_package_t::package_clean() {
     this->opcode_address = 0;
     this->opcode_size = 0;
 
-    this->read_regs.clear();
-    this->write_regs.clear();
+
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
+        this->read_regs[i] = POSITION_FAIL;
+    }
+
+
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
+        this->write_regs[i] = POSITION_FAIL;
+    }
 
     this->base_reg = 0;
     this->index_reg = 0;
@@ -160,7 +174,6 @@ void opcode_package_t::package_clean() {
 //==============================================================================
 void opcode_package_t::package_ready(uint32_t stall_time) {
     this->ready_cycle = sinuca_engine.get_global_cycle() + stall_time;
-    // ~ this->born_cycle = sinuca_engine.get_global_cycle();
     this->state = PACKAGE_STATE_READY;
 };
 
@@ -168,7 +181,6 @@ void opcode_package_t::package_ready(uint32_t stall_time) {
 //==============================================================================
 void opcode_package_t::package_untreated(uint32_t stall_time) {
     this->ready_cycle = sinuca_engine.get_global_cycle() + stall_time;
-    // ~ this->born_cycle = sinuca_engine.get_global_cycle();
     this->state = PACKAGE_STATE_UNTREATED;
 };
 
@@ -176,7 +188,6 @@ void opcode_package_t::package_untreated(uint32_t stall_time) {
 //==============================================================================
 void opcode_package_t::package_wait(uint32_t stall_time) {
     this->ready_cycle = sinuca_engine.get_global_cycle() + stall_time;
-    // ~ this->born_cycle = sinuca_engine.get_global_cycle();
     this->state = PACKAGE_STATE_WAIT;
 };
 
@@ -211,12 +222,12 @@ std::string opcode_package_t::content_to_string() {
     PackageString = PackageString + " READY:" + utils_t::uint64_to_string(this->ready_cycle);
 
     PackageString = PackageString + " | RRegs[";
-    for (uint32_t i = 0; i < this->read_regs.size(); i++) {
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
         PackageString = PackageString + " " + utils_t::uint32_to_string(this->read_regs[i]);
     }
 
     PackageString = PackageString + " ] | WRegs[";
-    for (uint32_t i = 0; i < this->write_regs.size(); i++) {
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
         PackageString = PackageString + " " + utils_t::uint32_to_string(this->write_regs[i]);
     }
     PackageString = PackageString + " ]";
@@ -234,65 +245,80 @@ std::string opcode_package_t::content_to_string() {
 // Instruction Class
 // Convert Instruction variables into String
 std::string opcode_package_t::opcode_to_trace_string() {
-    std::string traceString;
-    traceString = this->opcode_assembly;
-    traceString = traceString + " " + utils_t::uint32_to_char(this->opcode_operation);
-    traceString = traceString + " 0x" + utils_t::uint64_to_char(this->opcode_address);
-    traceString = traceString + " " + utils_t::uint32_to_char(this->opcode_size);
+    std::string trace_string = "";
+    std::string register_string = "";
+    uint32_t reg_count = 0;
 
-    traceString = traceString + " " + utils_t::uint32_to_char(this->read_regs.size());
-    for (std::size_t i = 0; i < this->read_regs.size(); i++) {
-        traceString = traceString + " " + utils_t::uint32_to_char(this->read_regs[i]);
+    trace_string = this->opcode_assembly;
+    trace_string = trace_string + " " + utils_t::uint32_to_char(this->opcode_operation);
+    trace_string = trace_string + " 0x" + utils_t::uint64_to_char(this->opcode_address);
+    trace_string = trace_string + " " + utils_t::uint32_to_char(this->opcode_size);
+
+    register_string = "";
+    reg_count = 0;
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
+        if (this->read_regs[i] >= 0) {
+            reg_count++;
+            register_string = register_string + " " + utils_t::uint32_to_char(this->read_regs[i]);
+        }
     }
+    trace_string = trace_string + " " + utils_t::uint32_to_char(reg_count) + register_string;
 
-    traceString = traceString + " " + utils_t::uint32_to_char(this->write_regs.size());
-    for (std::size_t i = 0; i < this->write_regs.size(); i++) {
-        traceString = traceString + " " + utils_t::uint32_to_char(this->write_regs[i]);
+    register_string = "";
+    reg_count = 0;
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
+        if (this->write_regs[i] >= 0) {
+            reg_count++;
+            register_string = register_string + " " + utils_t::uint32_to_char(this->write_regs[i]);
+        }
     }
+    trace_string = trace_string + " " + utils_t::uint32_to_char(reg_count) + register_string;
 
-    traceString = traceString + " " + utils_t::uint32_to_char(this->base_reg);
-    traceString = traceString + " " + utils_t::uint32_to_char(this->index_reg);
+    trace_string = trace_string + " " + utils_t::uint32_to_char(this->base_reg);
+    trace_string = trace_string + " " + utils_t::uint32_to_char(this->index_reg);
 
     if (this->is_read == true)
-        traceString = traceString + " 1";
+        trace_string = trace_string + " 1";
     else
-        traceString = traceString + " 0";
+        trace_string = trace_string + " 0";
 
     if (this->is_read2 == true)
-        traceString = traceString + " 1";
+        trace_string = trace_string + " 1";
     else
-        traceString = traceString + " 0";
+        trace_string = trace_string + " 0";
 
     if (this->is_write == true)
-        traceString = traceString + " 1";
+        trace_string = trace_string + " 1";
     else
-        traceString = traceString + " 0";
+        trace_string = trace_string + " 0";
 
 
     if (this->is_branch == true)
-        traceString = traceString + " 1";
+        trace_string = trace_string + " 1";
     else
-        traceString = traceString + " 0";
+        trace_string = trace_string + " 0";
 
     if (this->is_predicated == true)
-        traceString = traceString + " 1";
+        trace_string = trace_string + " 1";
     else
-        traceString = traceString + " 0";
+        trace_string = trace_string + " 0";
 
     if (this->is_prefetch == true)
-        traceString = traceString + " 1";
+        trace_string = trace_string + " 1";
     else
-        traceString = traceString + " 0";
+        trace_string = trace_string + " 0";
 
-    traceString = traceString + "\n";
+    trace_string = trace_string + "\n";
 
-    return traceString;
+    return trace_string;
 };
 
 
 //==============================================================================
 // Instruction Class
 // Convert Instruction variables into char
+
+/*
 void opcode_package_t::opcode_to_trace_char(char *trace_line) {
     std::size_t i;
     char tmp_str[64];
@@ -363,6 +389,7 @@ void opcode_package_t::opcode_to_trace_char(char *trace_line) {
 
     strcat(trace_line,  "\n");
 };
+*/
 
 //==============================================================================
 /// Convert Dynamic Memory Trace line into Instruction Memory Operands
@@ -520,7 +547,7 @@ void opcode_package_t::trace_string_to_opcode(const std::string& input_string) {
 /// 9 0x140647360305464 2 2 25 15 1 15 0 0
 ///
     int32_t start_pos = 0;
-    uint32_t end_pos = 0, field = 1, sub_fields = 0;
+    uint32_t end_pos = 0, field = 1, sub_fields = 0, reg_num = 0;
     std::string sub_string;
 
     ERROR_ASSERT_PRINTF(!input_string.empty() && input_string[0] != '#' && input_string[0] != '@', "Error converting Text to Instruction\n String::%s \n", input_string.c_str())
@@ -558,17 +585,24 @@ void opcode_package_t::trace_string_to_opcode(const std::string& input_string) {
 
 
                 case 5:
-                    this->read_regs.clear();
+                    ERROR_ASSERT_PRINTF(atoi(sub_string.c_str()) <= MAX_REGISTERS, "Reading a trace with more Read_Reg than MAX_REGISTERS(%d) registers.", MAX_REGISTERS)
+
+                    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
+                        this->read_regs[i] = POSITION_FAIL;
+                    }
+
                     sub_fields = atoi(sub_string.c_str());
+                    reg_num = 0;
                     if (sub_fields > 0)
                         field = 6;  /// Next Field
                     else
                         field = 7;  /// Next Field
                 break;
                         case 6:
-                            this->read_regs.push_back(strtoull(sub_string.c_str(), NULL, 10));
-
+                            this->read_regs[reg_num] = strtoull(sub_string.c_str(), NULL, 10);
+                            reg_num++;
                             sub_fields--;
+
                             if (sub_fields > 0)
                                 field = 6;  /// Next Field
                             else
@@ -577,17 +611,25 @@ void opcode_package_t::trace_string_to_opcode(const std::string& input_string) {
 
 
                 case 7:
-                    this->write_regs.clear();
+                    ERROR_ASSERT_PRINTF(atoi(sub_string.c_str()) <= MAX_REGISTERS, "Reading a trace with more Write_Reg than MAX_REGISTERS(%d) registers.", MAX_REGISTERS)
+
+                    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
+                        this->write_regs[i] = POSITION_FAIL;
+                    }
+
                     sub_fields = atoi(sub_string.c_str());
+                    reg_num = 0;
+
                     if (sub_fields > 0)
                         field = 8;  /// Next Field
                     else
                         field = 9;  /// Next Field
                 break;
                         case 8:
-                            this->write_regs.push_back(strtoull(sub_string.c_str(), NULL, 10));
-
+                            this->write_regs[reg_num] = strtoull(sub_string.c_str(), NULL, 10);
+                            reg_num++;
                             sub_fields--;
+
                             if (sub_fields > 0)
                                 field = 8;  /// Next Field
                             else

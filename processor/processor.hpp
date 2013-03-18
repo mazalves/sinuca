@@ -96,8 +96,11 @@ class processor_t : public interconnection_interface_t {
         uint32_t latency_fu_mem_store;
         uint32_t wait_between_fu_mem_store;
 
-        uint32_t read_buffer_size;
-        uint32_t write_buffer_size;
+        uint32_t memory_order_buffer_read_size;
+        uint32_t memory_order_buffer_write_size;
+
+        uint32_t disambiguation_block_size;
+        disambiguation_t disambiguation_type;
 
         uint32_t fetch_block_size;
         uint32_t branch_per_fetch;
@@ -109,6 +112,10 @@ class processor_t : public interconnection_interface_t {
 
         uint64_t fetch_offset_bits_mask;      /// Offset mask
         uint64_t not_fetch_offset_bits_mask;  /// Offset mask
+
+        uint64_t disambiguation_offset_bits_mask;      /// Offset mask
+        uint64_t not_disambiguation_offset_bits_mask;  /// Offset mask
+
 
         uint64_t *recv_ready_cycle;
 
@@ -150,7 +157,6 @@ class processor_t : public interconnection_interface_t {
         /// Register Alias Table for Renaming
         uint32_t register_alias_table_size;
         reorder_buffer_line_t* *register_alias_table;
-        reorder_buffer_line_t* *memory_map_table;
 
         /// Containers to fast the execution, with pointers of UOPs ready.
         container_ptr_reorder_buffer_line_t unified_reservation_station;    /// dispatch->execute
@@ -173,8 +179,8 @@ class processor_t : public interconnection_interface_t {
         uint64_t *ready_cycle_fu_mem_load;
         uint64_t *ready_cycle_fu_mem_store;
 
-        memory_package_t *read_buffer;
-        memory_package_t *write_buffer;
+        memory_order_buffer_line_t *memory_order_buffer_read;
+        memory_order_buffer_line_t *memory_order_buffer_write;
 
         cache_memory_t *data_cache;
         cache_memory_t *inst_cache;
@@ -289,6 +295,8 @@ class processor_t : public interconnection_interface_t {
                     reorder_buffer_position_used != 0);
         }
 
+        bool check_if_memory_overlaps(uint64_t memory_address1, uint32_t size1, uint64_t memory_address2, uint32_t size2);
+
         /// Fetch Buffer =======================================================
         int32_t fetch_buffer_insert();
         void fetch_buffer_remove();
@@ -301,14 +309,10 @@ class processor_t : public interconnection_interface_t {
         /// ====================================================================
 
         /// Reorder Buffer =====================================================
-        void rob_line_clean(uint32_t reorder_buffer_line);
-        std::string rob_line_to_string(uint32_t reorder_buffer_line);
-        std::string rob_print_all();
         int32_t rob_insert();
         void rob_remove();
-        int32_t rob_find_uop_number(uint64_t uop_number);
-        bool rob_check_age();
         /// ====================================================================
+
 
         INSTANTIATE_GET_SET(uint32_t, core_id)
         INSTANTIATE_GET_SET(uint64_t, offset_bits_mask)
@@ -376,9 +380,11 @@ class processor_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, latency_fu_mem_store)
         INSTANTIATE_GET_SET(uint32_t, wait_between_fu_mem_store)
 
+        INSTANTIATE_GET_SET(uint32_t, memory_order_buffer_read_size)
+        INSTANTIATE_GET_SET(uint32_t, memory_order_buffer_write_size)
 
-        INSTANTIATE_GET_SET(uint32_t, read_buffer_size)
-        INSTANTIATE_GET_SET(uint32_t, write_buffer_size)
+        INSTANTIATE_GET_SET(uint32_t, disambiguation_block_size)
+        INSTANTIATE_GET_SET(disambiguation_t, disambiguation_type)
 
         INSTANTIATE_GET_SET(cache_memory_t*, data_cache)
         INSTANTIATE_GET_SET(cache_memory_t*, inst_cache)

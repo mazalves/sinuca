@@ -29,9 +29,7 @@ uop_package_t::uop_package_t() {
     this->package_clean();
 };
 //==============================================================================
-uop_package_t::~uop_package_t() {
-    this->read_regs.clear();
-    this->write_regs.clear();
+uop_package_t::~uop_package_t(){
 };
 
 //==============================================================================
@@ -42,20 +40,19 @@ uop_package_t &uop_package_t::operator=(const uop_package_t &package) {
     this->opcode_address = package.opcode_address;
     this->opcode_size = package.opcode_size;
 
-    this->read_regs.clear();
-    for (uint32_t i = 0; i < package.read_regs.size(); i++) {
-        this->read_regs.push_back(package.read_regs[i]);
+
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
+        this->read_regs[i] = package.read_regs[i];
     }
 
-    this->write_regs.clear();
-    for (uint32_t i = 0; i < package.write_regs.size(); i++) {
-        this->write_regs.push_back(package.write_regs[i]);
+
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
+        this->write_regs[i] = package.write_regs[i];
     }
 
     this->uop_operation = package.uop_operation;
     this->memory_address = package.memory_address;
     this->memory_size = package.memory_size;
-
 
     /// SINUCA Control Variables
     this->opcode_number = package.opcode_number;
@@ -74,16 +71,13 @@ bool uop_package_t::operator==(const uop_package_t &package) {
     if (this->opcode_address != package.opcode_address) return FAIL;
     if (this->opcode_size != package.opcode_size) return FAIL;
 
-    if (this->read_regs.size() != package.read_regs.size()) return FAIL;
-    for (uint32_t i = 0; i < package.read_regs.size(); i++) {
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
         if (this->read_regs[i] != package.read_regs[i]) return FAIL;
     }
 
-    if (this->write_regs.size() != package.write_regs.size()) return FAIL;
-    for (uint32_t i = 0; i < package.write_regs.size(); i++) {
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
         if (this->write_regs[i] != package.write_regs[i]) return FAIL;
     }
-
 
     if (this->uop_operation != package.uop_operation) return FAIL;
     if (this->memory_address != package.memory_address) return FAIL;
@@ -110,86 +104,13 @@ void uop_package_t::opcode_to_uop(uint64_t uop_number, instruction_operation_t u
     this->opcode_address = opcode.opcode_address;
     this->opcode_size = opcode.opcode_size;
 
-    this->read_regs.clear();
-    for (uint32_t i = 0; i < opcode.read_regs.size(); i++) {
-        this->read_regs.push_back(opcode.read_regs[i]);
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
+        this->read_regs[i] = opcode.read_regs[i];
     }
 
-    this->write_regs.clear();
-    for (uint32_t i = 0; i < opcode.write_regs.size(); i++) {
-        this->write_regs.push_back(opcode.write_regs[i]);
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
+        this->write_regs[i] = opcode.write_regs[i];
     }
-
-/*
-    /// ========================================================================
-    /// Optimistic about the Registers dependency
-    switch (uop_operation) {
-        /// NOP
-        case INSTRUCTION_OPERATION_NOP:
-        /// INTEGERS
-        case INSTRUCTION_OPERATION_INT_ALU:
-        case INSTRUCTION_OPERATION_INT_MUL:
-        case INSTRUCTION_OPERATION_INT_DIV:
-        /// FLOAT POINT
-        case INSTRUCTION_OPERATION_FP_ALU:
-        case INSTRUCTION_OPERATION_FP_MUL:
-        case INSTRUCTION_OPERATION_FP_DIV:
-        /// BRANCHES
-        case INSTRUCTION_OPERATION_BRANCH:
-        /// NOT INDENTIFIED
-        case INSTRUCTION_OPERATION_OTHER:
-            /// Read all except Base and Index
-            /// Write all except Base and Index
-            this->read_regs.clear();
-            for (uint32_t i = 0; i < opcode.read_regs.size(); i++) {
-                if (opcode.read_regs[i] != opcode.base_reg && opcode.read_regs[i] != opcode.index_reg) {
-                    this->read_regs.push_back(opcode.read_regs[i]);
-                }
-            }
-
-            this->write_regs.clear();
-            for (uint32_t i = 0; i < opcode.write_regs.size(); i++) {
-                if (opcode.write_regs[i] != opcode.base_reg && opcode.write_regs[i] != opcode.index_reg) {
-                    this->write_regs.push_back(opcode.write_regs[i]);
-                }
-            }
-
-        break;
-
-        /// MEMORY OPERATIONS
-        case INSTRUCTION_OPERATION_MEM_LOAD:
-            /// Read only Base and Index
-            /// Write all except Base and Index
-            this->read_regs.clear();
-            this->read_regs.push_back(opcode.base_reg);
-            this->read_regs.push_back(opcode.index_reg);
-
-            this->write_regs.clear();
-            for (uint32_t i = 0; i < opcode.write_regs.size(); i++) {
-                if (opcode.write_regs[i] != opcode.base_reg && opcode.write_regs[i] != opcode.index_reg) {
-                    this->write_regs.push_back(opcode.write_regs[i]);
-                }
-            }
-        break;
-
-        case INSTRUCTION_OPERATION_MEM_STORE:
-            /// Read all
-            /// Write none
-            this->read_regs.clear();
-            for (uint32_t i = 0; i < opcode.read_regs.size(); i++) {
-                this->read_regs.push_back(opcode.read_regs[i]);
-            }
-
-            this->write_regs.clear();
-        break;
-
-        /// SYNCRONIZATION
-        case INSTRUCTION_OPERATION_BARRIER:
-            ERROR_PRINTF("Invalid instruction BARRIER being decoded.\n");
-        break;
-
-    }
-*/
 
     this->uop_operation = uop_operation;
     this->memory_address = memory_address;
@@ -211,13 +132,17 @@ void uop_package_t::package_clean() {
     this->opcode_address = 0;
     this->opcode_size = 0;
 
-    this->read_regs.clear();
-    this->write_regs.clear();
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
+        this->read_regs[i] = POSITION_FAIL;
+    }
+
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
+        this->write_regs[i] = POSITION_FAIL;
+    }
 
     this->uop_operation = INSTRUCTION_OPERATION_NOP;
     this->memory_address = 0;
     this->memory_size = 0;
-
 
     /// SINUCA Control Variables
     this->opcode_number = 0;
@@ -277,13 +202,13 @@ std::string uop_package_t::content_to_string() {
     PackageString = PackageString + " READY:" + utils_t::uint64_to_char(this->ready_cycle);
 
     PackageString = PackageString + " | RRegs[";
-    for (uint32_t i = 0; i < this->read_regs.size(); i++) {
-        PackageString = PackageString + " " + utils_t::uint32_to_char(this->read_regs[i]);
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
+        PackageString = PackageString + " " + utils_t::uint32_to_string(this->read_regs[i]);
     }
 
     PackageString = PackageString + " ] | WRegs[";
-    for (uint32_t i = 0; i < this->write_regs.size(); i++) {
-        PackageString = PackageString + " " + utils_t::uint32_to_char(this->write_regs[i]);
+    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
+        PackageString = PackageString + " " + utils_t::uint32_to_string(this->write_regs[i]);
     }
     PackageString = PackageString + " ]";
 
