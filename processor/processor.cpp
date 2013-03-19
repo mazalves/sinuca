@@ -1541,6 +1541,10 @@ void processor_t::stage_commit() {
             ERROR_ASSERT_PRINTF(uint32_t(position_buffer) == this->reorder_buffer_position_start, "Commiting different from the position start\n");
             this->rob_remove();
         }
+        /// Could not commit the older, then stop looking for ready uops
+        else {
+            break;
+        }
     }
 };
 

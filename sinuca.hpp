@@ -50,7 +50,6 @@
 #include <limits>
 #include <vector>
 #include <string>
-#include <boost/circular_buffer.hpp>
 
 /// Embedded Libraries
 #include "./extra_libs/include/zlib.h"

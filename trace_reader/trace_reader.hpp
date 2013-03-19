@@ -31,9 +31,9 @@
   */
 class trace_reader_t {
     private:
-        std::ifstream StaticTraceFile;
-        std::ifstream *DynamicTraceFile;
-        std::ifstream *MemoryTraceFile;
+        FILE * StaticTraceFile;
+        FILE **DynamicTraceFile;
+        FILE **MemoryTraceFile;
 
         gzFile gzStaticTraceFile;
         gzFile *gzDynamicTraceFile;
@@ -48,6 +48,12 @@ class trace_reader_t {
         uint32_t *actual_bbl;
         uint32_t *actual_bbl_opcode;
         bool is_compressed_trace_file;
+
+        /// Used to handle the trace reader
+        char *line_dynamic;
+        char *sync_dynamic;
+        char *line_static;
+        char *line_memory;
 
     public:
         /// ====================================================================
@@ -67,7 +73,7 @@ class trace_reader_t {
         void gzgetline(const gzFile& file, char* new_line);
         void gzgetline(const gzFile& file, std::string& new_line);
         uint32_t trace_next_dynamic(uint32_t cpuid, sync_t *sync_found);
-        std::string trace_next_memory(uint32_t cpuid);
+        void trace_next_memory(uint32_t cpuid);
         bool trace_fetch(uint32_t cpuid, opcode_package_t *m);
         void generate_static_dictionary();
         void check_static_dictionary();
