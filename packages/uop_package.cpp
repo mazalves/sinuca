@@ -203,12 +203,16 @@ std::string uop_package_t::content_to_string() {
 
     PackageString = PackageString + " | RRegs[";
     for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-        PackageString = PackageString + " " + utils_t::uint32_to_string(this->read_regs[i]);
+        if (this->read_regs[i] >= 0) {
+            PackageString = PackageString + " " + utils_t::uint32_to_string(this->read_regs[i]);
+        }
     }
 
     PackageString = PackageString + " ] | WRegs[";
     for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-        PackageString = PackageString + " " + utils_t::uint32_to_string(this->write_regs[i]);
+        if (this->write_regs[i] >= 0) {
+            PackageString = PackageString + " " + utils_t::uint32_to_string(this->write_regs[i]);
+        }
     }
     PackageString = PackageString + " ]";
 

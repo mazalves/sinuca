@@ -276,7 +276,6 @@ class processor_t : public interconnection_interface_t {
         void stage_rename();
         void stage_dispatch();
         void stage_execution();
-        void solve_data_forward(reorder_buffer_line_t *rob_line);
         void stage_commit();
 
         inline bool cmp_fetch_block(uint64_t memory_addressA, uint64_t memory_addressB) {
@@ -296,6 +295,8 @@ class processor_t : public interconnection_interface_t {
         }
 
         bool check_if_memory_overlaps(uint64_t memory_address1, uint32_t size1, uint64_t memory_address2, uint32_t size2);
+        void make_memory_dependencies(reorder_buffer_line_t *new_rob_line, memory_order_buffer_line_t *input_array, uint32_t size_array);
+        void solve_data_forward(reorder_buffer_line_t *rob_line);
 
         /// Fetch Buffer =======================================================
         int32_t fetch_buffer_insert();
