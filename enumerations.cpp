@@ -251,7 +251,7 @@ const char *get_enum_inclusiveness_char(inclusiveness_t type) {
 const char *get_enum_prefetch_policy_char(prefetch_policy_t type) {
     switch (type) {
         case PREFETCHER_STRIDE:     return "STRIDE"; break;
-		case PREFETCHER_STREAM:		return "STREAM"; break;
+        case PREFETCHER_STREAM:     return "STREAM"; break;
         case PREFETCHER_DISABLE:    return "DISABLE"; break;
     };
     ERROR_PRINTF("Wrong PREFETCH_POLICY\n");
@@ -365,13 +365,27 @@ const char *get_enum_memory_controller_mask_char(memory_controller_mask_t type) 
     return "FAIL";
 };
 
+/// ============================================================================
+/// Memory controller commands to the DRAM
+const char *get_enum_memory_controller_command_char(memory_controller_command_t type){
+    switch (type) {
+        case MEMORY_CONTROLLER_COMMAND_PRECHARGE:       return "PRECHARGE"; break;
+        case MEMORY_CONTROLLER_COMMAND_ROW_ACCESS:      return "ROW_ACCESS"; break;
+        case MEMORY_CONTROLLER_COMMAND_COLUMN_READ:     return "COLUMN_READ"; break;
+        case MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE:    return "COLUMN_WRITE"; break;
+
+        case MEMORY_CONTROLLER_COMMAND_NUMBER:          return "NUMBER"; break;
+    };
+    ERROR_PRINTF("Wrong MEMORY_CONTROLLER_COMMAND\n");
+    return "FAIL";
+};
 
 /// ============================================================================
 /// Policy to set the priority during the Row Buffer access
 const char *get_enum_request_priority_char(request_priority_t type) {
     switch (type) {
-        case REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST:     return "ROW_BUFFER_HITS_FIRST"; break;
-        case REQUEST_PRIORITY_FIRST_COME_FIRST_SERVE:     return "FIRST_COME_FIRST_SERVE"; break;
+        case REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST:    return "ROW_BUFFER_HITS_FIRST"; break;
+        case REQUEST_PRIORITY_FIRST_COME_FIRST_SERVE:   return "FIRST_COME_FIRST_SERVE"; break;
     };
     ERROR_PRINTF("Wrong MEMORY_CONTROLLER_REQUEST_PRIORITY\n");
     return "FAIL";
@@ -381,8 +395,8 @@ const char *get_enum_request_priority_char(request_priority_t type) {
 /// Policy to give privilege of some operations over others
 const char *get_enum_write_priority_char(write_priority_t type) {
     switch (type) {
-        case WRITE_PRIORITY_SERVICE_AT_NO_READ:  return "SERVICE_AT_NO_READ"; break;
-        case WRITE_PRIORITY_DRAIN_WHEN_FULL:     return "DRAIN_WHEN_FULL"; break;
+        case WRITE_PRIORITY_SERVICE_AT_NO_READ:     return "SERVICE_AT_NO_READ"; break;
+        case WRITE_PRIORITY_DRAIN_WHEN_FULL:        return "DRAIN_WHEN_FULL"; break;
     };
     ERROR_PRINTF("Wrong write_priority\n");
     return "FAIL";

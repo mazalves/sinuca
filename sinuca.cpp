@@ -208,7 +208,7 @@ int main(int argc, char **argv) {
     /// Start CLOCK
     while (sinuca_engine.get_is_simulation_allocated() && sinuca_engine.alive()) {
 
-        /// Spawn Warmup
+        /// Spawn Warmup - is_warm_up is set inside the trace_reader
         if (sinuca_engine.is_warm_up == true) {
             SINUCA_PRINTF("WARM-UP END - CYCLE: %"PRIu64"\n", sinuca_engine.get_global_cycle() );
             sinuca_engine.global_reset_statistics();

@@ -72,7 +72,7 @@ class cache_memory_t : public interconnection_interface_t {
         memory_package_t *mshr_buffer;  /// Buffer of Missed Requests
         uint32_t mshr_buffer_size;
 
-        container_ptr_memory_package_t *mshr_born_ordered;
+        container_ptr_memory_package_t mshr_born_ordered;
 
         uint64_t send_ans_ready_cycle;
         uint64_t send_rqst_ready_cycle;
@@ -198,6 +198,7 @@ class cache_memory_t : public interconnection_interface_t {
 
 
         void insert_mshr_born_ordered(memory_package_t* package);
+        int32_t allocate_request(memory_package_t* package);
         int32_t allocate_copyback(memory_package_t* package);
         int32_t allocate_prefetch(memory_package_t* package);
 

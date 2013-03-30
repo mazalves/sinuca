@@ -936,15 +936,6 @@ void sinuca_engine_t::initialize_memory_controller() {
             memory_controller_parameters.push_back("INTERCONNECTION_WIDTH");
             this->memory_controller_array[i]->set_interconnection_width( cfg_memory_controller[ memory_controller_parameters.back() ] );
 
-            memory_controller_parameters.push_back("BUS_WIDTH");
-            this->memory_controller_array[i]->set_bus_width( cfg_memory_controller[ memory_controller_parameters.back() ] );
-
-            memory_controller_parameters.push_back("BUS_FREQUENCY");
-            this->memory_controller_array[i]->set_bus_frequency( cfg_memory_controller[ memory_controller_parameters.back() ] );
-
-            memory_controller_parameters.push_back("CORE_TO_BUS_CLOCK_RATIO");
-            this->memory_controller_array[i]->set_core_to_bus_clock_ratio( cfg_memory_controller[ memory_controller_parameters.back() ] );
-
             memory_controller_parameters.push_back("ADDRESS_MASK");
             if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_CHANNEL_CTRL_COLUMN") ==  0) {
                 this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLUMN);
@@ -969,20 +960,28 @@ void sinuca_engine_t::initialize_memory_controller() {
             memory_controller_parameters.push_back("TOTAL_CONTROLLERS");
             this->memory_controller_array[i]->set_total_controllers( cfg_memory_controller[ memory_controller_parameters.back() ] );
 
+
+            memory_controller_parameters.push_back("MSHR_BUFFER_REQUEST_RESERVED_SIZE");
+            this->memory_controller_array[i]->set_mshr_buffer_request_reserved_size( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("MSHR_BUFFER_COPYBACK_RESERVED_SIZE");
+            this->memory_controller_array[i]->set_mshr_buffer_copyback_reserved_size( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("MSHR_BUFFER_PREFETCH_RESERVED_SIZE");
+            this->memory_controller_array[i]->set_mshr_buffer_prefetch_reserved_size( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+
             memory_controller_parameters.push_back("CHANNELS_PER_CONTROLLER");
             this->memory_controller_array[i]->set_channels_per_controller( cfg_memory_controller[ memory_controller_parameters.back() ] );
 
-            memory_controller_parameters.push_back("BANKS_PER_CHANNEL");
-            this->memory_controller_array[i]->set_banks_per_channel( cfg_memory_controller[ memory_controller_parameters.back() ] );
+            memory_controller_parameters.push_back("BANK_PER_CHANNEL");
+            this->memory_controller_array[i]->set_bank_per_channel( cfg_memory_controller[ memory_controller_parameters.back() ] );
 
-            memory_controller_parameters.push_back("READ_BUFFER_SIZE");
-            this->memory_controller_array[i]->set_read_buffer_size( cfg_memory_controller[ memory_controller_parameters.back() ] );
+            memory_controller_parameters.push_back("BANK_BUFFER_SIZE");
+            this->memory_controller_array[i]->set_bank_buffer_size( cfg_memory_controller[ memory_controller_parameters.back() ] );
 
-            memory_controller_parameters.push_back("WRITE_BUFFER_SIZE");
-            this->memory_controller_array[i]->set_write_buffer_size( cfg_memory_controller[ memory_controller_parameters.back() ] );
-
-            memory_controller_parameters.push_back("ROW_BUFFER_SIZE");
-            this->memory_controller_array[i]->set_row_buffer_size( cfg_memory_controller[ memory_controller_parameters.back() ] );
+            memory_controller_parameters.push_back("BANK_ROW_BUFFER_SIZE");
+            this->memory_controller_array[i]->set_bank_row_buffer_size( cfg_memory_controller[ memory_controller_parameters.back() ] );
 
             memory_controller_parameters.push_back("BANK_SELECTION_POLICY");
             if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "RANDOM") ==  0) {
@@ -993,20 +992,6 @@ void sinuca_engine_t::initialize_memory_controller() {
             }
             else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "BUFFER_LEVEL") ==  0) {
                 this->memory_controller_array[i]->set_bank_selection_policy(SELECTION_BUFFER_LEVEL);
-            }
-            else {
-                ERROR_PRINTF("MAIN MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_memory_controller[ memory_controller_parameters.back() ].c_str(), memory_controller_parameters.back());
-            }
-
-            memory_controller_parameters.push_back("CHANNEL_SELECTION_POLICY");
-            if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "RANDOM") ==  0) {
-                this->memory_controller_array[i]->set_channel_selection_policy(SELECTION_RANDOM);
-            }
-            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROUND_ROBIN") ==  0) {
-                this->memory_controller_array[i]->set_channel_selection_policy(SELECTION_ROUND_ROBIN);
-            }
-            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "BUFFER_LEVEL") ==  0) {
-                this->memory_controller_array[i]->set_channel_selection_policy(SELECTION_BUFFER_LEVEL);
             }
             else {
                 ERROR_PRINTF("MAIN MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_memory_controller[ memory_controller_parameters.back() ].c_str(), memory_controller_parameters.back());
@@ -1034,17 +1019,58 @@ void sinuca_engine_t::initialize_memory_controller() {
                 ERROR_PRINTF("MAIN MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_memory_controller[ memory_controller_parameters.back() ].c_str(), memory_controller_parameters.back());
             }
 
-            memory_controller_parameters.push_back("RP_LATENCY");
-            this->memory_controller_array[i]->set_RP_latency( cfg_memory_controller[ memory_controller_parameters.back() ] );
+            /// DRAM configuration
 
-            memory_controller_parameters.push_back("RCD_LATENCY");
-            this->memory_controller_array[i]->set_RCD_latency( cfg_memory_controller[ memory_controller_parameters.back() ] );
+            memory_controller_parameters.push_back("BUS_FREQUENCY");
+            this->memory_controller_array[i]->set_bus_frequency( cfg_memory_controller[ memory_controller_parameters.back() ] );
 
-            memory_controller_parameters.push_back("CAS_LATENCY");
-            this->memory_controller_array[i]->set_CAS_latency( cfg_memory_controller[ memory_controller_parameters.back() ] );
+            memory_controller_parameters.push_back("BURST_LENGTH");
+            this->memory_controller_array[i]->set_burst_length( cfg_memory_controller[ memory_controller_parameters.back() ] );
 
-            memory_controller_parameters.push_back("RAS_LATENCY");
-            this->memory_controller_array[i]->set_RAS_latency( cfg_memory_controller[ memory_controller_parameters.back() ] );
+            memory_controller_parameters.push_back("CORE_TO_BUS_CLOCK_RATIO");
+            this->memory_controller_array[i]->set_core_to_bus_clock_ratio( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            /// DRAM timming configuration
+
+            memory_controller_parameters.push_back("TIMING_AL");
+            this->memory_controller_array[i]->set_timing_al( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("TIMING_CAS");
+            this->memory_controller_array[i]->set_timing_cas( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("TIMING_CCD");
+            this->memory_controller_array[i]->set_timing_ccd( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("TIMING_CWD");
+            this->memory_controller_array[i]->set_timing_cwd( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("TIMING_FAW");
+            this->memory_controller_array[i]->set_timing_faw( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("TIMING_RAS");
+            this->memory_controller_array[i]->set_timing_ras( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("TIMING_RC");
+            this->memory_controller_array[i]->set_timing_rc( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("TIMING_RCD");
+            this->memory_controller_array[i]->set_timing_rcd( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("TIMING_RP");
+            this->memory_controller_array[i]->set_timing_rp( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("TIMING_RRD");
+            this->memory_controller_array[i]->set_timing_rrd( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("TIMING_RTP");
+            this->memory_controller_array[i]->set_timing_rtp( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("TIMING_WR");
+            this->memory_controller_array[i]->set_timing_wr( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
+            memory_controller_parameters.push_back("TIMING_WTR");
+            this->memory_controller_array[i]->set_timing_wtr( cfg_memory_controller[ memory_controller_parameters.back() ] );
+
 
             this->memory_controller_array[i]->set_max_ports(1);
 

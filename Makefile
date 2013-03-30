@@ -24,16 +24,16 @@ RM = rm -f
 # ~ LDFLAGS = -ggdb  -pg
 
 ## DEBUG DEEP FAST
-# ~ FLAGS =  -Wall -O2 -ggdb  -Werror -lefence
-# ~ LDFLAGS = -ggdb  -lefence
+FLAGS =  -Wall -O2 -ggdb  -Werror -lefence
+LDFLAGS = -ggdb  -lefence
 
 ## DEBUG NORMAL
 # ~ FLAGS =  -Wall -O1 -ggdb -Werror
 # ~ LDFLAGS = -ggdb
 
 # ~ ## EXECUTION
-FLAGS =   -O3 -ggdb -Wall -Wextra -Werror
-LDFLAGS = -ggdb
+# ~ FLAGS =   -O3 -ggdb -Wall -Wextra -Werror
+# ~ LDFLAGS = -ggdb
 
 ########################################################
 # ~ MACHINE=$(shell uname -m)
@@ -85,7 +85,8 @@ SRC_LINE_USAGE_PREDICTOR =	line_usage_predictor/line_usage_predictor.cpp \
 
 SRC_CACHE_MEMORY =	cache_memory/cache_memory.cpp
 
-SRC_MAIN_MEMORY =   main_memory/memory_controller.cpp
+SRC_MAIN_MEMORY =   main_memory/memory_channel.cpp \
+					main_memory/memory_controller.cpp
 
 SRC_CORE = sinuca.cpp sinuca_engine.cpp sinuca_configurator.cpp \
 			$(SRC_BASIC) $(SRC_PACKAGE) $(SRC_TRACE_READER) \

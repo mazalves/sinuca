@@ -56,6 +56,7 @@ class sinuca_engine_t {
         /// Control the line size for all components
         uint32_t global_line_size;
         uint64_t global_offset_bits_mask;
+        uint64_t global_not_offset_bits_mask;
         /// Control if all the allocation is ready
         bool is_simulation_allocated;
         /// Control for Run Time Debug
@@ -125,7 +126,6 @@ class sinuca_engine_t {
         void global_periodic_check();
         void global_clock();
 
-
         INSTANTIATE_GET_SET(interconnection_interface_t**, interconnection_interface_array);
         INSTANTIATE_GET_SET(processor_t**, processor_array);
         INSTANTIATE_GET_SET(cache_memory_t**, cache_memory_array);
@@ -149,6 +149,11 @@ class sinuca_engine_t {
         uint32_t get_global_line_size();
 
         INSTANTIATE_GET_SET(uint64_t, global_offset_bits_mask);
+        INSTANTIATE_GET_SET(uint64_t, global_not_offset_bits_mask);
+
+        inline bool global_cmp_tag_index_bank(uint64_t memory_addressA, uint64_t memory_addressB) {
+            return (memory_addressA & this->global_not_offset_bits_mask) == (memory_addressB & this->global_not_offset_bits_mask);
+        }
 
 
         /// ====================================================================

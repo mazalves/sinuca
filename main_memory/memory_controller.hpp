@@ -29,32 +29,50 @@ class memory_controller_t : public interconnection_interface_t {
         memory_controller_mask_t address_mask_type;
         uint32_t line_size;
 
-        uint32_t bus_width;
-        uint32_t bus_frequency;
-        uint32_t core_to_bus_clock_ratio;
-
         uint32_t controller_number;
         uint32_t total_controllers;
+
+        uint32_t mshr_buffer_request_reserved_size;
+        uint32_t mshr_buffer_copyback_reserved_size;
+        uint32_t mshr_buffer_prefetch_reserved_size;
+
         uint32_t channels_per_controller;
-        uint32_t banks_per_channel;
-        uint32_t read_buffer_size;
-        uint32_t write_buffer_size;
-        uint32_t row_buffer_size;
+        uint32_t bank_per_channel;
+        uint32_t bank_buffer_size;
+        selection_t bank_selection_policy;
+        uint32_t bank_row_buffer_size;
 
         request_priority_t request_priority_policy;
         write_priority_t write_priority_policy;
 
-        selection_t bank_selection_policy;
-        selection_t channel_selection_policy;
+        /// DRAM configuration
+        uint32_t bus_frequency; // DRAM to core bus frequency
+        uint32_t burst_length;  // DDR1 has a BL=2, DDR2 has a BL=4, DDR3 has a BL=8
+        uint32_t core_to_bus_clock_ratio;  // Ratio between PROCESSOR and BUS frequency
 
-        uint32_t RP_latency;
-        uint32_t RCD_latency;
-        uint32_t CAS_latency;
-        uint32_t RAS_latency;
+        /// All parameters given in nCK
+        /// 1 nCK = (IO Bus Cycle)
+        uint32_t timing_al;     // added latency for column accesses
+        uint32_t timing_cas;    // column access strobe (cl) latency
+        uint32_t timing_ccd;    // column to column delay
+        uint32_t timing_cwd;    // column write delay (cwl)
+        uint32_t timing_faw;    // four (row) activation window
+        uint32_t timing_ras;    // row access strobe
+        uint32_t timing_rc;     // row cycle
+        uint32_t timing_rcd;    // row to column comand delay
+        uint32_t timing_rp;     // row precharge
+        uint32_t timing_rrd;    // row activation to row activation delay
+        uint32_t timing_rtp;    // read to precharge
+        uint32_t timing_wr;     // write recovery time
+        uint32_t timing_wtr;    // write to read delay time
 
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
+        uint64_t column_bits_mask;
+        uint64_t not_column_bits_mask;
+        uint64_t column_bits_shift;
+
         uint64_t row_bits_mask;
         uint64_t row_bits_shift;
 
@@ -67,28 +85,20 @@ class memory_controller_t : public interconnection_interface_t {
         uint64_t controller_bits_mask;
         uint64_t controller_bits_shift;
 
-        uint64_t column_bits_mask;
-        uint64_t not_column_bits_mask;
-        uint64_t column_bits_shift;
 
-        uint32_t bus_latency;          /// Ready to send new CAS signal
-        uint64_t *bus_ready_cycle;          /// Ready to send new CAS signal
-        uint64_t *send_ready_cycle;         /// Ready to send new READ
-        uint64_t *recv_read_ready_cycle;    /// Ready to receive new READ
-        uint64_t *recv_write_ready_cycle;   /// Ready to receive new WRITE
+        uint64_t send_ready_cycle;         /// Ready to send new Answer
+        uint64_t recv_ready_cycle;         /// Ready to receive new Request
 
-        uint32_t *last_bank_selected;
-        uint32_t last_channel_selected;
+        uint32_t mshr_buffer_size;
+        memory_package_t *mshr_buffer;
+        container_ptr_memory_package_t mshr_born_ordered;
+        uint32_t timing_burst;
         memory_channel_t *channels;
 
-        memory_package_t *fill_buffer;
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
         uint64_t stat_accesses;
-        uint64_t stat_open_new_row;
-        uint64_t stat_full_read_buffer;
-        uint64_t stat_full_write_buffer;
 
         uint64_t stat_instruction_completed;
         uint64_t stat_read_completed;
@@ -115,6 +125,10 @@ class memory_controller_t : public interconnection_interface_t {
         uint64_t stat_min_copyback_wait_time;
         uint64_t stat_max_copyback_wait_time;
         uint64_t stat_acumulated_copyback_wait_time;
+
+        uint64_t stat_full_mshr_buffer_request;
+        uint64_t stat_full_mshr_buffer_copyback;
+        uint64_t stat_full_mshr_buffer_prefetch;
 
     public:
         /// ====================================================================
@@ -146,77 +160,74 @@ class memory_controller_t : public interconnection_interface_t {
         void print_configuration();
         /// ====================================================================
 
-        /// Selection strategies
-        uint32_t selection_bank_random(uint32_t total_buffers);
-        uint32_t selection_bank_round_robin(uint32_t channel, uint32_t total_buffers);
-
-        uint32_t selection_channel_random(uint32_t total_channels);
-        uint32_t selection_channel_round_robin(uint32_t total_channels);
-
         /// MASKS
         void set_masks();
 
-        inline uint64_t get_row(uint64_t addr) {
-            return (addr & this->row_bits_mask) >> this->row_bits_shift;
-        }
-
-        inline uint64_t get_bank(uint64_t addr) {
-            return (addr & this->bank_bits_mask) >> this->bank_bits_shift;
+        inline uint64_t get_controller(uint64_t addr) {
+            return (addr & this->controller_bits_mask) >> this->controller_bits_shift;
         }
 
         inline uint64_t get_channel(uint64_t addr) {
             return (addr & this->channel_bits_mask) >> this->channel_bits_shift;
         }
 
-        inline uint64_t get_controller(uint64_t addr) {
-            return (addr & this->controller_bits_mask) >> this->controller_bits_shift;
-        }
 
-        inline uint64_t get_column(uint64_t addr) {
-            return (addr & this->column_bits_mask) >> this->column_bits_shift;
-        }
-
-        inline bool cmp_row_bank_channel(uint64_t memory_addressA, uint64_t memory_addressB) {
-            return (memory_addressA & this->not_column_bits_mask) == (memory_addressB & this->not_column_bits_mask);
-        }
-
-        void find_cas_and_ras(memory_package_t *input_buffer, uint32_t input_buffer_size, memory_package_t *row_buffer, int32_t& cas_position, int32_t& ras_position);
+        void insert_mshr_born_ordered(memory_package_t* package);
+        int32_t allocate_request(memory_package_t* package);
+        int32_t allocate_copyback(memory_package_t* package);
+        int32_t allocate_prefetch(memory_package_t* package);
 
         INSTANTIATE_GET_SET(memory_controller_mask_t, address_mask_type)
         INSTANTIATE_GET_SET(uint32_t, line_size)
 
-        INSTANTIATE_GET_SET(uint32_t, bus_width)
-        INSTANTIATE_GET_SET(uint32_t, bus_frequency)
-        INSTANTIATE_GET_SET(uint32_t, core_to_bus_clock_ratio)
-
         INSTANTIATE_GET_SET(uint32_t, controller_number)
         INSTANTIATE_GET_SET(uint32_t, total_controllers)
-        INSTANTIATE_GET_SET(uint32_t, channels_per_controller)
-        INSTANTIATE_GET_SET(uint32_t, banks_per_channel)
-        INSTANTIATE_GET_SET(uint32_t, read_buffer_size)
-        INSTANTIATE_GET_SET(uint32_t, write_buffer_size)
-        INSTANTIATE_GET_SET(uint32_t, row_buffer_size)
 
+        INSTANTIATE_GET_SET(uint32_t, mshr_buffer_request_reserved_size)
+        INSTANTIATE_GET_SET(uint32_t, mshr_buffer_copyback_reserved_size)
+        INSTANTIATE_GET_SET(uint32_t, mshr_buffer_prefetch_reserved_size)
+        INSTANTIATE_GET_SET(uint32_t, mshr_buffer_size)
+
+        INSTANTIATE_GET_SET(uint32_t, channels_per_controller)
+        INSTANTIATE_GET_SET(uint32_t, bank_per_channel)
+
+        INSTANTIATE_GET_SET(uint32_t, bank_buffer_size)
         INSTANTIATE_GET_SET(selection_t, bank_selection_policy)
-        INSTANTIATE_GET_SET(selection_t, channel_selection_policy)
+        INSTANTIATE_GET_SET(uint32_t, bank_row_buffer_size)
 
         INSTANTIATE_GET_SET(request_priority_t, request_priority_policy)
         INSTANTIATE_GET_SET(write_priority_t, write_priority_policy)
 
-        INSTANTIATE_GET_SET(uint32_t, bus_latency)
+        /// DRAM configuration
+        INSTANTIATE_GET_SET(uint32_t, bus_frequency)
+        INSTANTIATE_GET_SET(uint32_t, burst_length)
+        INSTANTIATE_GET_SET(uint32_t, core_to_bus_clock_ratio)
 
-        INSTANTIATE_GET_SET(uint32_t, RP_latency)
-        INSTANTIATE_GET_SET(uint32_t, RCD_latency)
-        INSTANTIATE_GET_SET(uint32_t, CAS_latency)
-        INSTANTIATE_GET_SET(uint32_t, RAS_latency)
+        /// All parameters given in nCK
+        /// 1 nCK = (IO Bus Cycle)
+        INSTANTIATE_GET_SET(uint32_t, timing_burst)
+        INSTANTIATE_GET_SET(uint32_t, timing_al)
+        INSTANTIATE_GET_SET(uint32_t, timing_cas)
+        INSTANTIATE_GET_SET(uint32_t, timing_ccd)
+        INSTANTIATE_GET_SET(uint32_t, timing_cwd)
+        INSTANTIATE_GET_SET(uint32_t, timing_faw)
+        INSTANTIATE_GET_SET(uint32_t, timing_ras)
+        INSTANTIATE_GET_SET(uint32_t, timing_rc)
+        INSTANTIATE_GET_SET(uint32_t, timing_rcd)
+        INSTANTIATE_GET_SET(uint32_t, timing_rp)
+        INSTANTIATE_GET_SET(uint32_t, timing_rrd)
+        INSTANTIATE_GET_SET(uint32_t, timing_rtp)
+        INSTANTIATE_GET_SET(uint32_t, timing_wr)
+        INSTANTIATE_GET_SET(uint32_t, timing_wtr)
 
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_accesses)
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_open_new_row)
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_read_buffer)
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_write_buffer)
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_buffer_request);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_buffer_copyback);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_buffer_prefetch);
 
         INSTANTIATE_GET_SET(uint64_t, stat_instruction_completed)
         INSTANTIATE_GET_SET(uint64_t, stat_read_completed)

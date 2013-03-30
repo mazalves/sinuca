@@ -1,4 +1,4 @@
-//==============================================================================
+/// ============================================================================
 //
 // Copyright (C) 2010, 2011, 2012
 // Marco Antonio Zanata Alves
@@ -21,7 +21,7 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
-//==============================================================================
+/// ============================================================================
 #include "../sinuca.hpp"
 
 #ifdef ROUTER_DEBUG
@@ -30,7 +30,7 @@
     #define ROUTER_DEBUG_PRINTF(...)
 #endif
 
-//==============================================================================
+/// ============================================================================
 interconnection_router_t::interconnection_router_t() {
     this->set_type_component(COMPONENT_INTERCONNECTION_ROUTER);
 
@@ -62,7 +62,7 @@ interconnection_router_t::~interconnection_router_t() {
     utils_t::template_delete_array<uint64_t>(stat_transmitted_package_size);
 };
 
-//==============================================================================
+/// ============================================================================
 void interconnection_router_t::allocate() {
     this->recv_ready_cycle = utils_t::template_allocate_initialize_array<uint64_t>(this->get_max_ports(), 0);
 
@@ -74,57 +74,8 @@ void interconnection_router_t::allocate() {
     this->stat_transmitted_package_size = utils_t::template_allocate_initialize_array<uint64_t>(sinuca_engine.get_global_line_size() + 1, 0);
 };
 
-//==============================================================================
-int32_t interconnection_router_t::input_buffer_insert(uint32_t port) {
-    int32_t valid_position = POSITION_FAIL;
-    /// There is free space.
-    if (this->input_buffer_position_used[port] < this->input_buffer_size) {
-        valid_position = this->input_buffer_position_end[port];
-        this->input_buffer_position_used[port]++;
-        this->input_buffer_position_end[port]++;
-        if (this->input_buffer_position_end[port] >= this->input_buffer_size) {
-            this->input_buffer_position_end[port] = 0;
-        }
-    }
-    return valid_position;
-};
 
-//==============================================================================
-void interconnection_router_t::input_buffer_remove(uint32_t port) {
-    ERROR_ASSERT_PRINTF(this->input_buffer_position_used[port] > 0, "Trying to remove from router with no used position.\n");
-
-    this->input_buffer[port][this->input_buffer_position_start[port]].package_clean();
-
-    this->input_buffer_position_used[port]--;
-    this->input_buffer_position_start[port]++;
-    if (this->input_buffer_position_start[port] >= this->input_buffer_size) {
-        this->input_buffer_position_start[port] = 0;
-    }
-};
-
-//==============================================================================
-void interconnection_router_t::input_buffer_reinsert(uint32_t port) {
-    ERROR_ASSERT_PRINTF(this->input_buffer_position_used[port] > 0, "Trying to remove from ROB with no used position.\n");
-
-    /// There is free space. Make a copy
-    if (this->input_buffer_position_used[port] < this->input_buffer_size) {
-        input_buffer[port][this->input_buffer_position_end[port]] = input_buffer[port][this->input_buffer_position_start[port]];
-        this->input_buffer[port][this->input_buffer_position_start[port]].package_clean();
-    }
-
-    /// Change the pointers
-    this->input_buffer_position_start[port]++;
-    if (this->input_buffer_position_start[port] >= this->input_buffer_size) {
-        this->input_buffer_position_start[port] = 0;
-    }
-
-    this->input_buffer_position_end[port]++;
-    if (this->input_buffer_position_end[port] >= this->input_buffer_size) {
-        this->input_buffer_position_end[port] = 0;
-    }
-};
-
-//==============================================================================
+/// ============================================================================
 void interconnection_router_t::clock(uint32_t subcycle) {
     if (subcycle != 0) return;
     ROUTER_DEBUG_PRINTF("==================== ID(%u) ",this->get_id());
@@ -138,15 +89,15 @@ void interconnection_router_t::clock(uint32_t subcycle) {
         /// Select a port to be activated.
         switch (this->get_selection_policy()) {
             case SELECTION_RANDOM:
-                port = this->selection_random(this->get_max_ports());
+                port = this->selection_random();
             break;
 
             case SELECTION_ROUND_ROBIN:
-                port = this->selection_round_robin(this->get_max_ports());
+                port = this->selection_round_robin();
             break;
 
             case SELECTION_BUFFER_LEVEL:
-                port = this->selection_buffer_level(this->input_buffer, this->get_max_ports(), this->get_input_buffer_size());
+                port = this->selection_buffer_level();
             break;
         }
 
@@ -182,7 +133,7 @@ void interconnection_router_t::clock(uint32_t subcycle) {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 int32_t interconnection_router_t::send_package(memory_package_t *package) {
     ROUTER_DEBUG_PRINTF("send_package() package:%s\n", package->content_to_string().c_str());
 
@@ -217,7 +168,7 @@ int32_t interconnection_router_t::send_package(memory_package_t *package) {
 };
 
 
-//==============================================================================
+/// ============================================================================
 bool interconnection_router_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
 
     if (this->recv_ready_cycle[input_port] <= sinuca_engine.get_global_cycle()) {
@@ -270,35 +221,35 @@ void interconnection_router_t::remove_token_list(memory_package_t *package) {
 };
 
 
-//==============================================================================
+/// ============================================================================
 // Selection Strategies
-//==============================================================================
+/// ============================================================================
 /// Selection strategy: Random
-uint32_t interconnection_router_t::selection_random(uint32_t total_buffers) {
+uint32_t interconnection_router_t::selection_random() {
     unsigned int seed = sinuca_engine.get_global_cycle() % 1000;
-    uint32_t selected = (rand_r(&seed) % total_buffers);
+    uint32_t selected = (rand_r(&seed) % this->get_max_ports());
     return selected;
 };
 
-//==============================================================================
+/// ============================================================================
 /// Selection strategy: Round Robin
-uint32_t interconnection_router_t::selection_round_robin(uint32_t total_buffers) {
+uint32_t interconnection_router_t::selection_round_robin() {
     this->last_selected++;
-    if (this->last_selected >= total_buffers) {
+    if (this->last_selected >= this->get_max_ports()) {
         this->last_selected = 0;
     }
     return this->last_selected;
 };
 
-//==============================================================================
+/// ============================================================================
 /// Selection strategy: Buffer Level
-uint32_t interconnection_router_t::selection_buffer_level(memory_package_t **buffer, uint32_t total_buffers, uint32_t buffer_size){
+uint32_t interconnection_router_t::selection_buffer_level(){
     uint32_t size_selected = 0;
     uint32_t selected = 0;
-    for (uint32_t i = 0; i < total_buffers; i++) {
+    for (uint32_t i = 0; i < this->get_max_ports(); i++) {
         uint32_t total = 0;
-        for (uint32_t j = 0; j < buffer_size; j++) {
-            if (buffer[i][j].state != PACKAGE_STATE_FREE) {
+        for (uint32_t j = 0; j < this->get_input_buffer_size(); j++) {
+            if (this->input_buffer[i][j].state != PACKAGE_STATE_FREE) {
                 total++;
             }
         }
@@ -310,17 +261,17 @@ uint32_t interconnection_router_t::selection_buffer_level(memory_package_t **buf
     return selected;
 };
 
-//==============================================================================
+/// ============================================================================
 void interconnection_router_t::print_structures() {
     SINUCA_PRINTF("%s INPUT_BUFFER:\n%s", this->get_label(), memory_package_t::print_all(this->input_buffer, this->get_max_ports(), this->input_buffer_size).c_str())
 };
 
-//==============================================================================
+/// ============================================================================
 void interconnection_router_t::panic() {
     this->print_structures();
 };
 
-//==============================================================================
+/// ============================================================================
 void interconnection_router_t::periodic_check(){
     #ifdef ROUTER_DEBUG
         ROUTER_DEBUG_PRINTF("\n");
@@ -329,9 +280,9 @@ void interconnection_router_t::periodic_check(){
     ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->input_buffer, this->get_max_ports(), this->input_buffer_size) == OK, "Check_age failed.\n");
 };
 
-//==============================================================================
+/// ============================================================================
 /// STATISTICS
-//==============================================================================
+/// ============================================================================
 void interconnection_router_t::reset_statistics() {
     this->set_stat_transmissions(0);
 
@@ -346,7 +297,7 @@ void interconnection_router_t::reset_statistics() {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 void interconnection_router_t::print_statistics() {
     char title[100] = "";
     sprintf(title, "Statistics of %s", this->get_label());
@@ -384,7 +335,7 @@ void interconnection_router_t::print_statistics() {
     }
 };
 
-//==============================================================================
+/// ============================================================================
 void interconnection_router_t::print_configuration() {
     char title[100] = "";
     sprintf(title, "Configuration of %s", this->get_label());
@@ -397,4 +348,55 @@ void interconnection_router_t::print_configuration() {
 
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "input_buffer_size", input_buffer_size);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "selection_policy", get_enum_selection_char(selection_policy));
+};
+
+
+/// ============================================================================
+int32_t interconnection_router_t::input_buffer_insert(uint32_t port) {
+    int32_t valid_position = POSITION_FAIL;
+    /// There is free space.
+    if (this->input_buffer_position_used[port] < this->input_buffer_size) {
+        valid_position = this->input_buffer_position_end[port];
+        this->input_buffer_position_used[port]++;
+        this->input_buffer_position_end[port]++;
+        if (this->input_buffer_position_end[port] >= this->input_buffer_size) {
+            this->input_buffer_position_end[port] = 0;
+        }
+    }
+    return valid_position;
+};
+
+/// ============================================================================
+void interconnection_router_t::input_buffer_remove(uint32_t port) {
+    ERROR_ASSERT_PRINTF(this->input_buffer_position_used[port] > 0, "Trying to remove from router with no used position.\n");
+
+    this->input_buffer[port][this->input_buffer_position_start[port]].package_clean();
+
+    this->input_buffer_position_used[port]--;
+    this->input_buffer_position_start[port]++;
+    if (this->input_buffer_position_start[port] >= this->input_buffer_size) {
+        this->input_buffer_position_start[port] = 0;
+    }
+};
+
+/// ============================================================================
+void interconnection_router_t::input_buffer_reinsert(uint32_t port) {
+    ERROR_ASSERT_PRINTF(this->input_buffer_position_used[port] > 0, "Trying to remove from ROB with no used position.\n");
+
+    /// There is free space. Make a copy
+    if (this->input_buffer_position_used[port] < this->input_buffer_size) {
+        input_buffer[port][this->input_buffer_position_end[port]] = input_buffer[port][this->input_buffer_position_start[port]];
+        this->input_buffer[port][this->input_buffer_position_start[port]].package_clean();
+    }
+
+    /// Change the pointers
+    this->input_buffer_position_start[port]++;
+    if (this->input_buffer_position_start[port] >= this->input_buffer_size) {
+        this->input_buffer_position_start[port] = 0;
+    }
+
+    this->input_buffer_position_end[port]++;
+    if (this->input_buffer_position_end[port] >= this->input_buffer_size) {
+        this->input_buffer_position_end[port] = 0;
+    }
 };

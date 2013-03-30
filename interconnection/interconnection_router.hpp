@@ -97,9 +97,9 @@ class interconnection_router_t : public interconnection_interface_t {
         void input_buffer_reinsert(uint32_t port);
 
         /// Selection strategies
-        uint32_t selection_random(uint32_t total_buffers);
-        uint32_t selection_round_robin(uint32_t total_buffers);
-        uint32_t selection_buffer_level(memory_package_t **buffer, uint32_t total_buffers, uint32_t buffer_size);
+        uint32_t selection_random();
+        uint32_t selection_round_robin();
+        uint32_t selection_buffer_level();
 
 
         INSTANTIATE_GET_SET(selection_t, selection_policy)

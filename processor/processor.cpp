@@ -474,6 +474,7 @@ void processor_t::stage_fetch() {
         /// Get the next opcode
         if (this->trace_next_opcode.state == PACKAGE_STATE_FREE) {
             valid_opcode = sinuca_engine.trace_reader->trace_fetch(this->core_id, &this->trace_next_opcode);
+            /// If the trace is over
             if (!valid_opcode) {
                 this->trace_over = true;
                 this->synchronize(SYNC_BARRIER);
@@ -483,7 +484,7 @@ void processor_t::stage_fetch() {
 
         /// If the instruction is a synchronization
         if (this->trace_next_opcode.sync_type != SYNC_FREE) {
-            synchronize(this->trace_next_opcode.sync_type);
+            this->synchronize(this->trace_next_opcode.sync_type);
             this->trace_next_opcode.package_clean();
             continue;
         }
@@ -999,6 +1000,7 @@ void processor_t::stage_rename() {
         ///=====================================================================
         /// Insert into MOB
         ///=====================================================================
+
         if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MEM_LOAD) {
             ERROR_ASSERT_PRINTF(this->reorder_buffer[position_rob].mob_ptr->memory_request.state == PACKAGE_STATE_FREE, "ROB has a pointer to a non free package.")
             /// Fix the request size to fit inside the cache line
@@ -1006,6 +1008,7 @@ void processor_t::stage_rename() {
             if (offset + this->reorder_buffer[position_rob].uop.memory_size >= sinuca_engine.get_global_line_size()) {
                 this->reorder_buffer[position_rob].uop.memory_size = sinuca_engine.get_global_line_size() - offset;
             }
+
 
             this->reorder_buffer[position_rob].mob_ptr->memory_request.packager(
                 this->get_id(),                                         /// Request Owner
@@ -1327,10 +1330,11 @@ void processor_t::stage_execution() {
     /// REMOVE MEMORY PACKAGE READS which are ready!
     for (uint32_t slot = 0; slot < this->memory_order_buffer_read_size; slot++) {
         if (this->memory_order_buffer_read[slot].rob_ptr != NULL &&
-        this->memory_order_buffer_read[slot].rob_ptr->stage == PROCESSOR_STAGE_EXECUTION &&
         this->memory_order_buffer_read[slot].rob_ptr->uop.state == PACKAGE_STATE_TRANSMIT &&
         this->memory_order_buffer_read[slot].memory_request.state == PACKAGE_STATE_READY) {
+            ERROR_ASSERT_PRINTF(this->memory_order_buffer_read[slot].rob_ptr->stage == PROCESSOR_STAGE_EXECUTION, "Package status is TRANSMIT but it is not in EXECUTION stage.\n")
             ERROR_ASSERT_PRINTF(this->memory_order_buffer_read[slot].rob_ptr->wait_mem_deps_number == 0, "Number of memory dependencies should be zero.\n")
+            ERROR_ASSERT_PRINTF(this->memory_order_buffer_read[slot].memory_request.is_answer == true, "Removing a package from MOB which is not answer.\n")
 
             // Solve ROB, and send to COMMIT
             this->memory_order_buffer_read[slot].rob_ptr->stage = PROCESSOR_STAGE_COMMIT;
@@ -1486,11 +1490,13 @@ void processor_t::solve_data_forward(reorder_buffer_line_t *rob_line) {
 
             switch (this->disambiguation_type) {
                 case DISAMBIGUATION_PERFECT:
-                    if (rob_line->mem_deps_ptr_array[j]->wait_mem_deps_number == 0 &&
-                    rob_line->mem_deps_ptr_array[j]->stage == PROCESSOR_STAGE_EXECUTION &&
-                    rob_line->mem_deps_ptr_array[j]->uop.state == PACKAGE_STATE_TRANSMIT &&
+                    if (rob_line->mem_deps_ptr_array[j]->uop.state == PACKAGE_STATE_TRANSMIT &&
+                    rob_line->mem_deps_ptr_array[j]->wait_mem_deps_number == 0 &&
                     rob_line->mem_deps_ptr_array[j]->uop.uop_operation == INSTRUCTION_OPERATION_MEM_LOAD) {
+                        ERROR_ASSERT_PRINTF(rob_line->mem_deps_ptr_array[j]->stage == PROCESSOR_STAGE_EXECUTION, "Package status is TRANSMIT but it is not in EXECUTION stage.\n")
+                        /// Solve the LOAD->LOAD and STORE->LOAD
                         rob_line->mem_deps_ptr_array[j]->mob_ptr->memory_request.state = PACKAGE_STATE_READY;
+                        rob_line->mem_deps_ptr_array[j]->mob_ptr->memory_request.is_answer = true;
                         this->solve_data_forward(rob_line->mem_deps_ptr_array[j]);
                     }
                 break;
@@ -1681,7 +1687,6 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
         ERROR_ASSERT_PRINTF(package->is_answer == true, "Only answers are expected.\n");
 
         int32_t slot = POSITION_FAIL;
-
         switch (package->memory_operation) {
             case MEMORY_OPERATION_INST: {
                 ERROR_ASSERT_PRINTF(input_port == PROCESSOR_PORT_INST_CACHE, "Receiving instruction package from a wrong port.\n");
@@ -1698,7 +1703,8 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
                     }
 
                     /// Wake up ALL instructions waiting
-                    if (this->fetch_buffer[j].state == PACKAGE_STATE_WAIT && this->cmp_fetch_block(this->fetch_buffer[j].opcode_address, package->memory_address)) {
+                    if (this->fetch_buffer[j].state == PACKAGE_STATE_WAIT &&
+                    this->cmp_fetch_block(this->fetch_buffer[j].opcode_address, package->memory_address)) {
                         this->add_stat_instruction_read_completed(this->fetch_buffer[j].born_cycle);
                         PROCESSOR_DEBUG_PRINTF("\t WANTED INSTRUCTION\n");
                         this->fetch_buffer[j].package_ready(transmission_latency);
@@ -1720,6 +1726,7 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
                 if (slot != POSITION_FAIL) {
                     PROCESSOR_DEBUG_PRINTF("\t WANTED READ.\n");
                     this->memory_order_buffer_read[slot].memory_request.package_ready(sinuca_engine.get_global_cycle() + transmission_latency);
+                    this->memory_order_buffer_read[slot].memory_request.is_answer = true;
                 }
                 ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read Request done, but it is not on the memory_order_buffer anymore.\n")
                 this->recv_ready_cycle[input_port] = sinuca_engine.get_global_cycle() + transmission_latency;

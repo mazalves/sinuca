@@ -294,6 +294,19 @@ enum memory_controller_mask_t {
 const char *get_enum_memory_controller_mask_char(memory_controller_mask_t type);
 
 /// ============================================================================
+/// Memory controller commands to the DRAM
+enum memory_controller_command_t {
+    MEMORY_CONTROLLER_COMMAND_PRECHARGE,
+    MEMORY_CONTROLLER_COMMAND_ROW_ACCESS,
+    MEMORY_CONTROLLER_COMMAND_COLUMN_READ,
+    MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE,
+
+    MEMORY_CONTROLLER_COMMAND_NUMBER
+};
+const char *get_enum_memory_controller_command_char(memory_controller_command_t type);
+
+
+/// ============================================================================
 /// Policy to set the priority during the Row Buffer access
 enum request_priority_t {
     REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST,
@@ -305,7 +318,7 @@ const char *get_enum_request_priority_char(request_priority_t type);
 /// Policy to give privilege of some operations over others
 enum write_priority_t {
     WRITE_PRIORITY_SERVICE_AT_NO_READ,
-    WRITE_PRIORITY_DRAIN_WHEN_FULL,
+    WRITE_PRIORITY_DRAIN_WHEN_FULL
 };
 const char *get_enum_write_priority_char(write_priority_t type);
 
