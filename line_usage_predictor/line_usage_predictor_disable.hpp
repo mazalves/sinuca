@@ -57,7 +57,6 @@ class line_usage_predictor_disable_t : public line_usage_predictor_t {
         // ~ int32_t send_package(memory_package_t *package);
         // ~ bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
         /// Token Controller Methods
-        // ~ void allocate_token_list();
         // ~ bool check_token_list(memory_package_t *package);
         // ~ uint32_t check_token_space(memory_package_t *package);
         // ~ void remove_token_list(memory_package_t *package);

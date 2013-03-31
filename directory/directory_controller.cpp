@@ -40,37 +40,36 @@ directory_controller_t::directory_controller_t() {
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(sinuca_engine.get_global_line_size()), "Wrong line_size.\n");
     this->not_offset_bits_mask = ~utils_t::fill_bit(0, utils_t::get_power_of_two(sinuca_engine.get_global_line_size()) - 1);
     this->generate_llc_copyback = true;
-    this->llc_caches = NULL;
-    this->directory_lines = new container_ptr_directory_line_t;
 };
 
 /// ============================================================================
 directory_controller_t::~directory_controller_t() {
     /// De-Allocate memory to prevent memory leak
-    this->directory_lines->clear();
-    for (uint32_t i = 0; i < this->directory_lines->size(); i++) {
+    this->directory_lines.clear();
+    for (uint32_t i = 0; i < this->directory_lines.size(); i++) {
         WARNING_PRINTF("Directory was not empty.\n")
-        directory_line_t *directory_line = this->directory_lines[0][i];
+        directory_line_t *directory_line = this->directory_lines[i];
         utils_t::template_delete_variable<directory_line_t>(directory_line);
     }
 
-    utils_t::template_delete_variable<container_ptr_directory_line_t>(this->directory_lines);
-    utils_t::template_delete_variable<container_ptr_cache_memory_t>(this->llc_caches);
 };
 
 /// ============================================================================
 void directory_controller_t::allocate() {
-    /// Store pointers to all the LLC caches
-    this->llc_caches = new container_ptr_cache_memory_t;
+
+    uint32_t sum_mshr_buffer_size = 0;
     /// Find all LLC
     for (uint32_t i = 0; i < sinuca_engine.get_cache_memory_array_size(); i++) {
         cache_memory_t *cache_memory = sinuca_engine.cache_memory_array[i];
         container_ptr_cache_memory_t *lower_level_cache = cache_memory->get_lower_level_cache();
         /// Found LLC
         if (lower_level_cache->empty()) {
-            this->llc_caches->push_back(cache_memory);
+            sum_mshr_buffer_size += cache_memory->get_mshr_buffer_size();
+            this->llc_caches.push_back(cache_memory);
         }
     }
+
+    this->directory_lines.reserve(sum_mshr_buffer_size);
 };
 
 /// ============================================================================
@@ -96,11 +95,6 @@ bool directory_controller_t::receive_package(memory_package_t *package, uint32_t
 
 /// ============================================================================
 /// Token Controller Methods
-/// ============================================================================
-void directory_controller_t::allocate_token_list() {
-    DIRECTORY_CTRL_DEBUG_PRINTF("allocate_token_list()\n");
-};
-
 /// ============================================================================
 bool directory_controller_t::check_token_list(memory_package_t *package) {
     ERROR_PRINTF("check_token_list %s.\n", package->content_to_string().c_str())
@@ -146,17 +140,17 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
         ERROR_ASSERT_PRINTF(directory_line_number != POSITION_FAIL,
                             "High level RQST must have a directory_line.\n. cache_id:%u, package:%s\n",
                             cache->get_id(), package->content_to_string().c_str())
-        directory_line = this->directory_lines[0][directory_line_number];
+        directory_line = this->directory_lines[directory_line_number];
     }
     /// Check for LOCK
     else {
-        for (uint32_t i = 0; i < this->directory_lines->size(); i++) {
+        for (uint32_t i = 0; i < this->directory_lines.size(); i++) {
             /// Transaction on the same address was found
-            if (this->cmp_index_tag(this->directory_lines[0][i]->initial_memory_address, package->memory_address)){
-                ERROR_ASSERT_PRINTF(directory_lines[0][i]->lock_type != LOCK_FREE, "Found directory with LOCK_FREE\n");
+            if (this->cmp_index_tag(this->directory_lines[i]->initial_memory_address, package->memory_address)){
+                ERROR_ASSERT_PRINTF(directory_lines[i]->lock_type != LOCK_FREE, "Found directory with LOCK_FREE\n");
                 /// If READ     Need LOCK_FREE or LOCK_READ    => LOCK_READ
                 /// If WRITE    Need LOCK_FREE                 => LOCK_WRITE
-                if (is_read && directory_lines[0][i]->lock_type == LOCK_READ) {
+                if (is_read && directory_lines[i]->lock_type == LOCK_READ) {
                     break;
                 }
                 else {
@@ -184,10 +178,10 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     /// Takes care about Parallel Requests at the same Cache Level
     /// ================================================================================
     /// Check for parallel requests
-    for (uint32_t i = 0; i < this->directory_lines->size(); i++) {
+    for (uint32_t i = 0; i < this->directory_lines.size(); i++) {
         /// Find Parallel Request
-        if (directory_lines[0][i]->cache_request_order[cache_id] != 0 &&
-        this->cmp_index_tag(directory_lines[0][i]->initial_memory_address, package->memory_address)) {
+        if (directory_lines[i]->cache_request_order[cache_id] != 0 &&
+        this->cmp_index_tag(directory_lines[i]->initial_memory_address, package->memory_address)) {
             // =============================================================
             // Line Usage Prediction
             // Consider that the missing sub-blocks were requested.
@@ -198,8 +192,8 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
             /// No Directory_line yet => create
             if (directory_line == NULL) {
-                this->directory_lines->push_back(new directory_line_t());
-                directory_line = this->directory_lines->back();
+                this->directory_lines.push_back(new directory_line_t());
+                directory_line = this->directory_lines.back();
 
                 directory_line->packager(package->id_owner, package->opcode_number, package->opcode_address, package->uop_number,
                                             is_read ? LOCK_READ : LOCK_WRITE,
@@ -289,8 +283,8 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 /// The request can be treated now !
                 /// New Directory_Line + LOCK
                 if (directory_line == NULL) {
-                    this->directory_lines->push_back(new directory_line_t());
-                    directory_line = this->directory_lines->back();
+                    this->directory_lines.push_back(new directory_line_t());
+                    directory_line = this->directory_lines.back();
 
                     directory_line->packager(package->id_owner, package->opcode_number, package->opcode_address, package->uop_number,
                                                 is_read ? LOCK_READ : LOCK_WRITE,
@@ -365,8 +359,8 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 /// The request can be treated now !
                 /// New Directory_Line + LOCK
                 if (directory_line == NULL) {
-                    this->directory_lines->push_back(new directory_line_t());
-                    directory_line = this->directory_lines->back();
+                    this->directory_lines.push_back(new directory_line_t());
+                    directory_line = this->directory_lines.back();
 
                     directory_line->packager(package->id_owner, package->opcode_number, package->opcode_address, package->uop_number,
                                                 is_read ? LOCK_READ : LOCK_WRITE,
@@ -488,7 +482,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             DIRECTORY_CTRL_DEBUG_PRINTF("\t Erasing Directory Line:%s\n", directory_line->directory_line_to_string().c_str())
             utils_t::template_delete_variable<directory_line_t>(directory_line);
             directory_line = NULL;
-            this->directory_lines->erase(this->directory_lines->begin() + directory_line_number);
+            this->directory_lines.erase(this->directory_lines.begin() + directory_line_number);
 
             /// Erase the package
             DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (WRITE Done)\n")
@@ -514,7 +508,7 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
     directory_line_t *directory_line = NULL;
     int32_t directory_line_number = find_directory_line(package);
     if (directory_line_number != POSITION_FAIL) {
-        directory_line = this->directory_lines[0][directory_line_number];
+        directory_line = this->directory_lines[directory_line_number];
     }
     ERROR_ASSERT_PRINTF(directory_line != NULL, "Higher level REQUEST must have a directory_line\n")
 
@@ -551,7 +545,7 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
         DIRECTORY_CTRL_DEBUG_PRINTF("\t Erasing Directory Line:%s\n", directory_line->directory_line_to_string().c_str())
         utils_t::template_delete_variable<directory_line_t>(directory_line);
         directory_line = NULL;
-        this->directory_lines->erase(this->directory_lines->begin() + directory_line_number);
+        this->directory_lines.erase(this->directory_lines.begin() + directory_line_number);
         /// Update Coherence Status
         this->coherence_new_operation(cache, cache_line, package, false);
         /// Update Statistics
@@ -581,7 +575,7 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
             DIRECTORY_CTRL_DEBUG_PRINTF("\t Erasing Directory Line:%s\n", directory_line->directory_line_to_string().c_str())
             utils_t::template_delete_variable<directory_line_t>(directory_line);
             directory_line = NULL;
-            this->directory_lines->erase(this->directory_lines->begin() + directory_line_number);
+            this->directory_lines.erase(this->directory_lines.begin() + directory_line_number);
             /// Update Coherence Status
             this->coherence_new_operation(cache, cache_line, package, false);
             /// Update Statistics
@@ -657,13 +651,13 @@ package_state_t directory_controller_t::treat_cache_request_sent(uint32_t cache_
                 directory_line_number = find_directory_line(package);
                 ERROR_ASSERT_PRINTF(directory_line_number != POSITION_FAIL, "High level RQST must have a directory_line.\n. cache_id:%u, package:%s\n",
                                     cache->get_id(), package->content_to_string().c_str())
-                directory_line = this->directory_lines[0][directory_line_number];
+                directory_line = this->directory_lines[directory_line_number];
 
                 /// Erase the directory_entry
                 DIRECTORY_CTRL_DEBUG_PRINTF("\t Erasing Directory Line:%s\n", directory_line->directory_line_to_string().c_str())
                 utils_t::template_delete_variable<directory_line_t>(directory_line);
                 directory_line = NULL;
-                this->directory_lines->erase(this->directory_lines->begin() + directory_line_number);
+                this->directory_lines.erase(this->directory_lines.begin() + directory_line_number);
             }
             /// Erase the package
             DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (Requester = This)\n")
@@ -678,12 +672,12 @@ package_state_t directory_controller_t::treat_cache_request_sent(uint32_t cache_
 
 /// ============================================================================
 int32_t directory_controller_t::find_directory_line(memory_package_t *package) {
-    for (uint32_t i = 0; i < this->directory_lines->size(); i++) {
+    for (uint32_t i = 0; i < this->directory_lines.size(); i++) {
         /// Requested Address Found
-        if (this->directory_lines[0][i]->id_owner == package->id_owner &&
-        this->directory_lines[0][i]->opcode_number == package->opcode_number &&
-        this->directory_lines[0][i]->uop_number == package->uop_number &&
-        this->cmp_index_tag(directory_lines[0][i]->initial_memory_address, package->memory_address)) {
+        if (this->directory_lines[i]->id_owner == package->id_owner &&
+        this->directory_lines[i]->opcode_number == package->opcode_number &&
+        this->directory_lines[i]->uop_number == package->uop_number &&
+        this->cmp_index_tag(directory_lines[i]->initial_memory_address, package->memory_address)) {
             return i;
         }
     }
@@ -734,8 +728,8 @@ bool directory_controller_t::create_cache_copyback(cache_memory_t *cache, cache_
     ///=========================================================================
     /// Allocate CopyBack at the Directory_Line + LOCK
     ///=========================================================================
-    this->directory_lines->push_back(new directory_line_t());
-    directory_line_t *directory_line = this->directory_lines->back();
+    this->directory_lines.push_back(new directory_line_t());
+    directory_line_t *directory_line = this->directory_lines.back();
 
     directory_line->packager(package->id_owner, package->opcode_number, package->opcode_address, package->uop_number,
                                 LOCK_WRITE,
@@ -901,9 +895,9 @@ uint32_t directory_controller_t::find_next_obj_id(cache_memory_t *cache_memory, 
 // =============================================================================
 bool directory_controller_t::is_locked(uint64_t memory_address) {
     /// Check for a lock to the address.
-    for (uint32_t i = 0; i < this->directory_lines->size(); i++) {
+    for (uint32_t i = 0; i < this->directory_lines.size(); i++) {
         /// Same address found
-        if (this->cmp_index_tag(directory_lines[0][i]->initial_memory_address, memory_address)) {
+        if (this->cmp_index_tag(directory_lines[i]->initial_memory_address, memory_address)) {
             /// Is Locked
             return OK;
         }
@@ -921,8 +915,8 @@ protocol_status_t directory_controller_t::find_cache_line_higher_levels(cache_me
     container_ptr_cache_memory_t *lower_level_cache = cache_memory->get_lower_level_cache();
     if (lower_level_cache->empty() && check_llc == true) {
         /// Iterate over all LLC
-        for (uint32_t i = 0; i < this->llc_caches->size(); i++) {
-            cache_memory_t *llc = this->llc_caches[0][i];
+        for (uint32_t i = 0; i < this->llc_caches.size(); i++) {
+            cache_memory_t *llc = this->llc_caches[i];
 
             /// If bank invalid for the address
             if (llc->get_bank(memory_address) != llc->get_bank_number()) {
@@ -1310,8 +1304,8 @@ void directory_controller_t::new_statistics(cache_memory_t *cache, memory_packag
 /// ============================================================================
 void directory_controller_t::print_structures() {
     SINUCA_PRINTF("DIRECTORY_LINE:\n")
-    for (uint32_t i = 0; i < this->directory_lines->size(); i++) {
-        SINUCA_PRINTF("[%u] %s\n", i, this->directory_lines[0][i]->directory_line_to_string().c_str());
+    for (uint32_t i = 0; i < this->directory_lines.size(); i++) {
+        SINUCA_PRINTF("[%u] %s\n", i, this->directory_lines[i]->directory_line_to_string().c_str());
     }
 };
 
@@ -1326,7 +1320,7 @@ void directory_controller_t::periodic_check(){
         DIRECTORY_CTRL_DEBUG_PRINTF("\n");
         this->print_structures();
     #endif
-    ERROR_ASSERT_PRINTF(directory_line_t::check_age(this->directory_lines, this->directory_lines->size()) == OK, "Check_age failed.\n");
+    ERROR_ASSERT_PRINTF(directory_line_t::check_age(&this->directory_lines, this->directory_lines.size()) == OK, "Check_age failed.\n");
 };
 
 /// ============================================================================

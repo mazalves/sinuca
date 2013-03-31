@@ -127,7 +127,7 @@ void sinuca_engine_t::set_global_line_size(uint32_t new_size) {
         for (uint32_t i = 0; i < utils_t::get_power_of_two(this->global_line_size); i++) {
             this->global_offset_bits_mask |= 1 << i;
         }
-        this->global_not_offset_bits_mask = !this->global_offset_bits_mask;
+        this->global_not_offset_bits_mask = ~this->global_offset_bits_mask;
     }
     ERROR_ASSERT_PRINTF(this->get_global_line_size() == new_size, "All the line_size must be equal.\n")
 };

@@ -105,8 +105,7 @@ bool directory_line_t::check_age(container_ptr_directory_line_t *input_array, ui
     }
 
     for (uint32_t i = 0; i < size_array ; i++) {
-        directory_line_t *directory_line = input_array[0][i];
-        if (directory_line->born_cycle < min_cycle) {
+        if (input_array[0][i]->born_cycle < min_cycle) {
             return FAIL;
         }
     }

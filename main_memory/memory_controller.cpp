@@ -84,7 +84,10 @@ memory_controller_t::~memory_controller_t() {
 /// ============================================================================
 void memory_controller_t::allocate() {
 
-    this->channels = utils_t::template_allocate_array<memory_channel_t>(this->get_channels_per_controller());
+    ERROR_ASSERT_PRINTF(mshr_buffer_request_reserved_size > 0, "mshr_buffer_request_reserved_size should be bigger than zero.\n");
+    ERROR_ASSERT_PRINTF(mshr_buffer_copyback_reserved_size > 0, "mshr_buffer_copyback_reserved_size should be bigger than zero.\n");
+    ERROR_ASSERT_PRINTF(mshr_buffer_prefetch_reserved_size > 0, "mshr_buffer_prefetch_reserved_size should be bigger than zero.\n");
+
 
     /// MSHR = [    REQUEST    | COPYBACK | PREFETCH ]
     this->mshr_buffer_size = this->mshr_buffer_request_reserved_size +
@@ -92,19 +95,24 @@ void memory_controller_t::allocate() {
                                 this->mshr_buffer_prefetch_reserved_size;
     this->mshr_buffer = utils_t::template_allocate_array<memory_package_t>(this->get_mshr_buffer_size());
     this->mshr_born_ordered.reserve(this->mshr_buffer_size);
+    this->token_list.reserve(this->mshr_buffer_size);
 
     this->set_masks();
 
     this->timing_burst = (this->line_size / this->get_burst_length());
 
+    this->channels = utils_t::template_allocate_array<memory_channel_t>(this->get_channels_per_controller());
     for (uint32_t i = 0; i < this->get_channels_per_controller(); i++) {
+        char label[50] = "";
+        sprintf(label, "%s_MEMORY_CHANNEL_%d", this->get_label(), i);
+        this->channels[i].set_label(label);
+
         this->channels[i].bank_per_channel = this->bank_per_channel;
         this->channels[i].bank_buffer_size = this->bank_buffer_size;
         this->channels[i].bank_selection_policy = this->bank_selection_policy;
 
         this->channels[i].request_priority_policy = this->request_priority_policy;
         this->channels[i].write_priority_policy = this->write_priority_policy;
-
 
         /// Consider the latency in terms of processor cycles
         this->channels[i].timing_burst = this->timing_burst * this->core_to_bus_clock_ratio;
@@ -146,9 +154,12 @@ void memory_controller_t::allocate() {
 void memory_controller_t::set_masks() {
     uint64_t i;
 
-    ERROR_ASSERT_PRINTF(this->get_total_controllers() > this->get_controller_number(), "Wrong number of memory_controllers (%u/%u).\n", this->get_controller_number(), this->get_total_controllers());
-    ERROR_ASSERT_PRINTF(this->get_channels_per_controller() > 0, "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
-    ERROR_ASSERT_PRINTF(this->get_bank_per_channel() > 0, "Wrong number of memory_banks (%u).\n", this->get_bank_per_channel());
+    ERROR_ASSERT_PRINTF(this->get_total_controllers() > this->get_controller_number(),
+                        "Wrong number of memory_controllers (%u/%u).\n", this->get_controller_number(), this->get_total_controllers());
+    ERROR_ASSERT_PRINTF(this->get_channels_per_controller() > 0,
+                        "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
+    ERROR_ASSERT_PRINTF(this->get_bank_per_channel() > 0,
+                        "Wrong number of memory_banks (%u).\n", this->get_bank_per_channel());
     this->column_bits_mask = 0;
     this->controller_bits_mask = 0;
     this->channel_bits_mask = 0;
@@ -157,8 +168,12 @@ void memory_controller_t::set_masks() {
 
     switch (this->get_address_mask_type()) {
         case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLUMN:
-            ERROR_ASSERT_PRINTF(this->get_total_controllers() > 1 && utils_t::check_if_power_of_two(this->get_total_controllers()), "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
-            ERROR_ASSERT_PRINTF(this->get_channels_per_controller() > 1 && utils_t::check_if_power_of_two(this->get_channels_per_controller()), "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
+            ERROR_ASSERT_PRINTF(this->get_total_controllers() > 1 &&
+                                utils_t::check_if_power_of_two(this->get_total_controllers()),
+                                "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
+            ERROR_ASSERT_PRINTF(this->get_channels_per_controller() > 1 &&
+                                utils_t::check_if_power_of_two(this->get_channels_per_controller()),
+                                "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
 
             this->column_bits_shift = 0;
             this->controller_bits_shift = utils_t::get_power_of_two(this->get_bank_row_buffer_size());
@@ -194,8 +209,11 @@ void memory_controller_t::set_masks() {
         break;
 
         case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLUMN:
-            ERROR_ASSERT_PRINTF(this->get_total_controllers() == 1, "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
-            ERROR_ASSERT_PRINTF(this->get_channels_per_controller() > 1 && utils_t::check_if_power_of_two(this->get_channels_per_controller()), "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
+            ERROR_ASSERT_PRINTF(this->get_total_controllers() == 1,
+                                "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
+            ERROR_ASSERT_PRINTF(this->get_channels_per_controller() > 1 &&
+                                utils_t::check_if_power_of_two(this->get_channels_per_controller()),
+                                "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
 
             this->column_bits_shift = 0;
             this->controller_bits_shift = 0;
@@ -523,32 +541,24 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
 /// ============================================================================
 /// Token Controller Methods
 /// ============================================================================
-void memory_controller_t::allocate_token_list() {
-    MEMORY_CONTROLLER_DEBUG_PRINTF("allocate_token_list()\n");
-
-    this->set_token_list(utils_t::template_allocate_array<container_token_t>(1));
-};
-
-/// ============================================================================
 bool memory_controller_t::check_token_list(memory_package_t *package) {
     ERROR_ASSERT_PRINTF(package->is_answer == false, "check_token_list received a Answer.\n")
     uint32_t token = 0;
 
     /// 1. Check if the name is already in the guest list.
-    container_token_t *local_token_list = this->get_token_list();
-    for (token = 0; token < local_token_list[0].size(); token++) {
+    for (token = 0; token < this->token_list.size(); token++) {
         /// Requested Address Found
-        if (local_token_list[0][token].id_owner == package->id_owner &&
-        local_token_list[0][token].opcode_number == package->opcode_number &&
-        local_token_list[0][token].uop_number == package->uop_number &&
-        local_token_list[0][token].memory_address == package->memory_address &&
-        local_token_list[0][token].memory_operation == package->memory_operation) {
+        if (this->token_list[token].id_owner == package->id_owner &&
+        this->token_list[token].opcode_number == package->opcode_number &&
+        this->token_list[token].uop_number == package->uop_number &&
+        this->token_list[token].memory_address == package->memory_address &&
+        this->token_list[token].memory_operation == package->memory_operation) {
             break;
         }
     }
 
     /// 2. Name is not in the guest list, lets add it.
-    if (token == local_token_list[0].size()) {
+    if (token == this->token_list.size()) {
         /// Allocate the new token
         token_t new_token;
         new_token.id_owner = package->id_owner;
@@ -557,7 +567,7 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
         new_token.memory_address = package->memory_address;
         new_token.memory_operation = package->memory_operation;
 
-        local_token_list[0].push_back(new_token);
+        this->token_list.push_back(new_token);
     }
 
     /// 3. Check if the guest can come now, or it needs to wait for free space.
@@ -577,21 +587,39 @@ uint32_t memory_controller_t::check_token_space(memory_package_t *package) {
     MEMORY_CONTROLLER_DEBUG_PRINTF("check_token_space() %s\n", package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(get_controller(package->memory_address) == this->get_controller_number(), "Wrong controller.\n%s\n", package->content_to_string().c_str());
 
-    uint32_t free_space = memory_package_t::count_free(this->mshr_buffer, this->mshr_buffer_size);
+    uint32_t free_space = 0;
+
+    switch (package->memory_operation) {
+        case MEMORY_OPERATION_READ:
+        case MEMORY_OPERATION_INST:
+            free_space = memory_package_t::count_free(this->mshr_buffer, this->mshr_buffer_request_reserved_size);
+        break;
+
+        case MEMORY_OPERATION_PREFETCH:
+            free_space = memory_package_t::count_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size,
+                                                    this->mshr_buffer_prefetch_reserved_size);
+        break;
+
+        case MEMORY_OPERATION_COPYBACK:
+        case MEMORY_OPERATION_WRITE:
+            free_space = memory_package_t::count_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size,
+                                                    this->mshr_buffer_copyback_reserved_size);
+        break;
+    }
+
     return free_space;
 };
 
 /// ============================================================================
 void memory_controller_t::remove_token_list(memory_package_t *package) {
-    container_token_t *local_token_list = this->get_token_list();
-    for (uint32_t token = 0; token < local_token_list[0].size(); token++) {
+    for (uint32_t token = 0; token < this->token_list.size(); token++) {
         /// Requested Address Found
-        if (local_token_list[0][token].id_owner == package->id_owner &&
-        local_token_list[0][token].opcode_number == package->opcode_number &&
-        local_token_list[0][token].uop_number == package->uop_number &&
-        local_token_list[0][token].memory_address == package->memory_address &&
-        local_token_list[0][token].memory_operation == package->memory_operation) {
-            local_token_list[0].erase(local_token_list[0].begin() + token);
+        if (this->token_list[token].id_owner == package->id_owner &&
+        this->token_list[token].opcode_number == package->opcode_number &&
+        this->token_list[token].uop_number == package->uop_number &&
+        this->token_list[token].memory_address == package->memory_address &&
+        this->token_list[token].memory_operation == package->memory_operation) {
+            this->token_list.erase(this->token_list.begin() + token);
             return;
         }
     }

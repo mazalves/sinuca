@@ -331,11 +331,11 @@ bool memory_channel_t::check_if_minimum_latency(uint32_t bank, memory_controller
         break;
 
         case MEMORY_CONTROLLER_COMMAND_NUMBER:
-            ERROR_ASSERT_PRINTF(false, "Should not receive COMMAND_NUMBER\n")
+            ERROR_PRINTF("Should not receive COMMAND_NUMBER\n")
         break;
     }
 
-    ERROR_ASSERT_PRINTF(false, "Could not check the minimum latency\n")
+    ERROR_PRINTF("Could not check the minimum latency\n")
     return false;
 };
 
@@ -431,6 +431,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
                 return;
             }
 
+            this->add_stat_row_buffer_miss();
             this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_ROW_ACCESS;
             this->bank_open_row_address[bank] = package->memory_address;
             this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] = sinuca_engine.get_global_cycle();
@@ -475,6 +476,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
                 break;
             }
 
+            this->add_stat_row_buffer_hit();
             this->bank_buffer[bank].erase(this->bank_buffer[bank].begin() + this->bank_buffer_actual_position[bank]);
             this->bank_buffer_actual_position[bank] = -1;
         break;
@@ -514,6 +516,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
                     break;
                 }
 
+                this->add_stat_row_buffer_hit();
                 this->bank_buffer[bank].erase(this->bank_buffer[bank].begin() + this->bank_buffer_actual_position[bank]);
                 this->bank_buffer_actual_position[bank] = -1;
             }
@@ -522,6 +525,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
                 if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_PRECHARGE)) {
                     return;
                 }
+
 
                 this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_PRECHARGE;
                 this->bank_open_row_address[bank] = package->memory_address;
@@ -565,6 +569,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
                     break;
                 }
 
+                this->add_stat_row_buffer_hit();
                 this->bank_buffer[bank].erase(this->bank_buffer[bank].begin() + this->bank_buffer_actual_position[bank]);
                 this->bank_buffer_actual_position[bank] = -1;
             }
@@ -583,7 +588,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
 
         //======================================================================
         case MEMORY_CONTROLLER_COMMAND_NUMBER:
-            ERROR_ASSERT_PRINTF(false, "Should not receive COMMAND_NUMBER\n")
+            ERROR_PRINTF("Should not receive COMMAND_NUMBER\n")
         break;
 
     }
@@ -627,11 +632,6 @@ bool memory_channel_t::receive_package(memory_package_t *package, uint32_t input
 /// ============================================================================
 /// Token Controller Methods
 /// ============================================================================
-void memory_channel_t::allocate_token_list() {
-    MEMORY_CONTROLLER_DEBUG_PRINTF("allocate_token_list()\n");
-};
-
-/// ============================================================================
 bool memory_channel_t::check_token_list(memory_package_t *package) {
     ERROR_PRINTF("check_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
     return FAIL;
@@ -669,6 +669,9 @@ void memory_channel_t::periodic_check(){
 /// STATISTICS
 /// ============================================================================
 void memory_channel_t::reset_statistics() {
+    this->stat_row_buffer_hit = 0;
+    this->stat_row_buffer_miss = 0;
+
     this->stat_read_forward = 0;
     this->stat_write_forward = 0;
 };
@@ -685,25 +688,19 @@ void memory_channel_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_read_forward", stat_read_forward);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_write_forward", stat_write_forward);
 
-    // ~ sinuca_engine.write_statistics_small_separator();
-    // ~ sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_row_buffer_miss", stat_open_new_row);
-    // ~ sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_row_buffer_hit", stat_accesses - stat_open_new_row);
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_row_buffer_hit", stat_row_buffer_hit - stat_row_buffer_miss);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_row_buffer_miss", stat_row_buffer_miss);
 
 
 };
 
 /// ============================================================================
 void memory_channel_t::print_configuration() {
-    // ~ char title[100] = "";
-    // ~ sprintf(title, "Configuration of %s", this->get_label());
-    // ~ sinuca_engine.write_statistics_big_separator();
-    // ~ sinuca_engine.write_statistics_comments(title);
-    // ~ sinuca_engine.write_statistics_big_separator();
-// ~
-    // ~ sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "prefetcher_type", get_enum_prefetch_policy_char(prefetcher_type));
-    // ~ sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "full_buffer_type", get_enum_full_buffer_char(full_buffer_type));
-    // ~ sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "request_buffer_size", request_buffer_size);
-// ~
-    // ~ sinuca_engine.write_statistics_small_separator();
-    // ~ sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "offset_bits_mask", utils_t::address_to_binary(this->offset_bits_mask).c_str());
+    char title[100] = "";
+    sprintf(title, "Configuration of %s", this->get_label());
+    sinuca_engine.write_statistics_big_separator();
+    sinuca_engine.write_statistics_comments(title);
+    sinuca_engine.write_statistics_big_separator();
+
 };

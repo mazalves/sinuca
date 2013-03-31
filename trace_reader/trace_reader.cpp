@@ -110,7 +110,7 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t ncpus) {
     TRACE_READER_DEBUG_PRINTF("Static File = %s => READY !\n", stat_file_name);
     this->generate_static_dictionary();
 
-    ERROR_ASSERT_PRINTF(static_dictionary.size() > 0, "Generated dictionary with 0.\n");
+    ERROR_ASSERT_PRINTF(!static_dictionary.empty(), "Generated dictionary with 0.\n");
 
     // =======================================================================
     // Dynamic Trace Files

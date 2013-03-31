@@ -87,6 +87,24 @@ processor_t::processor_t() {
     this->stage_execution_width = 0;
     this->stage_commit_width = 0;
 
+    /// ====================================================================
+    /// Integer Functional Units
+    this->ready_cycle_fu_int_alu = NULL;
+    this->ready_cycle_fu_int_mul = NULL;
+    this->ready_cycle_fu_int_div = NULL;
+
+    /// ====================================================================
+    /// Floating Point Functional Units
+    this->ready_cycle_fu_fp_alu = NULL;
+    this->ready_cycle_fu_fp_mul = NULL;
+    this->ready_cycle_fu_fp_div = NULL;
+
+    /// ====================================================================
+    /// Memory Functional Units
+    this->ready_cycle_fu_mem_load = NULL;
+    this->ready_cycle_fu_mem_store = NULL;
+
+
     /// Integer Funcional Units
     this->number_fu_int_alu = 0;
     this->latency_fu_int_alu = 0;
@@ -218,6 +236,9 @@ void processor_t::allocate() {
     this->reorder_buffer_position_end = 0;
     this->reorder_buffer_position_used = 0;
 
+    this->unified_functional_units.reserve(this->reorder_buffer_size);
+    this->unified_reservation_station.reserve(this->reorder_buffer_size);
+
     /// Register Alias Table for Renaming
     this->register_alias_table_size = 260; /// Number of registers on the trace (258 is used for SiNUCA only maintain the dependency between uops)
     this->register_alias_table = utils_t::template_allocate_initialize_array<reorder_buffer_line_t*>(this->register_alias_table_size, NULL);
@@ -267,7 +288,7 @@ void processor_t::allocate() {
     this->not_disambiguation_offset_bits_mask = ~disambiguation_offset_bits_mask;
 
     char label[50] = "";
-    sprintf(label, "Branch_Predictor_%s", this->get_label());
+    sprintf(label, "%s_BRANCH_PREDICTOR", this->get_label());
     this->branch_predictor->set_label(label);
     this->branch_predictor->allocate();
 
@@ -384,9 +405,8 @@ void processor_t::synchronize(sync_t new_sync) {
                     case SYNC_BARRIER:
                     case SYNC_WAIT_CRITICAL_START:
                     case SYNC_FREE:
-                        ERROR_ASSERT_PRINTF(false,
-                                            "Processor[%d] should not receive synchronize[%s]\n",
-                                            this->get_core_id(), get_enum_sync_char(new_sync));
+                        ERROR_PRINTF("Processor[%d] should not receive synchronize[%s]\n",
+                                    this->get_core_id(), get_enum_sync_char(new_sync));
                     break;
                 }
             }
@@ -419,8 +439,7 @@ void processor_t::synchronize(sync_t new_sync) {
         /// Should not receive these Sync_T
         case SYNC_WAIT_CRITICAL_START:
         case SYNC_FREE:
-            ERROR_ASSERT_PRINTF(false,
-                        "Processor[%d] should not receive synchronize[%s]\n",
+            ERROR_PRINTF("Processor[%d] should not receive synchronize[%s]\n",
                         this->get_core_id(), get_enum_sync_char(new_sync));
         break;
     }
@@ -1137,7 +1156,6 @@ void processor_t::stage_dispatch() {
 
     for (uint32_t k = 0; k < this->unified_reservation_station.size(); k++) {
         reorder_buffer_line_t* reorder_buffer_line = this->unified_reservation_station[k];
-        bool dispatched = false;
 
         /// No other Functional Unit is available
         if (total_dispatched >= this->stage_dispatch_width) {
@@ -1146,10 +1164,12 @@ void processor_t::stage_dispatch() {
 
         if (reorder_buffer_line->wait_reg_deps_number == 0 &&
         reorder_buffer_line->uop.ready_cycle <= sinuca_engine.get_global_cycle()) {
-
             ERROR_ASSERT_PRINTF(reorder_buffer_line->stage == PROCESSOR_STAGE_RENAME, "Reservation Station with package not in Rename Stage.\n")
             ERROR_ASSERT_PRINTF(reorder_buffer_line->uop.state == PACKAGE_STATE_READY, "Reservation Station with package not Ready.\n")
             PROCESSOR_DEBUG_PRINTF("\t Dispatching package\n");
+
+            bool dispatched = false;
+
             switch (reorder_buffer_line->uop.uop_operation) {
             ///=============================================================
                 /// BRANCHES
@@ -1342,6 +1362,7 @@ void processor_t::stage_execution() {
             this->memory_order_buffer_read[slot].rob_ptr->uop.package_ready(this->stage_commit_cycles);
             this->solve_data_forward(this->memory_order_buffer_read[slot].rob_ptr);
             this->memory_order_buffer_read[slot].package_clean();
+            break;
         }
     }
 
@@ -1748,11 +1769,6 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
 
 /// ============================================================================
 /// Token Controller Methods
-/// ============================================================================
-void processor_t::allocate_token_list() {
-    PROCESSOR_DEBUG_PRINTF("allocate_token_list()\n");
-};
-
 /// ============================================================================
 bool processor_t::check_token_list(memory_package_t *package) {
     ERROR_PRINTF("check_token_list %s.\n", package->content_to_string().c_str())

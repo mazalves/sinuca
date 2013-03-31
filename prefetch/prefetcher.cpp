@@ -149,11 +149,6 @@ bool prefetch_t::receive_package(memory_package_t *package, uint32_t input_port,
 /// ============================================================================
 /// Token Controller Methods
 /// ============================================================================
-void prefetch_t::allocate_token_list() {
-    PREFETCHER_DEBUG_PRINTF("allocate_token_list()\n");
-};
-
-/// ============================================================================
 bool prefetch_t::check_token_list(memory_package_t *package) {
     ERROR_PRINTF("check_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
     return FAIL;

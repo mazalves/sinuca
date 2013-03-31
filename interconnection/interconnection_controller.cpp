@@ -119,11 +119,6 @@ bool interconnection_controller_t::receive_package(memory_package_t *package, ui
 /// ============================================================================
 /// Token Controller Methods
 /// ============================================================================
-void interconnection_controller_t::allocate_token_list() {
-    INTERCONNECTION_CTRL_DEBUG_PRINTF("allocate_token_list()\n");
-};
-
-/// ============================================================================
 bool interconnection_controller_t::check_token_list(memory_package_t *package) {
     ERROR_PRINTF("check_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
     return FAIL;

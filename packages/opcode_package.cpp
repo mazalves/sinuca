@@ -87,11 +87,9 @@ bool opcode_package_t::operator==(const opcode_package_t &package) {
     if (this->opcode_address != package.opcode_address) return FAIL;
     if (this->opcode_size != package.opcode_size) return FAIL;
 
-
     for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
         if (this->read_regs[i] != package.read_regs[i]) return FAIL;
     }
-
 
     for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
         if (this->write_regs[i] != package.write_regs[i]) return FAIL;
@@ -134,11 +132,9 @@ void opcode_package_t::package_clean() {
     this->opcode_address = 0;
     this->opcode_size = 0;
 
-
     for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
         this->read_regs[i] = POSITION_FAIL;
     }
-
 
     for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
         this->write_regs[i] = POSITION_FAIL;
@@ -245,85 +241,10 @@ std::string opcode_package_t::content_to_string() {
 };
 
 
-//==============================================================================
-// Instruction Class
-// Convert Instruction variables into String
-/*
-std::string opcode_package_t::opcode_to_trace_string() {
-    std::string trace_string = "";
-    std::string register_string = "";
-    uint32_t reg_count = 0;
-
-    trace_string = this->opcode_assembly;
-    trace_string = trace_string + " " + utils_t::uint32_to_char(this->opcode_operation);
-    trace_string = trace_string + " 0x" + utils_t::uint64_to_char(this->opcode_address);
-    trace_string = trace_string + " " + utils_t::uint32_to_char(this->opcode_size);
-
-    register_string = "";
-    reg_count = 0;
-    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-        if (this->read_regs[i] >= 0) {
-            reg_count++;
-            register_string = register_string + " " + utils_t::uint32_to_char(this->read_regs[i]);
-        }
-    }
-    trace_string = trace_string + " " + utils_t::uint32_to_char(reg_count) + register_string;
-
-    register_string = "";
-    reg_count = 0;
-    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-        if (this->write_regs[i] >= 0) {
-            reg_count++;
-            register_string = register_string + " " + utils_t::uint32_to_char(this->write_regs[i]);
-        }
-    }
-    trace_string = trace_string + " " + utils_t::uint32_to_char(reg_count) + register_string;
-
-    trace_string = trace_string + " " + utils_t::uint32_to_char(this->base_reg);
-    trace_string = trace_string + " " + utils_t::uint32_to_char(this->index_reg);
-
-    if (this->is_read == true)
-        trace_string = trace_string + " 1";
-    else
-        trace_string = trace_string + " 0";
-
-    if (this->is_read2 == true)
-        trace_string = trace_string + " 1";
-    else
-        trace_string = trace_string + " 0";
-
-    if (this->is_write == true)
-        trace_string = trace_string + " 1";
-    else
-        trace_string = trace_string + " 0";
-
-
-    if (this->is_branch == true)
-        trace_string = trace_string + " 1";
-    else
-        trace_string = trace_string + " 0";
-
-    if (this->is_predicated == true)
-        trace_string = trace_string + " 1";
-    else
-        trace_string = trace_string + " 0";
-
-    if (this->is_prefetch == true)
-        trace_string = trace_string + " 1";
-    else
-        trace_string = trace_string + " 0";
-
-    trace_string = trace_string + "\n";
-
-    return trace_string;
-};
-*/
-
 //============================================================================== NEW
 // Instruction Class
 // Convert Instruction variables into String
 void opcode_package_t::opcode_to_trace_string(char *trace_string) {
-    // ~ static char *trace_string = utils_t::template_allocate_array<char>(TRACE_LINE_SIZE);
     static char *register_string = utils_t::template_allocate_array<char>(TRACE_LINE_SIZE);
     uint32_t reg_count;
 
@@ -405,62 +326,8 @@ void opcode_package_t::opcode_to_trace_string(char *trace_string) {
 
    strcat(trace_string,"\n");
 
-    // ~ return trace_string;
 };
 
-
-//==============================================================================
-/*
-/// Convert Dynamic Memory Trace line into Instruction Memory Operands
-/// Field N.:   01 |  02  |      03
-///     Ex:     W 8 0x140735291283448
-///             W 8 0x140735291283440
-///             W 8 0x140735291283432
-void opcode_package_t::trace_string_to_read(const std::string& input_string, uint32_t actual_bbl) {
-    int32_t start_pos = 0;
-    uint32_t end_pos = 0;
-    uint32_t field = 1;
-    std::string sub_string;
-
-    for (end_pos = 0 ; end_pos <= input_string.length() ; end_pos++) {
-        if (input_string[end_pos] == ' ' || end_pos == input_string.length()) {
-            sub_string = input_string.substr(start_pos, end_pos - start_pos);
-            start_pos = end_pos + 1;
-
-            switch (field) {
-                case 1:
-                    /// Read or Write (Check the Instruction Type and the Memory Type)
-                    ERROR_ASSERT_PRINTF(sub_string.compare("R") == 0, "MemoryTraceFile Wrong Type. Type (R) expected.\n Inst: %s\n Mem:%s\n", this->content_to_string().c_str(), input_string.c_str())
-                    field = 2;  /// Next Field
-                break;
-
-                case 2:
-                    /// Load/Store Size
-                    this->read_size = strtoull(sub_string.c_str(), NULL, 10);
-                    field = 3;  /// Next Field
-                break;
-
-
-                case 3:
-                    /// Memory Address
-                    this->read_address = strtoull(sub_string.c_str(), NULL, 10);
-                    field = 4;  /// Next Field
-                break;
-
-                case 4:
-                    /// Basic Block Number
-                    field = 5; /// Next Field
-                    ERROR_ASSERT_PRINTF((uint32_t)strtoul(sub_string.c_str(), NULL, 10) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%u)\n", actual_bbl, (uint32_t)strtoul(sub_string.c_str(), NULL, 10))
-                break;
-
-                default:
-                    ERROR_ASSERT_PRINTF(false, "Error converting Text to Memory (Wrong  number of fields)\n")
-                break;
-            }
-        }
-    }
-};
-*/
 
 //============================================================================== NEW
 /// Convert Dynamic Memory Trace line into Instruction Memory Operands
@@ -477,7 +344,6 @@ void opcode_package_t::trace_string_to_read(const char * input_string, uint32_t 
 
     for (end_pos = 0 ; end_pos <= strlen(input_string) ; end_pos++) {
         if (input_string[end_pos] == ' ' || end_pos == strlen(input_string)) {
-            // ~ sub_string = input_string.substr(start_pos, end_pos - start_pos);
             strncpy(sub_string, input_string + start_pos, end_pos - start_pos);
             sub_string[end_pos - start_pos] = '\0';
             start_pos = end_pos + 1;
@@ -496,7 +362,6 @@ void opcode_package_t::trace_string_to_read(const char * input_string, uint32_t 
                     field = 3;  /// Next Field
                 break;
 
-
                 case 3:
                     /// Memory Address
                     this->read_address = strtoull(sub_string, NULL, 10);
@@ -511,56 +376,13 @@ void opcode_package_t::trace_string_to_read(const char * input_string, uint32_t 
                 break;
 
                 default:
-                    ERROR_ASSERT_PRINTF(false, "Error converting Text to Memory (Wrong  number of fields)\n")
+                    ERROR_PRINTF("Error converting Text to Memory (Wrong  number of fields)\n")
                 break;
             }
         }
     }
 };
 
-//==============================================================================
-/*
-void opcode_package_t::trace_string_to_read2(const std::string& input_string, uint32_t actual_bbl) {
-    int32_t start_pos = 0;
-    uint32_t end_pos = 0;
-    uint32_t field = 1;
-    std::string sub_string;
-
-    for (end_pos = 0 ; end_pos <= input_string.length() ; end_pos++) {
-        if (input_string[end_pos] == ' ' || end_pos == input_string.length()) {
-            sub_string = input_string.substr(start_pos, end_pos - start_pos);
-            start_pos = end_pos + 1;
-
-            switch (field) {
-                case 1:     /// Read or Write (Check the Instruction Type and the Memory Type)
-                    ERROR_ASSERT_PRINTF(sub_string.compare("R") == 0, "MemoryTraceFile Wrong Type. Type (R) expected.\n Inst: %s\n Mem:%s\n", this->content_to_string().c_str(), input_string.c_str())
-                    field = 2;  /// Next Field
-                break;
-
-                case 2:     /// Load/Store Size
-                    this->read2_size = strtoull(sub_string.c_str(), NULL, 10);
-                    field = 3;  /// Next Field
-                break;
-
-                case 3:     /// Memory Address
-                    this->read2_address = strtoull(sub_string.c_str(), NULL, 10);
-                    field = 4;  /// Next Field
-                break;
-
-                case 4:
-                    /// Basic Block Number
-                    field = 5; /// Next Field
-                    ERROR_ASSERT_PRINTF((uint32_t)strtoul(sub_string.c_str(), NULL, 10) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%u)\n", actual_bbl, (uint32_t)strtoul(sub_string.c_str(), NULL, 10))
-                break;
-
-                default:
-                    ERROR_ASSERT_PRINTF(false, "Error converting Text to Memory (Wrong  number of fields)\n")
-                break;
-            }
-        }
-    }
-};
-*/
 
 //============================================================================== NEW
 void opcode_package_t::trace_string_to_read2(const char * input_string, uint32_t actual_bbl) {
@@ -572,7 +394,6 @@ void opcode_package_t::trace_string_to_read2(const char * input_string, uint32_t
 
     for (end_pos = 0 ; end_pos <= strlen(input_string) ; end_pos++) {
         if (input_string[end_pos] == ' ' || end_pos == strlen(input_string)) {
-            // ~ sub_string = input_string.substr(start_pos, end_pos - start_pos);
             strncpy(sub_string, input_string + start_pos, end_pos - start_pos);
             sub_string[end_pos - start_pos] = '\0';
             start_pos = end_pos + 1;
@@ -600,58 +421,13 @@ void opcode_package_t::trace_string_to_read2(const char * input_string, uint32_t
                 break;
 
                 default:
-                    ERROR_ASSERT_PRINTF(false, "Error converting Text to Memory (Wrong  number of fields)\n")
+                    ERROR_PRINTF("Error converting Text to Memory (Wrong  number of fields)\n")
                 break;
             }
         }
     }
 };
 
-
-
-//==============================================================================
-/*
-void opcode_package_t::trace_string_to_write(const std::string& input_string, uint32_t actual_bbl) {
-    int32_t start_pos = 0;
-    uint32_t end_pos = 0;
-    uint32_t field = 1;
-    std::string sub_string;
-
-    for (end_pos = 0 ; end_pos <= input_string.length() ; end_pos++) {
-        if (input_string[end_pos] == ' ' || end_pos == input_string.length()) {
-            sub_string = input_string.substr(start_pos, end_pos - start_pos);
-            start_pos = end_pos + 1;
-
-            switch (field) {
-                case 1:     /// Read or Write (Check the Instruction Type and the Memory Type)
-                    ERROR_ASSERT_PRINTF(sub_string.compare("W") == 0, "MemoryTraceFile Wrong Type. Type (W) expected.\n Inst: %s\n Mem:%s\n", this->content_to_string().c_str(), input_string.c_str())
-                    field = 2;  /// Next Field
-                break;
-
-                case 2:     /// Load/Store Size
-                    this->write_size = strtoull(sub_string.c_str(), NULL, 10);
-                    field = 3;  /// Next Field
-                break;
-
-                case 3:     /// Memory Address
-                    this->write_address = strtoull(sub_string.c_str(), NULL, 10);
-                    field = 4;  /// Next Field
-                break;
-
-                case 4:
-                    /// Basic Block Number
-                    field = 5; /// Next Field
-                    ERROR_ASSERT_PRINTF((uint32_t)strtoul(sub_string.c_str(), NULL, 10) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%u)\n", actual_bbl, (uint32_t)strtoul(sub_string.c_str(), NULL, 10))
-                break;
-
-                default:
-                    ERROR_ASSERT_PRINTF(false, "Error converting Text to Memory (Wrong  number of fields)\n")
-                break;
-            }
-        }
-    }
-};
-*/
 
 //============================================================================== NEW
 void opcode_package_t::trace_string_to_write(const char * input_string, uint32_t actual_bbl) {
@@ -663,7 +439,6 @@ void opcode_package_t::trace_string_to_write(const char * input_string, uint32_t
 
     for (end_pos = 0 ; end_pos <= strlen(input_string) ; end_pos++) {
         if (input_string[end_pos] == ' ' || end_pos == strlen(input_string)) {
-            // ~ sub_string = input_string.substr(start_pos, end_pos - start_pos);
             strncpy(sub_string, input_string + start_pos, end_pos - start_pos);
             sub_string[end_pos - start_pos] = '\0';
             start_pos = end_pos + 1;
@@ -691,174 +466,13 @@ void opcode_package_t::trace_string_to_write(const char * input_string, uint32_t
                 break;
 
                 default:
-                    ERROR_ASSERT_PRINTF(false, "Error converting Text to Memory (Wrong  number of fields)\n")
+                    ERROR_PRINTF("Error converting Text to Memory (Wrong  number of fields)\n")
                 break;
             }
         }
     }
 };
 
-//==============================================================================
-/*
-/// Convert Static Trace line into Instruction
-void opcode_package_t::trace_string_to_opcode(const std::string& input_string) {
-/// Field N.:   01                 |   02                | 03           | 04        |   05      |    06   |   07        |     08        |     09
-/// Type:    opcode_operation | instruction_address | Inst. Size   | N.Rregs   | read_regs | N.Wregs | write_regs  | IsPredicated  | IsPrefetch
-/// Static File Example:
-/// #
-/// # Compressed Trace Generated By Pin to SiNUCA
-/// #
-/// @1
-/// 1 0x140647360289520 3 1 15 1 12 0 0
-/// 9 0x140647360289523 5 2 35 15 2 35 15 0 0
-/// @2
-/// 9 0x140647360305456 1 2 14 15 1 15 0 0
-/// 1 0x140647360305457 3 1 15 1 14 0 0
-/// 9 0x140647360305460 2 2 27 15 1 15 0 0
-/// 9 0x140647360305462 2 2 26 15 1 15 0 0
-/// 9 0x140647360305464 2 2 25 15 1 15 0 0
-///
-    int32_t start_pos = 0;
-    uint32_t end_pos = 0, field = 1, sub_fields = 0, reg_num = 0;
-    std::string sub_string;
-
-    ERROR_ASSERT_PRINTF(!input_string.empty() && input_string[0] != '#' && input_string[0] != '@', "Error converting Text to Instruction\n String::%s \n", input_string.c_str())
-
-    for (end_pos = 0; end_pos <= input_string.length(); end_pos++) {
-        if (input_string[end_pos] == ' ' || end_pos == input_string.length()) {
-            sub_string = input_string.substr(start_pos, end_pos - start_pos);
-            start_pos = end_pos + 1;
-            /// printf("%s\n", sub_string.c_str());
-
-            switch (field) {
-                case 1:
-                    strncpy(this->opcode_assembly, sub_string.c_str(), sizeof(this->opcode_assembly));
-                    field = 2;  /// Next Field
-                break;
-
-                case 2:
-                    this->opcode_operation = instruction_operation_t(atoi(sub_string.c_str()));
-                    field = 3;  /// Next Field
-                break;
-
-
-                case 3:
-                    ERROR_ASSERT_PRINTF(sub_string.compare(0, 2, "0x") == 0, "Error converting Text to Instruction (Wrong number of fields)\n")
-                    sub_string = sub_string.substr(2, sub_string.length());
-
-                    this->opcode_address = strtoull(sub_string.c_str(), NULL, 10);
-                    field = 4;  /// Next Field
-                break;
-
-                case 4:
-                    this->opcode_size = atoi(sub_string.c_str());
-                    field = 5;  /// Next Field
-                break;
-
-
-                case 5:
-                    ERROR_ASSERT_PRINTF(atoi(sub_string.c_str()) <= MAX_REGISTERS, "Reading a trace with more Read_Reg than MAX_REGISTERS(%d) registers.", MAX_REGISTERS)
-
-                    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-                        this->read_regs[i] = POSITION_FAIL;
-                    }
-
-                    sub_fields = atoi(sub_string.c_str());
-                    reg_num = 0;
-                    if (sub_fields > 0)
-                        field = 6;  /// Next Field
-                    else
-                        field = 7;  /// Next Field
-                break;
-                        case 6:
-                            this->read_regs[reg_num] = strtoull(sub_string.c_str(), NULL, 10);
-                            reg_num++;
-                            sub_fields--;
-
-                            if (sub_fields > 0)
-                                field = 6;  /// Next Field
-                            else
-                                field = 7;  /// Next Field
-                        break;
-
-
-                case 7:
-                    ERROR_ASSERT_PRINTF(atoi(sub_string.c_str()) <= MAX_REGISTERS, "Reading a trace with more Write_Reg than MAX_REGISTERS(%d) registers.", MAX_REGISTERS)
-
-                    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-                        this->write_regs[i] = POSITION_FAIL;
-                    }
-
-                    sub_fields = atoi(sub_string.c_str());
-                    reg_num = 0;
-
-                    if (sub_fields > 0)
-                        field = 8;  /// Next Field
-                    else
-                        field = 9;  /// Next Field
-                break;
-                        case 8:
-                            this->write_regs[reg_num] = strtoull(sub_string.c_str(), NULL, 10);
-                            reg_num++;
-                            sub_fields--;
-
-                            if (sub_fields > 0)
-                                field = 8;  /// Next Field
-                            else
-                                field = 9;  /// Next Field
-                        break;
-                /// Base and Index Registers
-                case 9:
-                    this->base_reg = strtoull(sub_string.c_str(), NULL, 10);
-                    field = 10;  /// Next Field
-                break;
-
-
-                case 10:
-                    this->index_reg = strtoull(sub_string.c_str(), NULL, 10);
-                    field = 11;  /// Next Field
-                break;
-
-                /// Flags
-                case 11:
-                    this->is_read = (sub_string == "1");
-                    field = 12;  /// Next Field
-                break;
-
-                case 12:
-                    this->is_read2 = (sub_string == "1");
-                    field = 13;  /// Next Field
-                break;
-
-                case 13:
-                    this->is_write = (sub_string == "1");
-                    field = 14;  /// Next Field
-                break;
-
-                case 14:
-                    this->is_branch = (sub_string == "1");
-                    field = 15;  /// Next Field
-                break;
-
-                case 15:
-                    this->is_predicated = (sub_string == "1");
-                    field = 16;  /// Next Field
-                break;
-
-                case 16:
-                    this->is_prefetch = (sub_string == "1");
-                    field = 17;  /// Next Field
-                break;
-
-                default:
-                    ERROR_ASSERT_PRINTF(false, "Error converting Text to Instruction (More fields than wanted) - %s\n", sub_string.c_str())
-                break;
-            }
-        }
-    }
-    ERROR_ASSERT_PRINTF(field == 17, "Error converting Text to Instruction (Less fields than wanted) - %d\n", field)
-};
-*/
 
 //============================================================================== NEW
 /// Convert Static Trace line into Instruction
@@ -889,7 +503,6 @@ void opcode_package_t::trace_string_to_opcode(const char *input_string) {
     for (end_pos = 0; end_pos <= strlen(input_string); end_pos++) {
         if (input_string[end_pos] == ' ' || end_pos == strlen(input_string)) {
 
-            // ~ sub_string = input_string.substr(start_pos, end_pos - start_pos);
             strncpy(sub_string, input_string + start_pos, end_pos - start_pos);
             sub_string[end_pos - start_pos] = '\0';
             start_pos = end_pos + 1;
@@ -906,10 +519,8 @@ void opcode_package_t::trace_string_to_opcode(const char *input_string) {
                     field = 3;  /// Next Field
                 break;
 
-
                 case 3:
                     ERROR_ASSERT_PRINTF(memcmp(sub_string, "0x", 2) == 0, "Error converting Text to Instruction (Wrong number of fields), input_string = %s\n", sub_string)
-                    // ~ sub_string = sub_string.substr(2, sub_string.length());
                     this->opcode_address = strtoull(sub_string + 2, NULL, 10);
                     field = 4;  /// Next Field
                 break;
@@ -918,7 +529,6 @@ void opcode_package_t::trace_string_to_opcode(const char *input_string) {
                     this->opcode_size = atoi(sub_string);
                     field = 5;  /// Next Field
                 break;
-
 
                 case 5:
                     for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
@@ -1011,7 +621,7 @@ void opcode_package_t::trace_string_to_opcode(const char *input_string) {
                 break;
 
                 default:
-                    ERROR_ASSERT_PRINTF(false, "Error converting Text to Instruction (More fields than wanted) - %d %s\n", field, sub_string)
+                    ERROR_PRINTF("Error converting Text to Instruction (More fields than wanted) - %d %s\n", field, sub_string)
                 break;
             }
         }

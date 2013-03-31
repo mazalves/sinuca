@@ -107,7 +107,6 @@ void sinuca_engine_t::initialize() {
         CONFIGURATOR_DEBUG_PRINTF("Allocating %s\n", this->interconnection_interface_array[i]->get_label());
         this->interconnection_interface_array[i]->allocate();
         this->interconnection_interface_array[i]->allocate_base();
-        this->interconnection_interface_array[i]->allocate_token_list();
     }
     this->set_is_simulation_allocated(true);
     CONFIGURATOR_DEBUG_PRINTF("Finished allocation\n");

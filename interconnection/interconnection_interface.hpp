@@ -30,7 +30,7 @@
   * The II will exist on almost every component in order to interface the components
   */
 class interconnection_interface_t {
-    private:
+    protected:
         /// ====================================================================
         /// Set by sinuca_configurator
         /// ====================================================================
@@ -41,11 +41,7 @@ class interconnection_interface_t {
         uint32_t used_ports;
         uint32_t interconnection_width;
         uint32_t interconnection_latency;
-
-        /// ====================================================================
-        /// Set by allocate_token_list
-        /// ====================================================================
-        container_token_t *token_list;
+        container_token_t token_list;
 
         /// ====================================================================
         /// Set by this->set_higher_lower_level_component()
@@ -92,8 +88,6 @@ class interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, interconnection_width)
         INSTANTIATE_GET_SET(uint32_t, interconnection_latency)
 
-        INSTANTIATE_GET_SET(container_token_t*, token_list)
-
         /// ====================================================================
         /// Inheritance
         /// ====================================================================
@@ -104,7 +98,6 @@ class interconnection_interface_t {
         virtual bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) = 0; /// Only Sender calculate the latency and pass to the receiver.
 
         /// Token Controller Methods
-        virtual void allocate_token_list() = 0;
         virtual bool check_token_list(memory_package_t *package) = 0;       /// Check for available position to receive a package and allocate a token
         virtual uint32_t check_token_space(memory_package_t *package) = 0;  /// Should check the internal structure of the component to see if there is space for more tokens
         virtual void remove_token_list(memory_package_t *package) = 0;      /// After arrive the package remove from token list

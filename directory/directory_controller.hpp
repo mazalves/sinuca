@@ -34,8 +34,8 @@ class directory_controller_t : public interconnection_interface_t {
         /// Set by this->allocate()
         /// ====================================================================
         uint64_t not_offset_bits_mask;
-        container_ptr_cache_memory_t *llc_caches;
-        container_ptr_directory_line_t *directory_lines;
+        container_ptr_cache_memory_t llc_caches;
+        container_ptr_directory_line_t directory_lines;
 
         /// ====================================================================
         /// Statistics related
@@ -96,7 +96,6 @@ class directory_controller_t : public interconnection_interface_t {
         int32_t send_package(memory_package_t *package);
         bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
         /// Token Controller Methods
-        void allocate_token_list();
         bool check_token_list(memory_package_t *package);
         uint32_t check_token_space(memory_package_t *package);
         void remove_token_list(memory_package_t *package);
@@ -140,10 +139,9 @@ class directory_controller_t : public interconnection_interface_t {
         };
 
         inline uint32_t get_directory_lines_size() {
-            return this->directory_lines->size();
+            return this->directory_lines.size();
         };
 
-        INSTANTIATE_GET_SET(container_ptr_directory_line_t*, directory_lines)
         INSTANTIATE_GET_SET(uint64_t, not_offset_bits_mask)
         INSTANTIATE_GET_SET(coherence_protocol_t, coherence_protocol_type)
         INSTANTIATE_GET_SET(inclusiveness_t, inclusiveness_type)

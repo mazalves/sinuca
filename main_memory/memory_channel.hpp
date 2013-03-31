@@ -75,6 +75,11 @@ class memory_channel_t : public interconnection_interface_t {
 
         uint32_t last_bank_selected;
 
+        /// ====================================================================
+        /// Statistics related
+        /// ====================================================================
+        uint64_t stat_row_buffer_hit;
+        uint64_t stat_row_buffer_miss;
 
         uint64_t stat_read_forward;
         uint64_t stat_write_forward;
@@ -96,7 +101,6 @@ class memory_channel_t : public interconnection_interface_t {
         int32_t send_package(memory_package_t *package);
         bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
         /// Token Controller Methods
-        void allocate_token_list();
         bool check_token_list(memory_package_t *package);
         uint32_t check_token_space(memory_package_t *package);
         void remove_token_list(memory_package_t *package);
@@ -162,6 +166,9 @@ class memory_channel_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, timing_rtp)
         INSTANTIATE_GET_SET(uint32_t, timing_wr)
         INSTANTIATE_GET_SET(uint32_t, timing_wtr)
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_row_buffer_hit);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_row_buffer_miss);
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_read_forward);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_write_forward);

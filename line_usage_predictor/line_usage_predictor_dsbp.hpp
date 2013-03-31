@@ -80,7 +80,7 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
 
         uint64_t *stat_accessed_sub_blocks;
         uint64_t *stat_written_sub_blocks;
-        
+
         uint64_t *stat_active_sub_block_per_access;     /// Number of active sub_blocks on the line during one access
         uint64_t *stat_active_sub_block_per_cycle;      /// Number of cycles with a set of sub_blocks enabled
 
@@ -121,7 +121,6 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         // ~ int32_t send_package(memory_package_t *package);
         // ~ bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
         /// Token Controller Methods
-        // ~ void allocate_token_list();
         // ~ bool check_token_list(memory_package_t *package);
         // ~ uint32_t check_token_space(memory_package_t *package);
         // ~ void remove_token_list(memory_package_t *package);
