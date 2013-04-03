@@ -397,13 +397,11 @@ void memory_controller_t::insert_mshr_born_ordered(memory_package_t* package){
 int32_t memory_controller_t::allocate_request(memory_package_t* package){
 
     int32_t slot = memory_package_t::find_free(this->mshr_buffer, this->mshr_buffer_request_reserved_size);
+    ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Receiving a REQUEST package, but MSHR is full\n")
     if (slot != POSITION_FAIL) {
         MEMORY_CONTROLLER_DEBUG_PRINTF("\t NEW REQUEST\n");
         this->mshr_buffer[slot] = *package;
         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
-    }
-    else {
-        add_stat_full_mshr_buffer_request();
     }
     return slot;
 };
@@ -412,14 +410,12 @@ int32_t memory_controller_t::allocate_request(memory_package_t* package){
 int32_t memory_controller_t::allocate_copyback(memory_package_t* package){
 
     int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size, this->mshr_buffer_copyback_reserved_size);
+    ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Receiving a COPYBACK package, but MSHR is full\n")
     if (slot != POSITION_FAIL) {
         slot += this->mshr_buffer_request_reserved_size;
         MEMORY_CONTROLLER_DEBUG_PRINTF("\t NEW COPYBACK\n");
         this->mshr_buffer[slot] = *package;
         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
-    }
-    else {
-        add_stat_full_mshr_buffer_copyback();
     }
     return slot;
 };
@@ -428,14 +424,12 @@ int32_t memory_controller_t::allocate_copyback(memory_package_t* package){
 int32_t memory_controller_t::allocate_prefetch(memory_package_t* package){
     int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size,
                                                 this->mshr_buffer_prefetch_reserved_size);
+    ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Receiving a PREFETCH package, but MSHR is full\n")
     if (slot != POSITION_FAIL) {
         slot += this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size;
         MEMORY_CONTROLLER_DEBUG_PRINTF("\t NEW PREFETCH\n");
         this->mshr_buffer[slot] = *package;
         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
-    }
-    else {
-        add_stat_full_mshr_buffer_prefetch();
     }
     return slot;
 };
@@ -570,16 +564,66 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
         this->token_list.push_back(new_token);
     }
 
-    /// 3. Check if the guest can come now, or it needs to wait for free space.
-    if (token < this->check_token_space(package)) {
-        /// Lets party !
-        return OK;
+    /// Attention: Since we classify the incoming requests into request, prefetch and copyback
+    /// But we only have one token_list, we are counting how many requests of each type exists
+    /// so we know if we can or cannot receive the package.
+    uint32_t slot, request_number = 0, copyback_number = 0, prefetch_number = 0;
+    for (slot = 0; slot < token; slot++) {
+        switch (this->token_list[slot].memory_operation) {
+            case MEMORY_OPERATION_READ:
+            case MEMORY_OPERATION_INST:
+                request_number++;
+            break;
+
+            case MEMORY_OPERATION_PREFETCH:
+                prefetch_number++;
+            break;
+
+            case MEMORY_OPERATION_COPYBACK:
+            case MEMORY_OPERATION_WRITE:
+                copyback_number++;
+            break;
+        }
     }
-    else {
-        /// Hold on !
-        add_stat_full_mshr_buffer_request();
-        return FAIL;
+
+    /// 3. Check if the guest can come now, Or it needs to wait for free space.
+    /// Hold on !
+    switch (package->memory_operation) {
+        case MEMORY_OPERATION_READ:
+        case MEMORY_OPERATION_INST:
+            if (request_number < this->check_token_space(package)) {
+                /// Lets party !
+                return OK;
+            }
+            else {
+                this->add_stat_full_mshr_buffer_request();
+            }
+        break;
+
+        case MEMORY_OPERATION_PREFETCH:
+            if (prefetch_number < this->check_token_space(package)) {
+                /// Lets party !
+                return OK;
+            }
+            else {
+                this->add_stat_full_mshr_buffer_prefetch();
+            }
+        break;
+
+        case MEMORY_OPERATION_COPYBACK:
+        case MEMORY_OPERATION_WRITE:
+            if (copyback_number < this->check_token_space(package)) {
+                /// Lets party !
+                return OK;
+            }
+            else {
+                this->add_stat_full_mshr_buffer_copyback();
+            }
+        break;
     }
+
+    return FAIL;
+
 };
 
 /// ============================================================================

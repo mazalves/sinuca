@@ -104,6 +104,10 @@ class processor_t : public interconnection_interface_t {
 
         uint32_t fetch_block_size;
         uint32_t branch_per_fetch;
+
+        /// Branch Latency to flush on wrong prediction
+        uint32_t branch_flush_latency;
+        uint64_t branch_flush_cycle_ready;
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
@@ -192,6 +196,11 @@ class processor_t : public interconnection_interface_t {
 
         uint64_t stat_reset_fetch_opcode_counter;
         uint64_t stat_reset_decode_uop_counter;
+
+        /// Full ROB and MOB statistics
+        uint64_t stat_full_reorder_buffer;
+        uint64_t stat_full_memory_order_buffer_read;
+        uint64_t stat_full_memory_order_buffer_write;
 
         /// Executed Instructions
         uint64_t stat_nop_completed;
@@ -391,6 +400,10 @@ class processor_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, fetch_block_size)
         INSTANTIATE_GET_SET(uint32_t, branch_per_fetch)
 
+        /// Branch Latency to flush on wrong prediction
+        INSTANTIATE_GET_SET(uint32_t, branch_flush_latency)
+        INSTANTIATE_GET_SET(uint64_t, branch_flush_cycle_ready)
+
         /// Processor Synchronization
         INSTANTIATE_GET_SET(sync_t, sync_status);
         INSTANTIATE_GET_SET(uint64_t, sync_status_time);
@@ -403,6 +416,12 @@ class processor_t : public interconnection_interface_t {
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_reset_fetch_opcode_counter)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_reset_decode_uop_counter)
+
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_reorder_buffer)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_memory_order_buffer_read)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_memory_order_buffer_write)
+
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_nop_completed)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_branch_completed)

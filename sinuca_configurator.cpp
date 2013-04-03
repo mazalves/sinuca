@@ -204,6 +204,10 @@ void sinuca_engine_t::initialize_processor() {
             this->processor_array[i]->set_stage_commit_cycles( cfg_processor[ processor_parameters.back() ] );
 
 
+            /// Branch Latency to flush on wrong prediction
+            processor_parameters.push_back("BRANCH_FLUSH_LATENCY");
+            this->processor_array[i]->set_branch_flush_latency( cfg_processor[ processor_parameters.back() ] );
+
             /// ================================================================
             /// Pipeline Width
             /// ================================================================

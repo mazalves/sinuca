@@ -49,6 +49,10 @@ processor_t::processor_t() {
     this->branch_solve_stage = PROCESSOR_STAGE_FETCH;
     this->branch_opcode_number = 0;
 
+    /// Branch flush latency
+    this->branch_flush_latency = 0;
+    this->branch_flush_cycle_ready = 0;
+
     /// Stages Control Variables
     this->trace_next_opcode.package_clean();
     this->fetch_opcode_address = 0;                     /// Last PC requested to IC
@@ -458,6 +462,7 @@ void processor_t::solve_branch(uint64_t opcode_number, processor_stage_t process
         this->branch_opcode_number == opcode_number &&
         this->branch_solve_stage == processor_stage) {
             this->branch_solve_stage = PROCESSOR_STAGE_FETCH;
+                this->branch_flush_cycle_ready = sinuca_engine.get_global_cycle() + this->branch_flush_latency;
     }
 };
 
@@ -479,7 +484,8 @@ void processor_t::stage_fetch() {
         // ~ }
 
         /// If must wait Branch miss prediction
-        if (this->branch_solve_stage != PROCESSOR_STAGE_FETCH) {
+        if (this->branch_solve_stage != PROCESSOR_STAGE_FETCH ||
+        this->branch_flush_cycle_ready >= sinuca_engine.get_global_cycle()) {
             add_stat_branch_stall_cycles();
             break;
         }
@@ -978,6 +984,7 @@ void processor_t::stage_rename() {
 
             position_mob = memory_order_buffer_line_t::find_free(this->memory_order_buffer_read, this->memory_order_buffer_read_size);
             if (position_mob == POSITION_FAIL) {
+                this->add_stat_full_memory_order_buffer_read();
                 break;
             }
             mob_line = &this->memory_order_buffer_read[position_mob];
@@ -986,6 +993,7 @@ void processor_t::stage_rename() {
         else if (this->decode_buffer[decode_buffer_position_start].uop_operation == INSTRUCTION_OPERATION_MEM_STORE) {
             position_mob = memory_order_buffer_line_t::find_free(this->memory_order_buffer_write, this->memory_order_buffer_write_size);
             if (position_mob == POSITION_FAIL) {
+                this->add_stat_full_memory_order_buffer_write();
                 break;
             }
             mob_line = &this->memory_order_buffer_write[position_mob];
@@ -995,6 +1003,7 @@ void processor_t::stage_rename() {
         /// Check free space on the ROB
         position_rob = this->rob_insert();
         if (position_rob == POSITION_FAIL) {
+            this->add_stat_full_reorder_buffer();
             break;
         }
 
@@ -1837,6 +1846,10 @@ void processor_t::reset_statistics() {
     this->set_stat_branch_stall_cycles(0);
     this->set_stat_sync_stall_cycles(0);
 
+    this->stat_full_reorder_buffer = 0;
+    this->stat_full_memory_order_buffer_read = 0;
+    this->stat_full_memory_order_buffer_write = 0;
+
     /// Executed Instructions
     this->set_stat_nop_completed(0);
     this->set_stat_branch_completed(0);
@@ -1920,6 +1933,12 @@ void processor_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_branch_stall_cycles", stat_branch_stall_cycles);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_branch_stall_cycles_ratio_warm", this->stat_branch_stall_cycles,
                                                                                                                        sinuca_engine.get_global_cycle() - sinuca_engine.get_reset_cycle());
+
+    /// ROB and MOB Statistics
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_reorder_buffer", stat_full_reorder_buffer);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_memory_order_buffer_read", stat_full_memory_order_buffer_read);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_memory_order_buffer_write", stat_full_memory_order_buffer_write);
 
     /// Executed Instructions
     sinuca_engine.write_statistics_small_separator();
