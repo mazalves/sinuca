@@ -107,6 +107,8 @@ class processor_t : public interconnection_interface_t {
 
         /// Branch Latency to flush on wrong prediction
         uint32_t branch_flush_latency;
+        uint32_t inflight_branches;
+        uint32_t inflight_branches_size;
         uint64_t branch_flush_cycle_ready;
         /// ====================================================================
         /// Set by this->allocate()
@@ -277,7 +279,7 @@ class processor_t : public interconnection_interface_t {
         /// ====================================================================
 
         void synchronize(sync_t new_sync);
-        void solve_branch(uint64_t opcode_number, processor_stage_t processor_stage);
+        void solve_branch(uint64_t opcode_number, processor_stage_t processor_stage, instruction_operation_t operation);
         void stage_fetch();
         void stage_decode();
         void stage_rename();
@@ -402,6 +404,8 @@ class processor_t : public interconnection_interface_t {
 
         /// Branch Latency to flush on wrong prediction
         INSTANTIATE_GET_SET(uint32_t, branch_flush_latency)
+        INSTANTIATE_GET_SET(uint32_t, inflight_branches)
+        INSTANTIATE_GET_SET(uint32_t, inflight_branches_size)
         INSTANTIATE_GET_SET(uint64_t, branch_flush_cycle_ready)
 
         /// Processor Synchronization

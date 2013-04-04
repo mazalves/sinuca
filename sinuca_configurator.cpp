@@ -203,11 +203,6 @@ void sinuca_engine_t::initialize_processor() {
             processor_parameters.push_back("STAGE_COMMIT_CYCLES");
             this->processor_array[i]->set_stage_commit_cycles( cfg_processor[ processor_parameters.back() ] );
 
-
-            /// Branch Latency to flush on wrong prediction
-            processor_parameters.push_back("BRANCH_FLUSH_LATENCY");
-            this->processor_array[i]->set_branch_flush_latency( cfg_processor[ processor_parameters.back() ] );
-
             /// ================================================================
             /// Pipeline Width
             /// ================================================================
@@ -333,6 +328,13 @@ void sinuca_engine_t::initialize_processor() {
 
             processor_parameters.push_back("BRANCH_PER_FETCH");
             this->processor_array[i]->set_branch_per_fetch( cfg_processor[ processor_parameters.back() ] );
+
+            processor_parameters.push_back("BRANCH_FLUSH_LATENCY");
+            this->processor_array[i]->set_branch_flush_latency( cfg_processor[ processor_parameters.back() ] );
+
+            processor_parameters.push_back("INFLIGHT_BRANCHES_SIZE");
+            this->processor_array[i]->set_inflight_branches_size( cfg_processor[ processor_parameters.back() ] );
+
 
             processor_parameters.push_back("CONNECTED_DATA_CACHE");
             processor_parameters.push_back("CONNECTED_INST_CACHE");

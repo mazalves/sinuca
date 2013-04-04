@@ -48,7 +48,8 @@ processor_t::processor_t() {
     /// Branch Prediction Control Variables
     this->branch_solve_stage = PROCESSOR_STAGE_FETCH;
     this->branch_opcode_number = 0;
-
+    this->inflight_branches = 0;
+    this->inflight_branches_size = 0;
     /// Branch flush latency
     this->branch_flush_latency = 0;
     this->branch_flush_cycle_ready = 0;
@@ -457,12 +458,20 @@ void processor_t::synchronize(sync_t new_sync) {
 };
 
 /// ============================================================================
-void processor_t::solve_branch(uint64_t opcode_number, processor_stage_t processor_stage) {
+void processor_t::solve_branch(uint64_t opcode_number, processor_stage_t processor_stage, instruction_operation_t operation) {
+    ERROR_ASSERT_PRINTF(operation == INSTRUCTION_OPERATION_BRANCH, "Asking to solve branch with non branch instruction")
+
+    /// Control the total of inflight instructions
+    if (processor_stage == PROCESSOR_STAGE_EXECUTION) {
+        ERROR_ASSERT_PRINTF(this->inflight_branches > 0, "Decreasing inflight branches to -1")
+        this->inflight_branches--;
+    }
+
     if (this->branch_solve_stage != PROCESSOR_STAGE_FETCH &&
-        this->branch_opcode_number == opcode_number &&
-        this->branch_solve_stage == processor_stage) {
+        this->branch_solve_stage == processor_stage &&
+        this->branch_opcode_number == opcode_number) {
             this->branch_solve_stage = PROCESSOR_STAGE_FETCH;
-                this->branch_flush_cycle_ready = sinuca_engine.get_global_cycle() + this->branch_flush_latency;
+            this->branch_flush_cycle_ready = sinuca_engine.get_global_cycle() + this->branch_flush_latency;
     }
 };
 
@@ -482,6 +491,7 @@ void processor_t::stage_fetch() {
             // ~ this->synchronize(SYNC_BARRIER);
             // ~ break;
         // ~ }
+
 
         /// If must wait Branch miss prediction
         if (this->branch_solve_stage != PROCESSOR_STAGE_FETCH ||
@@ -517,7 +527,6 @@ void processor_t::stage_fetch() {
         /// If the instruction is a branch
         if (this->trace_next_opcode.opcode_operation == INSTRUCTION_OPERATION_BRANCH) {
             count_branches++;
-
             if (count_branches > this->branch_per_fetch){
                 break;
             }
@@ -662,6 +671,12 @@ void processor_t::stage_decode() {
 
     /// Fetch_Buffer => (Decode) => Decode_Buffer
     for (uint32_t i = 0; i < this->stage_decode_width ; i++) {
+
+        if (this->inflight_branches > this->inflight_branches_size) {
+            break;
+        }
+
+
         /// ====================================================================
         /// DECODE =============================================================
 
@@ -801,6 +816,9 @@ void processor_t::stage_decode() {
                                                                         0, 0,
                                                                         this->fetch_buffer[fetch_buffer_position_start]);
 
+            /// If the instruction is a branch
+            this->inflight_branches++;
+
             /// Fix the dependencies between uops
             /// ALU     ReadRegs    = * + 258 (Aux Register) (if is_read)
             ///         WriteRegs   = * + 258 (Aux Register) (if is_write)
@@ -836,7 +854,7 @@ void processor_t::stage_decode() {
             PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, this->decode_buffer[position_buffer].content_to_string().c_str());
 
             /// Solve the Branch Prediction
-            this->solve_branch(this->fetch_buffer[fetch_buffer_position_start].opcode_number, PROCESSOR_STAGE_DECODE);
+            this->solve_branch(this->fetch_buffer[fetch_buffer_position_start].opcode_number, PROCESSOR_STAGE_DECODE, this->fetch_buffer[fetch_buffer_position_start].opcode_operation);
         }
 
 
@@ -1022,7 +1040,9 @@ void processor_t::stage_rename() {
         this->unified_reservation_station.push_back(&this->reorder_buffer[position_rob]);
 
         /// Solve the Branch Prediction
-        this->solve_branch(this->reorder_buffer[position_rob].uop.opcode_number, PROCESSOR_STAGE_RENAME);
+        if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_BRANCH) {
+            this->solve_branch(this->reorder_buffer[position_rob].uop.opcode_number, PROCESSOR_STAGE_RENAME, this->reorder_buffer[position_rob].uop.uop_operation);
+        }
 
 
         ///=====================================================================
@@ -1184,7 +1204,7 @@ void processor_t::stage_dispatch() {
                 /// BRANCHES
                 case INSTRUCTION_OPERATION_BRANCH:
                     /// Solve the Branch Prediction
-                    this->solve_branch(reorder_buffer_line->uop.opcode_number, PROCESSOR_STAGE_DISPATCH);
+                    this->solve_branch(reorder_buffer_line->uop.opcode_number, PROCESSOR_STAGE_DISPATCH, reorder_buffer_line->uop.uop_operation);
                 /// INTEGERS ALU ===============================================
                 case INSTRUCTION_OPERATION_INT_ALU:
                 /// NOP
@@ -1422,7 +1442,7 @@ void processor_t::stage_execution() {
                 /// BRANCHES
                 case INSTRUCTION_OPERATION_BRANCH:
                     /// Solve the Branch Prediction
-                    this->solve_branch(reorder_buffer_line->uop.opcode_number, PROCESSOR_STAGE_EXECUTION);
+                    this->solve_branch(reorder_buffer_line->uop.opcode_number, PROCESSOR_STAGE_EXECUTION, reorder_buffer_line->uop.uop_operation);
                 /// INTEGERS ===============================================
                 case INSTRUCTION_OPERATION_INT_ALU:
                 case INSTRUCTION_OPERATION_NOP:
@@ -2101,6 +2121,9 @@ void processor_t::print_configuration() {
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "branch_per_fetch", branch_per_fetch);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "inflight_branches_size", inflight_branches_size);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "branch_flush_latency", branch_flush_latency);
+
 
     this->branch_predictor->print_configuration();
 };
