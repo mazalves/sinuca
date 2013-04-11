@@ -41,6 +41,7 @@ interconnection_router_t::interconnection_router_t() {
     this->input_buffer_position_end = NULL;
     this->input_buffer_position_used = NULL;
 
+    this->input_buffer_position_used_total = 0;
     this->send_ready_cycle = 0;
     this->recv_ready_cycle = NULL;
 
@@ -81,6 +82,9 @@ void interconnection_router_t::clock(uint32_t subcycle) {
     ROUTER_DEBUG_PRINTF("==================== ID(%u) ",this->get_id());
     ROUTER_DEBUG_PRINTF("====================\n");
     ROUTER_DEBUG_PRINTF("cycle() \n");
+
+    /// Nothing to be done this cycle. -- Improve the performance
+    if (this->input_buffer_position_used_total == 0) return;
 
     /// Stalls the Router / Select Package / Send Package
     /// Makes the router stalls after a package send.
@@ -353,6 +357,7 @@ int32_t interconnection_router_t::input_buffer_insert(uint32_t port) {
     if (this->input_buffer_position_used[port] < this->input_buffer_size) {
         valid_position = this->input_buffer_position_end[port];
         this->input_buffer_position_used[port]++;
+        this->input_buffer_position_used_total++;
         this->input_buffer_position_end[port]++;
         if (this->input_buffer_position_end[port] >= this->input_buffer_size) {
             this->input_buffer_position_end[port] = 0;
@@ -368,6 +373,7 @@ void interconnection_router_t::input_buffer_remove(uint32_t port) {
     this->input_buffer[port][this->input_buffer_position_start[port]].package_clean();
 
     this->input_buffer_position_used[port]--;
+    this->input_buffer_position_used_total--;
     this->input_buffer_position_start[port]++;
     if (this->input_buffer_position_start[port] >= this->input_buffer_size) {
         this->input_buffer_position_start[port] = 0;

@@ -247,6 +247,10 @@ void cache_memory_t::clock(uint32_t subcycle) {
     CACHE_DEBUG_PRINTF("====================\n");
     CACHE_DEBUG_PRINTF("cycle() \n");
 
+    /// Nothing to be done this cycle. -- Improve the performance
+    if (this->mshr_born_ordered.empty() &&
+    this->prefetcher->get_request_buffer_position_used() == 0) return;
+
     /// =================================================================
     /// MSHR_BUFFER - REMOVE THE READY PACKAGES
     /// =================================================================

@@ -1662,31 +1662,40 @@ void processor_t::clock(uint32_t subcycle) {
 
     this->branch_predictor->clock(subcycle);
 
-    /// Read from FU
-    /// Mark ROB instructions as DONE
-    /// Remove ISSUE WIDE oldest instructions
-    this->stage_commit();
+    /// Something to be done this cycle. -- Improve the performance
+    if (this->reorder_buffer_position_used != 0) {
+        /// Read from FU
+        /// Mark ROB instructions as DONE
+        /// Remove ISSUE WIDE oldest instructions
+        this->stage_commit();
 
-    /// Read each FU pipeline
-    /// Creates latency for each instruction
-    /// LOAD/STORES ready, are send to READ/WRITE buffer
-    /// After allocate to READ/WRITE buffer, wait only for LOADS
-    this->stage_execution();
+        /// Read each FU pipeline
+        /// Creates latency for each instruction
+        /// LOAD/STORES ready, are send to READ/WRITE buffer
+        /// After allocate to READ/WRITE buffer, wait only for LOADS
+        this->stage_execution();
 
-    /// Read Ready instructions from ROB
-    /// Send to free Functional Units
-    this->stage_dispatch();
+        /// Read Ready instructions from ROB
+        /// Send to free Functional Units
+        this->stage_dispatch();
+    }
 
-    /// Read from the Decode Buffer
-    /// Solve the dependencies
-    /// Store on ROB
-    this->stage_rename();
+    /// Something to be done this cycle. -- Improve the performance
+    if (decode_buffer_position_used != 0) {
+        /// Read from the Decode Buffer
+        /// Solve the dependencies
+        /// Store on ROB
+        this->stage_rename();
+    }
 
-    /// Read from the Fetch Buffer
-    /// Split Load_Load into 2xLoads
-    /// Split Load_Store into 1xLoad + 1xStore
-    /// Store on Decode Buffer
-    this->stage_decode();
+    /// Something to be done this cycle. -- Improve the performance
+    if (fetch_buffer_position_used != 0) {
+        /// Read from the Fetch Buffer
+        /// Split Load_Load into 2xLoads
+        /// Split Load_Store into 1xLoad + 1xStore
+        /// Store on Decode Buffer
+        this->stage_decode();
+    }
 
     /// Read from the trace
     /// Send request to ICache

@@ -42,6 +42,7 @@ class interconnection_router_t : public interconnection_interface_t {
         uint32_t *input_buffer_position_start;
         uint32_t *input_buffer_position_end;
         uint32_t *input_buffer_position_used;
+        uint32_t input_buffer_position_used_total;
 
         uint64_t send_ready_cycle;  /// Time left for the router's next send operation.
         uint64_t *recv_ready_cycle;  /// Time left for the router's next receive operation (per port).
