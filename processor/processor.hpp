@@ -200,6 +200,8 @@ class processor_t : public interconnection_interface_t {
         uint64_t stat_reset_decode_uop_counter;
 
         /// Full ROB and MOB statistics
+        uint64_t stat_full_fetch_buffer;
+        uint64_t stat_full_decode_buffer;
         uint64_t stat_full_reorder_buffer;
         uint64_t stat_full_memory_order_buffer_read;
         uint64_t stat_full_memory_order_buffer_write;
@@ -421,11 +423,11 @@ class processor_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_reset_fetch_opcode_counter)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_reset_decode_uop_counter)
 
-
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_fetch_buffer)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_decode_buffer)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_reorder_buffer)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_memory_order_buffer_read)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_memory_order_buffer_write)
-
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_nop_completed)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_branch_completed)

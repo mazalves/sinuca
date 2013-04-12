@@ -534,6 +534,7 @@ void processor_t::stage_fetch() {
 
         position_buffer = this->fetch_buffer_insert();
         if (position_buffer == POSITION_FAIL) {
+            this->add_stat_full_fetch_buffer();
             break;
         }
 
@@ -672,10 +673,10 @@ void processor_t::stage_decode() {
     /// Fetch_Buffer => (Decode) => Decode_Buffer
     for (uint32_t i = 0; i < this->stage_decode_width ; i++) {
 
+        /// Stop to decode if achieved the maximum number of parallel branches in execution
         if (this->inflight_branches > this->inflight_branches_size) {
             break;
         }
-
 
         /// ====================================================================
         /// DECODE =============================================================
@@ -684,11 +685,18 @@ void processor_t::stage_decode() {
         /// Check if there is enough space for one OpCode be Decoded
         /// Check if the oldest fetch buffer position is ready
         if (this->fetch_buffer_position_used == 0 ||
-        this->decode_buffer_size - this->decode_buffer_position_used < MAX_UOP_DECODED ||
         this->fetch_buffer[fetch_buffer_position_start].state != PACKAGE_STATE_READY ||
         this->fetch_buffer[fetch_buffer_position_start].ready_cycle > sinuca_engine.get_global_cycle()) {
             break;
         }
+
+        /// Don't have enough space into the decode buffer
+        if (this->decode_buffer_size - this->decode_buffer_position_used < MAX_UOP_DECODED) {
+            this->add_stat_full_decode_buffer();
+            break;
+        }
+
+
         ERROR_ASSERT_PRINTF(this->decode_opcode_counter == this->fetch_buffer[fetch_buffer_position_start].opcode_number, "Renaming out-of-order.\n")
         this->decode_opcode_counter++;
 
@@ -1875,6 +1883,8 @@ void processor_t::reset_statistics() {
     this->set_stat_branch_stall_cycles(0);
     this->set_stat_sync_stall_cycles(0);
 
+    this->stat_full_fetch_buffer = 0;
+    this->stat_full_decode_buffer = 0;
     this->stat_full_reorder_buffer = 0;
     this->stat_full_memory_order_buffer_read = 0;
     this->stat_full_memory_order_buffer_write = 0;
@@ -1965,6 +1975,9 @@ void processor_t::print_statistics() {
 
     /// ROB and MOB Statistics
     sinuca_engine.write_statistics_small_separator();
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_fetch_buffer", stat_full_fetch_buffer);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_decode_buffer", stat_full_decode_buffer);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_reorder_buffer", stat_full_reorder_buffer);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_memory_order_buffer_read", stat_full_memory_order_buffer_read);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_memory_order_buffer_write", stat_full_memory_order_buffer_write);
