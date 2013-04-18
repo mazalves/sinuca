@@ -27,10 +27,12 @@
 /// ============================================================================
 memory_order_buffer_line_t::memory_order_buffer_line_t() {
     this->package_clean();
+    this->mem_deps_ptr_array = NULL;
 };
 
 /// ============================================================================
 memory_order_buffer_line_t::~memory_order_buffer_line_t() {
+    utils_t::template_delete_array<memory_order_buffer_line_t*>(mem_deps_ptr_array);
 };
 
 
@@ -38,23 +40,26 @@ memory_order_buffer_line_t::~memory_order_buffer_line_t() {
 void memory_order_buffer_line_t::package_clean() {
     this->memory_request.package_clean();
     this->rob_ptr = NULL;
+    this->uop_executed = false;
+    this->wait_mem_deps_number = 0;
 };
 
 /// ============================================================================
 std::string memory_order_buffer_line_t::content_to_string() {
-    std::string PackageString;
-    PackageString = "";
+    std::string content_string;
+    content_string = "";
 
     #ifndef SHOW_FREE_PACKAGE
         if (this->rob_ptr == NULL) {
-            return PackageString;
+            return content_string;
         }
     #endif
 
-    PackageString = this->memory_request.content_to_string();
-    PackageString = PackageString + " | UOP#" + utils_t::uint64_to_char(this->rob_ptr == NULL ? 0 : this->rob_ptr->uop.uop_number);
-    PackageString = PackageString + " | MemWait:" + utils_t::uint32_to_char(this->rob_ptr == NULL ? 0 : this->rob_ptr->wait_mem_deps_number);
-    return PackageString;
+    content_string = this->memory_request.content_to_string();
+    content_string = content_string + " | UOP#" + (this->rob_ptr == NULL ? "NO_ROB_PTR" : utils_t::uint64_to_char(this->rob_ptr->uop.uop_number));
+    content_string = content_string + " | EXECUTED:" + (this->uop_executed ? "TRUE" : "FALSE");
+    content_string = content_string + " | MemWAIT:" + utils_t::uint32_to_char(this->wait_mem_deps_number);
+    return content_string;
 };
 
 /// ============================================================================
@@ -62,8 +67,7 @@ std::string memory_order_buffer_line_t::content_to_string() {
 /// ============================================================================
 int32_t memory_order_buffer_line_t::find_free(memory_order_buffer_line_t *input_array, uint32_t size_array) {
     for (uint32_t i = 0; i < size_array ; i++) {
-        if (input_array[i].rob_ptr == NULL) {
-            ERROR_ASSERT_PRINTF(input_array[i].memory_request.state == PACKAGE_STATE_FREE, "Found a mob without rob_ptr but with memory_request.\n")
+        if (input_array[i].memory_request.state == PACKAGE_STATE_FREE) {
             return i;
         }
     }
@@ -77,13 +81,11 @@ int32_t memory_order_buffer_line_t::find_old_request_state_ready(memory_order_bu
 
     /// Find the oldest UOP inside the MOB.... and it have 0 deps.
     for (uint32_t i = 0; i < size_array ; i++) {
-        if (input_array[i].rob_ptr != NULL &&
-        input_array[i].rob_ptr->uop.state == PACKAGE_STATE_TRANSMIT &&
-        input_array[i].rob_ptr->wait_mem_deps_number == 0 &&
-        input_array[i].memory_request.state == state &&
-        old_uop_number > input_array[i].memory_request.uop_number &&
+        if (input_array[i].memory_request.state == state &&
+        input_array[i].uop_executed == true &&
+        input_array[i].wait_mem_deps_number == 0 &&
+        input_array[i].memory_request.uop_number < old_uop_number &&
         input_array[i].memory_request.ready_cycle <= sinuca_engine.get_global_cycle()) {
-            ERROR_ASSERT_PRINTF(input_array[i].rob_ptr->stage == PROCESSOR_STAGE_EXECUTION, "Package status is TRANSMIT but it is not in EXECUTION stage.\n")
             ERROR_ASSERT_PRINTF(input_array[i].memory_request.is_answer == false, "Selecting a package with ANSWER.\n")
             old_uop_number = input_array[i].memory_request.uop_number;
             old_pos = i;

@@ -163,7 +163,7 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define PREFETCHER_DEBUG
     // ~ #define LINE_USAGE_PREDICTOR_DEBUG
     #define MEMORY_CONTROLLER_DEBUG
-    #define ROUTER_DEBUG
+    // ~ #define ROUTER_DEBUG
     // ~ #define INTERCONNECTION_CTRL_DEBUG
     // ~ #define DIRECTORY_CTRL_DEBUG
     // ~ #define SHOW_FREE_PACKAGE
@@ -247,7 +247,8 @@ extern sinuca_engine_t sinuca_engine;
 /// ============================================================================
 /// TYPES
 /// ============================================================================
-typedef std::vector <uint32_t>                      container_register_t;
+// ~ typedef std::vector <uint32_t>                      container_register_t;
+typedef std::vector <uint64_t>                      container_memory_address_t;
 typedef std::vector <const char*>                   container_ptr_const_char_t;
 
 typedef std::vector <token_t>                       container_token_t;

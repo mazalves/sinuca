@@ -40,6 +40,7 @@ directory_controller_t::directory_controller_t() {
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(sinuca_engine.get_global_line_size()), "Wrong line_size.\n");
     this->not_offset_bits_mask = ~utils_t::fill_bit(0, utils_t::get_power_of_two(sinuca_engine.get_global_line_size()) - 1);
     this->generate_llc_copyback = true;
+    this->generate_non_llc_copyback = true;
 };
 
 /// ============================================================================
@@ -56,6 +57,10 @@ directory_controller_t::~directory_controller_t() {
 
 /// ============================================================================
 void directory_controller_t::allocate() {
+
+    if (this->generate_non_llc_copyback == false && this->generate_llc_copyback == true) {
+        ERROR_PRINTF("NON-LLC copyback disabled will not generate copybacks to the LLC\n")
+    }
 
     uint32_t sum_mshr_buffer_size = 0;
     /// Find all LLC
@@ -1101,30 +1106,10 @@ bool directory_controller_t::coherence_is_hit(cache_line_t *cache_line,  memory_
 bool directory_controller_t::coherence_need_copyback(cache_memory_t *cache_memory, cache_line_t *cache_line) {
     ERROR_ASSERT_PRINTF(cache_line != NULL, "Received a NULL cache_line\n");
 
-    if (generate_llc_copyback) {
-        switch (this->coherence_protocol_type) {
-            case COHERENCE_PROTOCOL_MOESI:
-                switch (cache_line->status) {
-                    case PROTOCOL_STATUS_M:
-                    case PROTOCOL_STATUS_O:
-                        return OK;
-                    break;
-
-                    case PROTOCOL_STATUS_E:
-                    case PROTOCOL_STATUS_S:
-                    case PROTOCOL_STATUS_I:
-                        return FAIL;
-                    break;
-                }
-            break;
-        }
-    }
-    else {
-        container_ptr_cache_memory_t *lower_level_cache = cache_memory->get_lower_level_cache();
-        if (lower_level_cache->empty()) {
-            return FAIL;
-        }
-        else {
+    /// LLC
+    container_ptr_cache_memory_t *lower_level_cache = cache_memory->get_lower_level_cache();
+    if (lower_level_cache->empty()) {
+        if (generate_llc_copyback) {
             switch (this->coherence_protocol_type) {
                 case COHERENCE_PROTOCOL_MOESI:
                     switch (cache_line->status) {
@@ -1142,9 +1127,34 @@ bool directory_controller_t::coherence_need_copyback(cache_memory_t *cache_memor
                 break;
             }
         }
-
+        else {
+            return FAIL;
+        }
     }
+    /// Non LLC
+    else {
+        if (generate_non_llc_copyback) {
+            switch (this->coherence_protocol_type) {
+                case COHERENCE_PROTOCOL_MOESI:
+                    switch (cache_line->status) {
+                        case PROTOCOL_STATUS_M:
+                        case PROTOCOL_STATUS_O:
+                            return OK;
+                        break;
 
+                        case PROTOCOL_STATUS_E:
+                        case PROTOCOL_STATUS_S:
+                        case PROTOCOL_STATUS_I:
+                            return FAIL;
+                        break;
+                    }
+                break;
+            }
+        }
+        else {
+            return FAIL;
+        }
+    }
 
     ERROR_PRINTF("Invalid protocol status\n");
     return FAIL;

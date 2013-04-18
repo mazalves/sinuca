@@ -29,10 +29,6 @@ class reorder_buffer_line_t {
         uint32_t wait_reg_deps_number;                  /// Must wait BEFORE execution
         reorder_buffer_line_t* *reg_deps_ptr_array;     /// Elements to wake-up AFTER execution
 
-        /// Memory Dependencies Control
-        uint32_t wait_mem_deps_number;                  /// Must wait BEFORE execution
-        reorder_buffer_line_t* *mem_deps_ptr_array;     /// Elements to wake-up AFTER execution
-
         memory_order_buffer_line_t* mob_ptr;                 /// mob pointer
         /// ====================================================================
         /// Methods

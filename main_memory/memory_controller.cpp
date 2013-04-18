@@ -691,10 +691,17 @@ void memory_controller_t::periodic_check(){
         this->print_structures();
     #endif
 
-    ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->mshr_buffer, this->mshr_buffer_size) == OK, "Check_age failed.\n");
+    switch (this->write_priority_policy) {
+        case WRITE_PRIORITY_DRAIN_WHEN_FULL:
+        break;
 
-    for (uint32_t i = 0; i < this->channels_per_controller; i++) {
-        this->channels[i].periodic_check();
+        case WRITE_PRIORITY_SERVICE_AT_NO_READ:
+            ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->mshr_buffer, this->mshr_buffer_size) == OK, "Check_age failed.\n");
+
+            for (uint32_t i = 0; i < this->channels_per_controller; i++) {
+                this->channels[i].periodic_check();
+            }
+        break;
     }
 };
 

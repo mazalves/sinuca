@@ -53,6 +53,7 @@ memory_channel_t::memory_channel_t() {
     this->bank_buffer_actual_position = NULL;
 
     this->bank_is_drain_write = NULL;
+    this->bank_number_drain_write = NULL;
     this->bank_open_row_address = NULL;
 
     this->bank_last_command = NULL;
@@ -68,6 +69,8 @@ memory_channel_t::~memory_channel_t() {
     utils_t::template_delete_array<int32_t>(bank_buffer_actual_position);
 
     utils_t::template_delete_array<bool>(bank_is_drain_write);
+    utils_t::template_delete_array<uint32_t>(bank_number_drain_write);
+
     utils_t::template_delete_array<uint64_t>(bank_open_row_address);
 
     utils_t::template_delete_array<memory_controller_command_t>(bank_last_command);
@@ -82,6 +85,7 @@ void memory_channel_t::allocate() {
     this->bank_buffer_actual_position = utils_t::template_allocate_initialize_array<int32_t>(this->get_bank_per_channel(), -1);
 
     this->bank_is_drain_write = utils_t::template_allocate_initialize_array<bool>(this->get_bank_per_channel(), false);
+    this->bank_number_drain_write = utils_t::template_allocate_initialize_array<uint32_t>(this->get_bank_per_channel(), 0);
     this->bank_open_row_address = utils_t::template_allocate_initialize_array<uint64_t>(this->get_bank_per_channel(), 0);
 
     this->bank_last_command = utils_t::template_allocate_initialize_array<memory_controller_command_t>(this->get_bank_per_channel(), MEMORY_CONTROLLER_COMMAND_PRECHARGE);
@@ -194,11 +198,15 @@ int32_t memory_channel_t::find_next_package(uint32_t bank) {
     int32_t slot = POSITION_FAIL;
 
     /// If it is in drain_write mode
-    if (this->bank_is_drain_write[bank]) {
+    if (this->bank_is_drain_write[bank] && this->bank_number_drain_write[bank] > 0) {
         slot = find_next_write_operation(bank);
         if (slot == POSITION_FAIL) {
             this->bank_is_drain_write[bank] = false;
+            this->bank_number_drain_write[bank] = 0;
             slot = find_next_read_operation(bank);
+        }
+        else {
+            this->bank_number_drain_write[bank]--;
         }
     }
     else {
@@ -208,6 +216,7 @@ int32_t memory_channel_t::find_next_package(uint32_t bank) {
                 /// Could not find READ, but buffer is FULL
                 if (slot == POSITION_FAIL && this->bank_buffer[bank].size() == this->bank_buffer_size) {
                     this->bank_is_drain_write[bank] = true;
+                    this->bank_number_drain_write[bank] = this->bank_buffer_size - 1;
                     slot = find_next_write_operation(bank);
                 }
             break;
@@ -219,6 +228,7 @@ int32_t memory_channel_t::find_next_package(uint32_t bank) {
                     /// If buffer is full
                     if (this->bank_buffer[bank].size() == this->bank_buffer_size) {
                         this->bank_is_drain_write[bank] = true;
+                        this->bank_number_drain_write[bank] = this->bank_buffer_size - 1;
                     }
                     slot = find_next_write_operation(bank);
                 }
@@ -456,7 +466,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
                     /// Prepare for answer later
                     package->memory_size = sinuca_engine.get_global_line_size();
                     package->is_answer = true;
-                    package->package_transmit(this->timing_rcd - this->timing_al);
+                    package->package_transmit(this->timing_cas + this->timing_burst);
                 break;
 
                 case MEMORY_OPERATION_COPYBACK:
@@ -472,7 +482,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
                     /// Prepare for answer later
                     package->memory_size = 1;
                     package->is_answer = true;
-                    package->package_ready(this->timing_rcd - this->timing_al);
+                    package->package_ready(this->timing_cwd + this->timing_burst);
                 break;
             }
 
@@ -497,7 +507,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
                         this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
                         this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
                         package->is_answer = true;
-                        package->package_transmit(this->timing_burst);
+                        package->package_transmit(this->timing_cas + this->timing_burst);
                     break;
 
                     case MEMORY_OPERATION_COPYBACK:
@@ -512,7 +522,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
                         this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
                         /// Consider that tRTRS - tCWL is equal to ZERO. (Both are parallel)
                         package->is_answer = true;
-                        package->package_ready(this->timing_cas + this->timing_burst);
+                        package->package_ready(this->timing_cwd + this->timing_burst);
                     break;
                 }
 
@@ -550,7 +560,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
                         this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
                         this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
                         package->is_answer = true;
-                        package->package_transmit(this->timing_cwd + this->timing_burst + this->timing_wtr);
+                        package->package_transmit(this->timing_cas + this->timing_burst);
                     break;
 
                     case MEMORY_OPERATION_COPYBACK:
@@ -565,7 +575,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
                         this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
                         /// Max(tBurst, tCCD)
                         package->is_answer = true;
-                        package->package_ready(this->timing_burst > this->timing_ccd ? this->timing_burst : this->timing_ccd);
+                        package->package_ready(this->timing_cwd + this->timing_burst);
                     break;
                 }
 

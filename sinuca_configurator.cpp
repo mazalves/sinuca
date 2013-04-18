@@ -239,6 +239,9 @@ void sinuca_engine_t::initialize_processor() {
             processor_parameters.push_back("REORDER_BUFFER_SIZE");
             this->processor_array[i]->set_reorder_buffer_size( cfg_processor[ processor_parameters.back() ] );
 
+            processor_parameters.push_back("UNIFIED_RESERVATION_STATION_WINDOW_SIZE");
+            this->processor_array[i]->set_unified_reservation_station_window_size( cfg_processor[ processor_parameters.back() ] );
+
             /// ================================================================
             /// Integer Funcional Units
             /// ================================================================
@@ -1224,6 +1227,8 @@ void sinuca_engine_t::initialize_directory_controller() {
         directory_parameters.push_back("GENERATE_LLC_COPYBACK");
         this->directory_controller->set_generate_llc_copyback( cfg_directory[ directory_parameters.back() ] );
 
+        directory_parameters.push_back("GENERATE_NON_LLC_COPYBACK");
+        this->directory_controller->set_generate_non_llc_copyback( cfg_directory[ directory_parameters.back() ] );
 
         /// ================================================================
         /// Check if any DIRECTORY non-required parameters exist

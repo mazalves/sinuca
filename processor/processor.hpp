@@ -103,13 +103,17 @@ class processor_t : public interconnection_interface_t {
         disambiguation_t disambiguation_type;
 
         uint32_t fetch_block_size;
-        uint32_t branch_per_fetch;
+
 
         /// Branch Latency to flush on wrong prediction
+        uint32_t branch_per_fetch;
         uint32_t branch_flush_latency;
         uint32_t inflight_branches;
         uint32_t inflight_branches_size;
         uint64_t branch_flush_cycle_ready;
+
+        uint32_t unified_reservation_station_window_size;
+
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
@@ -186,6 +190,9 @@ class processor_t : public interconnection_interface_t {
 
         memory_order_buffer_line_t *memory_order_buffer_read;
         memory_order_buffer_line_t *memory_order_buffer_write;
+        /// Number of positions used inside MOB
+        uint32_t memory_order_buffer_read_used;
+        uint32_t memory_order_buffer_write_used;
 
         cache_memory_t *data_cache;
         cache_memory_t *inst_cache;
@@ -306,8 +313,9 @@ class processor_t : public interconnection_interface_t {
         }
 
         bool check_if_memory_overlaps(uint64_t memory_address1, uint32_t size1, uint64_t memory_address2, uint32_t size2);
-        void make_memory_dependencies(reorder_buffer_line_t *new_rob_line, memory_order_buffer_line_t *input_array, uint32_t size_array);
-        void solve_data_forward(reorder_buffer_line_t *rob_line);
+        void make_memory_dependencies(memory_order_buffer_line_t *new_mob_line, memory_order_buffer_line_t *input_array, uint32_t size_array);
+        void solve_register_dependency(reorder_buffer_line_t *rob_line);
+        void solve_memory_dependency(memory_order_buffer_line_t *mob_line);
 
         /// Fetch Buffer =======================================================
         int32_t fetch_buffer_insert();
@@ -395,6 +403,9 @@ class processor_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, memory_order_buffer_read_size)
         INSTANTIATE_GET_SET(uint32_t, memory_order_buffer_write_size)
 
+        INSTANTIATE_GET_SET(uint32_t, memory_order_buffer_read_used)
+        INSTANTIATE_GET_SET(uint32_t, memory_order_buffer_write_used)
+
         INSTANTIATE_GET_SET(uint32_t, disambiguation_block_size)
         INSTANTIATE_GET_SET(disambiguation_t, disambiguation_type)
 
@@ -402,6 +413,7 @@ class processor_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(cache_memory_t*, inst_cache)
 
         INSTANTIATE_GET_SET(uint32_t, fetch_block_size)
+        INSTANTIATE_GET_SET(uint32_t, unified_reservation_station_window_size)
         INSTANTIATE_GET_SET(uint32_t, branch_per_fetch)
 
         /// Branch Latency to flush on wrong prediction

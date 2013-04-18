@@ -28,13 +28,11 @@
 reorder_buffer_line_t::reorder_buffer_line_t() {
     this->package_clean();
     this->reg_deps_ptr_array = NULL;
-    this->mem_deps_ptr_array = NULL;
 };
 
 /// ============================================================================
 reorder_buffer_line_t::~reorder_buffer_line_t() {
     utils_t::template_delete_array<reorder_buffer_line_t*>(reg_deps_ptr_array);
-    utils_t::template_delete_array<reorder_buffer_line_t*>(mem_deps_ptr_array);
 };
 
 /// ============================================================================
@@ -43,7 +41,6 @@ void reorder_buffer_line_t::package_clean() {
     this->stage = PROCESSOR_STAGE_DECODE;
     this->mob_ptr = NULL;
     this->wait_reg_deps_number = 0;
-    this->wait_mem_deps_number = 0;
 };
 
 /// ============================================================================
@@ -60,7 +57,6 @@ std::string reorder_buffer_line_t::content_to_string() {
     content_string = this->uop.content_to_string();
     content_string = content_string + " | STAGE:" + get_enum_processor_stage_char(this->stage);
     content_string = content_string + " | RegWAIT:" + utils_t::uint32_to_char(this->wait_reg_deps_number);
-    content_string = content_string + " | MemWAIT:" + utils_t::uint32_to_char(this->wait_mem_deps_number);
     return content_string;
 };
 

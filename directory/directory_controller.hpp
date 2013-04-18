@@ -29,6 +29,7 @@ class directory_controller_t : public interconnection_interface_t {
         coherence_protocol_t coherence_protocol_type;
         inclusiveness_t inclusiveness_type;
         bool generate_llc_copyback;
+        bool generate_non_llc_copyback;
 
         /// ====================================================================
         /// Set by this->allocate()
@@ -146,6 +147,7 @@ class directory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(coherence_protocol_t, coherence_protocol_type)
         INSTANTIATE_GET_SET(inclusiveness_t, inclusiveness_type)
         INSTANTIATE_GET_SET(bool, generate_llc_copyback)
+        INSTANTIATE_GET_SET(bool, generate_non_llc_copyback)
 
         /// ====================================================================
         /// Statistics related

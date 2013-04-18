@@ -65,6 +65,7 @@ class memory_channel_t : public interconnection_interface_t {
         int32_t *bank_buffer_actual_position;   /// Position inside BankBuffer of the actual request being treated
 
         bool *bank_is_drain_write;              /// Buffer is in drain_write mode
+        uint32_t *bank_number_drain_write;      /// Number of writes treated in drain_write mode
         uint64_t *bank_open_row_address;        /// Address of the actual request being treated
 
         /// Keep track of the last command in each bank

@@ -26,6 +26,11 @@ class memory_order_buffer_line_t {
         memory_package_t memory_request;                /// memory_request stored
         reorder_buffer_line_t* rob_ptr;                 /// rob pointer
 
+        /// Memory Dependencies Control
+        bool uop_executed;
+        uint32_t wait_mem_deps_number;                  /// Must wait BEFORE execution
+        memory_order_buffer_line_t* *mem_deps_ptr_array;     /// Elements to wake-up AFTER execution
+
         /// ====================================================================
         /// Methods
         /// ====================================================================
