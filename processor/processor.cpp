@@ -586,6 +586,7 @@ void processor_t::stage_fetch() {
             }
 
             if (this->fetch_buffer[j].state == PACKAGE_STATE_WAIT &&
+            /// Make sure the instruction starts and ends inside the block
             this->cmp_fetch_block(this->fetch_buffer[j].opcode_address, this->fetch_buffer[position_buffer].opcode_address)) {
                 waiting = true;
                 break;
@@ -598,10 +599,10 @@ void processor_t::stage_fetch() {
             fetch_buffer[position_buffer].package_wait(1);
         }
         /// Line Buffer
-        else if (this->cmp_fetch_block(this->fetch_buffer[position_buffer].opcode_address, this->fetch_opcode_address_line_buffer)) {
-            PROCESSOR_DEBUG_PRINTF("\t FOUND INTO FETCH BUFFER (READY)\n");
-            fetch_buffer[position_buffer].package_ready(1);
-        }
+        // ~ else if (this->cmp_fetch_block(this->fetch_buffer[position_buffer].opcode_address, this->fetch_opcode_address_line_buffer)) {
+            // ~ PROCESSOR_DEBUG_PRINTF("\t FOUND INTO FETCH BUFFER (READY)\n");
+            // ~ fetch_buffer[position_buffer].package_ready(1);
+        // ~ }
         else {
             int32_t transmission_latency = this->send_instruction_package(this->fetch_buffer + position_buffer);
             if (transmission_latency != POSITION_FAIL) {  /// Try to send to the IC.
@@ -683,7 +684,7 @@ void processor_t::stage_decode() {
     for (uint32_t i = 0; i < this->stage_decode_width ; i++) {
 
         /// Stop to decode if achieved the maximum number of parallel branches in execution
-        if (this->inflight_branches >= this->inflight_branches_size) {
+        if (this->inflight_branches > this->inflight_branches_size) {
             break;
         }
 
@@ -983,7 +984,7 @@ void processor_t::make_memory_dependencies(memory_order_buffer_line_t *new_mob_l
                 /// For every old memory write
                 /// Make dependencies to be solved
                 /// However, read to read will never generate deps nor suffer READ-TO-READ solutions
-                if (new_mob_line->memory_request.memory_operation == MEMORY_OPERATION_READ  && old_mob_line->memory_request.memory_operation == MEMORY_OPERATION_READ){
+                if (new_mob_line->memory_request.memory_operation == MEMORY_OPERATION_READ && old_mob_line->memory_request.memory_operation == MEMORY_OPERATION_READ){
                     break;
                 }
                 else {
@@ -1069,7 +1070,6 @@ void processor_t::stage_rename() {
         ///=====================================================================
         /// Insert into MOB
         ///=====================================================================
-
         if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MEM_LOAD) {
             ERROR_ASSERT_PRINTF(this->reorder_buffer[position_rob].mob_ptr->memory_request.state == PACKAGE_STATE_FREE, "ROB has a pointer to a non free package.")
             /// Fix the request size to fit inside the cache line
@@ -1416,6 +1416,7 @@ void processor_t::stage_execution() {
             this->memory_order_buffer_read[slot].rob_ptr->mob_ptr = NULL;
             this->solve_register_dependency(this->memory_order_buffer_read[slot].rob_ptr);
             this->solve_memory_dependency(&this->memory_order_buffer_read[slot]);
+            /// Clean MOB line.
             this->memory_order_buffer_read[slot].package_clean();
             this->memory_order_buffer_read_used--;
             break;
@@ -1445,11 +1446,24 @@ void processor_t::stage_execution() {
     if (position_mem != POSITION_FAIL) {
         int32_t transmission_latency = this->send_package(&this->memory_order_buffer_write[position_mem].memory_request);
         if (transmission_latency != POSITION_FAIL) {  /// Try to send to the DC.
-            /// Solve dependencies(forwarding data) before the store be removed from the MOB
-            this->solve_memory_dependency(&this->memory_order_buffer_write[position_mem]);
-            /// Never waits, clean MOB line.
-            this->memory_order_buffer_write[position_mem].package_clean();
-            this->memory_order_buffer_write_used--;
+            if (this->wait_write_complete) {
+                this->memory_order_buffer_write[position_mem].rob_ptr->stage = PROCESSOR_STAGE_COMMIT;
+                this->memory_order_buffer_write[position_mem].rob_ptr->uop.package_ready(this->stage_execution_cycles + this->stage_commit_cycles);
+                this->memory_order_buffer_write[position_mem].rob_ptr->mob_ptr = NULL;
+                /// Solve dependencies(forwarding data) before the store be removed from the MOB
+                this->solve_register_dependency(this->memory_order_buffer_write[position_mem].rob_ptr);
+                this->solve_memory_dependency(&this->memory_order_buffer_write[position_mem]);
+                /// Clean MOB line.
+                this->memory_order_buffer_write[position_mem].package_clean();
+                this->memory_order_buffer_write_used--;
+            }
+            else {
+                /// Solve dependencies(forwarding data) before the store be removed from the MOB
+                this->solve_memory_dependency(&this->memory_order_buffer_write[position_mem]);
+                /// Clean MOB line.
+                this->memory_order_buffer_write[position_mem].package_clean();
+                this->memory_order_buffer_write_used--;
+            }
         }
     }
 
@@ -1515,11 +1529,20 @@ void processor_t::stage_execution() {
                 /// FUNC_UNIT_MEM_STORE => WRITE_BUFFER
                 case INSTRUCTION_OPERATION_MEM_STORE: {
                     reorder_buffer_line->mob_ptr->uop_executed = true;
-                    reorder_buffer_line->mob_ptr = NULL;
-                    /// Never waits for the cache
-                    reorder_buffer_line->stage = PROCESSOR_STAGE_COMMIT;
-                    reorder_buffer_line->uop.package_ready(this->stage_execution_cycles + this->stage_commit_cycles);
-                    this->solve_register_dependency(reorder_buffer_line);
+
+                    if (this->wait_write_complete) {
+                        /// Waits for the cache
+                        reorder_buffer_line->uop.state = PACKAGE_STATE_TRANSMIT;
+                    }
+                    else {
+                        reorder_buffer_line->mob_ptr->rob_ptr = NULL;
+                        reorder_buffer_line->mob_ptr = NULL;
+                        /// Never waits for the cache
+                        reorder_buffer_line->stage = PROCESSOR_STAGE_COMMIT;
+                        reorder_buffer_line->uop.package_ready(this->stage_execution_cycles + this->stage_commit_cycles);
+                        this->solve_register_dependency(reorder_buffer_line);
+                    }
+
                     total_executed++;
                     /// Remove from the Functional Units
                     this->unified_functional_units.erase(this->unified_functional_units.begin() + k);
@@ -1592,7 +1615,6 @@ void processor_t::solve_memory_dependency(memory_order_buffer_line_t *mob_line) 
                             /// Solve the LOAD->LOAD and STORE->LOAD
                             mob_line->mem_deps_ptr_array[j]->memory_request.state = PACKAGE_STATE_READY;
                             mob_line->mem_deps_ptr_array[j]->memory_request.is_answer = true;
-                            // ~ this->solve_register_dependency(mob_line->mem_deps_ptr_array[j]);
                         }
                     }
                 break;
@@ -1602,7 +1624,6 @@ void processor_t::solve_memory_dependency(memory_order_buffer_line_t *mob_line) 
             }
 
             /// This update the ready cycle, and it is usefull to compute the time each instruction waits for the functional unit
-            // ~ mob_line->mem_deps_ptr_array[j]->uop.ready_cycle = sinuca_engine.get_global_cycle();
             mob_line->mem_deps_ptr_array[j] = NULL;
         }
         /// All the dependencies are solved
@@ -1816,7 +1837,7 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
 
                     /// Wake up ALL instructions waiting
                     if (this->fetch_buffer[j].state == PACKAGE_STATE_WAIT &&
-                    this->cmp_fetch_block(this->fetch_buffer[j].opcode_address, package->memory_address)) {
+                    this->cmp_fetch_block(package->memory_address, this->fetch_buffer[j].opcode_address)) {
                         this->add_stat_instruction_read_completed(this->fetch_buffer[j].born_cycle);
                         PROCESSOR_DEBUG_PRINTF("\t WANTED INSTRUCTION\n");
                         this->fetch_buffer[j].package_ready(transmission_latency);

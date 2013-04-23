@@ -257,8 +257,7 @@ bool memory_channel_t::check_if_minimum_latency(uint32_t bank, memory_controller
             > actual_cycle)
                 return false;
             /// ================================================================
-            else
-                return true;
+            return true;
         break;
 
         case MEMORY_CONTROLLER_COMMAND_ROW_ACCESS:
@@ -273,8 +272,17 @@ bool memory_channel_t::check_if_minimum_latency(uint32_t bank, memory_controller
             > actual_cycle)
                 return false;
             /// ================================================================
-            else
-                return true;
+            else {
+                uint32_t row_activated_inside_window = 0;
+                for (uint32_t i = 0; i < this->get_bank_per_channel(); i++) {
+                    if ((this->bank_last_command_cycle[i][MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_faw)
+                    > actual_cycle)
+                        row_activated_inside_window++;
+                }
+                if (row_activated_inside_window >= 4)
+                    return false;
+            }
+            return true;
         break;
 
         case MEMORY_CONTROLLER_COMMAND_COLUMN_READ:
@@ -304,8 +312,7 @@ bool memory_channel_t::check_if_minimum_latency(uint32_t bank, memory_controller
             > actual_cycle)
                 return false;
             /// ================================================================
-            else
-                return true;
+            return true;
         break;
 
         case MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE:
@@ -336,8 +343,7 @@ bool memory_channel_t::check_if_minimum_latency(uint32_t bank, memory_controller
             > actual_cycle)
                 return false;
             /// ================================================================
-            else
-                return true;
+            return true;
         break;
 
         case MEMORY_CONTROLLER_COMMAND_NUMBER:

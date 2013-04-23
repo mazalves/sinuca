@@ -111,6 +111,8 @@ void cache_memory_t::allocate() {
     this->mshr_born_ordered.reserve(this->mshr_buffer_size);
     this->token_list.reserve(this->mshr_buffer_size);
 
+    this->mshr_request_different_lines = utils_t::template_allocate_array<cache_line_t>(this->mshr_request_different_lines_size);
+
     ERROR_ASSERT_PRINTF(this->get_total_banks() == 1 || this->prefetcher->get_prefetcher_type() == PREFETCHER_DISABLE, "Cannot use a multibanked cache with prefetch. (Some requests may be generated in the wrong bank)\n");
 
     /// ================================================================================
@@ -251,12 +253,41 @@ void cache_memory_t::clock(uint32_t subcycle) {
     if (this->mshr_born_ordered.empty() &&
     this->prefetcher->get_request_buffer_position_used() == 0) return;
 
+
+    // Remove from MSHR
+    for (uint32_t i = 0; i < this->mshr_buffer_request_reserved_size; i++){
+        // Check if line will be removed from MSHR
+        if (mshr_buffer[i].state == PACKAGE_STATE_READY && this->mshr_buffer[i].ready_cycle <= sinuca_engine.get_global_cycle()) {
+            // Decrement the usage_counter of diff_lines
+            for (uint32_t same_line = 0; same_line < this->mshr_request_different_lines_size; same_line++) {
+                // Check for same_address
+                if (this->cmp_tag_index_bank(this->mshr_request_different_lines[same_line].tag, this->mshr_buffer[i].memory_address)) {
+                    // ~ SINUCA_PRINTF("%d - REMOVING from DIFF - 0x%"PRIu64"  #%"PRIu64"\n", this->get_id(),
+                                                                                        // ~ this->mshr_buffer[i].memory_address,
+                                                                                        // ~ this->mshr_request_different_lines[same_line].usage_counter)
+                    this->mshr_request_different_lines[same_line].usage_counter--;
+                    if (this->mshr_request_different_lines[same_line].usage_counter == 0) {
+                        // ~ SINUCA_PRINTF("\t %d ERASING ENTRY from DIFF - 0x%"PRIu64"  #%"PRIu64"\n", this->get_id(),
+                                                                                                    // ~ this->mshr_buffer[i].memory_address,
+                                                                                                    // ~ this->mshr_request_different_lines[same_line].usage_counter)
+                        this->mshr_request_different_lines[same_line].tag = 0;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+
+
     /// =================================================================
     /// MSHR_BUFFER - REMOVE THE READY PACKAGES
     /// =================================================================
     for (uint32_t i = 0; i < this->mshr_born_ordered.size(); i++){
         if (mshr_born_ordered[i]->state == PACKAGE_STATE_READY &&
         this->mshr_born_ordered[i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
+            // ~ SINUCA_PRINTF("\t%d REMOVING from ORDERED - 0x%"PRIu64"\n", this->get_id(),
+                                                                        // ~ this->mshr_born_ordered[i]->memory_address)
             this->mshr_born_ordered[i]->package_clean();
             this->mshr_born_ordered.erase(this->mshr_born_ordered.begin() + i);
         }
@@ -295,8 +326,9 @@ void cache_memory_t::clock(uint32_t subcycle) {
                 }
                 /// Normal COPY-BACK Request
                 else if (this->mshr_born_ordered[i]->state == PACKAGE_STATE_FREE) {
-                    this->mshr_born_ordered[i]->package_clean();
-                    this->mshr_born_ordered.erase(this->mshr_born_ordered.begin() + i);
+                    this->mshr_born_ordered[i]->package_ready(1);
+                    // ~ this->mshr_born_ordered[i]->package_clean();
+                    // ~ this->mshr_born_ordered.erase(this->mshr_born_ordered.begin() + i);
                 }
             }
             break;
@@ -616,22 +648,24 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
 /// ============================================================================
 bool cache_memory_t::check_token_list(memory_package_t *package) {
     ERROR_ASSERT_PRINTF(package->is_answer == false, "check_token_list received a Answer.\n")
-    uint32_t token = 0;
+    uint32_t token_pos = 0, number_tokens_comming = 0, number_free_different_lines = 0, free_line = 0;
 
-    /// 1. Check if the name is already in the guest list.
-    for (token = 0; token < this->token_list.size(); token++) {
+    /// 1. Check if the name is already in the guest (token) list.
+    for (token_pos = 0; token_pos < this->token_list.size(); token_pos++) {
+        number_tokens_comming += this->token_list[token_pos].is_comming;
+
         /// Requested Address Found
-        if (this->token_list[token].id_owner == package->id_owner &&
-        this->token_list[token].opcode_number == package->opcode_number &&
-        this->token_list[token].uop_number == package->uop_number &&
-        this->token_list[token].memory_address == package->memory_address &&
-        this->token_list[token].memory_operation == package->memory_operation) {
+        if (this->token_list[token_pos].id_owner == package->id_owner &&
+        this->token_list[token_pos].opcode_number == package->opcode_number &&
+        this->token_list[token_pos].uop_number == package->uop_number &&
+        this->token_list[token_pos].memory_address == package->memory_address &&
+        this->token_list[token_pos].memory_operation == package->memory_operation) {
             break;
         }
     }
 
-    /// 2. Name is not in the guest list, lets add it.
-    if (token == this->token_list.size()) {
+    /// 2. Name is not in the guest (token) list, lets add it.
+    if (token_pos == this->token_list.size()) {
         /// Allocate the new token
         token_t new_token;
         new_token.id_owner = package->id_owner;
@@ -642,7 +676,7 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
 
         this->token_list.push_back(new_token);
     }
-
+/*
     /// 3. Check if the guest can come now, or it needs to wait for free space.
     if (token < this->check_token_space(package)) {
         /// Lets party !
@@ -653,6 +687,48 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
         add_stat_full_mshr_buffer_request();
         return FAIL;
     }
+ */
+    /// 3. Check if the guest can come now, or it needs to wait for free space.
+    if (token_pos < this->check_token_space(package) && token_pos < this->mshr_request_token_window_size) {
+
+        /// Check if MSHR is already working on the same line.
+        for (uint32_t same_line = 0; same_line < this->mshr_request_different_lines_size; same_line++) {
+            /// Number of empty entries for different_lines
+            if (this->mshr_request_different_lines[same_line].usage_counter == 0 && this->mshr_request_different_lines[same_line].tag == 0) {
+                number_free_different_lines++;
+                free_line = same_line;
+            }
+            /// Check for same_address
+            else if (cmp_tag_index_bank(this->mshr_request_different_lines[same_line].tag, package->memory_address)) {
+                /// Avoid increment twice
+                if (this->token_list[token_pos].is_comming == false) {
+                    this->token_list[token_pos].is_comming = true;
+                    this->mshr_request_different_lines[same_line].usage_counter++;
+                    // ~ SINUCA_PRINTF("%d EXISTING and ++ on DIFF - 0x%"PRIu64"  #%"PRIu64"\n", this->get_id(),
+                                                                                        // ~ this->mshr_request_different_lines[same_line].tag,
+                                                                                        // ~ this->mshr_request_different_lines[same_line].usage_counter)
+                }
+                /// Come on in! Lets Party !
+                return OK;
+            }
+        }
+
+        /// Not found the same address - Check if can create a new entry
+        if ((token_pos - number_tokens_comming) < number_free_different_lines) {
+            this->token_list[token_pos].is_comming = true;
+            this->mshr_request_different_lines[free_line].usage_counter++;
+            this->mshr_request_different_lines[free_line].tag = package->memory_address;
+            // ~ SINUCA_PRINTF("%d CREATE and ++ on DIFF - 0x%"PRIu64"  #%"PRIu64"\n", this->get_id(),
+                                                                                    // ~ this->mshr_request_different_lines[free_line].tag,
+                                                                                    // ~ this->mshr_request_different_lines[free_line].usage_counter)
+            /// Come on in! Lets Party !
+            return OK;
+        }
+    }
+
+    /// Hold on, wait in the line!
+    add_stat_full_mshr_buffer_request();
+    return FAIL;
 };
 
 /// ============================================================================
@@ -904,6 +980,18 @@ void cache_memory_t::update_last_access(cache_line_t *line) {
 /// ============================================================================
 void cache_memory_t::print_structures() {
     SINUCA_PRINTF("%s MSHR_BUFFER:\n%s", this->get_label(), memory_package_t::print_all(this->mshr_buffer, this->mshr_buffer_size).c_str())
+
+    SINUCA_PRINTF("%s TOKEN_LIST:\n", this->get_label())
+    for (uint32_t i = 0; i < this->token_list.size(); i++) {
+        SINUCA_PRINTF("0x%"PRIu64"\n", this->token_list[i].memory_address)
+    }
+
+    SINUCA_PRINTF("%s MSHR_REQUEST_DIFFERENT_LINES:\n", this->get_label())
+    for (uint32_t i = 0; i < this->mshr_request_different_lines_size; i++) {
+        SINUCA_PRINTF("0x%"PRIu64" #%"PRIu64"\n", this->mshr_request_different_lines[i].tag, this->mshr_request_different_lines[i].usage_counter)
+    }
+
+
 };
 
 /// ============================================================================

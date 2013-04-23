@@ -24,7 +24,7 @@ RM = rm -f
 # ~ LDFLAGS = -ggdb  -pg
 
 ## DEBUG DEEP FAST
-# ~ FLAGS =  -Wall -O2 -ggdb  -Werror -lefence
+# ~ FLAGS = -O2 -ggdb -Wall -Wextra -Werror -lefence
 # ~ LDFLAGS = -ggdb  -lefence
 
 ## DEBUG NORMAL

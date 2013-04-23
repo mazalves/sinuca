@@ -50,6 +50,9 @@ class cache_memory_t : public interconnection_interface_t {
         uint32_t mshr_buffer_copyback_reserved_size;
         uint32_t mshr_buffer_prefetch_reserved_size;
 
+        uint32_t mshr_request_different_lines_size;
+        uint32_t mshr_request_token_window_size;
+
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
@@ -73,6 +76,8 @@ class cache_memory_t : public interconnection_interface_t {
         uint32_t mshr_buffer_size;
 
         container_ptr_memory_package_t mshr_born_ordered;
+
+        cache_line_t *mshr_request_different_lines;
 
         uint64_t send_ans_ready_cycle;
         uint64_t send_rqst_ready_cycle;
@@ -227,11 +232,14 @@ class cache_memory_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, penalty_read)
         INSTANTIATE_GET_SET(uint32_t, penalty_write)
         INSTANTIATE_GET_SET(memory_package_t*, mshr_buffer)
+
         INSTANTIATE_GET_SET(uint32_t, mshr_buffer_size)
         INSTANTIATE_GET_SET(uint32_t, mshr_buffer_request_reserved_size)
         INSTANTIATE_GET_SET(uint32_t, mshr_buffer_copyback_reserved_size)
         INSTANTIATE_GET_SET(uint32_t, mshr_buffer_prefetch_reserved_size)
 
+        INSTANTIATE_GET_SET(uint32_t, mshr_request_different_lines_size)
+        INSTANTIATE_GET_SET(uint32_t, mshr_request_token_window_size)
 
         /// ====================================================================
         /// Statistics related
@@ -241,7 +249,6 @@ class cache_memory_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_invalidation_copyback)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction_copyback)
-
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_instruction_hit)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_read_hit)

@@ -103,7 +103,7 @@ class processor_t : public interconnection_interface_t {
         disambiguation_t disambiguation_type;
 
         uint32_t fetch_block_size;
-
+        bool wait_write_complete;
 
         /// Branch Latency to flush on wrong prediction
         uint32_t branch_per_fetch;
@@ -309,6 +309,8 @@ class processor_t : public interconnection_interface_t {
             return (trace_over == false ||
                     fetch_buffer_position_used != 0 ||
                     decode_buffer_position_used != 0 ||
+                    memory_order_buffer_read_used != 0 ||
+                    memory_order_buffer_write_used != 0 ||
                     reorder_buffer_position_used != 0);
         }
 
@@ -413,6 +415,7 @@ class processor_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(cache_memory_t*, inst_cache)
 
         INSTANTIATE_GET_SET(uint32_t, fetch_block_size)
+        INSTANTIATE_GET_SET(bool, wait_write_complete)
         INSTANTIATE_GET_SET(uint32_t, unified_reservation_station_window_size)
         INSTANTIATE_GET_SET(uint32_t, branch_per_fetch)
 

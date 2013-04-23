@@ -227,8 +227,6 @@ void sinuca_engine_t::initialize_processor() {
             /// ================================================================
             /// Buffers
             /// ================================================================
-            processor_parameters.push_back("FETCH_BLOCK_SIZE");
-            this->processor_array[i]->set_fetch_block_size( cfg_processor[ processor_parameters.back() ] );
 
             processor_parameters.push_back("FETCH_BUFFER_SIZE");
             this->processor_array[i]->set_fetch_buffer_size( cfg_processor[ processor_parameters.back() ] );
@@ -328,6 +326,13 @@ void sinuca_engine_t::initialize_processor() {
 
             processor_parameters.push_back("DISAMBIGUATION_BLOCK_SIZE");
             this->processor_array[i]->set_disambiguation_block_size( cfg_processor[ processor_parameters.back() ] );
+
+            processor_parameters.push_back("FETCH_BLOCK_SIZE");
+            this->processor_array[i]->set_fetch_block_size( cfg_processor[ processor_parameters.back() ] );
+
+            processor_parameters.push_back("WAIT_WRITE_COMPLETE");
+            this->processor_array[i]->set_wait_write_complete( cfg_processor[ processor_parameters.back() ] );
+
 
             processor_parameters.push_back("BRANCH_PER_FETCH");
             this->processor_array[i]->set_branch_per_fetch( cfg_processor[ processor_parameters.back() ] );
@@ -542,6 +547,14 @@ void sinuca_engine_t::initialize_cache_memory() {
 
             cache_memory_parameters.push_back("MSHR_BUFFER_PREFETCH_RESERVED_SIZE");
             this->cache_memory_array[i]->set_mshr_buffer_prefetch_reserved_size( cfg_cache_memory[ cache_memory_parameters.back() ] );
+
+
+            cache_memory_parameters.push_back("MSHR_REQUEST_DIFFERENT_LINES_SIZE");
+            this->cache_memory_array[i]->set_mshr_request_different_lines_size( cfg_cache_memory[ cache_memory_parameters.back() ] );
+
+            cache_memory_parameters.push_back("MSHR_REQUEST_TOKEN_WINDOW_SIZE");
+            this->cache_memory_array[i]->set_mshr_request_token_window_size( cfg_cache_memory[ cache_memory_parameters.back() ] );
+
 
             cache_memory_parameters.push_back("REPLACEMENT_POLICY");
             if (strcasecmp(cfg_cache_memory[ cache_memory_parameters.back() ], "FIFO") ==  0) {
