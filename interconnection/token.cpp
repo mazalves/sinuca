@@ -22,19 +22,37 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
 /// ============================================================================
-/// ============================================================================
-/// Token for Token Controller (Inside interconnection_interface_t)
-/// ============================================================================
-class token_t {
-    public:
-        uint32_t id_owner;
-        uint64_t opcode_number;
-        uint64_t opcode_address;
-        uint64_t uop_number;
-        uint64_t memory_address;
-        memory_operation_t memory_operation;
-        bool is_coming;
+#include "./../sinuca.hpp"
+#include <string>
 
-        token_t();
-        std::string content_to_string();
+/// ============================================================================
+token_t::token_t(){
+    this->id_owner = 0;
+    this->opcode_number = 0;
+    this->opcode_address = 0;
+    this->uop_number = 0;
+    this->memory_address = 0;
+    this->memory_operation = MEMORY_OPERATION_INST;
+    this->is_coming = false;
+};
+
+/// ============================================================================
+std::string token_t::content_to_string() {
+    std::string content_string;
+    content_string = "";
+
+    content_string = content_string + " TOKEN: Owner:" + utils_t::uint32_to_char(this->id_owner);
+    content_string = content_string + " OPCode#" + utils_t::uint64_to_char(this->opcode_number);
+    content_string = content_string + " 0x" + utils_t::uint64_to_char(this->opcode_address);
+    content_string = content_string + " UOP#" + utils_t::uint64_to_char(this->uop_number);
+
+    content_string = content_string + " | " + get_enum_memory_operation_char(this->memory_operation);
+    content_string = content_string + " 0x" + utils_t::uint64_to_char(this->memory_address);
+    if (this->is_coming) {
+        content_string = content_string + " COMING ";
+    }
+    else {
+        content_string = content_string + " NOT_COMING";
+    }
+    return content_string;
 };

@@ -132,7 +132,8 @@ extern sinuca_engine_t sinuca_engine;
 // ~ #define PERIODIC_CHECK   1  /// Period between the Periodic Check
 #define PERIODIC_CHECK  1000000  /// Period between the Periodic Check
 
-#define INITIALIZE_DEBUG 0//3000000    /// Cycle to start the DEBUG_PRINTF (0 to disable)
+// ~ #define INITIALIZE_DEBUG 900000    /// Cycle to start the DEBUG_PRINTF (0 to disable)
+#define INITIALIZE_DEBUG 0    /// Cycle to start the DEBUG_PRINTF (0 to disable)
 #define FINALIZE_DEBUG 0      /// Cycle to stop the DEBUG_PRINTF (0 to disable)
 
 /// Class specific definitions
@@ -162,7 +163,7 @@ extern sinuca_engine_t sinuca_engine;
     #define CACHE_DEBUG
     // ~ #define PREFETCHER_DEBUG
     // ~ #define LINE_USAGE_PREDICTOR_DEBUG
-    #define MEMORY_CONTROLLER_DEBUG
+    // ~ #define MEMORY_CONTROLLER_DEBUG
     // ~ #define ROUTER_DEBUG
     // ~ #define INTERCONNECTION_CTRL_DEBUG
     // ~ #define DIRECTORY_CTRL_DEBUG

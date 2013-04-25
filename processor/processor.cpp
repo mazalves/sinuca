@@ -1423,47 +1423,63 @@ void processor_t::stage_execution() {
         }
     }
 
+    /// After selecting an old package, the processor needs to send it before gets another
+    /// Without this, the cache could allocate a token, then the processor tries to send another package, which could create a dead-lock
+    static memory_order_buffer_line_t *oldest_read_to_send = NULL;
+    static memory_order_buffer_line_t *oldest_write_to_send = NULL;
+
     /// ========================================================================
     /// READ_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_package()
     position_mem = POSITION_FAIL;
-    if (this->memory_order_buffer_read_used != 0){
-        position_mem = memory_order_buffer_line_t::find_old_request_state_ready(this->memory_order_buffer_read, this->memory_order_buffer_read_size, PACKAGE_STATE_TRANSMIT);
+    if (this->memory_order_buffer_read_used != 0 && oldest_read_to_send == NULL){
+        position_mem = memory_order_buffer_line_t::find_old_request_state_ready(this->memory_order_buffer_read,
+                                                                            this->memory_order_buffer_read_size, PACKAGE_STATE_TRANSMIT);
+        if (position_mem != POSITION_FAIL) {
+            oldest_read_to_send = &this->memory_order_buffer_read[position_mem];
+        }
     }
-    if (position_mem != POSITION_FAIL) {
-        int32_t transmission_latency = this->send_package(&this->memory_order_buffer_read[position_mem].memory_request);
+    if (oldest_read_to_send != NULL) {
+        int32_t transmission_latency = this->send_package(&oldest_read_to_send->memory_request);
         if (transmission_latency != POSITION_FAIL) {  /// Try to send to the Data Cache.
             /// Wait answer.
-            this->memory_order_buffer_read[position_mem].memory_request.package_wait(transmission_latency);
+            oldest_read_to_send->memory_request.package_wait(transmission_latency);
+            oldest_read_to_send = NULL;
         }
     }
 
     /// ========================================================================
     /// WRITE_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_package()
     position_mem = POSITION_FAIL;
-    if (this->memory_order_buffer_write_used != 0){
-        position_mem = memory_order_buffer_line_t::find_old_request_state_ready(this->memory_order_buffer_write, this->memory_order_buffer_write_size, PACKAGE_STATE_TRANSMIT);
+    if (this->memory_order_buffer_write_used != 0 && oldest_read_to_send == NULL){
+        position_mem = memory_order_buffer_line_t::find_old_request_state_ready(this->memory_order_buffer_write,
+                                                                            this->memory_order_buffer_write_size, PACKAGE_STATE_TRANSMIT);
+        if (position_mem != POSITION_FAIL) {
+            oldest_write_to_send = &this->memory_order_buffer_write[position_mem];
+        }
+
     }
-    if (position_mem != POSITION_FAIL) {
-        int32_t transmission_latency = this->send_package(&this->memory_order_buffer_write[position_mem].memory_request);
+    if (oldest_write_to_send != NULL) {
+        int32_t transmission_latency = this->send_package(&oldest_write_to_send->memory_request);
         if (transmission_latency != POSITION_FAIL) {  /// Try to send to the DC.
             if (this->wait_write_complete) {
-                this->memory_order_buffer_write[position_mem].rob_ptr->stage = PROCESSOR_STAGE_COMMIT;
-                this->memory_order_buffer_write[position_mem].rob_ptr->uop.package_ready(this->stage_execution_cycles + this->stage_commit_cycles);
-                this->memory_order_buffer_write[position_mem].rob_ptr->mob_ptr = NULL;
+                oldest_write_to_send->rob_ptr->stage = PROCESSOR_STAGE_COMMIT;
+                oldest_write_to_send->rob_ptr->uop.package_ready(this->stage_execution_cycles + this->stage_commit_cycles);
+                oldest_write_to_send->rob_ptr->mob_ptr = NULL;
                 /// Solve dependencies(forwarding data) before the store be removed from the MOB
-                this->solve_register_dependency(this->memory_order_buffer_write[position_mem].rob_ptr);
-                this->solve_memory_dependency(&this->memory_order_buffer_write[position_mem]);
+                this->solve_register_dependency(oldest_write_to_send->rob_ptr);
+                this->solve_memory_dependency(oldest_write_to_send);
                 /// Clean MOB line.
-                this->memory_order_buffer_write[position_mem].package_clean();
+                oldest_write_to_send->package_clean();
                 this->memory_order_buffer_write_used--;
             }
             else {
                 /// Solve dependencies(forwarding data) before the store be removed from the MOB
-                this->solve_memory_dependency(&this->memory_order_buffer_write[position_mem]);
+                this->solve_memory_dependency(oldest_write_to_send);
                 /// Clean MOB line.
-                this->memory_order_buffer_write[position_mem].package_clean();
+                oldest_write_to_send->package_clean();
                 this->memory_order_buffer_write_used--;
             }
+            oldest_write_to_send = NULL;
         }
     }
 
@@ -1515,6 +1531,7 @@ void processor_t::stage_execution() {
 
                 /// FUNC_UNIT_MEM_LOAD => READ_BUFFER
                 case INSTRUCTION_OPERATION_MEM_LOAD: {
+                    ERROR_ASSERT_PRINTF(reorder_buffer_line->mob_ptr != NULL, "Read with a NULL pointer to MOB")
                     reorder_buffer_line->mob_ptr->uop_executed = true;
                     /// Waits for the cache
                     reorder_buffer_line->uop.state = PACKAGE_STATE_TRANSMIT;
@@ -1528,6 +1545,7 @@ void processor_t::stage_execution() {
 
                 /// FUNC_UNIT_MEM_STORE => WRITE_BUFFER
                 case INSTRUCTION_OPERATION_MEM_STORE: {
+                    ERROR_ASSERT_PRINTF(reorder_buffer_line->mob_ptr != NULL, "Write with a NULL pointer to MOB")
                     reorder_buffer_line->mob_ptr->uop_executed = true;
 
                     if (this->wait_write_complete) {
@@ -1600,22 +1618,24 @@ void processor_t::solve_memory_dependency(memory_order_buffer_line_t *mob_line) 
     ///=========================================================================
     /// Send message to acknowledge the dependency is over
     for (uint32_t j = 0; j < this->reorder_buffer_size; j++) {
+        /// All the dependencies are solved
+        if (mob_line->mem_deps_ptr_array[j] == NULL) {
+            break;
+        }
         /// There is an unsolved dependency
-        if (mob_line->mem_deps_ptr_array[j] != NULL) {
+        else {
             mob_line->mem_deps_ptr_array[j]->wait_mem_deps_number--;
 
             switch (this->disambiguation_type) {
                 case DISAMBIGUATION_PERFECT:
                     if (mob_line->mem_deps_ptr_array[j]->uop_executed == true &&
                     mob_line->mem_deps_ptr_array[j]->wait_mem_deps_number == 0 &&
-                    mob_line->mem_deps_ptr_array[j]->memory_request.memory_operation == MEMORY_OPERATION_READ) {
-                        /// Check if address and size matches
-                        if (mob_line->mem_deps_ptr_array[j]->memory_request.memory_address == mob_line->memory_request.memory_address &&
-                        mob_line->mem_deps_ptr_array[j]->memory_request.memory_size == mob_line->memory_request.memory_size) {
-                            /// Solve the LOAD->LOAD and STORE->LOAD
-                            mob_line->mem_deps_ptr_array[j]->memory_request.state = PACKAGE_STATE_READY;
-                            mob_line->mem_deps_ptr_array[j]->memory_request.is_answer = true;
-                        }
+                    mob_line->mem_deps_ptr_array[j]->memory_request.memory_operation == MEMORY_OPERATION_READ &&
+                    mob_line->mem_deps_ptr_array[j]->memory_request.memory_address == mob_line->memory_request.memory_address &&
+                    mob_line->mem_deps_ptr_array[j]->memory_request.memory_size == mob_line->memory_request.memory_size) {
+                        /// Solve the LOAD->LOAD and STORE->LOAD
+                        mob_line->mem_deps_ptr_array[j]->memory_request.state = PACKAGE_STATE_READY;
+                        mob_line->mem_deps_ptr_array[j]->memory_request.is_answer = true;
                     }
                 break;
 
@@ -1625,10 +1645,6 @@ void processor_t::solve_memory_dependency(memory_order_buffer_line_t *mob_line) 
 
             /// This update the ready cycle, and it is usefull to compute the time each instruction waits for the functional unit
             mob_line->mem_deps_ptr_array[j] = NULL;
-        }
-        /// All the dependencies are solved
-        else {
-            break;
         }
     }
 };

@@ -50,7 +50,7 @@ std::string memory_order_buffer_line_t::content_to_string() {
     content_string = "";
 
     #ifndef SHOW_FREE_PACKAGE
-        if (this->rob_ptr == NULL) {
+        if (this->memory_request.state == PACKAGE_STATE_FREE) {
             return content_string;
         }
     #endif

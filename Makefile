@@ -58,7 +58,8 @@ SRC_PROCESSOR =	 	processor/processor.cpp \
 					processor/reorder_buffer_line.cpp \
 					processor/memory_order_buffer_line.cpp
 
-SRC_INTERCONNECTION =  	interconnection/interconnection_router.cpp \
+SRC_INTERCONNECTION =	interconnection/token.cpp \
+						interconnection/interconnection_router.cpp \
 						interconnection/interconnection_controller.cpp \
 						interconnection/interconnection_interface.cpp
 
