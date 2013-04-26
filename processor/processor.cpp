@@ -151,8 +151,8 @@ processor_t::processor_t() {
     this->memory_order_buffer_write_size = 0;
     this->memory_order_buffer_read = NULL;
     this->memory_order_buffer_write = NULL;
-    this->memory_order_buffer_read_used = 0;
-    this->memory_order_buffer_write_used = 0;
+    this->memory_order_buffer_read_executed = 0;
+    this->memory_order_buffer_write_executed = 0;
 
 
     this->disambiguation_block_size = 0;
@@ -595,7 +595,7 @@ void processor_t::stage_fetch() {
 
         /// Requested Line
         if (waiting == true) {
-            PROCESSOR_DEBUG_PRINTF("\t ALREADY REQUESTED THE SAME LINE (WAIT)\n");
+            PROCESSOR_DEBUG_PRINTF("\t JUST REQUESTED THE SAME BLOCK (WAIT)\n");
             fetch_buffer[position_buffer].package_wait(1);
         }
         /// Line Buffer
@@ -965,8 +965,12 @@ void processor_t::make_memory_dependencies(memory_order_buffer_line_t *new_mob_l
 
         switch (this->disambiguation_type) {
             case DISAMBIGUATION_PERFECT: {
-                /// If memory overlaps
-                if (check_if_memory_overlaps(new_mob_line->memory_request.memory_address, new_mob_line->memory_request.memory_size,
+
+                /// If Store-Store or If memory overlaps
+                if ((new_mob_line->memory_request.memory_operation == MEMORY_OPERATION_WRITE &&
+                    old_mob_line->memory_request.memory_operation == MEMORY_OPERATION_WRITE) ||
+
+                check_if_memory_overlaps(new_mob_line->memory_request.memory_address, new_mob_line->memory_request.memory_size,
                 old_mob_line->memory_request.memory_address, old_mob_line->memory_request.memory_size)) {
                     /// Make dependencies to be solved
                     for (uint32_t k = 0; k < this->reorder_buffer_size; k++) {
@@ -1021,7 +1025,6 @@ void processor_t::stage_rename() {
 
         /// If READ => Check free space on the MOB-READ
         if (this->decode_buffer[decode_buffer_position_start].uop_operation == INSTRUCTION_OPERATION_MEM_LOAD) {
-
             position_mob = memory_order_buffer_line_t::find_free(this->memory_order_buffer_read, this->memory_order_buffer_read_size);
             if (position_mob == POSITION_FAIL) {
                 this->add_stat_full_memory_order_buffer_read();
@@ -1078,8 +1081,6 @@ void processor_t::stage_rename() {
                 this->reorder_buffer[position_rob].uop.memory_size = sinuca_engine.get_global_line_size() - offset;
             }
 
-            this->memory_order_buffer_read_used++;
-
             this->reorder_buffer[position_rob].mob_ptr->memory_request.packager(
                 this->get_id(),                                         /// Request Owner
                 this->reorder_buffer[position_rob].uop.opcode_number,      /// Opcode. Number
@@ -1108,8 +1109,6 @@ void processor_t::stage_rename() {
             if (offset + this->reorder_buffer[position_rob].uop.memory_size >= sinuca_engine.get_global_line_size()) {
                 this->reorder_buffer[position_rob].uop.memory_size = sinuca_engine.get_global_line_size() - offset;
             }
-
-            this->memory_order_buffer_write_used++;
 
             this->reorder_buffer[position_rob].mob_ptr->memory_request.packager(
                 this->get_id(),                                         /// Request Owner
@@ -1401,25 +1400,23 @@ void processor_t::stage_execution() {
 
     /// ========================================================================
     /// REMOVE MEMORY PACKAGE READS which are ready!
-    for (uint32_t slot = 0; slot < this->memory_order_buffer_read_size; slot++) {
-        if (this->memory_order_buffer_read_used == 0){
-            break;
-        }
-
-        if (this->memory_order_buffer_read[slot].memory_request.state == PACKAGE_STATE_READY) {
-            ERROR_ASSERT_PRINTF(this->memory_order_buffer_read[slot].uop_executed == true, "Removing memory read before being executed.\n")
-            ERROR_ASSERT_PRINTF(this->memory_order_buffer_read[slot].wait_mem_deps_number == 0, "Number of memory dependencies should be zero.\n")
-            ERROR_ASSERT_PRINTF(this->memory_order_buffer_read[slot].memory_request.is_answer == true, "Removing a package from MOB which is not answer.\n")
-            // Solve ROB, and send to COMMIT
-            this->memory_order_buffer_read[slot].rob_ptr->stage = PROCESSOR_STAGE_COMMIT;
-            this->memory_order_buffer_read[slot].rob_ptr->uop.package_ready(this->stage_commit_cycles);
-            this->memory_order_buffer_read[slot].rob_ptr->mob_ptr = NULL;
-            this->solve_register_dependency(this->memory_order_buffer_read[slot].rob_ptr);
-            this->solve_memory_dependency(&this->memory_order_buffer_read[slot]);
-            /// Clean MOB line.
-            this->memory_order_buffer_read[slot].package_clean();
-            this->memory_order_buffer_read_used--;
-            break;
+    if (this->memory_order_buffer_read_executed != 0){
+        for (uint32_t slot = 0; slot < this->memory_order_buffer_read_size; slot++) {
+            if (this->memory_order_buffer_read[slot].memory_request.state == PACKAGE_STATE_READY) {
+                ERROR_ASSERT_PRINTF(this->memory_order_buffer_read[slot].uop_executed == true, "Removing memory read before being executed.\n")
+                ERROR_ASSERT_PRINTF(this->memory_order_buffer_read[slot].wait_mem_deps_number == 0, "Number of memory dependencies should be zero.\n")
+                ERROR_ASSERT_PRINTF(this->memory_order_buffer_read[slot].memory_request.is_answer == true, "Removing a package from MOB which is not answer.\n")
+                /// Solve ROB, and send to COMMIT
+                this->memory_order_buffer_read[slot].rob_ptr->stage = PROCESSOR_STAGE_COMMIT;
+                this->memory_order_buffer_read[slot].rob_ptr->uop.package_ready(this->stage_commit_cycles);
+                this->memory_order_buffer_read[slot].rob_ptr->mob_ptr = NULL;
+                this->solve_register_dependency(this->memory_order_buffer_read[slot].rob_ptr);
+                this->solve_memory_dependency(&this->memory_order_buffer_read[slot]);
+                /// Clean MOB line.
+                this->memory_order_buffer_read[slot].package_clean();
+                this->memory_order_buffer_read_executed--;
+                break;
+            }
         }
     }
 
@@ -1431,9 +1428,10 @@ void processor_t::stage_execution() {
     /// ========================================================================
     /// READ_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_package()
     position_mem = POSITION_FAIL;
-    if (this->memory_order_buffer_read_used != 0 && oldest_read_to_send == NULL){
+    if (this->memory_order_buffer_read_executed != 0 && oldest_read_to_send == NULL){
         position_mem = memory_order_buffer_line_t::find_old_request_state_ready(this->memory_order_buffer_read,
                                                                             this->memory_order_buffer_read_size, PACKAGE_STATE_TRANSMIT);
+
         if (position_mem != POSITION_FAIL) {
             oldest_read_to_send = &this->memory_order_buffer_read[position_mem];
         }
@@ -1450,13 +1448,13 @@ void processor_t::stage_execution() {
     /// ========================================================================
     /// WRITE_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_package()
     position_mem = POSITION_FAIL;
-    if (this->memory_order_buffer_write_used != 0 && oldest_read_to_send == NULL){
+    if (this->memory_order_buffer_write_executed != 0 && oldest_read_to_send == NULL){
         position_mem = memory_order_buffer_line_t::find_old_request_state_ready(this->memory_order_buffer_write,
                                                                             this->memory_order_buffer_write_size, PACKAGE_STATE_TRANSMIT);
+
         if (position_mem != POSITION_FAIL) {
             oldest_write_to_send = &this->memory_order_buffer_write[position_mem];
         }
-
     }
     if (oldest_write_to_send != NULL) {
         int32_t transmission_latency = this->send_package(&oldest_write_to_send->memory_request);
@@ -1467,18 +1465,12 @@ void processor_t::stage_execution() {
                 oldest_write_to_send->rob_ptr->mob_ptr = NULL;
                 /// Solve dependencies(forwarding data) before the store be removed from the MOB
                 this->solve_register_dependency(oldest_write_to_send->rob_ptr);
-                this->solve_memory_dependency(oldest_write_to_send);
-                /// Clean MOB line.
-                oldest_write_to_send->package_clean();
-                this->memory_order_buffer_write_used--;
             }
-            else {
-                /// Solve dependencies(forwarding data) before the store be removed from the MOB
-                this->solve_memory_dependency(oldest_write_to_send);
-                /// Clean MOB line.
-                oldest_write_to_send->package_clean();
-                this->memory_order_buffer_write_used--;
-            }
+            /// Solve dependencies(forwarding data) before the store be removed from the MOB
+            this->solve_memory_dependency(oldest_write_to_send);
+            /// Clean MOB line.
+            oldest_write_to_send->package_clean();
+            this->memory_order_buffer_write_executed--;
             oldest_write_to_send = NULL;
         }
     }
@@ -1532,6 +1524,7 @@ void processor_t::stage_execution() {
                 /// FUNC_UNIT_MEM_LOAD => READ_BUFFER
                 case INSTRUCTION_OPERATION_MEM_LOAD: {
                     ERROR_ASSERT_PRINTF(reorder_buffer_line->mob_ptr != NULL, "Read with a NULL pointer to MOB")
+                    this->memory_order_buffer_read_executed++;
                     reorder_buffer_line->mob_ptr->uop_executed = true;
                     /// Waits for the cache
                     reorder_buffer_line->uop.state = PACKAGE_STATE_TRANSMIT;
@@ -1546,6 +1539,7 @@ void processor_t::stage_execution() {
                 /// FUNC_UNIT_MEM_STORE => WRITE_BUFFER
                 case INSTRUCTION_OPERATION_MEM_STORE: {
                     ERROR_ASSERT_PRINTF(reorder_buffer_line->mob_ptr != NULL, "Write with a NULL pointer to MOB")
+                    this->memory_order_buffer_write_executed++;
                     reorder_buffer_line->mob_ptr->uop_executed = true;
 
                     if (this->wait_write_complete) {
@@ -1754,8 +1748,8 @@ void processor_t::clock(uint32_t subcycle) {
     }
 
     /// Something to be done this cycle. -- Improve the performance
-    if (this->memory_order_buffer_read_used != 0 ||
-    this->memory_order_buffer_write_used != 0 ||
+    if (this->memory_order_buffer_read_executed != 0 ||
+    this->memory_order_buffer_write_executed != 0 ||
     this->reorder_buffer_position_used != 0){
         /// Read each FU pipeline
         /// Creates latency for each instruction

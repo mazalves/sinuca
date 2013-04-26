@@ -191,8 +191,8 @@ class processor_t : public interconnection_interface_t {
         memory_order_buffer_line_t *memory_order_buffer_read;
         memory_order_buffer_line_t *memory_order_buffer_write;
         /// Number of positions used inside MOB
-        uint32_t memory_order_buffer_read_used;
-        uint32_t memory_order_buffer_write_used;
+        uint32_t memory_order_buffer_read_executed;
+        uint32_t memory_order_buffer_write_executed;
 
         cache_memory_t *data_cache;
         cache_memory_t *inst_cache;
@@ -309,8 +309,8 @@ class processor_t : public interconnection_interface_t {
             return (trace_over == false ||
                     fetch_buffer_position_used != 0 ||
                     decode_buffer_position_used != 0 ||
-                    memory_order_buffer_read_used != 0 ||
-                    memory_order_buffer_write_used != 0 ||
+                    memory_order_buffer_read_executed != 0 ||
+                    memory_order_buffer_write_executed != 0 ||
                     reorder_buffer_position_used != 0);
         }
 
@@ -405,8 +405,8 @@ class processor_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, memory_order_buffer_read_size)
         INSTANTIATE_GET_SET(uint32_t, memory_order_buffer_write_size)
 
-        INSTANTIATE_GET_SET(uint32_t, memory_order_buffer_read_used)
-        INSTANTIATE_GET_SET(uint32_t, memory_order_buffer_write_used)
+        INSTANTIATE_GET_SET(uint32_t, memory_order_buffer_read_executed)
+        INSTANTIATE_GET_SET(uint32_t, memory_order_buffer_write_executed)
 
         INSTANTIATE_GET_SET(uint32_t, disambiguation_block_size)
         INSTANTIATE_GET_SET(disambiguation_t, disambiguation_type)

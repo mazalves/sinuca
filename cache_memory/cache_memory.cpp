@@ -111,6 +111,7 @@ void cache_memory_t::allocate() {
     this->mshr_born_ordered.reserve(this->mshr_buffer_size);
     this->token_list.reserve(this->mshr_buffer_size);
 
+    this->mshr_request_different_lines_used = 0;
     this->mshr_request_different_lines = utils_t::template_allocate_array<cache_line_t>(this->mshr_request_different_lines_size);
 
     ERROR_ASSERT_PRINTF(this->get_total_banks() == 1 || this->prefetcher->get_prefetcher_type() == PREFETCHER_DISABLE, "Cannot use a multibanked cache with prefetch. (Some requests may be generated in the wrong bank)\n");
@@ -272,6 +273,7 @@ void cache_memory_t::clock(uint32_t subcycle) {
                         this->mshr_request_different_lines[same_line].usage_counter--;
                         if (this->mshr_request_different_lines[same_line].usage_counter == 0) {
                             this->mshr_request_different_lines[same_line].tag = 0;
+                            this->mshr_request_different_lines_used--;
                         }
                         break;
                     }
@@ -636,11 +638,11 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
 /// ============================================================================
 bool cache_memory_t::check_token_list(memory_package_t *package) {
     ERROR_ASSERT_PRINTF(package->is_answer == false, "check_token_list received a Answer.\n")
-    uint32_t token_pos = 0, number_tokens_comming = 0, number_free_different_lines = 0, free_line = 0;
+    uint32_t token_pos = 0, number_tokens_coming = 0;
 
     /// 1. Check if the name is already in the guest (token) list.
     for (token_pos = 0; token_pos < this->token_list.size(); token_pos++) {
-        number_tokens_comming += this->token_list[token_pos].is_coming;
+        number_tokens_coming += this->token_list[token_pos].is_coming;
 
         /// Requested Address Found
         if (this->token_list[token_pos].id_owner == package->id_owner &&
@@ -670,37 +672,33 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
 
         /// Check if MSHR is already working on the same line.
         for (uint32_t same_line = 0; same_line < this->mshr_request_different_lines_size; same_line++) {
-            /// Number of empty entries for different_lines
-            if (this->mshr_request_different_lines[same_line].usage_counter == 0 && this->mshr_request_different_lines[same_line].tag == 0) {
-                number_free_different_lines++;
-                free_line = same_line;
-            }
             /// Check for same_address
-            else if (cmp_tag_index_bank(this->mshr_request_different_lines[same_line].tag, package->memory_address)) {
-                /// Avoid increment twice
-                if (this->token_list[token_pos].is_coming == false) {
-                    this->token_list[token_pos].is_coming = true;
-                    this->mshr_request_different_lines[same_line].usage_counter++;
-                    // ~ SINUCA_PRINTF("%d EXISTING and ++ on DIFF - 0x%"PRIu64"  #%"PRIu64"\n", this->get_id(),
-                                                                                        // ~ this->mshr_request_different_lines[same_line].tag,
-                                                                                        // ~ this->mshr_request_different_lines[same_line].usage_counter)
-                }
+            if (cmp_tag_index_bank(this->mshr_request_different_lines[same_line].tag, package->memory_address)) {
+                /// Avoid increment the usage_counter twice
+                this->mshr_request_different_lines[same_line].usage_counter += !this->token_list[token_pos].is_coming;
+                this->token_list[token_pos].is_coming = true;
+
                 /// Come on in! Lets Party !
                 return OK;
             }
         }
 
         /// Not found the same address - Check if can create a new entry
-        if ((token_pos - number_tokens_comming) < number_free_different_lines) {
-            this->token_list[token_pos].is_coming = true;
-            ERROR_ASSERT_PRINTF(this->mshr_request_different_lines[free_line].usage_counter == 0, "Just created and usage counter different from ZERO\n")
-            this->mshr_request_different_lines[free_line].usage_counter++;
-            this->mshr_request_different_lines[free_line].tag = package->memory_address;
-            // ~ SINUCA_PRINTF("%d CREATE and ++ on DIFF - 0x%"PRIu64"  #%"PRIu64"\n", this->get_id(),
-                                                                                    // ~ this->mshr_request_different_lines[free_line].tag,
-                                                                                    // ~ this->mshr_request_different_lines[free_line].usage_counter)
-            /// Come on in! Lets Party !
-            return OK;
+        if ((token_pos - number_tokens_coming) < (this->mshr_request_different_lines_size - this->mshr_request_different_lines_used)) {
+            /// Check if MSHR is already working on the same line.
+            for (uint32_t slot = 0; slot < this->mshr_request_different_lines_size; slot++) {
+                /// Find an empty entry for different_line
+                if (this->mshr_request_different_lines[slot].usage_counter == 0 && this->mshr_request_different_lines[slot].tag == 0) {
+                    ERROR_ASSERT_PRINTF(this->mshr_request_different_lines[slot].usage_counter == 0, "Just created and usage counter different from ZERO\n")
+                    this->mshr_request_different_lines[slot].usage_counter++;
+                    this->mshr_request_different_lines[slot].tag = package->memory_address;
+                    this->mshr_request_different_lines_used++;
+                    this->token_list[token_pos].is_coming = true;
+
+                    /// Come on in! Lets Party !
+                    return OK;
+                }
+            }
         }
     }
 
