@@ -1,9 +1,8 @@
 /// ============================================================================
 //
-// Copyright (C) 2010, 2011
+// Copyright (C) 2010, 2011, 2012
 // Marco Antonio Zanata Alves
 //
-// Modified by Francis Birck Moreira 2012
 // GPPD - Parallel and Distributed Processing Group
 // Universidade Federal do Rio Grande do Sul
 //
@@ -26,53 +25,47 @@
 #include <string>
 
 /// ============================================================================
-stream_table_line_t::stream_table_line_t() {
+mshr_diff_line_t::mshr_diff_line_t() {
     this->clean();
 };
 
 /// ============================================================================
-stream_table_line_t::~stream_table_line_t() {
+mshr_diff_line_t::~mshr_diff_line_t() {
 };
 
 /// ============================================================================
-void stream_table_line_t::clean() {
-     this->starting_address = 0;
-     this->ending_address = 0;
-     this->direction = 0;
-
-     this->cycle_last_activation = 0;         /// Last time a Memory Request matched into this stream
-     this->cycle_last_request = 0;            /// Last prefetch done
-     this->last_memory_address = 0;
-
-     this->state = PREFETCHER_STREAM_STATE_INVALID;
-}
+void mshr_diff_line_t::clean(){
+    this->valid = false;
+    this->memory_address = 0;
+    this->usage_counter = 0;
+};
 
 /// ============================================================================
-std::string stream_table_line_t::content_to_string() {
+std::string mshr_diff_line_t::content_to_string() {
     std::string content_string;
     content_string = "";
 
     #ifndef SHOW_FREE_PACKAGE
-        if (this->state == PREFETCHER_STREAM_STATE_INVALID && this->starting_address == 0) {
+        if (this->valid == false) {
             return content_string;
         }
     #endif
 
-
-    content_string = content_string + " STREAM: Starting Address:" + utils_t::uint64_to_char(this->starting_address);
-    content_string = content_string + " STREAM: Ending Address:" + utils_t::uint64_to_char(this->ending_address);
-    content_string = content_string + " Stream Direction:" + utils_t::uint32_to_char(this->direction);
-
-    content_string = content_string + " Stream Last Activation:" + utils_t::int64_to_char(this->cycle_last_activation);
-    content_string = content_string + " Stream Last Request:" + utils_t::uint64_to_char(this->cycle_last_request);
-    content_string = content_string + " Stream Last Address:" + utils_t::uint64_to_char(this->last_memory_address);
-
-    content_string = content_string + " Stream State:" + get_enum_prefetch_stream_state_char(this->state);
+    content_string = content_string + " MSHR_DIFF_LINE: ";
+    if (this->valid) {
+        content_string = content_string + " VALID ";
+    }
+    else {
+        content_string = content_string + " INVALID";
+    }
+    content_string = content_string + " 0x" + utils_t::uint64_to_char(this->memory_address);
+    content_string = content_string + "  #" + utils_t::uint32_to_char(this->usage_counter);
     return content_string;
 };
 
+
 /// ============================================================================
-std::string stream_table_line_t::print_all(stream_table_line_t *input_array, uint32_t size_array) {
+std::string mshr_diff_line_t::print_all(mshr_diff_line_t *input_array, uint32_t size_array) {
     std::string content_string;
     std::string final_string;
 

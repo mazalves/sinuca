@@ -77,7 +77,7 @@ class cache_memory_t : public interconnection_interface_t {
 
         container_ptr_memory_package_t mshr_born_ordered;
 
-        cache_line_t *mshr_request_different_lines;
+        mshr_diff_line_t *mshr_request_different_lines;
         uint32_t mshr_request_different_lines_used;
 
         uint64_t send_ans_ready_cycle;

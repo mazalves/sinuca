@@ -112,7 +112,7 @@ void cache_memory_t::allocate() {
     this->token_list.reserve(this->mshr_buffer_size);
 
     this->mshr_request_different_lines_used = 0;
-    this->mshr_request_different_lines = utils_t::template_allocate_array<cache_line_t>(this->mshr_request_different_lines_size);
+    this->mshr_request_different_lines = utils_t::template_allocate_array<mshr_diff_line_t>(this->mshr_request_different_lines_size);
 
     ERROR_ASSERT_PRINTF(this->get_total_banks() == 1 || this->prefetcher->get_prefetcher_type() == PREFETCHER_DISABLE, "Cannot use a multibanked cache with prefetch. (Some requests may be generated in the wrong bank)\n");
 
@@ -265,14 +265,15 @@ void cache_memory_t::clock(uint32_t subcycle) {
                 // Decrement the usage_counter of diff_lines
                 for (uint32_t same_line = 0; same_line < this->mshr_request_different_lines_size; same_line++) {
                     // Check for same_address
-                    if (this->cmp_tag_index_bank(this->mshr_request_different_lines[same_line].tag, mshr_born_ordered[i]->memory_address)) {
+                    if (this->mshr_request_different_lines[same_line].valid &&
+                    this->cmp_tag_index_bank(this->mshr_request_different_lines[same_line].memory_address, mshr_born_ordered[i]->memory_address)) {
                         // ~ SINUCA_PRINTF("%d - REMOVING from DIFF - 0x%"PRIu64"  #%"PRIu64"\n", this->get_id(),
                                                                                             // ~ mshr_born_ordered[i]->memory_address,
                                                                                             // ~ this->mshr_request_different_lines[same_line].usage_counter)
                         ERROR_ASSERT_PRINTF(this->mshr_request_different_lines[same_line].usage_counter > 0, "Usage counter will become negative\n")
                         this->mshr_request_different_lines[same_line].usage_counter--;
                         if (this->mshr_request_different_lines[same_line].usage_counter == 0) {
-                            this->mshr_request_different_lines[same_line].tag = 0;
+                            this->mshr_request_different_lines[same_line].clean();
                             this->mshr_request_different_lines_used--;
                         }
                         break;
@@ -673,7 +674,8 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
         /// Check if MSHR is already working on the same line.
         for (uint32_t same_line = 0; same_line < this->mshr_request_different_lines_size; same_line++) {
             /// Check for same_address
-            if (cmp_tag_index_bank(this->mshr_request_different_lines[same_line].tag, package->memory_address)) {
+            if (this->mshr_request_different_lines[same_line].valid &&
+            cmp_tag_index_bank(this->mshr_request_different_lines[same_line].memory_address, package->memory_address)) {
                 /// Avoid increment the usage_counter twice
                 this->mshr_request_different_lines[same_line].usage_counter += !this->token_list[token_pos].is_coming;
                 this->token_list[token_pos].is_coming = true;
@@ -688,10 +690,11 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
             /// Check if MSHR is already working on the same line.
             for (uint32_t slot = 0; slot < this->mshr_request_different_lines_size; slot++) {
                 /// Find an empty entry for different_line
-                if (this->mshr_request_different_lines[slot].usage_counter == 0 && this->mshr_request_different_lines[slot].tag == 0) {
-                    ERROR_ASSERT_PRINTF(this->mshr_request_different_lines[slot].usage_counter == 0, "Just created and usage counter different from ZERO\n")
-                    this->mshr_request_different_lines[slot].usage_counter++;
-                    this->mshr_request_different_lines[slot].tag = package->memory_address;
+                if (this->mshr_request_different_lines[slot].valid == false) {
+                    this->mshr_request_different_lines[slot].valid = true;
+                    this->mshr_request_different_lines[slot].memory_address = package->memory_address;
+                    this->mshr_request_different_lines[slot].usage_counter = 1;
+
                     this->mshr_request_different_lines_used++;
                     this->token_list[token_pos].is_coming = true;
 
@@ -962,12 +965,8 @@ void cache_memory_t::print_structures() {
         SINUCA_PRINTF("%s\n", this->token_list[i].content_to_string().c_str())
     }
 
-    SINUCA_PRINTF("%s MSHR_REQUEST_DIFFERENT_LINES:\n", this->get_label())
-    for (uint32_t i = 0; i < this->mshr_request_different_lines_size; i++) {
-        if (this->mshr_request_different_lines[i].tag != 0 && this->mshr_request_different_lines[i].usage_counter != 0)
-            SINUCA_PRINTF("0x%"PRIu64" #%"PRIu64"\n", this->mshr_request_different_lines[i].tag, this->mshr_request_different_lines[i].usage_counter)
-    }
-
+    SINUCA_PRINTF("%s MSHR_REQUEST_DIFFERENT_LINES:\n%s", this->get_label(),
+                                                mshr_diff_line_t::print_all(this->mshr_request_different_lines, this->mshr_request_different_lines_size).c_str())
 
 };
 

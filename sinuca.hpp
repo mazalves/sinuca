@@ -110,6 +110,7 @@ class line_usage_predictor_subblock_stats_t;
 class line_usage_predictor_line_stats_t;
 class line_usage_predictor_disable_t;
 /// Cache Memory
+class mshr_diff_line_t;
 class cache_line_t;
 class cache_set_t;
 class cache_memory_t;
@@ -334,6 +335,7 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 #include "./prefetch/prefetcher_stream.hpp"
 #include "./prefetch/prefetcher_disable.hpp"
 
+#include "./cache_memory/mshr_diff_line.hpp"
 #include "./cache_memory/cache_line.hpp"
 #include "./cache_memory/cache_set.hpp"
 #include "./cache_memory/cache_memory.hpp"

@@ -84,7 +84,8 @@ SRC_LINE_USAGE_PREDICTOR =	line_usage_predictor/line_usage_predictor.cpp \
 							line_usage_predictor/line_usage_predictor_line_stats.cpp \
 							line_usage_predictor/line_usage_predictor_disable.cpp
 
-SRC_CACHE_MEMORY =	cache_memory/cache_memory.cpp
+SRC_CACHE_MEMORY =	cache_memory/mshr_diff_line.cpp \
+					cache_memory/cache_memory.cpp
 
 SRC_MAIN_MEMORY =   main_memory/memory_channel.cpp \
 					main_memory/memory_controller.cpp

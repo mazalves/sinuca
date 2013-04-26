@@ -48,6 +48,13 @@ std::string stride_table_line_t::content_to_string() {
     std::string content_string;
     content_string = "";
 
+    #ifndef SHOW_FREE_PACKAGE
+        if (this->stride_state == PREFETCHER_STRIDE_STATE_NO_PRED && this->last_memory_address == 0) {
+            return content_string;
+        }
+    #endif
+
+
     content_string = content_string + " STRIDE:";
     content_string = content_string + " Last Opcode Address:" + utils_t::uint64_to_char(this->last_opcode_address);
     content_string = content_string + " Last Memory Address:" + utils_t::uint64_to_char(this->last_memory_address);
