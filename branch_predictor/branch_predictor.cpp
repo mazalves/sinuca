@@ -45,7 +45,7 @@ void branch_predictor_t::allocate() {
 
 /// ============================================================================
 void branch_predictor_t::clock(uint32_t subcycle) {
-    if (subcycle != 0) return;
+    (void) subcycle;
     BRANCH_PREDICTOR_DEBUG_PRINTF("==================== ");
     BRANCH_PREDICTOR_DEBUG_PRINTF("====================\n");
     BRANCH_PREDICTOR_DEBUG_PRINTF("cycle() \n");

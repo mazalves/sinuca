@@ -245,7 +245,7 @@ void cache_memory_t::set_masks() {
 
 /// ============================================================================
 void cache_memory_t::clock(uint32_t subcycle) {
-    if (subcycle != 0) return;
+    (void) subcycle;
     CACHE_DEBUG_PRINTF("==================== ID(%u) ",this->get_id());
     CACHE_DEBUG_PRINTF("====================\n");
     CACHE_DEBUG_PRINTF("cycle() \n");
@@ -317,7 +317,7 @@ void cache_memory_t::clock(uint32_t subcycle) {
                 if (this->mshr_born_ordered[i]->state == PACKAGE_STATE_WAIT) {
                     this->mshr_born_ordered[i]->package_wait(transmission_latency);
                 }
-                /// Normal COPY-BACK Request
+                /// Normal COPY-BACK Request (Will free the position)
                 else if (this->mshr_born_ordered[i]->state == PACKAGE_STATE_FREE) {
                     this->mshr_born_ordered[i]->package_ready(transmission_latency);
                 }
@@ -569,11 +569,11 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
         if (this->recv_ans_ready_cycle <= sinuca_engine.get_global_cycle()) {
             for (uint32_t i = 0 ; i < this->mshr_buffer_size; i++) {
                 /// Find the correct REQUEST which matches with the ANSWER
-                if (this->mshr_buffer[i].state == PACKAGE_STATE_WAIT &&
-                this->mshr_buffer[i].id_owner == package->id_owner &&
-                this->mshr_buffer[i].opcode_number == package->opcode_number &&
+                if (this->mshr_buffer[i].opcode_number == package->opcode_number &&
                 this->mshr_buffer[i].uop_number == package->uop_number &&
-                this->cmp_tag_index_bank(this->mshr_buffer[i].memory_address, package->memory_address)) {
+                this->cmp_tag_index_bank(this->mshr_buffer[i].memory_address, package->memory_address) &&
+                this->mshr_buffer[i].state == PACKAGE_STATE_WAIT &&
+                this->mshr_buffer[i].id_owner == package->id_owner) {
                     CACHE_DEBUG_PRINTF("\t RECEIVED ANSWER package WANTED\n");
                     this->mshr_buffer[i].is_answer = package->is_answer;
                     this->mshr_buffer[i].memory_size = package->memory_size;
@@ -646,11 +646,11 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
         number_tokens_coming += this->token_list[token_pos].is_coming;
 
         /// Requested Address Found
-        if (this->token_list[token_pos].id_owner == package->id_owner &&
-        this->token_list[token_pos].opcode_number == package->opcode_number &&
+        if (this->token_list[token_pos].opcode_number == package->opcode_number &&
         this->token_list[token_pos].uop_number == package->uop_number &&
         this->token_list[token_pos].memory_address == package->memory_address &&
-        this->token_list[token_pos].memory_operation == package->memory_operation) {
+        this->token_list[token_pos].memory_operation == package->memory_operation &&
+        this->token_list[token_pos].id_owner == package->id_owner) {
             break;
         }
     }
@@ -723,11 +723,11 @@ uint32_t cache_memory_t::check_token_space(memory_package_t *package) {
 void cache_memory_t::remove_token_list(memory_package_t *package) {
     for (uint32_t token = 0; token < this->token_list.size(); token++) {
         /// Requested Address Found
-        if (this->token_list[token].id_owner == package->id_owner &&
-        this->token_list[token].opcode_number == package->opcode_number &&
+        if (this->token_list[token].opcode_number == package->opcode_number &&
         this->token_list[token].uop_number == package->uop_number &&
         this->token_list[token].memory_address == package->memory_address &&
-        this->token_list[token].memory_operation == package->memory_operation) {
+        this->token_list[token].memory_operation == package->memory_operation &&
+        this->token_list[token].id_owner == package->id_owner) {
             this->token_list.erase(this->token_list.begin() + token);
             return;
         }

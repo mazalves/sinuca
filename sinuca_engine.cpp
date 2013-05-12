@@ -228,16 +228,13 @@ void sinuca_engine_t::global_clock() {
     else {
         this->set_is_runtime_debug(true);
     }
+    uint32_t sub_cycle = 0;
 
-    for (uint32_t sub_cycle = 0 ; sub_cycle < 1 ; sub_cycle++) {
-        if (sub_cycle == 0) {
-            DEBUG_PRINTF("\n\n\n");
-            DEBUG_PRINTF("========================================================================================================\n");
-            DEBUG_PRINTF("======================================== Sinuca_Cycle %"PRIu64"/%u ========================================\n\n\n", this->get_global_cycle(), sub_cycle);
-        }
-        for (uint32_t i = 0 ; i < this->get_interconnection_interface_array_size() ; i++) {
-            this->interconnection_interface_array[i]->clock(sub_cycle);
-        }
+    DEBUG_PRINTF("\n\n\n")
+    DEBUG_PRINTF("========================================================================================================\n")
+    DEBUG_PRINTF("======================================== Sinuca_Cycle %"PRIu64"/%u ========================================\n\n\n", this->get_global_cycle(), sub_cycle)
+    for (uint32_t i = 0 ; i < this->get_interconnection_interface_array_size() ; i++) {
+        this->interconnection_interface_array[i]->clock(sub_cycle);
     }
     this->global_cycle++;
 };

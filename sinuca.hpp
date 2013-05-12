@@ -249,14 +249,11 @@ extern sinuca_engine_t sinuca_engine;
 /// ============================================================================
 /// TYPES
 /// ============================================================================
-// ~ typedef std::vector <uint32_t>                      container_register_t;
-// ~ typedef std::vector <cache_line_t>                  container_cache_line_t;
-typedef std::vector <const char*>                   container_ptr_const_char_t;
-
 typedef std::vector <token_t>                       container_token_t;
 typedef std::vector <opcode_package_t>              container_opcode_package_t;
 typedef std::vector <container_opcode_package_t>    container_static_dictionary_t;
 
+typedef std::vector <const char*>                   container_ptr_const_char_t;
 typedef std::vector <memory_package_t*>             container_ptr_memory_package_t;
 typedef std::vector <reorder_buffer_line_t*>        container_ptr_reorder_buffer_line_t;
 typedef std::vector <directory_line_t*>             container_ptr_directory_line_t;

@@ -67,15 +67,6 @@ void prefetch_stream_t::allocate() {
 };
 
 /// ============================================================================
-void prefetch_stream_t::clock(uint32_t subcycle) {
-    if (subcycle != 0) return;
-
-    PREFETCHER_DEBUG_PRINTF("==================== ");
-    PREFETCHER_DEBUG_PRINTF("====================\n");
-    PREFETCHER_DEBUG_PRINTF("cycle() \n");
-};
-
-/// ============================================================================
 void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
     uint32_t slot;
     bool found = 0;

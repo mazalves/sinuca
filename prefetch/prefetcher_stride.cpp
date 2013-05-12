@@ -53,15 +53,8 @@ void prefetch_stride_t::allocate() {
     this->stride_table = utils_t::template_allocate_array<stride_table_line_t>(this->get_stride_table_size());
 };
 
-/// ============================================================================
-void prefetch_stride_t::clock(uint32_t subcycle) {
-    if (subcycle != 0) return;
-    PREFETCHER_DEBUG_PRINTF("==================== ");
-    PREFETCHER_DEBUG_PRINTF("====================\n");
-    PREFETCHER_DEBUG_PRINTF("cycle() \n");
-};
 
-//======================================================================
+/// ============================================================================
 void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
     uint32_t slot;
 

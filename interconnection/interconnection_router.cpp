@@ -78,7 +78,7 @@ void interconnection_router_t::allocate() {
 
 /// ============================================================================
 void interconnection_router_t::clock(uint32_t subcycle) {
-    if (subcycle != 0) return;
+    (void) subcycle;
     ROUTER_DEBUG_PRINTF("==================== ID(%u) ",this->get_id());
     ROUTER_DEBUG_PRINTF("====================\n");
     ROUTER_DEBUG_PRINTF("cycle() \n");

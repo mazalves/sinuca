@@ -45,15 +45,8 @@ void prefetch_disable_t::allocate() {
     prefetch_t::allocate();
 };
 
-/// ============================================================================
-void prefetch_disable_t::clock(uint32_t subcycle) {
-    if (subcycle != 0) return;
-    PREFETCHER_DEBUG_PRINTF("==================== ");
-    PREFETCHER_DEBUG_PRINTF("====================\n");
-    PREFETCHER_DEBUG_PRINTF("cycle() \n");
-};
 
-//======================================================================
+/// ============================================================================
 void prefetch_disable_t::treat_prefetch(memory_package_t *package) {
     (void)package;
 };

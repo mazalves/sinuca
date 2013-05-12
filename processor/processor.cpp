@@ -157,6 +157,7 @@ processor_t::processor_t() {
 
     this->disambiguation_block_size = 0;
     this->disambiguation_type = DISAMBIGUATION_DISABLE;
+    this->register_forward_latency = 0;
 
     this->register_alias_table_size = 0;
     this->register_alias_table = NULL;
@@ -599,10 +600,10 @@ void processor_t::stage_fetch() {
             fetch_buffer[position_buffer].package_wait(1);
         }
         /// Line Buffer
-        // ~ else if (this->cmp_fetch_block(this->fetch_buffer[position_buffer].opcode_address, this->fetch_opcode_address_line_buffer)) {
-            // ~ PROCESSOR_DEBUG_PRINTF("\t FOUND INTO FETCH BUFFER (READY)\n");
-            // ~ fetch_buffer[position_buffer].package_ready(1);
-        // ~ }
+        else if (this->cmp_fetch_block(this->fetch_buffer[position_buffer].opcode_address, this->fetch_opcode_address_line_buffer)) {
+            PROCESSOR_DEBUG_PRINTF("\t FOUND INTO FETCH BUFFER (READY)\n");
+            fetch_buffer[position_buffer].package_ready(1);
+        }
         else {
             int32_t transmission_latency = this->send_instruction_package(this->fetch_buffer + position_buffer);
             if (transmission_latency != POSITION_FAIL) {  /// Try to send to the IC.
@@ -1083,15 +1084,15 @@ void processor_t::stage_rename() {
 
             this->reorder_buffer[position_rob].mob_ptr->memory_request.packager(
                 this->get_id(),                                         /// Request Owner
-                this->reorder_buffer[position_rob].uop.opcode_number,      /// Opcode. Number
-                this->reorder_buffer[position_rob].uop.opcode_address,      /// Opcode. Address
-                this->reorder_buffer[position_rob].uop.uop_number,         /// Uop. Number
+                this->reorder_buffer[position_rob].uop.opcode_number,   /// Opcode. Number
+                this->reorder_buffer[position_rob].uop.opcode_address,  /// Opcode. Address
+                this->reorder_buffer[position_rob].uop.uop_number,      /// Uop. Number
 
-                this->reorder_buffer[position_rob].uop.memory_address,     /// Mem. Address
-                this->reorder_buffer[position_rob].uop.memory_size,        /// Block Size
+                this->reorder_buffer[position_rob].uop.memory_address,  /// Mem. Address
+                this->reorder_buffer[position_rob].uop.memory_size,     /// Block Size
 
                 PACKAGE_STATE_TRANSMIT,                                 /// Pack. State
-                this->stage_execution_cycles,                           /// Stall Cycles
+                this->stage_rename_cycles + this->stage_dispatch_cycles + this->stage_execution_cycles,  /// Stall Cycles
 
                 MEMORY_OPERATION_READ,                                  /// Mem. Operation
                 false,                                                  /// Is Answer
@@ -1112,15 +1113,15 @@ void processor_t::stage_rename() {
 
             this->reorder_buffer[position_rob].mob_ptr->memory_request.packager(
                 this->get_id(),                                         /// Request Owner
-                this->reorder_buffer[position_rob].uop.opcode_number,     /// Opcode. Number
-                this->reorder_buffer[position_rob].uop.opcode_address,     /// Opcode. Address
-                this->reorder_buffer[position_rob].uop.uop_number,        /// Uop. Number
+                this->reorder_buffer[position_rob].uop.opcode_number,   /// Opcode. Number
+                this->reorder_buffer[position_rob].uop.opcode_address,  /// Opcode. Address
+                this->reorder_buffer[position_rob].uop.uop_number,      /// Uop. Number
 
-                this->reorder_buffer[position_rob].uop.memory_address,    /// Mem. Address
-                this->reorder_buffer[position_rob].uop.memory_size,       /// Block Size
+                this->reorder_buffer[position_rob].uop.memory_address,  /// Mem. Address
+                this->reorder_buffer[position_rob].uop.memory_size,     /// Block Size
 
                 PACKAGE_STATE_TRANSMIT,                                 /// Pack. State
-                this->stage_execution_cycles,                           /// Stall Cycles
+                this->stage_rename_cycles + this->stage_dispatch_cycles + this->stage_execution_cycles,  /// Stall Cycles
 
                 MEMORY_OPERATION_WRITE,                                 /// Mem. Operation
                 false,                                                  /// Is Answer
@@ -1226,8 +1227,6 @@ void processor_t::stage_dispatch() {
             ///=============================================================
                 /// BRANCHES
                 case INSTRUCTION_OPERATION_BRANCH:
-                    /// Solve the Branch Prediction
-                    this->solve_branch(reorder_buffer_line->uop.opcode_number, PROCESSOR_STAGE_DISPATCH, reorder_buffer_line->uop.uop_operation);
                 /// INTEGERS ALU ===============================================
                 case INSTRUCTION_OPERATION_INT_ALU:
                 /// NOP
@@ -1237,6 +1236,13 @@ void processor_t::stage_dispatch() {
                     if (fu_int_alu < this->number_fu_int_alu) {
                         for (uint32_t i = 0; i < this->number_fu_int_alu; i++) {
                             if (this->ready_cycle_fu_int_alu[i] <= sinuca_engine.get_global_cycle()) {
+
+                                /// Solve the Branch Prediction
+                                if (reorder_buffer_line->uop.uop_operation == INSTRUCTION_OPERATION_BRANCH) {
+                                    this->solve_branch(reorder_buffer_line->uop.opcode_number, PROCESSOR_STAGE_DISPATCH, reorder_buffer_line->uop.uop_operation);
+                                }
+
+
                                 this->ready_cycle_fu_int_alu[i] = sinuca_engine.get_global_cycle() + this->wait_between_fu_int_alu;
 
                                 fu_int_alu++;
@@ -1402,7 +1408,8 @@ void processor_t::stage_execution() {
     /// REMOVE MEMORY PACKAGE READS which are ready!
     if (this->memory_order_buffer_read_executed != 0){
         for (uint32_t slot = 0; slot < this->memory_order_buffer_read_size; slot++) {
-            if (this->memory_order_buffer_read[slot].memory_request.state == PACKAGE_STATE_READY) {
+            if (this->memory_order_buffer_read[slot].memory_request.state == PACKAGE_STATE_READY &&
+            this->memory_order_buffer_read[slot].memory_request.ready_cycle <= sinuca_engine.get_global_cycle()) {
                 ERROR_ASSERT_PRINTF(this->memory_order_buffer_read[slot].uop_executed == true, "Removing memory read before being executed.\n")
                 ERROR_ASSERT_PRINTF(this->memory_order_buffer_read[slot].wait_mem_deps_number == 0, "Number of memory dependencies should be zero.\n")
                 ERROR_ASSERT_PRINTF(this->memory_order_buffer_read[slot].memory_request.is_answer == true, "Removing a package from MOB which is not answer.\n")
@@ -1526,8 +1533,9 @@ void processor_t::stage_execution() {
                     ERROR_ASSERT_PRINTF(reorder_buffer_line->mob_ptr != NULL, "Read with a NULL pointer to MOB")
                     this->memory_order_buffer_read_executed++;
                     reorder_buffer_line->mob_ptr->uop_executed = true;
-                    /// Waits for the cache
+                    /// Waits for the cache to send the answer
                     reorder_buffer_line->uop.state = PACKAGE_STATE_TRANSMIT;
+                    reorder_buffer_line->uop.package_ready(this->stage_execution_cycles);
                     total_executed++;
                     /// Remove from the Functional Units
                     this->unified_functional_units.erase(this->unified_functional_units.begin() + k);
@@ -1543,8 +1551,9 @@ void processor_t::stage_execution() {
                     reorder_buffer_line->mob_ptr->uop_executed = true;
 
                     if (this->wait_write_complete) {
-                        /// Waits for the cache
+                        /// Waits for the cache to receive the package
                         reorder_buffer_line->uop.state = PACKAGE_STATE_TRANSMIT;
+                        reorder_buffer_line->uop.package_ready(this->stage_execution_cycles);
                     }
                     else {
                         reorder_buffer_line->mob_ptr->rob_ptr = NULL;
@@ -1580,8 +1589,10 @@ void processor_t::solve_register_dependency(reorder_buffer_line_t *rob_line) {
             break;
         }
         uint32_t write_register = rob_line->uop.write_regs[j];
-        ERROR_ASSERT_PRINTF(write_register < this->register_alias_table_size, "Read Register (%d) > Register Alias Table Size (%d)\n", write_register, this->register_alias_table_size);
-        if (this->register_alias_table[write_register] != NULL && this->register_alias_table[write_register]->uop.uop_number == rob_line->uop.uop_number) {
+        ERROR_ASSERT_PRINTF(write_register < this->register_alias_table_size, "Read Register (%d) > Register Alias Table Size (%d)\n",
+                                                                            write_register, this->register_alias_table_size);
+        if (this->register_alias_table[write_register] != NULL &&
+        this->register_alias_table[write_register]->uop.uop_number == rob_line->uop.uop_number) {
             this->register_alias_table[write_register] = NULL;
         }
     }
@@ -1595,7 +1606,9 @@ void processor_t::solve_register_dependency(reorder_buffer_line_t *rob_line) {
         if (rob_line->reg_deps_ptr_array[j] != NULL) {
             rob_line->reg_deps_ptr_array[j]->wait_reg_deps_number--;
             /// This update the ready cycle, and it is usefull to compute the time each instruction waits for the functional unit
-            rob_line->reg_deps_ptr_array[j]->uop.ready_cycle = sinuca_engine.get_global_cycle();
+            if (rob_line->reg_deps_ptr_array[j]->uop.ready_cycle <= sinuca_engine.get_global_cycle()) {
+                rob_line->reg_deps_ptr_array[j]->uop.ready_cycle = sinuca_engine.get_global_cycle() + this->register_forward_latency;
+            }
             rob_line->reg_deps_ptr_array[j] = NULL;
         }
         /// All the dependencies are solved
@@ -1629,6 +1642,7 @@ void processor_t::solve_memory_dependency(memory_order_buffer_line_t *mob_line) 
                     mob_line->mem_deps_ptr_array[j]->memory_request.memory_size == mob_line->memory_request.memory_size) {
                         /// Solve the LOAD->LOAD and STORE->LOAD
                         mob_line->mem_deps_ptr_array[j]->memory_request.state = PACKAGE_STATE_READY;
+                        mob_line->mem_deps_ptr_array[j]->memory_request.ready_cycle =  sinuca_engine.get_global_cycle() + this->register_forward_latency;
                         mob_line->mem_deps_ptr_array[j]->memory_request.is_answer = true;
                     }
                 break;
@@ -1732,7 +1746,7 @@ void processor_t::stage_commit() {
 
 /// ============================================================================
 void processor_t::clock(uint32_t subcycle) {
-    if (subcycle != 0) return;
+    (void) subcycle;
     PROCESSOR_DEBUG_PRINTF("==================== ID(%u) ",this->get_id());
     PROCESSOR_DEBUG_PRINTF("====================\n");
     PROCESSOR_DEBUG_PRINTF("cycle() \n");
@@ -1781,10 +1795,14 @@ void processor_t::clock(uint32_t subcycle) {
         this->stage_decode();
     }
 
-    /// Read from the trace
-    /// Send request to ICache
-    /// Store on Fetch Buffer, Waiting for ICache
-    this->stage_fetch();
+    /// Something to be done this cycle. -- Improve the performance
+    if (!this->trace_over ||
+    fetch_buffer_position_used != 0) {
+        /// Read from the trace
+        /// Send request to ICache
+        /// Store on Fetch Buffer, Waiting for ICache
+        this->stage_fetch();
+    }
 };
 
 /// ============================================================================
@@ -1868,7 +1886,7 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
                                                                     package->content_to_string().c_str());
                 if (slot != POSITION_FAIL) {
                     PROCESSOR_DEBUG_PRINTF("\t WANTED READ.\n");
-                    this->memory_order_buffer_read[slot].memory_request.package_ready(sinuca_engine.get_global_cycle() + transmission_latency);
+                    this->memory_order_buffer_read[slot].memory_request.package_ready(transmission_latency);
                     this->memory_order_buffer_read[slot].memory_request.is_answer = true;
                 }
                 ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read Request done, but it is not on the memory_order_buffer anymore.\n")
@@ -2220,8 +2238,14 @@ void processor_t::print_configuration() {
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "branch_per_fetch", branch_per_fetch);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "inflight_branches_size", inflight_branches_size);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "branch_flush_latency", branch_flush_latency);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "inflight_branches_size", inflight_branches_size);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "disambiguation_block_size", disambiguation_block_size);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "disambiguation_type", get_enum_disambiguation_char(disambiguation_type));
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "register_forward_latency", register_forward_latency);
 
 
     this->branch_predictor->print_configuration();

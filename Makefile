@@ -28,7 +28,7 @@ RM = rm -f
 # ~ LDFLAGS = -ggdb  -lefence
 
 ## DEBUG NORMAL
-# ~ FLAGS =  -Wall -O1 -ggdb -Werror
+# ~ FLAGS =  -Wall -O2 -ggdb -Werror
 # ~ LDFLAGS = -ggdb
 
 # ~ ## EXECUTION

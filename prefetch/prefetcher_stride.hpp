@@ -61,7 +61,7 @@ class prefetch_stride_t : public prefetch_t {
         /// ====================================================================
         /// Basic Methods
         void allocate();
-        void clock(uint32_t sub_cycle);
+        // ~ void clock(uint32_t sub_cycle);
         // ~ int32_t send_package(memory_package_t *package);
         // ~ bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
         /// Token Controller Methods

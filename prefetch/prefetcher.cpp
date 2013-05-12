@@ -65,6 +65,15 @@ void prefetch_t::allocate() {
 };
 
 /// ============================================================================
+void prefetch_t::clock(uint32_t subcycle) {
+    (void) subcycle;
+    PREFETCHER_DEBUG_PRINTF("==================== ");
+    PREFETCHER_DEBUG_PRINTF("====================\n");
+    PREFETCHER_DEBUG_PRINTF("cycle() \n");
+};
+
+
+/// ============================================================================
 /// Request Buffer Methods
 /// ============================================================================
 /*! Should make all the verifications before call this method, because it will

@@ -101,6 +101,7 @@ class processor_t : public interconnection_interface_t {
 
         uint32_t disambiguation_block_size;
         disambiguation_t disambiguation_type;
+        uint32_t register_forward_latency;
 
         uint32_t fetch_block_size;
         bool wait_write_complete;
@@ -408,8 +409,9 @@ class processor_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, memory_order_buffer_read_executed)
         INSTANTIATE_GET_SET(uint32_t, memory_order_buffer_write_executed)
 
-        INSTANTIATE_GET_SET(uint32_t, disambiguation_block_size)
         INSTANTIATE_GET_SET(disambiguation_t, disambiguation_type)
+        INSTANTIATE_GET_SET(uint32_t, disambiguation_block_size)
+        INSTANTIATE_GET_SET(uint32_t, register_forward_latency)
 
         INSTANTIATE_GET_SET(cache_memory_t*, data_cache)
         INSTANTIATE_GET_SET(cache_memory_t*, inst_cache)
