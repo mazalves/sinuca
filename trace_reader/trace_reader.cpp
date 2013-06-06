@@ -50,7 +50,6 @@ trace_reader_t::trace_reader_t() {
     this->is_compressed_trace_file = true;
 
     this->line_dynamic = NULL;
-    this->sync_dynamic = NULL;
     this->line_static = NULL;
     this->line_memory = NULL;
 };
@@ -72,7 +71,6 @@ trace_reader_t::~trace_reader_t() {
     utils_t::template_delete_array<uint32_t>(actual_bbl_opcode);
 
     utils_t::template_delete_array<char>(line_dynamic);
-    utils_t::template_delete_array<char>(sync_dynamic);
     utils_t::template_delete_array<char>(line_static);
     utils_t::template_delete_array<char>(line_memory);
 
@@ -85,9 +83,12 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t ncpus) {
     this->is_compressed_trace_file = is_compact;
 
     this->line_dynamic = utils_t::template_allocate_array<char>(TRACE_LINE_SIZE);
-    this->sync_dynamic = utils_t::template_allocate_array<char>(TRACE_LINE_SIZE);
     this->line_static = utils_t::template_allocate_array<char>(TRACE_LINE_SIZE);
     this->line_memory = utils_t::template_allocate_array<char>(TRACE_LINE_SIZE);
+
+    strcpy(this->line_dynamic, "");
+    strcpy(this->line_static, "");
+    strcpy(this->line_memory, "");
 
     // =======================================================================
     // Static Trace File
@@ -287,7 +288,6 @@ uint32_t trace_reader_t::trace_next_dynamic(uint32_t cpuid, sync_t *new_sync) {
 
     /// Auxiliar strings
     this->line_dynamic[0] = '\0';
-    this->sync_dynamic[0] = '\0';
 
     bool valid_dynamic = false;
     sync_t &sync_found = *new_sync;
@@ -316,9 +316,7 @@ uint32_t trace_reader_t::trace_next_dynamic(uint32_t cpuid, sync_t *new_sync) {
             continue;
         }
         else if (this->line_dynamic[0] == '$') {
-            strncpy(this->sync_dynamic, this->line_dynamic + 1, strlen(this->sync_dynamic) + 1);
-
-            sync_found = (sync_t)strtoul(this->sync_dynamic, NULL, 10);
+            sync_found = (sync_t)strtoul(this->line_dynamic + 1, NULL, 10);
             return FAIL;
         }
         else {

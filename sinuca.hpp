@@ -158,10 +158,10 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define CONFIGURATOR_DEBUG
     // ~ #define TRACE_READER_DEBUG
     // ~ #define TRACE_GENERATOR_DEBUG
-    #define PROCESSOR_DEBUG
-    // ~ #define SYNC_DEBUG
+    // ~ #define PROCESSOR_DEBUG
+    #define SYNC_DEBUG
     // ~ #define BRANCH_PREDICTOR_DEBUG
-    #define CACHE_DEBUG
+    // ~ #define CACHE_DEBUG
     // ~ #define PREFETCHER_DEBUG
     // ~ #define LINE_USAGE_PREDICTOR_DEBUG
     // ~ #define MEMORY_CONTROLLER_DEBUG

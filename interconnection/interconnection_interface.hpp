@@ -36,7 +36,7 @@ class interconnection_interface_t {
         /// ====================================================================
         uint32_t id;                    /// ID unique which defines the object.
         component_t type_component;     /// ID unique which defines the object.
-        char label[100];                /// Comprehensive object's name.
+        char label[500];                /// Comprehensive object's name.
         uint32_t max_ports;
         uint32_t used_ports;
         uint32_t interconnection_width;

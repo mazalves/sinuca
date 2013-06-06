@@ -561,7 +561,7 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
 
     ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(get_bank(package->memory_address) == this->get_bank_number(), "Wrong bank.\n%s\n", package->content_to_string().c_str());
-    ERROR_ASSERT_PRINTF(package->id_dst == this->get_id() && package->hop_count == POSITION_FAIL, "Received some package for a different id_dst.\n%s\n", package->content_to_string().c_str());
+    ERROR_ASSERT_PRINTF(package->id_dst == this->get_id() && package->hop_count == POSITION_FAIL, "Received some package for a different id_dst(%d).\n%s\n", this->get_id(), package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Received a wrong input_port\n%s\n", package->content_to_string().c_str());
 
     /// NEW ANSWER

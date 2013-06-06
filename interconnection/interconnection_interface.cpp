@@ -33,6 +33,7 @@
 interconnection_interface_t::interconnection_interface_t(){
     this->type_component = COMPONENT_NUMBER;
     strcpy(label, "NO_NAME_COMPONENT");
+    this->id = 0;
     this->max_ports = 0;
     this->used_ports = 0;
     this->interconnection_width = 0;

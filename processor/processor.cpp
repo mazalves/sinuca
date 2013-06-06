@@ -92,6 +92,9 @@ processor_t::processor_t() {
     this->stage_execution_width = 0;
     this->stage_commit_width = 0;
 
+    this->oldest_read_to_send = NULL;
+    this->oldest_write_to_send = NULL;
+
     /// ====================================================================
     /// Integer Functional Units
     this->ready_cycle_fu_int_alu = NULL;
@@ -316,12 +319,12 @@ void processor_t::allocate() {
 void processor_t::synchronize(sync_t new_sync) {
     processor_t** sinuca_processor = sinuca_engine.get_processor_array();
 
-    SYNC_DEBUG_PRINTF("All Status Before:");
+    SYNC_DEBUG_PRINTF("-- All Status Before:\n");
     for (uint32_t proc = 0; proc < sinuca_engine.get_processor_array_size(); proc++) {
-        SYNC_DEBUG_PRINTF("[%s]", get_enum_sync_char(sinuca_processor[proc]->sync_status))
+        SYNC_DEBUG_PRINTF("\tCORE:%d [%s]\n", proc, get_enum_sync_char(sinuca_processor[proc]->sync_status))
     }
 
-    SYNC_DEBUG_PRINTF(" -- Processor[%u] => ", this->get_core_id());
+    SYNC_DEBUG_PRINTF("-- Processor[%u] => ", this->get_core_id());
 
     switch (new_sync) {
         /// ====================================================================
@@ -345,7 +348,7 @@ void processor_t::synchronize(sync_t new_sync) {
                                     this->get_core_id(), get_enum_sync_char(new_sync), proc, get_enum_sync_char(sinuca_processor[proc]->sync_status));
             }
             if (!found_critical) {
-                SYNC_DEBUG_PRINTF("START");
+                SYNC_DEBUG_PRINTF("START ");
                 this->sync_status = SYNC_CRITICAL_START;
                 this->sync_status_time = sinuca_engine.get_global_cycle();
             }
@@ -371,9 +374,11 @@ void processor_t::synchronize(sync_t new_sync) {
                 this->sync_status = SYNC_FREE;
                 this->sync_status_time = sinuca_engine.get_global_cycle();
 
+                /// Find the oldest SYNC_WAIT_CRITICAL_START
                 bool found_wait_critical_start = false;
-                uint32_t older_wait_critical_start = this->get_core_id();
-                uint64_t cycle_older_wait_critical_start = this->sync_status_time;
+                uint32_t older_wait_critical_start = 0;
+                uint64_t cycle_older_wait_critical_start = std::numeric_limits<uint64_t>::max();
+
                 for (uint32_t proc = 0; proc < sinuca_engine.get_processor_array_size(); proc++) {
                     if (sinuca_processor[proc]->sync_status == SYNC_WAIT_CRITICAL_START) {
                         found_wait_critical_start = true;
@@ -390,7 +395,7 @@ void processor_t::synchronize(sync_t new_sync) {
                 }
                 /// Wakeup some other processor waiting
                 if (found_wait_critical_start) {
-                    SYNC_DEBUG_PRINTF("FOUND WAIT");
+                    SYNC_DEBUG_PRINTF("FOUND WAIT ");
                     sinuca_processor[older_wait_critical_start]->sync_status = SYNC_CRITICAL_START;
                     sinuca_processor[older_wait_critical_start]->sync_status_time = sinuca_engine.get_global_cycle();
                 }
@@ -432,7 +437,7 @@ void processor_t::synchronize(sync_t new_sync) {
             for (uint32_t proc = 0; proc < sinuca_engine.get_processor_array_size(); proc++) {
                 if (proc != this->get_core_id() && !sinuca_processor[proc]->trace_over) {
                     if (sinuca_processor[proc]->sync_status != SYNC_BARRIER) {
-                        SYNC_DEBUG_PRINTF("WAIT");
+                        SYNC_DEBUG_PRINTF("WAIT ");
                         is_last_barrier = false;
                         this->sync_status = SYNC_BARRIER;
                         this->sync_status_time = sinuca_engine.get_global_cycle();
@@ -441,7 +446,7 @@ void processor_t::synchronize(sync_t new_sync) {
                 }
             }
             if (is_last_barrier) {
-                SYNC_DEBUG_PRINTF("FREE");
+                SYNC_DEBUG_PRINTF("FREE ");
                 for (uint32_t proc = 0; proc < sinuca_engine.get_processor_array_size(); proc++) {
                     sinuca_processor[proc]->sync_status = SYNC_FREE;
                     sinuca_processor[proc]->sync_status_time = sinuca_engine.get_global_cycle();
@@ -459,12 +464,11 @@ void processor_t::synchronize(sync_t new_sync) {
         break;
     }
 
-
-    SYNC_DEBUG_PRINTF(" -- All Status After:");
+    SYNC_DEBUG_PRINTF("\n")
+    SYNC_DEBUG_PRINTF("-- All Status After:\n");
     for (uint32_t proc = 0; proc < sinuca_engine.get_processor_array_size(); proc++) {
-        SYNC_DEBUG_PRINTF("[%s]", get_enum_sync_char(sinuca_processor[proc]->sync_status))
+        SYNC_DEBUG_PRINTF("\t\tCORE:%d [%s]\n", proc, get_enum_sync_char(sinuca_processor[proc]->sync_status))
     }
-    SYNC_DEBUG_PRINTF("\n");
 };
 
 /// ============================================================================
@@ -1429,9 +1433,6 @@ void processor_t::stage_execution() {
 
     /// After selecting an old package, the processor needs to send it before gets another
     /// Without this, the cache could allocate a token, then the processor tries to send another package, which could create a dead-lock
-    static memory_order_buffer_line_t *oldest_read_to_send = NULL;
-    static memory_order_buffer_line_t *oldest_write_to_send = NULL;
-
     /// ========================================================================
     /// READ_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_package()
     position_mem = POSITION_FAIL;
@@ -1962,6 +1963,12 @@ void processor_t::periodic_check(){
     ERROR_ASSERT_PRINTF(reorder_buffer_line_t::check_age(this->reorder_buffer, this->reorder_buffer_size) == OK, "Check_age failed.\n");
     ERROR_ASSERT_PRINTF(memory_order_buffer_line_t::check_age(this->memory_order_buffer_read, this->memory_order_buffer_read_size) == OK, "Check_age failed.\n");
     ERROR_ASSERT_PRINTF(memory_order_buffer_line_t::check_age(this->memory_order_buffer_write, this->memory_order_buffer_write_size) == OK, "Check_age failed.\n");
+
+    // ~ uint64_t min_cycle = 0;
+    // ~ if (sinuca_engine.get_global_cycle() > MAX_ALIVE_TIME) {
+        // ~ min_cycle = sinuca_engine.get_global_cycle() - MAX_ALIVE_TIME;
+    // ~ }
+    // ~ ERROR_ASSERT_PRINTF(this->sync_status == SYNC_FREE || this->sync_status_time >= min_cycle, "Check_age failed.\n");
 
     this->branch_predictor->periodic_check();
 };

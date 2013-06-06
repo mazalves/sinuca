@@ -168,6 +168,10 @@ class processor_t : public interconnection_interface_t {
         uint32_t register_alias_table_size;
         reorder_buffer_line_t* *register_alias_table;
 
+        /// Store the last request (r/w) the processor tryed to send.
+        memory_order_buffer_line_t *oldest_read_to_send;
+        memory_order_buffer_line_t *oldest_write_to_send;
+
         /// Containers to fast the execution, with pointers of UOPs ready.
         container_ptr_reorder_buffer_line_t unified_reservation_station;    /// dispatch->execute
         container_ptr_reorder_buffer_line_t unified_functional_units;       /// execute->commit

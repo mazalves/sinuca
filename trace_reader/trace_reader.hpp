@@ -51,7 +51,6 @@ class trace_reader_t {
 
         /// Used to handle the trace reader
         char *line_dynamic;
-        char *sync_dynamic;
         char *line_static;
         char *line_memory;
 
