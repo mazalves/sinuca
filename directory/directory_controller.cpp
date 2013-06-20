@@ -587,6 +587,8 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
             this->new_statistics(cache, package, false);
 
             if (package->memory_operation == MEMORY_OPERATION_WRITE) {
+                // Add Latency /////// This is new !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_write();
                 /// Erase the package
                 DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (WRITE Done)\n")
                 return PACKAGE_STATE_READY;

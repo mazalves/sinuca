@@ -202,11 +202,6 @@ processor_stage_t branch_predictor_static_taken_t::predict_branch(const opcode_p
         else {
             this->add_stat_branch_predictor_miss();
         }
-
-        /// If NOT TAKEN, it will never generate extra latency
-        if (!is_taken){
-            solve_stage = PROCESSOR_STAGE_FETCH;
-        }
     }
 
     return solve_stage;
