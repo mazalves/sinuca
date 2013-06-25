@@ -2090,11 +2090,13 @@ void processor_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_other_completed", stat_other_completed);
 
     sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_int_all_completed", stat_int_alu_completed + stat_int_mul_completed + stat_int_div_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_int_alu_completed", stat_int_alu_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_int_mul_completed", stat_int_mul_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_int_div_completed", stat_int_div_completed);
 
     sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_fp_all_completed", stat_fp_alu_completed + stat_fp_mul_completed + stat_fp_div_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_fp_alu_completed", stat_fp_alu_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_fp_mul_completed", stat_fp_mul_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_fp_div_completed", stat_fp_div_completed);

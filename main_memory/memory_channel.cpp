@@ -707,8 +707,6 @@ void memory_channel_t::print_statistics() {
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_row_buffer_hit", stat_row_buffer_hit - stat_row_buffer_miss);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_row_buffer_miss", stat_row_buffer_miss);
-
-
 };
 
 /// ============================================================================

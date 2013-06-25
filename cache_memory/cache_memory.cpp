@@ -1054,6 +1054,16 @@ void cache_memory_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_eviction_copyback", stat_eviction_copyback);
 
     sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_read", stat_instruction_hit + stat_read_hit + stat_prefetch_hit +
+                                                                                                    stat_instruction_miss + stat_read_miss + stat_prefetch_miss);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_read_hit", stat_instruction_hit + stat_read_hit + stat_prefetch_hit);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_read_miss", stat_instruction_miss + stat_read_miss + stat_prefetch_miss);
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write", stat_write_hit + stat_copyback_hit + stat_write_miss + stat_copyback_miss);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write_hit", stat_write_hit + stat_copyback_hit);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write_miss", stat_write_miss + stat_copyback_miss);
+
+    sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_instruction_hit", stat_instruction_hit);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_read_hit", stat_read_hit);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_prefetch_hit", stat_prefetch_hit);

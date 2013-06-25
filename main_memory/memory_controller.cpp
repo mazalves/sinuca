@@ -764,6 +764,10 @@ void memory_controller_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_copyback_completed", stat_copyback_completed);
 
     sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_read", stat_instruction_completed + stat_read_completed + stat_prefetch_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write", stat_write_completed + stat_copyback_completed);
+
+    sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_instruction_wait_time", stat_min_instruction_wait_time);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_read_wait_time", stat_min_read_wait_time);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_prefetch_wait_time", stat_min_prefetch_wait_time);
@@ -792,7 +796,6 @@ void memory_controller_t::print_statistics() {
     for (uint32_t i = 0; i < this->channels_per_controller; i++) {
         this->channels[i].print_statistics();
     }
-
 };
 
 /// ============================================================================
