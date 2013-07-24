@@ -153,7 +153,7 @@ int32_t memory_channel_t::find_next_write_operation(uint32_t bank) {
         case REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST:
             /// Try to find OPERATION in the same OPEN_ROW
             for (i = 0; i < this->bank_buffer[bank].size(); i++) {
-                if ((this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_COPYBACK ||
+                if ((this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_WRITEBACK ||
                 this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_WRITE)
                 &&
                 this->cmp_row_bank_channel(this->bank_buffer[bank][i]->memory_address, this->bank_open_row_address[bank])) {
@@ -164,7 +164,7 @@ int32_t memory_channel_t::find_next_write_operation(uint32_t bank) {
             /// If could not find, Try to find OLDER OPERATION
             if (slot == POSITION_FAIL) {
                 for (i = 0; i < this->bank_buffer[bank].size(); i++) {
-                    if (this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_COPYBACK ||
+                    if (this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_WRITEBACK ||
                     this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_WRITE) {
                         slot = i;
                         break;
@@ -176,7 +176,7 @@ int32_t memory_channel_t::find_next_write_operation(uint32_t bank) {
         case REQUEST_PRIORITY_FIRST_COME_FIRST_SERVE:
             /// Try to find OLDER OPERATION
             for (i = 0; i < this->bank_buffer[bank].size(); i++) {
-                if (this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_COPYBACK ||
+                if (this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_WRITEBACK ||
                 this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_WRITE) {
                     slot = i;
                     break;
@@ -366,7 +366,7 @@ package_state_t memory_channel_t::treat_memory_request(memory_package_t *package
         case MEMORY_OPERATION_PREFETCH:
             /// Check for data forward
             for (i = 0; i < this->bank_buffer[bank].size(); i++) {
-                if ((this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_COPYBACK ||
+                if ((this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_WRITEBACK ||
                 this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_WRITE)
                 && sinuca_engine.global_cmp_tag_index_bank(this->bank_buffer[bank][i]->memory_address, package->memory_address)) {
                     /// Prepare for answer later
@@ -379,11 +379,11 @@ package_state_t memory_channel_t::treat_memory_request(memory_package_t *package
             }
         break;
 
-        case MEMORY_OPERATION_COPYBACK:
+        case MEMORY_OPERATION_WRITEBACK:
         case MEMORY_OPERATION_WRITE:
             // ~ /// Check for older write on same cache line
             // ~ for (i = 0; i < this->bank_buffer[bank].size(); i++) {
-                // ~ if ((this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_COPYBACK ||
+                // ~ if ((this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_WRITEBACK ||
                 // ~ this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_WRITE)
                 // ~ && sinuca_engine.global_cmp_tag_index_bank(this->bank_buffer[bank][i]->memory_address, package->memory_address)) {
                     // ~ /// Prepare for answer later
@@ -475,7 +475,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
                     package->package_transmit(this->timing_cas + this->timing_burst);
                 break;
 
-                case MEMORY_OPERATION_COPYBACK:
+                case MEMORY_OPERATION_WRITEBACK:
                 case MEMORY_OPERATION_WRITE:
                     /// Respect Min. Latency
                     if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
@@ -516,7 +516,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
                         package->package_transmit(this->timing_cas + this->timing_burst);
                     break;
 
-                    case MEMORY_OPERATION_COPYBACK:
+                    case MEMORY_OPERATION_WRITEBACK:
                     case MEMORY_OPERATION_WRITE:
                         /// Respect Min. Latency
                         if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
@@ -569,7 +569,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
                         package->package_transmit(this->timing_cas + this->timing_burst);
                     break;
 
-                    case MEMORY_OPERATION_COPYBACK:
+                    case MEMORY_OPERATION_WRITEBACK:
                     case MEMORY_OPERATION_WRITE:
                         /// Respect Min. Latency
                         if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {

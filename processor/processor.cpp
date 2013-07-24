@@ -1804,6 +1804,14 @@ void processor_t::clock(uint32_t subcycle) {
         /// Store on Fetch Buffer, Waiting for ICache
         this->stage_fetch();
     }
+
+    if (this->trace_over) {
+        this->stat_idle_cycles++;
+    }
+    else {
+        this->stat_active_cycles++;
+    }
+
 };
 
 /// ============================================================================
@@ -1896,7 +1904,7 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
             break;
 
             case MEMORY_OPERATION_WRITE:
-            case MEMORY_OPERATION_COPYBACK:
+            case MEMORY_OPERATION_WRITEBACK:
             case MEMORY_OPERATION_PREFETCH:
                 ERROR_PRINTF("Processor receiving %s.\n", get_enum_memory_operation_char(package->memory_operation))
                 return FAIL;
@@ -1981,6 +1989,9 @@ void processor_t::reset_statistics() {
     this->set_stat_reset_fetch_opcode_counter(this->fetch_opcode_counter);
     this->set_stat_reset_decode_uop_counter(this->decode_uop_counter);
 
+    this->set_stat_active_cycles(0);
+    this->set_stat_idle_cycles(0);
+
     this->set_stat_branch_stall_cycles(0);
     this->set_stat_sync_stall_cycles(0);
 
@@ -2044,6 +2055,10 @@ void processor_t::print_statistics() {
     sinuca_engine.write_statistics_comments(title);
     sinuca_engine.write_statistics_big_separator();
 
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_active_cycles", this->stat_active_cycles);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_idle_cycles", this->stat_idle_cycles);
+
+    sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "fetch_opcode_counter", this->fetch_opcode_counter);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "decode_uop_counter", this->decode_uop_counter);
 
@@ -2170,6 +2185,7 @@ void processor_t::print_configuration() {
     sinuca_engine.write_statistics_small_separator();
     /// Buffers' Size
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "fetch_buffer_size", fetch_buffer_size);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "decode_buffer_size", decode_buffer_size);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "reorder_buffer_size", reorder_buffer_size);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "unified_reservation_station_window_size", unified_reservation_station_window_size);
 

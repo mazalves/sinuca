@@ -183,7 +183,7 @@ void line_usage_predictor_dsbp_t::fill_package_sub_blocks(memory_package_t *pack
 
 /// ============================================================================
 void line_usage_predictor_dsbp_t::line_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->content_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_writeback() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
 
@@ -199,6 +199,18 @@ void line_usage_predictor_dsbp_t::line_sub_blocks_to_package(memory_package_t *p
         }
     }
 };
+
+/// ============================================================================
+void line_usage_predictor_dsbp_t::predict_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way) {
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_writeback() package:%s\n", package->content_to_string().c_str())
+
+    (void)package;
+    (void)index;
+    (void)way;
+
+    package->memory_size = sinuca_engine.get_global_line_size();
+};
+
 
 /// ============================================================================
 bool line_usage_predictor_dsbp_t::check_sub_block_is_hit(memory_package_t *package, uint64_t index, uint32_t way) {
@@ -650,11 +662,11 @@ void line_usage_predictor_dsbp_t::sub_block_miss(memory_package_t *package, uint
 };
 
 /// ============================================================================
-void line_usage_predictor_dsbp_t::line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->content_to_string().c_str())
+void line_usage_predictor_dsbp_t::line_send_writeback(memory_package_t *package, uint32_t index, uint32_t way) {
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_writeback() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
-    this->add_stat_send_copyback();         /// Access Statistics
+    this->add_stat_send_writeback();         /// Access Statistics
 
     (void)package;
     (void)index;
@@ -664,11 +676,11 @@ void line_usage_predictor_dsbp_t::line_send_copyback(memory_package_t *package, 
 
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
-void line_usage_predictor_dsbp_t::line_recv_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
+void line_usage_predictor_dsbp_t::line_recv_writeback(memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
-    this->add_stat_recv_copyback();         /// Access Statistics
+    this->add_stat_recv_writeback();         /// Access Statistics
 
     // Mark as dirty
     this->metadata_sets[index].ways[way].is_dirty = true;
@@ -677,7 +689,7 @@ void line_usage_predictor_dsbp_t::line_recv_copyback(memory_package_t *package, 
         this->metadata_sets[index].ways[way].clock_become_alive[i] = sinuca_engine.get_global_cycle();
         this->metadata_sets[index].ways[way].clock_become_dead[i] = sinuca_engine.get_global_cycle();
         if (package->sub_blocks[i] == true) {
-            this->metadata_sets[index].ways[way].valid_sub_blocks[i] = LINE_SUB_BLOCK_COPYBACK;
+            this->metadata_sets[index].ways[way].valid_sub_blocks[i] = LINE_SUB_BLOCK_WRITEBACK;
             this->metadata_sets[index].ways[way].real_write_counter[i]++;
         }
 
@@ -765,8 +777,8 @@ void line_usage_predictor_dsbp_t::line_eviction(uint32_t index, uint32_t way) {
                 this->stat_line_sub_block_wrong_first++;
             break;
 
-            case LINE_SUB_BLOCK_COPYBACK:
-                this->stat_line_sub_block_copyback++;
+            case LINE_SUB_BLOCK_WRITEBACK:
+                this->stat_line_sub_block_writeback++;
             break;
 
         }
@@ -963,13 +975,13 @@ void line_usage_predictor_dsbp_t::reset_statistics() {
     this->stat_line_sub_block_normal_over = 0;
     this->stat_line_sub_block_learn = 0;
     this->stat_line_sub_block_wrong_first = 0;
-    this->stat_line_sub_block_copyback = 0;
+    this->stat_line_sub_block_writeback = 0;
 
     this->stat_line_hit = 0;
     this->stat_line_miss = 0;
     this->stat_sub_block_miss = 0;
-    this->stat_send_copyback = 0;
-    this->stat_recv_copyback = 0;
+    this->stat_send_writeback = 0;
+    this->stat_recv_writeback = 0;
     this->stat_eviction = 0;
     this->stat_invalidation = 0;
 
@@ -1023,14 +1035,14 @@ void line_usage_predictor_dsbp_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_sub_block_normal_over", stat_line_sub_block_normal_over);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_sub_block_learn", stat_line_sub_block_learn);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_sub_block_wrong_first", stat_line_sub_block_wrong_first);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_sub_block_copyback", stat_line_sub_block_copyback);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_sub_block_writeback", stat_line_sub_block_writeback);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_hit", stat_line_hit);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_miss", stat_line_miss);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_miss", stat_sub_block_miss);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_send_copyback", stat_send_copyback);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_recv_copyback", stat_recv_copyback);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_send_writeback", stat_send_writeback);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_recv_writeback", stat_recv_writeback);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_eviction", stat_eviction);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_invalidation", stat_invalidation);
 

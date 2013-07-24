@@ -44,10 +44,11 @@ void aht_line_t::clean() {
     this->offset = 0;
     this->last_access = 0;
     this->pointer = false;
-    this->access_counter = 0;
-    this->overflow = 0;
-    this->is_last_access = false;    
-    this->is_last_write = false;
+
+    this->access_counter_read = 0;
+    this->access_counter_writeback = 0;
+    this->overflow_read = 0;
+    this->overflow_writeback = 0;
 };
 
 /// ============================================================================
@@ -56,15 +57,17 @@ std::string aht_line_t::content_to_string() {
     content_string = "";
 
     content_string = content_string + "aht_line -";
-    content_string = content_string + " Opcode_Address:" + utils_t::uint64_to_char(this->opcode_address);
-    content_string = content_string + " Offset:" + utils_t::uint32_to_char(this->offset);
-    content_string = content_string + " Last_Access:" + utils_t::uint64_to_char(this->last_access);
-    content_string = content_string + " Pointer:" + utils_t::uint32_to_char(this->pointer);
+    content_string = content_string + " opcode_address:" + utils_t::uint64_to_char(this->opcode_address);
+    content_string = content_string + " offset:" + utils_t::uint32_to_char(this->offset);
+    content_string = content_string + " last_access:" + utils_t::uint64_to_char(this->last_access);
+    content_string = content_string + " pointer:" + utils_t::bool_to_char(this->pointer);
 
-    content_string = content_string + " Usage_Counter:" + utils_t::uint32_to_char(this->access_counter);
-    content_string = content_string + " Overflow:" + utils_t::uint32_to_char(this->overflow);
-    content_string = content_string + " Is_Last_Access:" + utils_t::uint32_to_char(this->is_last_access);
-    content_string = content_string + " Is_Last_Write:" + utils_t::uint32_to_char(this->is_last_write);
+    content_string = content_string + " access_counter_read:" + utils_t::uint64_to_char(this->access_counter_read);
+    content_string = content_string + " access_counter_writeback:" + utils_t::uint64_to_char(this->access_counter_writeback);
+
+    content_string = content_string + " overflow_read:" + utils_t::bool_to_char(this->overflow_read);
+    content_string = content_string + " overflow_writeback:" + utils_t::bool_to_char(this->overflow_writeback);
+
     content_string = content_string + "\n";
     return content_string;
 };

@@ -160,7 +160,8 @@ std::string simulation_status_to_string() {
         sprintf(tmp_char, " - Opcode[%10"PRIu64"/%10"PRIu64"]", ActualLength, FullLength);
         strcat(processor_report, tmp_char);
 
-        sprintf(tmp_char, " - %7.3lf%%", 100.0 * ((double)ActualLength / (double)FullLength));
+        double percentage_complete = 100.0 * ((double)ActualLength / (double)FullLength);
+        sprintf(tmp_char, " - %7.3lf%%", percentage_complete);
         strcat(processor_report, tmp_char);
 
         sprintf(tmp_char, " %s", utils_t::progress_pretty(ActualLength, FullLength).c_str());
@@ -174,6 +175,15 @@ std::string simulation_status_to_string() {
 
         sprintf(tmp_char, " [%s]", sinuca_engine.is_processor_trace_eof[cpu] ? "OFF" : "ON");
         strcat(processor_report, tmp_char);
+
+        gettimeofday(&sinuca_engine.stat_timer_end, NULL);
+        double seconds_spent = sinuca_engine.stat_timer_end.tv_sec - sinuca_engine.stat_timer_start.tv_sec +
+                                ((sinuca_engine.stat_timer_end.tv_usec - sinuca_engine.stat_timer_start.tv_usec) / 1000000.0);
+
+        uint64_t seconds_remaining = (100*(seconds_spent / percentage_complete)) - seconds_spent;
+        sprintf(tmp_char, " ETC(%02.0f:%02.0f:%02.0f)", floor(seconds_remaining/3600.0), floor(fmod(seconds_remaining,3600.0)/60.0), fmod(seconds_remaining,60.0));
+        strcat(processor_report, tmp_char);
+
         strcat(processor_report, "\n");
 
         final_report += processor_report;
@@ -225,6 +235,26 @@ int main(int argc, char **argv) {
         if ((sinuca_engine.get_global_cycle() % PERIODIC_CHECK) == 0) {
             sinuca_engine.global_periodic_check();
         }
+
+        /// Spawn Clock Signal
+        sinuca_engine.global_clock();
+    }
+
+    /// Evict all the cache lines.
+    bool all_evicted = false;
+    while (all_evicted != true){
+        /// Progress Information
+        if ((sinuca_engine.get_global_cycle() % HEART_BEAT) == 0) {
+            SINUCA_PRINTF("Mass Eviction... HEART-BEAT - CYCLE: %"PRIu64"\n", sinuca_engine.get_global_cycle() );
+            SINUCA_PRINTF("%s\n", simulation_status_to_string().c_str());
+        }
+
+        /// Spawn Periodic Check
+        if ((sinuca_engine.get_global_cycle() % PERIODIC_CHECK) == 0) {
+            sinuca_engine.global_periodic_check();
+        }
+
+        all_evicted = sinuca_engine.directory_controller->coherence_evict_all();
 
         /// Spawn Clock Signal
         sinuca_engine.global_clock();

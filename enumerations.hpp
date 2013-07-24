@@ -64,7 +64,7 @@ enum memory_operation_t {
     MEMORY_OPERATION_READ,
     MEMORY_OPERATION_WRITE,
     MEMORY_OPERATION_PREFETCH,
-    MEMORY_OPERATION_COPYBACK
+    MEMORY_OPERATION_WRITEBACK
 };
 const char *get_enum_memory_operation_char(memory_operation_t type);
 
@@ -237,28 +237,6 @@ enum prefetch_stream_state_t {
 const char *get_enum_prefetch_stream_state_char(prefetch_stream_state_t type);
 
 /// ============================================================================
-/// Line Usage Predictor type
-enum line_usage_predictor_policy_t {
-    LINE_USAGE_PREDICTOR_POLICY_DSBP,
-    LINE_USAGE_PREDICTOR_POLICY_DLEC,
-    LINE_USAGE_PREDICTOR_POLICY_SUBBLOCK_STATS,
-    LINE_USAGE_PREDICTOR_POLICY_LINE_STATS,
-    LINE_USAGE_PREDICTOR_POLICY_DISABLE
-};
-const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_policy_t type);
-
-/// ============================================================================
-/// Valid Sub-Block Type
-enum line_sub_block_t {
-    LINE_SUB_BLOCK_DISABLE,
-    LINE_SUB_BLOCK_NORMAL,
-    LINE_SUB_BLOCK_LEARN,
-    LINE_SUB_BLOCK_WRONG_FIRST,
-    LINE_SUB_BLOCK_COPYBACK
-};
-const char *get_enum_line_sub_block_t_char(line_sub_block_t type);
-
-/// ============================================================================
 /// Prefetcher type
 enum full_buffer_t {
     FULL_BUFFER_OVERRIDE,
@@ -321,5 +299,28 @@ enum write_priority_t {
     WRITE_PRIORITY_DRAIN_WHEN_FULL
 };
 const char *get_enum_write_priority_char(write_priority_t type);
+
+/// ============================================================================
+/// Line Usage Predictor type
+enum line_usage_predictor_policy_t {
+    LINE_USAGE_PREDICTOR_POLICY_DISABLE,
+    LINE_USAGE_PREDICTOR_POLICY_DSBP,
+    LINE_USAGE_PREDICTOR_POLICY_DSBP_ORACLE,
+    LINE_USAGE_PREDICTOR_POLICY_DEWP,
+    LINE_USAGE_PREDICTOR_POLICY_DEWP_ORACLE
+};
+const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_policy_t type);
+
+/// ============================================================================
+/// Valid Sub-Block Type
+enum line_sub_block_t {
+    LINE_SUB_BLOCK_DISABLE,
+    LINE_SUB_BLOCK_NORMAL,
+    LINE_SUB_BLOCK_LEARN,
+    LINE_SUB_BLOCK_WRONG_FIRST,
+    LINE_SUB_BLOCK_WRITEBACK
+};
+const char *get_enum_line_sub_block_t_char(line_sub_block_t type);
+
 
 #endif  // _SINUCA_ENUMERATOR_HPP_

@@ -545,8 +545,8 @@ void sinuca_engine_t::initialize_cache_memory() {
             cache_memory_parameters.push_back("MSHR_BUFFER_REQUEST_RESERVED_SIZE");
             this->cache_memory_array[i]->set_mshr_buffer_request_reserved_size( cfg_cache_memory[ cache_memory_parameters.back() ] );
 
-            cache_memory_parameters.push_back("MSHR_BUFFER_COPYBACK_RESERVED_SIZE");
-            this->cache_memory_array[i]->set_mshr_buffer_copyback_reserved_size( cfg_cache_memory[ cache_memory_parameters.back() ] );
+            cache_memory_parameters.push_back("MSHR_BUFFER_WRITEBACK_RESERVED_SIZE");
+            this->cache_memory_array[i]->set_mshr_buffer_writeback_reserved_size( cfg_cache_memory[ cache_memory_parameters.back() ] );
 
             cache_memory_parameters.push_back("MSHR_BUFFER_PREFETCH_RESERVED_SIZE");
             this->cache_memory_array[i]->set_mshr_buffer_prefetch_reserved_size( cfg_cache_memory[ cache_memory_parameters.back() ] );
@@ -724,93 +724,12 @@ void sinuca_engine_t::initialize_cache_memory() {
                 else {
                     ERROR_PRINTF("CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
                 }
-
             }
-            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "DLEC") ==  0) {
-                this->cache_memory_array[i]->line_usage_predictor = new line_usage_predictor_dlec_t;
-                line_usage_predictor_dlec_t *line_usage_predictor_ptr = static_cast<line_usage_predictor_dlec_t*>(this->cache_memory_array[i]->line_usage_predictor);
+            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "DSBP_ORACLE") ==  0) {
+                this->cache_memory_array[i]->line_usage_predictor = new line_usage_predictor_dsbp_oracle_t;
+                line_usage_predictor_dsbp_oracle_t *line_usage_predictor_ptr = static_cast<line_usage_predictor_dsbp_oracle_t*>(this->cache_memory_array[i]->line_usage_predictor);
 
-                line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_DLEC);
-
-
-                /// Metadata
-                line_usage_predictor_parameters.push_back("METADATA_LINE_NUMBER");
-                line_usage_predictor_ptr->set_metadata_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
-                ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_line_number() == line_usage_predictor_ptr->get_metadata_line_number(),
-                                    "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
-
-                line_usage_predictor_parameters.push_back("METADATA_ASSOCIATIVITY");
-                line_usage_predictor_ptr->set_metadata_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
-                ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_associativity() == line_usage_predictor_ptr->get_metadata_associativity(),
-                                    "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
-
-                line_usage_predictor_parameters.push_back("USAGE_COUNTER_BITS");
-                line_usage_predictor_ptr->set_access_counter_bits( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
-
-
-
-                line_usage_predictor_parameters.push_back("EARLY_EVICTION");
-                line_usage_predictor_ptr->set_early_eviction( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
-
-                line_usage_predictor_parameters.push_back("EARLY_COPYBACK");
-                line_usage_predictor_ptr->set_early_copyback( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
-
-                line_usage_predictor_parameters.push_back("TURNOFF_DEAD_LINES");
-                line_usage_predictor_ptr->set_turnoff_dead_lines( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
-
-                /// AHTM
-                line_usage_predictor_parameters.push_back("AHTM_LINE_NUMBER");
-                line_usage_predictor_ptr->set_ahtm_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
-
-                line_usage_predictor_parameters.push_back("AHTM_ASSOCIATIVITY");
-                line_usage_predictor_ptr->set_ahtm_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
-
-                line_usage_predictor_parameters.push_back("AHTM_REPLACEMENT_POLICY");
-                if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "FIFO") ==  0) {
-                    line_usage_predictor_ptr->set_ahtm_replacement_policy(REPLACEMENT_FIFO);
-                }
-                else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "LRF") ==  0) {
-                    line_usage_predictor_ptr->set_ahtm_replacement_policy(REPLACEMENT_LRF);
-                }
-                else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "LRU") ==  0) {
-                    line_usage_predictor_ptr->set_ahtm_replacement_policy(REPLACEMENT_LRU);
-                }
-                else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "RANDOM") ==  0) {
-                    line_usage_predictor_ptr->set_ahtm_replacement_policy(REPLACEMENT_RANDOM);
-                }
-                else {
-                    ERROR_PRINTF("CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
-                }
-
-                /// AHTC
-                line_usage_predictor_parameters.push_back("AHTC_LINE_NUMBER");
-                line_usage_predictor_ptr->set_ahtc_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
-
-                line_usage_predictor_parameters.push_back("AHTC_ASSOCIATIVITY");
-                line_usage_predictor_ptr->set_ahtc_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
-
-                line_usage_predictor_parameters.push_back("AHTC_REPLACEMENT_POLICY");
-                if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "FIFO") ==  0) {
-                    line_usage_predictor_ptr->set_ahtc_replacement_policy(REPLACEMENT_FIFO);
-                }
-                else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "LRF") ==  0) {
-                    line_usage_predictor_ptr->set_ahtc_replacement_policy(REPLACEMENT_LRF);
-                }
-                else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "LRU") ==  0) {
-                    line_usage_predictor_ptr->set_ahtc_replacement_policy(REPLACEMENT_LRU);
-                }
-                else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "RANDOM") ==  0) {
-                    line_usage_predictor_ptr->set_ahtc_replacement_policy(REPLACEMENT_RANDOM);
-                }
-                else {
-                    ERROR_PRINTF("CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
-                }
-            }
-            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "SUBBLOCK_STATS") ==  0) {
-                this->cache_memory_array[i]->line_usage_predictor = new line_usage_predictor_subblock_stats_t;
-                line_usage_predictor_subblock_stats_t *line_usage_predictor_ptr = static_cast<line_usage_predictor_subblock_stats_t*>(this->cache_memory_array[i]->line_usage_predictor);
-
-                line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_SUBBLOCK_STATS);
+                line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_DSBP_ORACLE);
 
                 line_usage_predictor_parameters.push_back("SUB_BLOCK_SIZE");
                 line_usage_predictor_ptr->set_sub_block_size( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
@@ -827,11 +746,68 @@ void sinuca_engine_t::initialize_cache_memory() {
                                     "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
 
             }
-            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "LINE_STATS") ==  0) {
-                this->cache_memory_array[i]->line_usage_predictor = new line_usage_predictor_line_stats_t;
-                line_usage_predictor_line_stats_t *line_usage_predictor_ptr = static_cast<line_usage_predictor_line_stats_t*>(this->cache_memory_array[i]->line_usage_predictor);
+            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "DEWP") ==  0) {
+                this->cache_memory_array[i]->line_usage_predictor = new line_usage_predictor_dewp_t;
+                line_usage_predictor_dewp_t *line_usage_predictor_ptr = static_cast<line_usage_predictor_dewp_t*>(this->cache_memory_array[i]->line_usage_predictor);
 
-                line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_LINE_STATS);
+                line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_DEWP);
+
+
+                /// Metadata
+                line_usage_predictor_parameters.push_back("METADATA_LINE_NUMBER");
+                line_usage_predictor_ptr->set_metadata_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+                ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_line_number() == line_usage_predictor_ptr->get_metadata_line_number(),
+                                    "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
+
+                line_usage_predictor_parameters.push_back("METADATA_ASSOCIATIVITY");
+                line_usage_predictor_ptr->set_metadata_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+                ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_associativity() == line_usage_predictor_ptr->get_metadata_associativity(),
+                                    "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
+
+                line_usage_predictor_parameters.push_back("USAGE_COUNTER_BITS_READ");
+                line_usage_predictor_ptr->set_access_counter_bits_read( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+                line_usage_predictor_parameters.push_back("USAGE_COUNTER_BITS_WRITEBACK");
+                line_usage_predictor_ptr->set_access_counter_bits_writeback( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+                line_usage_predictor_parameters.push_back("EARLY_EVICTION");
+                line_usage_predictor_ptr->set_early_eviction( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+                line_usage_predictor_parameters.push_back("EARLY_WRITEBACK");
+                line_usage_predictor_ptr->set_early_writeback( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+                line_usage_predictor_parameters.push_back("TURNOFF_DEAD_LINES");
+                line_usage_predictor_ptr->set_turnoff_dead_lines( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+                /// AHT
+                line_usage_predictor_parameters.push_back("AHT_LINE_NUMBER");
+                line_usage_predictor_ptr->set_aht_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+                line_usage_predictor_parameters.push_back("AHT_ASSOCIATIVITY");
+                line_usage_predictor_ptr->set_aht_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+                line_usage_predictor_parameters.push_back("AHT_REPLACEMENT_POLICY");
+                if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "FIFO") ==  0) {
+                    line_usage_predictor_ptr->set_aht_replacement_policy(REPLACEMENT_FIFO);
+                }
+                else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "LRF") ==  0) {
+                    line_usage_predictor_ptr->set_aht_replacement_policy(REPLACEMENT_LRF);
+                }
+                else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "LRU") ==  0) {
+                    line_usage_predictor_ptr->set_aht_replacement_policy(REPLACEMENT_LRU);
+                }
+                else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "RANDOM") ==  0) {
+                    line_usage_predictor_ptr->set_aht_replacement_policy(REPLACEMENT_RANDOM);
+                }
+                else {
+                    ERROR_PRINTF("CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
+                }
+            }
+            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "DEWP_ORACLE") ==  0) {
+                this->cache_memory_array[i]->line_usage_predictor = new line_usage_predictor_dewp_oracle_t;
+                line_usage_predictor_dewp_oracle_t *line_usage_predictor_ptr = static_cast<line_usage_predictor_dewp_oracle_t*>(this->cache_memory_array[i]->line_usage_predictor);
+
+                line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_DEWP_ORACLE);
 
                 /// Metadata
                 line_usage_predictor_parameters.push_back("METADATA_LINE_NUMBER");
@@ -900,11 +876,11 @@ void sinuca_engine_t::initialize_cache_memory() {
             }
             /// Prefetcher Parameter
             else if (prefetcher_parameters.empty() == false && line_usage_predictor_parameters.empty()) {
-                ERROR_PRINTF(" CACHE_MEMORY %d %s has required PARAMETER missing: \"%s\" \"%s\" \n", i, this->cache_memory_array[i]->get_label(), cache_memory_parameters.back(), prefetcher_parameters.back());
+                ERROR_PRINTF(" CACHE_MEMORY-Prefetcher %d %s has required PARAMETER missing: \"%s\" \"%s\" \n", i, this->cache_memory_array[i]->get_label(), cache_memory_parameters.back(), prefetcher_parameters.back());
             }
             /// Line_Usage_Predictor Parameter
             else {
-                ERROR_PRINTF(" CACHE_MEMORY %d %s has required PARAMETER missing: \"%s\" \"%s\" \n", i, this->cache_memory_array[i]->get_label(), cache_memory_parameters.back(), line_usage_predictor_parameters.back());
+                ERROR_PRINTF(" CACHE_MEMORY-Line_Usage_Predictor %d %s has required PARAMETER missing: \"%s\" \"%s\" \n", i, this->cache_memory_array[i]->get_label(), cache_memory_parameters.back(), line_usage_predictor_parameters.back());
             }
         }
         catch(libconfig::SettingTypeException &tex) {
@@ -914,11 +890,11 @@ void sinuca_engine_t::initialize_cache_memory() {
             }
             /// Prefetcher Parameter
             else if (prefetcher_parameters.empty() == false && line_usage_predictor_parameters.empty()) {
-                ERROR_PRINTF(" CACHE_MEMORY %d %s has required PARAMETER wrong type: \"%s\" \"%s\" \n", i, this->cache_memory_array[i]->get_label(), cache_memory_parameters.back(), prefetcher_parameters.back());
+                ERROR_PRINTF(" CACHE_MEMORY-Prefetcher %d %s has required PARAMETER wrong type: \"%s\" \"%s\" \n", i, this->cache_memory_array[i]->get_label(), cache_memory_parameters.back(), prefetcher_parameters.back());
             }
             /// Line_Usage_Predictor Parameter
             else {
-                ERROR_PRINTF(" CACHE_MEMORY %d %s has required PARAMETER wrong type: \"%s\" \"%s\" \n", i, this->cache_memory_array[i]->get_label(), cache_memory_parameters.back(), line_usage_predictor_parameters.back());
+                ERROR_PRINTF(" CACHE_MEMORY-Line_Usage_Predictor %d %s has required PARAMETER wrong type: \"%s\" \"%s\" \n", i, this->cache_memory_array[i]->get_label(), cache_memory_parameters.back(), line_usage_predictor_parameters.back());
             }
         }
     }
@@ -988,8 +964,8 @@ void sinuca_engine_t::initialize_memory_controller() {
             memory_controller_parameters.push_back("MSHR_BUFFER_REQUEST_RESERVED_SIZE");
             this->memory_controller_array[i]->set_mshr_buffer_request_reserved_size( cfg_memory_controller[ memory_controller_parameters.back() ] );
 
-            memory_controller_parameters.push_back("MSHR_BUFFER_COPYBACK_RESERVED_SIZE");
-            this->memory_controller_array[i]->set_mshr_buffer_copyback_reserved_size( cfg_memory_controller[ memory_controller_parameters.back() ] );
+            memory_controller_parameters.push_back("MSHR_BUFFER_WRITEBACK_RESERVED_SIZE");
+            this->memory_controller_array[i]->set_mshr_buffer_writeback_reserved_size( cfg_memory_controller[ memory_controller_parameters.back() ] );
 
             memory_controller_parameters.push_back("MSHR_BUFFER_PREFETCH_RESERVED_SIZE");
             this->memory_controller_array[i]->set_mshr_buffer_prefetch_reserved_size( cfg_memory_controller[ memory_controller_parameters.back() ] );
@@ -1240,11 +1216,14 @@ void sinuca_engine_t::initialize_directory_controller() {
             ERROR_PRINTF("DIRECTORY found a strange VALUE %s for PARAMETER %s\n", cfg_directory[ directory_parameters.back() ].c_str(), directory_parameters.back());
         }
 
-        directory_parameters.push_back("GENERATE_LLC_COPYBACK");
-        this->directory_controller->set_generate_llc_copyback( cfg_directory[ directory_parameters.back() ] );
+        directory_parameters.push_back("GENERATE_LLC_WRITEBACK");
+        this->directory_controller->set_generate_llc_writeback( cfg_directory[ directory_parameters.back() ] );
 
-        directory_parameters.push_back("GENERATE_NON_LLC_COPYBACK");
-        this->directory_controller->set_generate_non_llc_copyback( cfg_directory[ directory_parameters.back() ] );
+        directory_parameters.push_back("GENERATE_NON_LLC_WRITEBACK");
+        this->directory_controller->set_generate_non_llc_writeback( cfg_directory[ directory_parameters.back() ] );
+
+        directory_parameters.push_back("FINAL_WRITE_BACK_ALL");
+        this->directory_controller->set_final_writeback_all( cfg_directory[ directory_parameters.back() ] );
 
         /// ================================================================
         /// Check if any DIRECTORY non-required parameters exist

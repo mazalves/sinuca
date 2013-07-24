@@ -75,7 +75,11 @@ void interconnection_controller_t::allocate() {
     }
 
     /// Allocate the adjacency_matrix which will have the information about component conexions.
-    this->adjacency_matrix = utils_t::template_allocate_matrix<edge_t>(sinuca_engine.get_interconnection_interface_array_size(), sinuca_engine.get_interconnection_interface_array_size());
+    this->adjacency_matrix = utils_t::template_allocate_matrix<edge_t>(sinuca_engine.get_interconnection_interface_array_size(),
+                                                                        sinuca_engine.get_interconnection_interface_array_size());
+
+    this->predecessor = utils_t::template_allocate_initialize_matrix<interconnection_interface_t*>(sinuca_engine.get_interconnection_interface_array_size(),
+                                                                                                    sinuca_engine.get_interconnection_interface_array_size(), NULL);
 
     this->create_communication_graph();
 
@@ -93,6 +97,14 @@ void interconnection_controller_t::allocate() {
             this->routing_algorithm_floyd_warshall();
         break;
     }
+
+    /// Latency table
+    this->high_latency_matrix = utils_t::template_allocate_initialize_matrix<int32_t>(sinuca_engine.get_interconnection_interface_array_size(),
+                                                                                        sinuca_engine.get_interconnection_interface_array_size(), -1);
+    this->low_latency_matrix = utils_t::template_allocate_initialize_matrix<int32_t>(sinuca_engine.get_interconnection_interface_array_size(),
+                                                                                        sinuca_engine.get_interconnection_interface_array_size(), -1);
+
+    this->create_communication_cost();
 };
 
 /// ============================================================================
@@ -205,14 +217,13 @@ void interconnection_controller_t::routing_algorithm_floyd_warshall() {
     INTERCONNECTION_CTRL_DEBUG_PRINTF("routing_algorithm_floyd_warshall()\n");
     uint32_t i, j, k;
 
-    this->predecessor = utils_t::template_allocate_initialize_matrix<interconnection_interface_t*>(sinuca_engine.get_interconnection_interface_array_size(), sinuca_engine.get_interconnection_interface_array_size(), NULL);
     for (i = 0; i < sinuca_engine.get_interconnection_interface_array_size(); i++) {
         for (j = 0; j < sinuca_engine.get_interconnection_interface_array_size(); j++) {
             if (adjacency_matrix[i][j].weight != INFINITE && i != j) {
-                predecessor[i][j] = sinuca_engine.interconnection_interface_array[i];
+                this->predecessor[i][j] = sinuca_engine.interconnection_interface_array[i];
             }
             else {
-                predecessor[i][j] = NULL;
+                this->predecessor[i][j] = NULL;
             }
         }
     }
@@ -222,7 +233,7 @@ void interconnection_controller_t::routing_algorithm_floyd_warshall() {
             for (j = 0; j < sinuca_engine.get_interconnection_interface_array_size(); j++) {
                 if (adjacency_matrix[i][j].weight > adjacency_matrix[i][k].weight + adjacency_matrix[k][j].weight) {
                     adjacency_matrix[i][j].weight = adjacency_matrix[i][k].weight + adjacency_matrix[k][j].weight;
-                    predecessor[i][j] = predecessor[k][j];
+                    this->predecessor[i][j] = predecessor[k][j];
                 }
             }
         }
@@ -309,6 +320,35 @@ void interconnection_controller_t::create_route(interconnection_interface_t *src
 };
 
 /// ============================================================================
+void interconnection_controller_t::create_communication_cost() {
+    uint32_t max_latency = 0;
+    uint32_t min_width = 0;
+    for (uint32_t i = 0; i < sinuca_engine.get_interconnection_interface_array_size(); i++) {
+        for (uint32_t j = 0; j < sinuca_engine.get_interconnection_interface_array_size(); j++) {
+            if (i != j && route_matrix[i][j].hop_count == 0) {
+                /// Find the max latency between two adjacents components
+                max_latency = sinuca_engine.interconnection_interface_array[i]->get_interconnection_latency();
+                if (sinuca_engine.interconnection_interface_array[j]->get_interconnection_latency() > max_latency) {
+                    max_latency = sinuca_engine.interconnection_interface_array[j]->get_interconnection_latency();
+                }
+
+                /// Find the min width between two adjacents components
+                min_width = sinuca_engine.interconnection_interface_array[i]->get_interconnection_width();
+                if (sinuca_engine.interconnection_interface_array[j]->get_interconnection_width() > min_width) {
+                    min_width = sinuca_engine.interconnection_interface_array[j]->get_interconnection_width();
+                }
+
+                /// Set the high_latency (full package / answer)
+                this->high_latency_matrix[i][j] = max_latency * ((sinuca_engine.global_line_size / min_width) + 1 * ((sinuca_engine.global_line_size % min_width) != 0));
+
+                /// Set the low_latency (empty package / request)
+                this->low_latency_matrix[i][j] = max_latency;
+            }
+        }
+    }
+}
+
+/// ============================================================================
 void interconnection_controller_t::find_package_route(memory_package_t *package) {
     uint32_t src = package->id_src;
     uint32_t dst = package->id_dst;
@@ -331,18 +371,12 @@ void interconnection_controller_t::find_package_route(memory_package_t *package)
 
 /// ============================================================================
 uint32_t interconnection_controller_t::find_package_route_latency(memory_package_t *package, interconnection_interface_t *src, interconnection_interface_t *dst){
-    uint32_t max_latency = 0;
-    uint32_t min_width = 0;
+    /// The transmission latency is defined as 1 for requests, and line_size for answers
+    int32_t max_latency = this->high_latency_matrix[src->get_id()][dst->get_id()];
+    int32_t low_latency = this->low_latency_matrix[src->get_id()][dst->get_id()];
 
-    max_latency = src->get_interconnection_latency();
-    if (dst->get_interconnection_latency() > max_latency) {
-        max_latency = dst->get_interconnection_latency();
-    }
-
-    min_width = src->get_interconnection_width();
-    if (dst->get_interconnection_width() > min_width) {
-        min_width = dst->get_interconnection_width();
-    }
+    ERROR_ASSERT_PRINTF(max_latency != -1, "Transmiting between not adjacent components,  High_latency = -1\n");
+    ERROR_ASSERT_PRINTF(low_latency != -1, "Transmiting between not adjacent components,  Low_latency = -1\n");
 
     switch (package->memory_operation) {
         case MEMORY_OPERATION_INST:
@@ -350,23 +384,23 @@ uint32_t interconnection_controller_t::find_package_route_latency(memory_package
         case MEMORY_OPERATION_PREFETCH:
             /// BIG
             if (package->is_answer) {
-                return max_latency * ((package->memory_size / min_width) + 1 * ((package->memory_size % min_width) != 0));
+                return max_latency;
             }
             /// SMALL
             else {
-                return max_latency;
+                return low_latency;
             }
         break;
 
         case MEMORY_OPERATION_WRITE:
-        case MEMORY_OPERATION_COPYBACK:
+        case MEMORY_OPERATION_WRITEBACK:
             /// SMALL
             if (package->is_answer) {
-                return max_latency;
+                return low_latency;
             }
             /// BIG
             else {
-                return max_latency * ((package->memory_size / min_width) + 1 * ((package->memory_size % min_width) != 0));
+                return max_latency;
             }
         break;
     }

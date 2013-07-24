@@ -51,7 +51,7 @@ cache_memory_t::cache_memory_t() {
     this->penalty_write = 0;
 
     this->mshr_buffer_request_reserved_size = 0;
-    this->mshr_buffer_copyback_reserved_size = 0;
+    this->mshr_buffer_writeback_reserved_size = 0;
     this->mshr_buffer_prefetch_reserved_size = 0;
 
     this->total_sets = 0;
@@ -99,13 +99,13 @@ void cache_memory_t::allocate() {
     }
 
     ERROR_ASSERT_PRINTF(mshr_buffer_request_reserved_size > 0, "mshr_buffer_request_reserved_size should be bigger than zero.\n");
-    ERROR_ASSERT_PRINTF(mshr_buffer_copyback_reserved_size > 0, "mshr_buffer_copyback_reserved_size should be bigger than zero.\n");
+    ERROR_ASSERT_PRINTF(mshr_buffer_writeback_reserved_size > 0, "mshr_buffer_writeback_reserved_size should be bigger than zero.\n");
     ERROR_ASSERT_PRINTF(mshr_buffer_prefetch_reserved_size > 0, "mshr_buffer_prefetch_reserved_size should be bigger than zero.\n");
 
 
-    /// MSHR = [    REQUEST    | COPYBACK | PREFETCH ]
+    /// MSHR = [    REQUEST    | WRITEBACK | PREFETCH ]
     this->mshr_buffer_size = this->mshr_buffer_request_reserved_size +
-                                this->mshr_buffer_copyback_reserved_size +
+                                this->mshr_buffer_writeback_reserved_size +
                                 this->mshr_buffer_prefetch_reserved_size;
     this->mshr_buffer = utils_t::template_allocate_array<memory_package_t>(this->get_mshr_buffer_size());
     this->mshr_born_ordered.reserve(this->mshr_buffer_size);
@@ -317,7 +317,7 @@ void cache_memory_t::clock(uint32_t subcycle) {
                 if (this->mshr_born_ordered[i]->state == PACKAGE_STATE_WAIT) {
                     this->mshr_born_ordered[i]->package_wait(transmission_latency);
                 }
-                /// Normal COPY-BACK Request (Will free the position)
+                /// Normal WRITE-BACK Request (Will free the position)
                 else if (this->mshr_born_ordered[i]->state == PACKAGE_STATE_FREE) {
                     this->mshr_born_ordered[i]->package_ready(transmission_latency);
                 }
@@ -372,7 +372,7 @@ void cache_memory_t::clock(uint32_t subcycle) {
                 /// =============================================================
                 CACHE_DEBUG_PRINTF("\t Treat REQUEST this->mshr_born_ordered[%d] %s\n", i, this->mshr_born_ordered[i]->content_to_string().c_str());
                 if (this->mshr_born_ordered[i]->id_owner != this->get_id() &&
-                this->mshr_born_ordered[i]->memory_operation != MEMORY_OPERATION_COPYBACK) {
+                this->mshr_born_ordered[i]->memory_operation != MEMORY_OPERATION_WRITEBACK) {
                     this->prefetcher->treat_prefetch(this->mshr_born_ordered[i]);
                 }
             }
@@ -446,17 +446,17 @@ int32_t cache_memory_t::allocate_request(memory_package_t* package){
 
 
 /// ============================================================================
-int32_t cache_memory_t::allocate_copyback(memory_package_t* package){
+int32_t cache_memory_t::allocate_writeback(memory_package_t* package){
 
-    int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size, this->mshr_buffer_copyback_reserved_size);
+    int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size, this->mshr_buffer_writeback_reserved_size);
     if (slot != POSITION_FAIL) {
         slot += this->mshr_buffer_request_reserved_size;
-        CACHE_DEBUG_PRINTF("\t NEW COPYBACK\n");
+        CACHE_DEBUG_PRINTF("\t NEW WRITEBACK\n");
         this->mshr_buffer[slot] = *package;
         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
     }
     else {
-        add_stat_full_mshr_buffer_copyback();
+        add_stat_full_mshr_buffer_writeback();
     }
     return slot;
 };
@@ -464,10 +464,10 @@ int32_t cache_memory_t::allocate_copyback(memory_package_t* package){
 /// ============================================================================
 int32_t cache_memory_t::allocate_prefetch(memory_package_t* package){
 
-    int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size,
+    int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_writeback_reserved_size,
                                                 this->mshr_buffer_prefetch_reserved_size);
     if (slot != POSITION_FAIL) {
-        slot += this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size;
+        slot += this->mshr_buffer_request_reserved_size + this->mshr_buffer_writeback_reserved_size;
 
         CACHE_DEBUG_PRINTF("\t NEW PREFETCH\n");
 
@@ -613,7 +613,7 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
             break;
 
             case MEMORY_OPERATION_WRITE:
-            case MEMORY_OPERATION_COPYBACK:
+            case MEMORY_OPERATION_WRITEBACK:
             {
                 if (this->recv_rqst_write_ready_cycle <= sinuca_engine.get_global_cycle()) {
                     slot = this->allocate_request(package);
@@ -759,8 +759,8 @@ void cache_memory_t::cache_hit(memory_package_t *package) {
             this->add_stat_prefetch_hit();
         break;
 
-        case MEMORY_OPERATION_COPYBACK:
-            this->add_stat_copyback_hit();
+        case MEMORY_OPERATION_WRITEBACK:
+            this->add_stat_writeback_hit();
         break;
     }
 };
@@ -786,15 +786,15 @@ void cache_memory_t::cache_miss(memory_package_t *package) {
             this->add_stat_prefetch_miss(package->born_cycle);
         break;
 
-        case MEMORY_OPERATION_COPYBACK:
-            this->add_stat_copyback_miss(package->born_cycle);
+        case MEMORY_OPERATION_WRITEBACK:
+            this->add_stat_writeback_miss(package->born_cycle);
         break;
     }
 };
 /// ============================================================================
-void cache_memory_t::cache_invalidate(bool is_copyback) {
-    if (is_copyback) {
-        this->add_stat_invalidation_copyback();
+void cache_memory_t::cache_invalidate(bool is_writeback) {
+    if (is_writeback) {
+        this->add_stat_invalidation_writeback();
     }
     else {
         this->add_stat_invalidation();
@@ -802,15 +802,25 @@ void cache_memory_t::cache_invalidate(bool is_copyback) {
 };
 
 /// ============================================================================
-void cache_memory_t::cache_evict(bool is_copyback) {
-    if (is_copyback) {
-        this->add_stat_eviction_copyback();
+void cache_memory_t::cache_evict(bool is_writeback) {
+    if (is_writeback) {
+        this->add_stat_eviction_writeback();
     }
     else {
         this->add_stat_eviction();
     }
 };
 
+
+/// ============================================================================
+// Input: memory_address
+// Output: cache_line_t*, &index, &way
+cache_line_t* cache_memory_t::get_line(uint32_t index, uint32_t way) {
+    ERROR_ASSERT_PRINTF(index < this->index_bits_mask,"Wrong index number\n")
+    ERROR_ASSERT_PRINTF(way < this->get_associativity(), "Wrong way number\n")
+
+    return &this->sets[index].ways[way];
+}
 
 
 /// ============================================================================
@@ -838,7 +848,7 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& i
 
     switch (this->replacement_policy) {
         case REPLACEMENT_LRU: {
-            uint64_t last_access = sinuca_engine.get_global_cycle() + 1;
+            uint64_t last_access = std::numeric_limits<uint64_t>::max();
             for (uint32_t way = 0; way < this->get_associativity(); way++) {
                 /// The line is not locked by directory
                 if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[way].tag) == FAIL) {
@@ -857,32 +867,40 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& i
         break;
 
         case REPLACEMENT_DEAD_OR_LRU: {
-            uint64_t last_access = sinuca_engine.get_global_cycle() + 1;
+            uint64_t last_access = std::numeric_limits<uint64_t>::max();
+
+            cache_line_t *dead_choosen_line = NULL;
+            uint32_t dead_choosen_way;
             for (uint32_t way = 0; way < this->get_associativity(); way++) {
                 /// The line is not locked by directory
                 if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[way].tag) == FAIL) {
-                    /// If is_dead
-                    if (this->line_usage_predictor->check_line_is_last_access(index, way)) {
-                        choosen_line = &this->sets[index].ways[way];
-                        choosen_way = way;
-                        break;
-                    }
                     /// If the line is LRU && the line is not locked by directory
-                    else if (this->sets[index].ways[way].last_access <= last_access) {
+                    if (this->sets[index].ways[way].last_access <= last_access) {
                         choosen_line = &this->sets[index].ways[way];
                         last_access = this->sets[index].ways[way].last_access;
                         choosen_way = way;
+
+                        /// If is_dead
+                        if (this->line_usage_predictor->check_line_is_last_access(index, way)) {
+                            dead_choosen_line = &this->sets[index].ways[way];
+                            dead_choosen_way = way;
+                        }
                     }
                 }
                 else {
                     ERROR_ASSERT_PRINTF(cmp_tag_index_bank(memory_address, this->sets[index].ways[way].tag) == FAIL, "Trying to find one line to evict, but tag == address\n")
                 }
             }
+            /// Give priority to the LRU dead line
+            if (dead_choosen_line != NULL) {
+                choosen_line = dead_choosen_line;
+                choosen_way = dead_choosen_way;
+            }
         }
         break;
 
         case REPLACEMENT_INVALID_OR_LRU: {
-            uint64_t last_access = sinuca_engine.get_global_cycle() + 1;
+            uint64_t last_access = std::numeric_limits<uint64_t>::max();
             for (uint32_t way = 0; way < this->get_associativity(); way++) {
                 /// The line is not locked by directory
                 if (sinuca_engine.directory_controller->is_locked(this->sets[index].ways[way].tag) == FAIL) {
@@ -995,21 +1013,21 @@ void cache_memory_t::periodic_check(){
 void cache_memory_t::reset_statistics() {
     this->set_stat_accesses(0);
     this->set_stat_invalidation(0);
-    this->set_stat_invalidation_copyback(0);
+    this->set_stat_invalidation_writeback(0);
     this->set_stat_eviction(0);
-    this->set_stat_eviction_copyback(0);
+    this->set_stat_eviction_writeback(0);
 
     this->set_stat_instruction_hit(0);
     this->set_stat_read_hit(0);
     this->set_stat_prefetch_hit(0);
     this->set_stat_write_hit(0);
-    this->set_stat_copyback_hit(0);
+    this->set_stat_writeback_hit(0);
 
     this->set_stat_instruction_miss(0);
     this->set_stat_read_miss(0);
     this->set_stat_prefetch_miss(0);
     this->set_stat_write_miss(0);
-    this->set_stat_copyback_miss(0);
+    this->set_stat_writeback_miss(0);
 
     this->stat_min_instruction_wait_time = 0;
     this->stat_max_instruction_wait_time = 0;
@@ -1027,12 +1045,12 @@ void cache_memory_t::reset_statistics() {
     this->stat_max_write_wait_time = 0;
     this->stat_acumulated_write_wait_time = 0;
 
-    this->stat_min_copyback_wait_time = 0;
-    this->stat_max_copyback_wait_time = 0;
-    this->stat_acumulated_copyback_wait_time = 0;
+    this->stat_min_writeback_wait_time = 0;
+    this->stat_max_writeback_wait_time = 0;
+    this->stat_acumulated_writeback_wait_time = 0;
 
     this->stat_full_mshr_buffer_request = 0;
-    this->stat_full_mshr_buffer_copyback = 0;
+    this->stat_full_mshr_buffer_writeback = 0;
     this->stat_full_mshr_buffer_prefetch = 0;
 
     this->prefetcher->reset_statistics();
@@ -1049,9 +1067,9 @@ void cache_memory_t::print_statistics() {
 
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_accesses", stat_accesses);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_invalidation", stat_invalidation);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_invalidation_copyback", stat_invalidation_copyback);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_invalidation_writeback", stat_invalidation_writeback);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_eviction", stat_eviction);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_eviction_copyback", stat_eviction_copyback);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_eviction_writeback", stat_eviction_writeback);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_read", stat_instruction_hit + stat_read_hit + stat_prefetch_hit +
@@ -1059,23 +1077,23 @@ void cache_memory_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_read_hit", stat_instruction_hit + stat_read_hit + stat_prefetch_hit);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_read_miss", stat_instruction_miss + stat_read_miss + stat_prefetch_miss);
 
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write", stat_write_hit + stat_copyback_hit + stat_write_miss + stat_copyback_miss);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write_hit", stat_write_hit + stat_copyback_hit);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write_miss", stat_write_miss + stat_copyback_miss);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write", stat_write_hit + stat_writeback_hit + stat_write_miss + stat_writeback_miss);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write_hit", stat_write_hit + stat_writeback_hit);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write_miss", stat_write_miss + stat_writeback_miss);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_instruction_hit", stat_instruction_hit);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_read_hit", stat_read_hit);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_prefetch_hit", stat_prefetch_hit);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_write_hit", stat_write_hit);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_copyback_hit", stat_copyback_hit);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writeback_hit", stat_writeback_hit);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_instruction_miss", stat_instruction_miss);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_read_miss", stat_read_miss);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_prefetch_miss", stat_prefetch_miss);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_write_miss", stat_write_miss);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_copyback_miss", stat_copyback_miss);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writeback_miss", stat_writeback_miss);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_instruction_miss_percentage",stat_instruction_miss, stat_instruction_miss + stat_instruction_hit);
@@ -1088,25 +1106,25 @@ void cache_memory_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_read_wait_time", stat_min_read_wait_time);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_prefetch_wait_time", stat_min_prefetch_wait_time);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_write_wait_time", stat_min_write_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_copyback_wait_time", stat_min_copyback_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_writeback_wait_time", stat_min_writeback_wait_time);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_instruction_wait_time", stat_max_instruction_wait_time);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_read_wait_time", stat_max_read_wait_time);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_prefetch_wait_time", stat_max_prefetch_wait_time);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_write_wait_time", stat_max_write_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_copyback_wait_time", stat_max_copyback_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_writeback_wait_time", stat_max_writeback_wait_time);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_instruction_wait_time_ratio",stat_acumulated_instruction_wait_time, stat_instruction_miss);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_read_wait_time_ratio",stat_acumulated_read_wait_time, stat_read_miss);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_prefetch_wait_time_ratio",stat_acumulated_prefetch_wait_time, stat_prefetch_miss);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_write_wait_time_ratio",stat_acumulated_write_wait_time, stat_write_miss);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_copyback_wait_time_ratio",stat_acumulated_copyback_wait_time, stat_copyback_miss);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_writeback_wait_time_ratio",stat_acumulated_writeback_wait_time, stat_writeback_miss);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_buffer_request", stat_full_mshr_buffer_request);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_buffer_copyback", stat_full_mshr_buffer_copyback);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_buffer_writeback", stat_full_mshr_buffer_writeback);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_buffer_prefetch", stat_full_mshr_buffer_prefetch);
 
 
@@ -1143,7 +1161,7 @@ void cache_memory_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "penalty_write", penalty_write);
 
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_buffer_request_reserved_size", mshr_buffer_request_reserved_size);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_buffer_copyback_reserved_size", mshr_buffer_copyback_reserved_size);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_buffer_writeback_reserved_size", mshr_buffer_writeback_reserved_size);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_buffer_prefetch_reserved_size", mshr_buffer_prefetch_reserved_size);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_buffer_size", mshr_buffer_size);
 

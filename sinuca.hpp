@@ -93,22 +93,21 @@ class prefetch_stream_t;
 class prefetch_disable_t;
 /// Line Usage Predictor
 class line_usage_predictor_t;
+class line_usage_predictor_disable_t;
 /// === DSBP
 class pht_line_t;
 class pht_set_t;
 class dsbp_metadata_line_t;
 class dsbp_metadata_set_t;
 class line_usage_predictor_dsbp_t;
-/// === DLEC
+class line_usage_predictor_dsbp_oracle_t;
+/// === DEWP
 class aht_line_t;
 class aht_set_t;
-class dlec_metadata_line_t;
-class dlec_metadata_set_t;
-class line_usage_predictor_dlec_t;
-/// === STATISTICS / DISABLE
-class line_usage_predictor_subblock_stats_t;
-class line_usage_predictor_line_stats_t;
-class line_usage_predictor_disable_t;
+class dewp_metadata_line_t;
+class dewp_metadata_set_t;
+class line_usage_predictor_dewp_t;
+class line_usage_predictor_dewp_oracle_t;
 /// Cache Memory
 class mshr_diff_line_t;
 class cache_line_t;
@@ -158,16 +157,16 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define CONFIGURATOR_DEBUG
     // ~ #define TRACE_READER_DEBUG
     // ~ #define TRACE_GENERATOR_DEBUG
-    #define PROCESSOR_DEBUG
-    #define SYNC_DEBUG
+    // ~ #define PROCESSOR_DEBUG
+    // ~ #define SYNC_DEBUG
     // ~ #define BRANCH_PREDICTOR_DEBUG
-    #define CACHE_DEBUG
+    // ~ #define CACHE_DEBUG
     // ~ #define PREFETCHER_DEBUG
-    // ~ #define LINE_USAGE_PREDICTOR_DEBUG
-    #define MEMORY_CONTROLLER_DEBUG
-    #define ROUTER_DEBUG
+    #define LINE_USAGE_PREDICTOR_DEBUG
+    // ~ #define MEMORY_CONTROLLER_DEBUG
+    // ~ #define ROUTER_DEBUG
     // ~ #define INTERCONNECTION_CTRL_DEBUG
-    #define DIRECTORY_CTRL_DEBUG
+    // ~ #define DIRECTORY_CTRL_DEBUG
     // ~ #define SHOW_FREE_PACKAGE
     #define DEBUG_PRINTF(...)   {\
                                     if (sinuca_engine.get_is_runtime_debug()) {\
@@ -301,22 +300,21 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 /// Line Usage Predictor
 /// ============================================================================
 #include "./line_usage_predictor/line_usage_predictor.hpp"
+#include "./line_usage_predictor/line_usage_predictor_disable.hpp"
 
 #include "./line_usage_predictor/pht_line.hpp"
 #include "./line_usage_predictor/pht_set.hpp"
 #include "./line_usage_predictor/dsbp_metadata_line.hpp"
 #include "./line_usage_predictor/dsbp_metadata_set.hpp"
 #include "./line_usage_predictor/line_usage_predictor_dsbp.hpp"
+#include "./line_usage_predictor/line_usage_predictor_dsbp_oracle.hpp"
 
 #include "./line_usage_predictor/aht_line.hpp"
 #include "./line_usage_predictor/aht_set.hpp"
-#include "./line_usage_predictor/dlec_metadata_line.hpp"
-#include "./line_usage_predictor/dlec_metadata_set.hpp"
-#include "./line_usage_predictor/line_usage_predictor_dlec.hpp"
-
-#include "./line_usage_predictor/line_usage_predictor_subblock_stats.hpp"
-#include "./line_usage_predictor/line_usage_predictor_line_stats.hpp"
-#include "./line_usage_predictor/line_usage_predictor_disable.hpp"
+#include "./line_usage_predictor/dewp_metadata_line.hpp"
+#include "./line_usage_predictor/dewp_metadata_set.hpp"
+#include "./line_usage_predictor/line_usage_predictor_dewp.hpp"
+#include "./line_usage_predictor/line_usage_predictor_dewp_oracle.hpp"
 
 /// ============================================================================
 /// Memory Devices

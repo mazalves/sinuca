@@ -58,25 +58,37 @@ void line_usage_predictor_disable_t::clock(uint32_t subcycle) {
 
 /// ============================================================================
 void line_usage_predictor_disable_t::fill_package_sub_blocks(memory_package_t *package) {
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("fill_package_sub_blocks() package:%s\n", package->content_to_string().c_str())
     (void)package;
+
+    package->memory_size = sinuca_engine.get_global_line_size();
 };
 
 /// ============================================================================
 void line_usage_predictor_disable_t::line_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->content_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_sub_blocks_to_package() package:%s\n", package->content_to_string().c_str())
 
     (void)package;
     (void)index;
     (void)way;
 
-    // Modify the package->sub_blocks (next level request)
-    // ~ package->memory_size = sinuca_engine.get_global_line_size();
+    package->memory_size = sinuca_engine.get_global_line_size();
 };
 
+/// ============================================================================
+void line_usage_predictor_disable_t::predict_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way) {
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("predict_sub_blocks_to_package() package:%s\n", package->content_to_string().c_str())
+
+    (void)package;
+    (void)index;
+    (void)way;
+
+    package->memory_size = sinuca_engine.get_global_line_size();
+};
 
 /// ============================================================================
 bool line_usage_predictor_disable_t::check_sub_block_is_hit(memory_package_t *package, uint64_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("fill_package_sub_blocks() package:%s\n", package->content_to_string().c_str())
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_sub_block_is_hit() package:%s\n", package->content_to_string().c_str())
 
     (void)package;
     (void)index;
@@ -97,7 +109,7 @@ bool line_usage_predictor_disable_t::check_line_is_last_access(uint32_t index, u
 
 /// ============================================================================
 bool line_usage_predictor_disable_t::check_line_is_last_write(uint32_t index, uint32_t way){
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_access()\n")
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_write()\n")
 
     (void)index;
     (void)way;
@@ -120,7 +132,6 @@ void line_usage_predictor_disable_t::line_hit(memory_package_t *package, uint32_
 
 
 /// ============================================================================
-// Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_disable_t::line_miss(memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     this->add_stat_line_miss();         /// Access Statistics
@@ -128,14 +139,10 @@ void line_usage_predictor_disable_t::line_miss(memory_package_t *package, uint32
     (void)package;
     (void)index;
     (void)way;
-
-    // Modify the package->sub_blocks (next level request)
-    // ~ package->memory_size = sinuca_engine.get_global_line_size();
 };
 
 
 /// ============================================================================
-// Collateral Effect: Change the package->sub_blocks[]
 void line_usage_predictor_disable_t::sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("sub_block_miss() package:%s\n", package->content_to_string().c_str())
     this->add_stat_sub_block_miss();         /// Access Statistics
@@ -143,16 +150,13 @@ void line_usage_predictor_disable_t::sub_block_miss(memory_package_t *package, u
     (void)package;
     (void)index;
     (void)way;
-
-    // Modify the package->sub_blocks (next level request)
-    // ~ package->memory_size = sinuca_engine.get_global_line_size();
 };
 
 
 /// ============================================================================
-void line_usage_predictor_disable_t::line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_copy_back() package:%s\n", package->content_to_string().c_str())
-    this->add_stat_send_copyback();         /// Access Statistics
+void line_usage_predictor_disable_t::line_send_writeback(memory_package_t *package, uint32_t index, uint32_t way) {
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_send_writeback() package:%s\n", package->content_to_string().c_str())
+    this->add_stat_send_writeback();         /// Access Statistics
 
     (void)package;
     (void)index;
@@ -161,10 +165,9 @@ void line_usage_predictor_disable_t::line_send_copyback(memory_package_t *packag
 
 
 /// ============================================================================
-// Collateral Effect: Change the package->sub_blocks[]
-void line_usage_predictor_disable_t::line_recv_copyback(memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
-    this->add_stat_recv_copyback();         /// Access Statistics
+void line_usage_predictor_disable_t::line_recv_writeback(memory_package_t *package, uint32_t index, uint32_t way) {
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_recv_writeback() package:%s\n", package->content_to_string().c_str())
+    this->add_stat_recv_writeback();         /// Access Statistics
 
     (void)package;
     (void)index;
@@ -193,19 +196,19 @@ void line_usage_predictor_disable_t::line_invalidation(uint32_t index, uint32_t 
 
 /// ============================================================================
 void line_usage_predictor_disable_t::print_structures() {
-    line_usage_predictor_t::allocate();
+    line_usage_predictor_t::print_structures();
 };
 
 /// ============================================================================
 void line_usage_predictor_disable_t::panic() {
-    line_usage_predictor_t::allocate();
+    line_usage_predictor_t::panic();
 
     this->print_structures();
 };
 
 /// ============================================================================
 void line_usage_predictor_disable_t::periodic_check(){
-    line_usage_predictor_t::allocate();
+    line_usage_predictor_t::periodic_check();
 
     #ifdef PREFETCHER_DEBUG
         this->print_structures();
@@ -216,27 +219,27 @@ void line_usage_predictor_disable_t::periodic_check(){
 /// STATISTICS
 /// ============================================================================
 void line_usage_predictor_disable_t::reset_statistics() {
-    line_usage_predictor_t::allocate();
+    line_usage_predictor_t::reset_statistics();
 
     this->stat_line_hit = 0;
     this->stat_line_miss = 0;
     this->stat_sub_block_miss = 0;
-    this->stat_send_copyback = 0;
-    this->stat_recv_copyback = 0;
+    this->stat_send_writeback = 0;
+    this->stat_recv_writeback = 0;
     this->stat_eviction = 0;
     this->stat_invalidation = 0;
 };
 
 /// ============================================================================
 void line_usage_predictor_disable_t::print_statistics() {
-    line_usage_predictor_t::allocate();
+    line_usage_predictor_t::print_statistics();
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_hit", stat_line_hit);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_miss", stat_line_miss);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sub_block_miss", stat_sub_block_miss);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_send_copyback", stat_send_copyback);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_recv_copyback", stat_recv_copyback);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_send_writeback", stat_send_writeback);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_recv_writeback", stat_recv_writeback);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_eviction", stat_eviction);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_invalidation", stat_invalidation);
 };

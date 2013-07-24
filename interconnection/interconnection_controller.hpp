@@ -37,6 +37,9 @@ class interconnection_controller_t : public interconnection_interface_t {
         edge_t **adjacency_matrix;
         routing_table_element_t **route_matrix;
 
+        int32_t **high_latency_matrix;
+        int32_t **low_latency_matrix;
+
     public:
         /// ====================================================================
         /// Methods
@@ -77,7 +80,7 @@ class interconnection_controller_t : public interconnection_interface_t {
         void find_package_route(memory_package_t *package);
         uint32_t find_package_route_latency(memory_package_t *package, interconnection_interface_t *src, interconnection_interface_t *dst);
         void create_communication_graph();
-
+        void create_communication_cost();
         /// routing algorithms
         void routing_algorithm_floyd_warshall();  /// Create the routing table with floy-wharsall routing algorithm
         void routing_algorithm_xy();  /// Create the routing table for mesh NoCs with XY routing

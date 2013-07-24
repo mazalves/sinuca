@@ -128,6 +128,7 @@ class utils_t {
         static uint64_t fill_bit(uint32_t start, uint32_t end);
 
         static const char *print_mask_of_bits(uint32_t line_size, uint32_t line_number, uint32_t assoc);
+        static const char *bool_to_char(bool input_int);
         static const char *int32_to_char(int32_t input_int);
         static const char *uint32_to_char(uint32_t input_int);
         static const char *uint64_to_char(uint64_t input_int);

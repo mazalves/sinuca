@@ -28,8 +28,9 @@ class directory_controller_t : public interconnection_interface_t {
         /// ====================================================================
         coherence_protocol_t coherence_protocol_type;
         inclusiveness_t inclusiveness_type;
-        bool generate_llc_copyback;
-        bool generate_non_llc_copyback;
+        bool generate_llc_writeback;
+        bool generate_non_llc_writeback;
+        bool final_writeback_all;
 
         /// ====================================================================
         /// Set by this->allocate()
@@ -37,7 +38,7 @@ class directory_controller_t : public interconnection_interface_t {
         uint64_t not_offset_bits_mask;
         container_ptr_cache_memory_t llc_caches;
         container_ptr_directory_line_t directory_lines;
-
+        uint32_t max_cache_level;
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
@@ -45,13 +46,15 @@ class directory_controller_t : public interconnection_interface_t {
         uint64_t stat_read_hit;
         uint64_t stat_prefetch_hit;
         uint64_t stat_write_hit;
-        uint64_t stat_copyback_hit;
+        uint64_t stat_writeback_hit;
 
         uint64_t stat_instruction_miss;
         uint64_t stat_read_miss;
         uint64_t stat_prefetch_miss;
         uint64_t stat_write_miss;
-        uint64_t stat_copyback_miss;
+        uint64_t stat_writeback_miss;
+
+        uint64_t stat_final_writeback_all_cycles;
 
         uint64_t stat_min_instruction_wait_time;
         uint64_t stat_max_instruction_wait_time;
@@ -69,10 +72,9 @@ class directory_controller_t : public interconnection_interface_t {
         uint64_t stat_max_write_wait_time;
         uint64_t stat_acumulated_write_wait_time;
 
-        uint64_t stat_min_copyback_wait_time;
-        uint64_t stat_max_copyback_wait_time;
-        uint64_t stat_acumulated_copyback_wait_time;
-
+        uint64_t stat_min_writeback_wait_time;
+        uint64_t stat_max_writeback_wait_time;
+        uint64_t stat_acumulated_writeback_wait_time;
 
     public:
         /// ====================================================================
@@ -116,19 +118,21 @@ class directory_controller_t : public interconnection_interface_t {
         package_state_t treat_cache_answer(uint32_t obj_id, memory_package_t *package);
         package_state_t treat_cache_request_sent(uint32_t obj_id, memory_package_t *package);
 
-        bool create_cache_copyback(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
+        bool create_cache_writeback(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
 
         uint32_t find_next_obj_id(cache_memory_t *cache_memory, uint64_t memory_address);
         bool is_locked(uint64_t memory_address);
 
-        bool coherence_is_read(memory_operation_t memory_operation);
-        bool coherence_is_hit(cache_line_t *cache_line, memory_operation_t memory_operation);
-        bool coherence_need_copyback(cache_memory_t *cache_memory, cache_line_t *cache_line);
+        inline bool coherence_is_read(memory_operation_t memory_operation);
+        inline bool coherence_is_dirty(protocol_status_t line_status);
+        inline bool coherence_is_hit(cache_line_t *cache_line, memory_operation_t memory_operation);
+        inline bool coherence_need_writeback(cache_memory_t *cache_memory, cache_line_t *cache_line);
 
-        protocol_status_t find_copyback_higher_levels(cache_memory_t *cache_memory, uint64_t memory_address);
+        protocol_status_t find_writeback_higher_levels(cache_memory_t *cache_memory, uint64_t memory_address);
         protocol_status_t find_cache_line_higher_levels(cache_memory_t *cache_memory, uint64_t memory_address, bool check_llc);
 
         void coherence_invalidate_all(cache_memory_t *cache_memory, uint64_t memory_address);
+        bool coherence_evict_all();
         void coherence_evict_higher_levels(cache_memory_t *cache_memory, uint64_t memory_address);
 
         void new_statistics(cache_memory_t *cache, memory_package_t *package, bool is_hit);
@@ -146,8 +150,10 @@ class directory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint64_t, not_offset_bits_mask)
         INSTANTIATE_GET_SET(coherence_protocol_t, coherence_protocol_type)
         INSTANTIATE_GET_SET(inclusiveness_t, inclusiveness_type)
-        INSTANTIATE_GET_SET(bool, generate_llc_copyback)
-        INSTANTIATE_GET_SET(bool, generate_non_llc_copyback)
+        INSTANTIATE_GET_SET(bool, generate_llc_writeback)
+        INSTANTIATE_GET_SET(bool, generate_non_llc_writeback)
+        INSTANTIATE_GET_SET(bool, final_writeback_all)
+
 
         /// ====================================================================
         /// Statistics related
@@ -156,13 +162,15 @@ class directory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_read_hit)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_prefetch_hit)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_write_hit)
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_copyback_hit)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_writeback_hit)
 
-        INSTANTIATE_GET_SET(uint64_t, stat_instruction_miss)
-        INSTANTIATE_GET_SET(uint64_t, stat_read_miss)
-        INSTANTIATE_GET_SET(uint64_t, stat_prefetch_miss)
-        INSTANTIATE_GET_SET(uint64_t, stat_write_miss)
-        INSTANTIATE_GET_SET(uint64_t, stat_copyback_miss)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_instruction_miss)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_read_miss)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_prefetch_miss)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_write_miss)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_writeback_miss)
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_final_writeback_all_cycles)
 
         inline void add_stat_instruction_miss(uint64_t born_cycle) {
             this->stat_instruction_miss++;
@@ -196,11 +204,11 @@ class directory_controller_t : public interconnection_interface_t {
             if (this->stat_max_write_wait_time < new_time) this->stat_max_write_wait_time = new_time;
         };
 
-        inline void add_stat_copyback_miss(uint64_t born_cycle) {
-            this->stat_copyback_miss++;
+        inline void add_stat_writeback_miss(uint64_t born_cycle) {
+            this->stat_writeback_miss++;
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
-            this->stat_acumulated_copyback_wait_time += new_time;
-            if (this->stat_min_copyback_wait_time > new_time || this->stat_min_copyback_wait_time == 0) this->stat_min_copyback_wait_time = new_time;
-            if (this->stat_max_copyback_wait_time < new_time) this->stat_max_copyback_wait_time = new_time;
+            this->stat_acumulated_writeback_wait_time += new_time;
+            if (this->stat_min_writeback_wait_time > new_time || this->stat_min_writeback_wait_time == 0) this->stat_min_writeback_wait_time = new_time;
+            if (this->stat_max_writeback_wait_time < new_time) this->stat_max_writeback_wait_time = new_time;
         };
 };

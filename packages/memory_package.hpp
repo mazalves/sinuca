@@ -30,7 +30,7 @@
   */
 class memory_package_t {
     public:
-        uint32_t id_owner;                      /// if (read / write) PROCESSOR.ID   else if (copy-back / prefetch) CACHE_MEMORY.ID
+        uint32_t id_owner;                      /// if (read / write) PROCESSOR.ID   else if (write-back / prefetch) CACHE_MEMORY.ID
         uint64_t opcode_number;                 /// initial opcode number
         uint64_t opcode_address;                /// initial opcode address
         uint64_t uop_number;                    /// initial uop number (Instruction == 0)
@@ -44,7 +44,7 @@ class memory_package_t {
         memory_operation_t memory_operation;    /// memory operation
         bool is_answer;                         /// is answer or request
 
-        bool *sub_blocks;
+        bool *sub_blocks;                       /// required for the line_usage_predictor
 
         /// Router Control
         uint32_t id_src;                        /// id src component

@@ -189,7 +189,7 @@ std::string utils_t::connections_pretty(cache_memory_t *cache_memory, uint32_t l
     answer += "|--- ";
     answer += cache_memory->get_label();
     answer += " (L";
-    answer += uint32_to_string(cache_memory->get_hierarchy_level());
+    answer += uint32_to_char(cache_memory->get_hierarchy_level());
     answer += ")\n";
 
     /// Find Next Cache Level
@@ -216,6 +216,17 @@ std::string utils_t::connections_pretty(cache_memory_t *cache_memory, uint32_t l
 
     return answer;
 };
+
+//==============================================================================
+const char* utils_t::bool_to_char(bool input_int) {
+    /// Auxiliar strings
+    static char a[2];
+    a[0] = '\0';
+
+    sprintf(a , "%s", input_int ? "T" : "F");
+    return a;
+}
+
 
 //==============================================================================
 const char* utils_t::uint32_to_char(uint32_t input_int) {

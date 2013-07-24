@@ -205,6 +205,9 @@ class processor_t : public interconnection_interface_t {
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
+        uint64_t stat_active_cycles;
+        uint64_t stat_idle_cycles;
+
         uint64_t stat_branch_stall_cycles;
         uint64_t stat_sync_stall_cycles;
 
@@ -438,6 +441,9 @@ class processor_t : public interconnection_interface_t {
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_active_cycles)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_idle_cycles)
+
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_branch_stall_cycles)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_sync_stall_cycles)
 

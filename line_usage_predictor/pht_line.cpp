@@ -72,14 +72,14 @@ std::string pht_line_t::content_to_string() {
     content_string = content_string + " Last_Access:" + utils_t::uint64_to_char(this->last_access);
     content_string = content_string + " Pointer:" + utils_t::uint32_to_char(this->pointer);
     content_string = content_string + "\n";
-    
+
     /// access_counter
     content_string = content_string + "\t access_counter [";
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
         if (i % 4 == 0) {
             content_string = content_string + "|";
         }
-        content_string = content_string + " " + utils_t::uint32_to_char(this->access_counter[i]);
+        content_string = content_string + " " + utils_t::uint64_to_char(this->access_counter[i]);
     }
     content_string = content_string + "]\n";
 
@@ -89,10 +89,10 @@ std::string pht_line_t::content_to_string() {
         if (i % 4 == 0) {
             content_string = content_string + "|";
         }
-        content_string = content_string + " " + utils_t::uint32_to_char(this->overflow[i]);
+        content_string = content_string + " " + utils_t::bool_to_char(this->overflow[i]);
     }
     content_string = content_string + "]\n";
-    
+
     return content_string;
 };
 

@@ -37,7 +37,7 @@ class cache_line_t {
             this->status = PROTOCOL_STATUS_I;
             this->last_access = 0;
             this->usage_counter = 0;
-            this->dirty = true;
+            this->dirty = false;
         };
         ~cache_line_t() {
         };

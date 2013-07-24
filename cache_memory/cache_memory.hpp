@@ -47,7 +47,7 @@ class cache_memory_t : public interconnection_interface_t {
         uint32_t penalty_write;
 
         uint32_t mshr_buffer_request_reserved_size;
-        uint32_t mshr_buffer_copyback_reserved_size;
+        uint32_t mshr_buffer_writeback_reserved_size;
         uint32_t mshr_buffer_prefetch_reserved_size;
 
         uint32_t mshr_request_different_lines_size;
@@ -95,21 +95,21 @@ class cache_memory_t : public interconnection_interface_t {
         /// ====================================================================
         uint64_t stat_accesses;
         uint64_t stat_invalidation;
-        uint64_t stat_invalidation_copyback;
+        uint64_t stat_invalidation_writeback;
         uint64_t stat_eviction;
-        uint64_t stat_eviction_copyback;
+        uint64_t stat_eviction_writeback;
 
         uint64_t stat_instruction_hit;
         uint64_t stat_read_hit;
         uint64_t stat_prefetch_hit;
         uint64_t stat_write_hit;
-        uint64_t stat_copyback_hit;
+        uint64_t stat_writeback_hit;
 
         uint64_t stat_instruction_miss;
         uint64_t stat_read_miss;
         uint64_t stat_prefetch_miss;
         uint64_t stat_write_miss;
-        uint64_t stat_copyback_miss;
+        uint64_t stat_writeback_miss;
 
         uint64_t stat_min_instruction_wait_time;
         uint64_t stat_max_instruction_wait_time;
@@ -127,12 +127,12 @@ class cache_memory_t : public interconnection_interface_t {
         uint64_t stat_max_write_wait_time;
         uint64_t stat_acumulated_write_wait_time;
 
-        uint64_t stat_min_copyback_wait_time;
-        uint64_t stat_max_copyback_wait_time;
-        uint64_t stat_acumulated_copyback_wait_time;
+        uint64_t stat_min_writeback_wait_time;
+        uint64_t stat_max_writeback_wait_time;
+        uint64_t stat_acumulated_writeback_wait_time;
 
         uint64_t stat_full_mshr_buffer_request;
-        uint64_t stat_full_mshr_buffer_copyback;
+        uint64_t stat_full_mshr_buffer_writeback;
         uint64_t stat_full_mshr_buffer_prefetch;
 
     public:
@@ -204,9 +204,10 @@ class cache_memory_t : public interconnection_interface_t {
 
         void insert_mshr_born_ordered(memory_package_t* package);
         int32_t allocate_request(memory_package_t* package);
-        int32_t allocate_copyback(memory_package_t* package);
+        int32_t allocate_writeback(memory_package_t* package);
         int32_t allocate_prefetch(memory_package_t* package);
 
+        cache_line_t* get_line(uint32_t index, uint32_t way);
         cache_line_t* find_line(uint64_t memory_address, uint32_t& index, uint32_t& way);
         cache_line_t* evict_address(uint64_t memory_address, uint32_t& index, uint32_t& way);
         void change_address(cache_line_t *line, uint64_t new_memory_address);
@@ -216,8 +217,8 @@ class cache_memory_t : public interconnection_interface_t {
         /// Methods called by the directory to add statistics and others
         void cache_hit(memory_package_t *package);
         void cache_miss(memory_package_t *package);
-        void cache_invalidate(bool is_copyback);
-        void cache_evict(bool is_copyback);
+        void cache_invalidate(bool is_writeback);
+        void cache_evict(bool is_writeback);
 
         INSTANTIATE_GET_SET(uint32_t, cache_id)
         INSTANTIATE_GET_SET(uint32_t, bank_number)
@@ -236,7 +237,7 @@ class cache_memory_t : public interconnection_interface_t {
 
         INSTANTIATE_GET_SET(uint32_t, mshr_buffer_size)
         INSTANTIATE_GET_SET(uint32_t, mshr_buffer_request_reserved_size)
-        INSTANTIATE_GET_SET(uint32_t, mshr_buffer_copyback_reserved_size)
+        INSTANTIATE_GET_SET(uint32_t, mshr_buffer_writeback_reserved_size)
         INSTANTIATE_GET_SET(uint32_t, mshr_buffer_prefetch_reserved_size)
 
         INSTANTIATE_GET_SET(uint32_t, mshr_request_different_lines_size)
@@ -247,24 +248,24 @@ class cache_memory_t : public interconnection_interface_t {
         /// ====================================================================
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_accesses)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_invalidation)
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_invalidation_copyback)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_invalidation_writeback)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction)
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction_copyback)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction_writeback)
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_instruction_hit)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_read_hit)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_prefetch_hit)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_write_hit)
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_copyback_hit)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_writeback_hit)
 
         INSTANTIATE_GET_SET(uint64_t, stat_instruction_miss)
         INSTANTIATE_GET_SET(uint64_t, stat_read_miss)
         INSTANTIATE_GET_SET(uint64_t, stat_prefetch_miss)
         INSTANTIATE_GET_SET(uint64_t, stat_write_miss)
-        INSTANTIATE_GET_SET(uint64_t, stat_copyback_miss)
+        INSTANTIATE_GET_SET(uint64_t, stat_writeback_miss)
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_buffer_request);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_buffer_copyback);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_buffer_writeback);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_buffer_prefetch);
 
 
@@ -300,11 +301,11 @@ class cache_memory_t : public interconnection_interface_t {
             if (this->stat_max_write_wait_time < new_time) this->stat_max_write_wait_time = new_time;
         };
 
-        inline void add_stat_copyback_miss(uint64_t born_cycle) {
-            this->stat_copyback_miss++;
+        inline void add_stat_writeback_miss(uint64_t born_cycle) {
+            this->stat_writeback_miss++;
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
-            this->stat_acumulated_copyback_wait_time += new_time;
-            if (this->stat_min_copyback_wait_time > new_time) this->stat_min_copyback_wait_time = new_time;
-            if (this->stat_max_copyback_wait_time < new_time) this->stat_max_copyback_wait_time = new_time;
+            this->stat_acumulated_writeback_wait_time += new_time;
+            if (this->stat_min_writeback_wait_time > new_time) this->stat_min_writeback_wait_time = new_time;
+            if (this->stat_max_writeback_wait_time < new_time) this->stat_max_writeback_wait_time = new_time;
         };
 };

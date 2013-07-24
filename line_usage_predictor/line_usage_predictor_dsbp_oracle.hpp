@@ -21,7 +21,7 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
 /// ============================================================================
-class line_usage_predictor_subblock_stats_t : public line_usage_predictor_t {
+class line_usage_predictor_dsbp_oracle_t : public line_usage_predictor_t {
     private:
         /// ====================================================================
         /// Set by sinuca_configurator
@@ -45,8 +45,8 @@ class line_usage_predictor_subblock_stats_t : public line_usage_predictor_t {
         uint64_t stat_line_hit;
         uint64_t stat_line_miss;
         uint64_t stat_sub_block_miss;
-        uint64_t stat_send_copyback;
-        uint64_t stat_recv_copyback;
+        uint64_t stat_send_writeback;
+        uint64_t stat_recv_writeback;
         uint64_t stat_eviction;
         uint64_t stat_invalidation;
 
@@ -73,8 +73,8 @@ class line_usage_predictor_subblock_stats_t : public line_usage_predictor_t {
         /// ====================================================================
         /// Methods
         /// ====================================================================
-        line_usage_predictor_subblock_stats_t();
-        ~line_usage_predictor_subblock_stats_t();
+        line_usage_predictor_dsbp_oracle_t();
+        ~line_usage_predictor_dsbp_oracle_t();
         inline const char* get_type_component_label() {
             return "LINE_USAGE_PREDICTOR";
         };
@@ -107,6 +107,8 @@ class line_usage_predictor_subblock_stats_t : public line_usage_predictor_t {
         /// Inspections
         void fill_package_sub_blocks(memory_package_t *package);
         void line_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way);
+        void predict_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way);
+
         bool check_sub_block_is_hit(memory_package_t *package, uint64_t index, uint32_t way);
         bool check_line_is_last_access(uint32_t index, uint32_t way);
         bool check_line_is_last_write(uint32_t index, uint32_t way);
@@ -115,8 +117,8 @@ class line_usage_predictor_subblock_stats_t : public line_usage_predictor_t {
         void line_hit(memory_package_t *package, uint32_t index, uint32_t way);
         void line_miss(memory_package_t *package, uint32_t index, uint32_t way);
         void sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way);
-        void line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way);
-        void line_recv_copyback(memory_package_t *package, uint32_t index, uint32_t way);
+        void line_send_writeback(memory_package_t *package, uint32_t index, uint32_t way);
+        void line_recv_writeback(memory_package_t *package, uint32_t index, uint32_t way);
         void line_eviction(uint32_t index, uint32_t way);
         void line_invalidation(uint32_t index, uint32_t way);
         /// ====================================================================
@@ -139,8 +141,8 @@ class line_usage_predictor_subblock_stats_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_hit);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_miss);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_miss);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_send_copyback);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_recv_copyback);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_send_writeback);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_recv_writeback);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_invalidation);
 

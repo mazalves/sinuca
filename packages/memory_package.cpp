@@ -27,6 +27,8 @@
 /// ============================================================================
 memory_package_t::memory_package_t() {
     ERROR_ASSERT_PRINTF(sinuca_engine.get_global_line_size() > 0, "Allocating 0 positions.\n")
+    // =============================================================
+    // Line Usage Predictor
     this->sub_blocks = utils_t::template_allocate_initialize_array<bool>(sinuca_engine.get_global_line_size(), false);
 
     this->package_clean();
@@ -54,6 +56,8 @@ memory_package_t &memory_package_t::operator=(const memory_package_t &package) {
     this->memory_operation = package.memory_operation;
     this->is_answer = package.is_answer;
 
+    // =============================================================
+    // Line Usage Predictor
     // ~ for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
         // ~ this->sub_blocks[i] = package.sub_blocks[i];
     // ~ }
@@ -83,6 +87,8 @@ void memory_package_t::package_clean() {
     this->memory_operation = MEMORY_OPERATION_INST;
     this->is_answer = false;
 
+    // =============================================================
+    // Line Usage Predictor
     // ~ for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
         // ~ this->sub_blocks[i] = false;
     // ~ }

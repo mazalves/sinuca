@@ -85,13 +85,13 @@ memory_controller_t::~memory_controller_t() {
 void memory_controller_t::allocate() {
 
     ERROR_ASSERT_PRINTF(mshr_buffer_request_reserved_size > 0, "mshr_buffer_request_reserved_size should be bigger than zero.\n");
-    ERROR_ASSERT_PRINTF(mshr_buffer_copyback_reserved_size > 0, "mshr_buffer_copyback_reserved_size should be bigger than zero.\n");
+    ERROR_ASSERT_PRINTF(mshr_buffer_writeback_reserved_size > 0, "mshr_buffer_writeback_reserved_size should be bigger than zero.\n");
     ERROR_ASSERT_PRINTF(mshr_buffer_prefetch_reserved_size > 0, "mshr_buffer_prefetch_reserved_size should be bigger than zero.\n");
 
 
-    /// MSHR = [    REQUEST    | COPYBACK | PREFETCH ]
+    /// MSHR = [    REQUEST    | WRITEBACK | PREFETCH ]
     this->mshr_buffer_size = this->mshr_buffer_request_reserved_size +
-                                this->mshr_buffer_copyback_reserved_size +
+                                this->mshr_buffer_writeback_reserved_size +
                                 this->mshr_buffer_prefetch_reserved_size;
     this->mshr_buffer = utils_t::template_allocate_array<memory_package_t>(this->get_mshr_buffer_size());
     this->mshr_born_ordered.reserve(this->mshr_buffer_size);
@@ -300,8 +300,8 @@ void memory_controller_t::clock(uint32_t subcycle) {
                     this->add_stat_prefetch_completed(this->mshr_born_ordered[i]->born_cycle);
                 break;
 
-                case MEMORY_OPERATION_COPYBACK:
-                    this->add_stat_copyback_completed(this->mshr_born_ordered[i]->born_cycle);
+                case MEMORY_OPERATION_WRITEBACK:
+                    this->add_stat_writeback_completed(this->mshr_born_ordered[i]->born_cycle);
                 break;
 
                 case MEMORY_OPERATION_WRITE:
@@ -407,13 +407,13 @@ int32_t memory_controller_t::allocate_request(memory_package_t* package){
 };
 
 /// ============================================================================
-int32_t memory_controller_t::allocate_copyback(memory_package_t* package){
+int32_t memory_controller_t::allocate_writeback(memory_package_t* package){
 
-    int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size, this->mshr_buffer_copyback_reserved_size);
-    ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Receiving a COPYBACK package, but MSHR is full\n")
+    int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size, this->mshr_buffer_writeback_reserved_size);
+    ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Receiving a WRITEBACK package, but MSHR is full\n")
     if (slot != POSITION_FAIL) {
         slot += this->mshr_buffer_request_reserved_size;
-        MEMORY_CONTROLLER_DEBUG_PRINTF("\t NEW COPYBACK\n");
+        MEMORY_CONTROLLER_DEBUG_PRINTF("\t NEW WRITEBACK\n");
         this->mshr_buffer[slot] = *package;
         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
     }
@@ -422,11 +422,11 @@ int32_t memory_controller_t::allocate_copyback(memory_package_t* package){
 
 /// ============================================================================
 int32_t memory_controller_t::allocate_prefetch(memory_package_t* package){
-    int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size,
+    int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_writeback_reserved_size,
                                                 this->mshr_buffer_prefetch_reserved_size);
     ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Receiving a PREFETCH package, but MSHR is full\n")
     if (slot != POSITION_FAIL) {
-        slot += this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size;
+        slot += this->mshr_buffer_request_reserved_size + this->mshr_buffer_writeback_reserved_size;
         MEMORY_CONTROLLER_DEBUG_PRINTF("\t NEW PREFETCH\n");
         this->mshr_buffer[slot] = *package;
         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
@@ -440,7 +440,7 @@ int32_t memory_controller_t::allocate_prefetch(memory_package_t* package){
 int32_t memory_controller_t::send_package(memory_package_t *package) {
     MEMORY_CONTROLLER_DEBUG_PRINTF("send_package() package:%s\n", package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
-    ERROR_ASSERT_PRINTF(package->memory_operation != MEMORY_OPERATION_COPYBACK && package->memory_operation != MEMORY_OPERATION_WRITE, "Main memory must never send answer for WRITE.\n");
+    ERROR_ASSERT_PRINTF(package->memory_operation != MEMORY_OPERATION_WRITEBACK && package->memory_operation != MEMORY_OPERATION_WRITE, "Main memory must never send answer for WRITE.\n");
 
     if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
         sinuca_engine.interconnection_controller->find_package_route(package);
@@ -507,9 +507,9 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
                 return FAIL;
             break;
 
-            case MEMORY_OPERATION_COPYBACK:
+            case MEMORY_OPERATION_WRITEBACK:
             case MEMORY_OPERATION_WRITE:
-                slot = this->allocate_copyback(package);
+                slot = this->allocate_writeback(package);
                 if (slot != POSITION_FAIL) {
                     MEMORY_CONTROLLER_DEBUG_PRINTF("\t RECEIVED READ REQUEST\n");
                     this->mshr_buffer[slot].package_untreated(1);
@@ -564,10 +564,10 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
         this->token_list.push_back(new_token);
     }
 
-    /// Attention: Since we classify the incoming requests into request, prefetch and copyback
+    /// Attention: Since we classify the incoming requests into request, prefetch and writeback
     /// But we only have one token_list, we are counting how many requests of each type exists
     /// so we know if we can or cannot receive the package.
-    uint32_t slot, request_number = 0, copyback_number = 0, prefetch_number = 0;
+    uint32_t slot, request_number = 0, writeback_number = 0, prefetch_number = 0;
     for (slot = 0; slot < token; slot++) {
         switch (this->token_list[slot].memory_operation) {
             case MEMORY_OPERATION_READ:
@@ -579,9 +579,9 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
                 prefetch_number++;
             break;
 
-            case MEMORY_OPERATION_COPYBACK:
+            case MEMORY_OPERATION_WRITEBACK:
             case MEMORY_OPERATION_WRITE:
-                copyback_number++;
+                writeback_number++;
             break;
         }
     }
@@ -610,14 +610,14 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
             }
         break;
 
-        case MEMORY_OPERATION_COPYBACK:
+        case MEMORY_OPERATION_WRITEBACK:
         case MEMORY_OPERATION_WRITE:
-            if (copyback_number < this->check_token_space(package)) {
+            if (writeback_number < this->check_token_space(package)) {
                 /// Lets party !
                 return OK;
             }
             else {
-                this->add_stat_full_mshr_buffer_copyback();
+                this->add_stat_full_mshr_buffer_writeback();
             }
         break;
     }
@@ -640,14 +640,14 @@ uint32_t memory_controller_t::check_token_space(memory_package_t *package) {
         break;
 
         case MEMORY_OPERATION_PREFETCH:
-            free_space = memory_package_t::count_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_copyback_reserved_size,
+            free_space = memory_package_t::count_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_writeback_reserved_size,
                                                     this->mshr_buffer_prefetch_reserved_size);
         break;
 
-        case MEMORY_OPERATION_COPYBACK:
+        case MEMORY_OPERATION_WRITEBACK:
         case MEMORY_OPERATION_WRITE:
             free_space = memory_package_t::count_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size,
-                                                    this->mshr_buffer_copyback_reserved_size);
+                                                    this->mshr_buffer_writeback_reserved_size);
         break;
     }
 
@@ -715,7 +715,7 @@ void memory_controller_t::reset_statistics() {
     this->set_stat_read_completed(0);
     this->set_stat_prefetch_completed(0);
     this->set_stat_write_completed(0);
-    this->set_stat_copyback_completed(0);
+    this->set_stat_writeback_completed(0);
 
     this->stat_min_instruction_wait_time = MAX_ALIVE_TIME;
     this->stat_max_instruction_wait_time = 0;
@@ -733,12 +733,12 @@ void memory_controller_t::reset_statistics() {
     this->stat_max_write_wait_time = 0;
     this->stat_acumulated_write_wait_time = 0;
 
-    this->stat_min_copyback_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_copyback_wait_time = 0;
-    this->stat_acumulated_copyback_wait_time = 0;
+    this->stat_min_writeback_wait_time = MAX_ALIVE_TIME;
+    this->stat_max_writeback_wait_time = 0;
+    this->stat_acumulated_writeback_wait_time = 0;
 
     this->stat_full_mshr_buffer_request = 0;
-    this->stat_full_mshr_buffer_copyback = 0;
+    this->stat_full_mshr_buffer_writeback = 0;
     this->stat_full_mshr_buffer_prefetch = 0;
 
     for (uint32_t i = 0; i < this->channels_per_controller; i++) {
@@ -761,36 +761,36 @@ void memory_controller_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_read_completed", stat_read_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_prefetch_completed", stat_prefetch_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_write_completed", stat_write_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_copyback_completed", stat_copyback_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writeback_completed", stat_writeback_completed);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_read", stat_instruction_completed + stat_read_completed + stat_prefetch_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write", stat_write_completed + stat_copyback_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write", stat_write_completed + stat_writeback_completed);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_instruction_wait_time", stat_min_instruction_wait_time);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_read_wait_time", stat_min_read_wait_time);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_prefetch_wait_time", stat_min_prefetch_wait_time);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_write_wait_time", stat_min_write_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_copyback_wait_time", stat_min_copyback_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_writeback_wait_time", stat_min_writeback_wait_time);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_instruction_wait_time", stat_max_instruction_wait_time);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_read_wait_time", stat_max_read_wait_time);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_prefetch_wait_time", stat_max_prefetch_wait_time);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_write_wait_time", stat_max_write_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_copyback_wait_time", stat_max_copyback_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_writeback_wait_time", stat_max_writeback_wait_time);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_instruction_wait_time",stat_acumulated_instruction_wait_time, stat_instruction_completed);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_read_wait_time",stat_acumulated_read_wait_time, stat_read_completed);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_prefetch_wait_time",stat_acumulated_prefetch_wait_time, stat_prefetch_completed);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_write_wait_time",stat_acumulated_write_wait_time, stat_write_completed);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_copyback_wait_time",stat_acumulated_copyback_wait_time, stat_copyback_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_writeback_wait_time",stat_acumulated_writeback_wait_time, stat_writeback_completed);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_buffer_request", stat_full_mshr_buffer_request);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_buffer_copyback", stat_full_mshr_buffer_copyback);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_buffer_writeback", stat_full_mshr_buffer_writeback);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_buffer_prefetch", stat_full_mshr_buffer_prefetch);
 
     for (uint32_t i = 0; i < this->channels_per_controller; i++) {
@@ -828,7 +828,7 @@ void memory_controller_t::print_configuration() {
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_buffer_request_reserved_size", mshr_buffer_request_reserved_size);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_buffer_copyback_reserved_size", mshr_buffer_copyback_reserved_size);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_buffer_writeback_reserved_size", mshr_buffer_writeback_reserved_size);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_buffer_prefetch_reserved_size", mshr_buffer_prefetch_reserved_size);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_buffer_size", mshr_buffer_size);
 

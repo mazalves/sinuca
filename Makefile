@@ -74,15 +74,16 @@ SRC_PREFETCH =		prefetch/prefetcher.cpp \
 					prefetch/prefetcher_disable.cpp
 
 SRC_LINE_USAGE_PREDICTOR =	line_usage_predictor/line_usage_predictor.cpp \
+							line_usage_predictor/line_usage_predictor_disable.cpp \
 							line_usage_predictor/pht_line.cpp \
 							line_usage_predictor/dsbp_metadata_line.cpp \
 							line_usage_predictor/line_usage_predictor_dsbp.cpp \
+							line_usage_predictor/line_usage_predictor_dsbp_oracle.cpp \
 							line_usage_predictor/aht_line.cpp \
-							line_usage_predictor/dlec_metadata_line.cpp \
-							line_usage_predictor/line_usage_predictor_dlec.cpp \
-							line_usage_predictor/line_usage_predictor_subblock_stats.cpp \
-							line_usage_predictor/line_usage_predictor_line_stats.cpp \
-							line_usage_predictor/line_usage_predictor_disable.cpp
+							line_usage_predictor/dewp_metadata_line.cpp \
+							line_usage_predictor/line_usage_predictor_dewp.cpp \
+							line_usage_predictor/line_usage_predictor_dewp_oracle.cpp
+
 
 SRC_CACHE_MEMORY =	cache_memory/mshr_diff_line.cpp \
 					cache_memory/cache_memory.cpp

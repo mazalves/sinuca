@@ -125,6 +125,7 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
 
                             uint64_t opcode_address = package->opcode_address ;
                             uint64_t memory_address = (this->stream_table[slot].ending_address & this->not_offset_bits_mask) + (sinuca_engine.get_global_line_size() * index);
+                            memory_address += this->stream_table[slot].first_address & this->offset_bits_mask; /// Line usage predictor information
 
                             this->request_buffer[position].packager(
                                                                 0,                                          /// Request Owner
@@ -160,7 +161,6 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
                     else {
                         this->stream_table[slot].ending_address += sinuca_engine.get_global_line_size() * this->prefetch_degree;
                     }
-                    // ~ this->stream_table[slot].ending_address += sinuca_engine.get_global_line_size() * this->prefetch_degree;
                     this->stream_table[slot].starting_address = package->memory_address;
                     break;
                 }
@@ -185,6 +185,7 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
 
                             uint64_t opcode_address = package->opcode_address ;
                             uint64_t memory_address = (this->stream_table[slot].ending_address & this->not_offset_bits_mask) - (sinuca_engine.get_global_line_size() * index);
+                            memory_address += this->stream_table[slot].first_address & this->offset_bits_mask; /// Line_usage_predictor information
 
                             this->request_buffer[position].packager(
                                                                 0,                                          /// Request Owner
@@ -220,7 +221,6 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
                     else {
                         this->stream_table[slot].ending_address -= sinuca_engine.get_global_line_size() * this->prefetch_degree;
                     }
-                    // ~ this->stream_table[slot].ending_address -= sinuca_engine.get_global_line_size() * this->prefetch_degree;
                     this->stream_table[slot].starting_address = package->memory_address;
                     break;
                 }
@@ -316,6 +316,7 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
         if (available_slot != POSITION_FAIL) {
             this->stream_table[available_slot].clean();
             this->stream_table[available_slot].state = PREFETCHER_STREAM_STATE_ALLOCATED;
+            this->stream_table[available_slot].first_address = package->memory_address; /// Line_usage_predictor
             this->stream_table[available_slot].starting_address = package->memory_address;
             this->stream_table[available_slot].cycle_last_activation = sinuca_engine.get_global_cycle();
         }
@@ -324,6 +325,7 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
                 if ((this->stream_table[slot].cycle_last_activation + this->lifetime_cycles) < sinuca_engine.get_global_cycle()) {
                     this->stream_table[slot].clean();
                     this->stream_table[slot].state = PREFETCHER_STREAM_STATE_ALLOCATED;
+                    this->stream_table[slot].first_address = package->memory_address; /// Line_usage_predictor
                     this->stream_table[slot].starting_address = package->memory_address;
                     this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
                     break;

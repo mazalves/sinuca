@@ -21,42 +21,34 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
 /// ============================================================================
-class dlec_metadata_line_t {
+class dewp_metadata_line_t {
     public:
-        line_sub_block_t valid_sub_blocks;
-        uint64_t real_access_counter;
-        uint64_t access_counter;
-        bool overflow;
-        bool learn_mode;
-        aht_line_t *ahtm_pointer;
-        aht_line_t *ahtc_pointer;
+        line_sub_block_t line_status;
 
-        /// Static Energy
-        uint64_t clock_become_alive;
-        uint64_t clock_become_dead;
+        uint64_t real_access_counter_read;
+        uint64_t real_access_counter_writeback;
+
+        uint64_t access_counter_read;
+        uint64_t access_counter_writeback;
+
+        bool overflow_read;
+        bool overflow_writeback;
+
+        bool learn_mode;
+        aht_line_t *aht_pointer;
 
         /// Special Flags
+        bool is_dead_read;
+        bool is_dead_writeback;
         bool is_dirty;
-        bool need_copyback;
-        bool is_dead;
-        bool is_last_access;
-        bool is_last_write;
 
-        /// Statistics
-        uint64_t stat_access_counter;
-        uint64_t stat_write_counter;
-
-        uint64_t stat_clock_first_read;
-        uint64_t stat_clock_last_read;
-
-        uint64_t stat_clock_first_write;
-        uint64_t stat_clock_last_write;
-
+        /// Static Energy
+        uint64_t clock_first_access;
         /// ====================================================================
         /// Methods
         /// ====================================================================
-        dlec_metadata_line_t();
-        ~dlec_metadata_line_t();
+        dewp_metadata_line_t();
+        ~dewp_metadata_line_t();
 
         void clean();
         void reset_statistics();

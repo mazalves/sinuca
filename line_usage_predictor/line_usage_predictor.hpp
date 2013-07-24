@@ -70,8 +70,10 @@ class line_usage_predictor_t : public interconnection_interface_t {
         /// ====================================================================
 
         /// Inspections
-        virtual void fill_package_sub_blocks(memory_package_t *package)=0;
-        virtual void line_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way)=0;
+        virtual void fill_package_sub_blocks(memory_package_t *package)=0;  /// Check the offset and package size and enable correct bits
+        virtual void line_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way)=0; /// Get the line subblocks and add to package (writeback)
+        virtual void predict_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way)=0; /// Predict subblocks and add to package (miss/request)
+
         virtual bool check_sub_block_is_hit(memory_package_t *package, uint64_t index, uint32_t way)=0;
         virtual bool check_line_is_last_access(uint32_t index, uint32_t way)=0;
         virtual bool check_line_is_last_write(uint32_t index, uint32_t way)=0;
@@ -79,8 +81,8 @@ class line_usage_predictor_t : public interconnection_interface_t {
         virtual void line_hit(memory_package_t *package, uint32_t index, uint32_t way)=0;
         virtual void line_miss(memory_package_t *package, uint32_t index, uint32_t way)=0;
         virtual void sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way)=0;
-        virtual void line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way)=0;
-        virtual void line_recv_copyback(memory_package_t *package, uint32_t index, uint32_t way)=0;
+        virtual void line_send_writeback(memory_package_t *package, uint32_t index, uint32_t way)=0;
+        virtual void line_recv_writeback(memory_package_t *package, uint32_t index, uint32_t way)=0;
         virtual void line_eviction(uint32_t index, uint32_t way)=0;
         virtual void line_invalidation(uint32_t index, uint32_t way)=0;
 

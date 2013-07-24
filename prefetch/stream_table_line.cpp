@@ -36,6 +36,8 @@ stream_table_line_t::~stream_table_line_t() {
 
 /// ============================================================================
 void stream_table_line_t::clean() {
+    this->first_address = 0;             /// First address that generated this stream (line_usage_predictor information)
+
      this->starting_address = 0;
      this->ending_address = 0;
      this->direction = 0;
@@ -59,8 +61,9 @@ std::string stream_table_line_t::content_to_string() {
     #endif
 
 
-    content_string = content_string + " STREAM: Starting Address:" + utils_t::uint64_to_char(this->starting_address);
-    content_string = content_string + " STREAM: Ending Address:" + utils_t::uint64_to_char(this->ending_address);
+    content_string = content_string + " STREAM: First Address:" + utils_t::uint64_to_char(this->first_address); /// line_usage_predictor information
+    content_string = content_string + " Starting Address:" + utils_t::uint64_to_char(this->starting_address);
+    content_string = content_string + " Ending Address:" + utils_t::uint64_to_char(this->ending_address);
     content_string = content_string + " Stream Direction:" + utils_t::uint32_to_char(this->direction);
 
     content_string = content_string + " Stream Last Activation:" + utils_t::int64_to_char(this->cycle_last_activation);
@@ -81,7 +84,7 @@ std::string stream_table_line_t::print_all(stream_table_line_t *input_array, uin
         content_string = "";
         content_string = input_array[i].content_to_string();
         if (content_string.size() > 1) {
-            final_string = final_string + "[" + utils_t::uint32_to_string(i) + "] " + content_string + "\n";
+            final_string = final_string + "[" + utils_t::uint32_to_char(i) + "] " + content_string + "\n";
         }
     }
     return final_string;
