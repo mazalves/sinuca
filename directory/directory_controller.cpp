@@ -332,7 +332,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                                 /// Add statistics to the cache
                                 cache->cache_evict(true);
                                 /// Update Coherence Status and Last Access Time
-                                this->coherence_new_operation(cache, cache_line, writeback_package, false);   ///////// Wrong package here !!!!!!!!!!
+                                this->coherence_new_operation(cache, cache_line, writeback_package, false);
                                 /// Update Statistics
                                 this->new_statistics(cache, writeback_package, true);
                                 // =============================================================
@@ -446,7 +446,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                                 /// Add statistics to the cache
                                 cache->cache_evict(true);
                                 /// Update Coherence Status and Last Access Time
-                                this->coherence_new_operation(cache, cache_line, writeback_package, false);   ///////// Wrong package here !!!!!!!!!!
+                                this->coherence_new_operation(cache, cache_line, writeback_package, false);
                                 /// Update Statistics
                                 this->new_statistics(cache, writeback_package, true);
                                 // =============================================================
@@ -544,7 +544,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                     /// Add statistics to the cache
                     cache->cache_evict(true);
                     /// Update Coherence Status and Last Access Time
-                    this->coherence_new_operation(cache, cache_line, writeback_package, false);   ///////// Wrong package here !!!!!!!!!!
+                    this->coherence_new_operation(cache, cache_line, writeback_package, false);
                     /// Update Statistics
                     this->new_statistics(cache, writeback_package, true);
                     // =============================================================
@@ -1180,34 +1180,9 @@ bool directory_controller_t::coherence_evict_all() {
                             /// Update Statistics
                             this->new_statistics(cache, writeback_package, true);
                         }
-/*
-
-                        if (this->create_cache_writeback(cache, cache_line, index, way)) {
-
-                            /// Coherence Invalidate
-                            cache->change_address(cache_line, 0);
-                            cache->change_status(cache_line, PROTOCOL_STATUS_I);
-                            /// Add statistics to the cache
-                            cache->cache_evict(true);
-                                /// Update Coherence Status and Last Access Time
-                                this->coherence_new_operation(cache, cache_line, writeback_package, false);   ///////// Wrong package here !!!!!!!!!!
-*/
-/*
-                             /// Add statistics to the cache
-                            cache->cache_evict(true);
-                            /// Update Coherence Status and Last Access Time
-                            this->coherence_new_operation(cache, cache_line, package, false);   ///////// Wrong package here !!!!!!!!!!
-                            /// Update Statistics
-                            this->new_statistics(cache, package, true);
-*/
-
-                        }
-                        // ~ else {
-                            index = max_index;
-                            way = max_way;
-                            break;
-                            // ~ SINUCA_PRINTF("Not Evicted... ");
-                        // ~ }
+                        index = max_index;
+                        way = max_way;
+                        break;
                     }
                 }
             }

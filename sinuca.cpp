@@ -240,12 +240,14 @@ int main(int argc, char **argv) {
         sinuca_engine.global_clock();
     }
 
+    SINUCA_PRINTF("Evicting all cache lines... \n"
+
     /// Evict all the cache lines.
     bool all_evicted = false;
     while (all_evicted != true){
         /// Progress Information
         if ((sinuca_engine.get_global_cycle() % HEART_BEAT) == 0) {
-            SINUCA_PRINTF("Mass Eviction... HEART-BEAT - CYCLE: %"PRIu64"\n", sinuca_engine.get_global_cycle() );
+            SINUCA_PRINTF("HEART-BEAT - CYCLE: %"PRIu64"\n", sinuca_engine.get_global_cycle() );
             SINUCA_PRINTF("%s\n", simulation_status_to_string().c_str());
         }
 
