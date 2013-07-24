@@ -95,9 +95,11 @@ class cache_memory_t : public interconnection_interface_t {
         /// ====================================================================
         uint64_t stat_accesses;
         uint64_t stat_invalidation;
-        uint64_t stat_invalidation_writeback;
         uint64_t stat_eviction;
-        uint64_t stat_eviction_writeback;
+        uint64_t stat_writeback;
+
+        uint64_t stat_final_eviction;
+        uint64_t stat_final_writeback;
 
         uint64_t stat_instruction_hit;
         uint64_t stat_read_hit;
@@ -217,8 +219,6 @@ class cache_memory_t : public interconnection_interface_t {
         /// Methods called by the directory to add statistics and others
         void cache_hit(memory_package_t *package);
         void cache_miss(memory_package_t *package);
-        void cache_invalidate(bool is_writeback);
-        void cache_evict(bool is_writeback);
 
         INSTANTIATE_GET_SET(uint32_t, cache_id)
         INSTANTIATE_GET_SET(uint32_t, bank_number)
@@ -248,9 +248,11 @@ class cache_memory_t : public interconnection_interface_t {
         /// ====================================================================
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_accesses)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_invalidation)
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_invalidation_writeback)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction)
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction_writeback)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_writeback)
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_final_eviction)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_final_writeback)
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_instruction_hit)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_read_hit)

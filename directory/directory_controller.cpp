@@ -330,7 +330,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                             memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
                             if (writeback_package != NULL) {
                                 /// Add statistics to the cache
-                                cache->cache_evict(true);
+                                cache->add_stat_writeback();
                                 /// Update Coherence Status and Last Access Time
                                 this->coherence_new_operation(cache, cache_line, writeback_package, false);
                                 /// Update Statistics
@@ -444,7 +444,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                             memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
                             if (writeback_package != NULL) {
                                 /// Add statistics to the cache
-                                cache->cache_evict(true);
+                                cache->add_stat_writeback();
                                 /// Update Coherence Status and Last Access Time
                                 this->coherence_new_operation(cache, cache_line, writeback_package, false);
                                 /// Update Statistics
@@ -542,7 +542,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
                 if (writeback_package != NULL) {
                     /// Add statistics to the cache
-                    cache->cache_evict(true);
+                    cache->add_stat_writeback();
                     /// Update Coherence Status and Last Access Time
                     this->coherence_new_operation(cache, cache_line, writeback_package, false);
                     /// Update Statistics
@@ -874,7 +874,7 @@ bool directory_controller_t::inclusiveness_new_eviction(cache_memory_t *cache, c
         memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
         if (writeback_package != NULL) {
             /// Add statistics to the cache
-            cache->cache_evict(true);
+            cache->add_stat_writeback();
             /// Update Coherence Status and Last Access Time
             this->coherence_new_operation(cache, cache_line, writeback_package, false);
             /// Update Statistics
@@ -888,7 +888,7 @@ bool directory_controller_t::inclusiveness_new_eviction(cache_memory_t *cache, c
     }
     else {
         /// Add statistics to the cache
-        cache->cache_evict(false);
+        cache->add_stat_eviction();
     }
 
 
@@ -956,7 +956,7 @@ void directory_controller_t::coherence_evict_higher_levels(cache_memory_t *cache
         cache_memory->change_status(cache_line, PROTOCOL_STATUS_I);
 
         /// Cache Statistics
-        cache_memory->cache_invalidate(false);
+        cache_memory->add_stat_invalidation();
     }
 };
 
@@ -1137,7 +1137,7 @@ void directory_controller_t::coherence_invalidate_all(cache_memory_t *cache_memo
 
                 sinuca_engine.cache_memory_array[i]->change_status(cache_line, PROTOCOL_STATUS_I);
                 /// Cache Statistics
-                sinuca_engine.cache_memory_array[i]->cache_invalidate(false);
+                sinuca_engine.cache_memory_array[i]->add_stat_invalidation();
             }
         }
     }
@@ -1145,51 +1145,60 @@ void directory_controller_t::coherence_invalidate_all(cache_memory_t *cache_memo
 
 /// ============================================================================
 bool directory_controller_t::coherence_evict_all() {
-    uint32_t max_index, max_way;
-    cache_line_t *cache_line = NULL;
-    cache_memory_t *cache = NULL;
     bool all_clean = true;
 
     if (final_writeback_all == false){
         return all_clean;
     }
-    this->add_stat_final_writeback_all_cycles();
+
+    /// Stores the last evicted index, for each cache.
+    static uint32_t *last_index = utils_t::template_allocate_initialize_array<uint32_t>(sinuca_engine.get_cache_memory_array_size(), 0);
 
     DIRECTORY_CTRL_DEBUG_PRINTF("\nMass Eviction...");
-    static uint32_t level = 1;  /// Continue from the same level. (Avoid re-check the higher levels)
-    for ( ; level <= this->max_cache_level; level++) {
+    this->add_stat_final_writeback_all_cycles();
+
+    for (uint32_t level = 1; level <= this->max_cache_level; level++) {
         DIRECTORY_CTRL_DEBUG_PRINTF("Level %"PRIu32" - ", level);
         /// Get pointers to all cache lines.
         for (uint32_t i = 0; i < sinuca_engine.get_cache_memory_array_size(); i++) {
-            cache = sinuca_engine.cache_memory_array[i];
-            if (cache->get_hierarchy_level() != level) continue;
-            max_index = cache->get_total_sets();
-            max_way = cache->get_associativity();
-            for (uint32_t index = 0; index < max_index; index++) {
-                for (uint32_t way = 0; way < max_way; way++) {
-                    cache_line = cache->get_line(index, way);
-                    if (cache_line->status != PROTOCOL_STATUS_I && this->coherence_is_dirty(cache_line->status)){
+            cache_memory_t *cache = sinuca_engine.cache_memory_array[i];
+            if (cache->get_hierarchy_level() != level) {
+                continue;
+            }
+            for (uint32_t index = last_index[i]; index < cache->get_total_sets(); index++) {
+                last_index[i] = index;
+                for (uint32_t way = 0; way < cache->get_associativity(); way++) {
+                    cache_line_t *cache_line = cache->get_line(index, way);
+                    if (this->coherence_is_dirty(cache_line->status)) {
                         all_clean = false;
                         memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
                         if (writeback_package != NULL) {
                             DIRECTORY_CTRL_DEBUG_PRINTF("%s Evicted... %"PRIu32" x %"PRIu32" = %"PRIu64" \n", cache->get_label(), index, way , tag);
                             /// Add statistics to the cache
-                            cache->cache_evict(true);
-                            /// Update Coherence Status and Last Access Time
-                            this->coherence_new_operation(cache, cache_line, writeback_package, false);
+                            cache->add_stat_final_writeback();
+                            cache_line->status = PROTOCOL_STATUS_I;
                             /// Update Statistics
                             this->new_statistics(cache, writeback_package, true);
                         }
-                        index = max_index;
-                        way = max_way;
-                        break;
+                        /// Go for the next cache
+                        index = cache->get_total_sets();
+                        way = cache->get_associativity();
+                    }
+                    else {
+                        /// Add statistics to the cache
+                        cache->add_stat_final_eviction();
+                        cache_line->status = PROTOCOL_STATUS_I;
                     }
                 }
             }
         }
-        if (all_clean != true) break;   /// Don't go to the next level, until finish this.
+        /// Don't go to the next level, until finish this.
+        if (all_clean != true) break;
     }
 
+    if (all_clean) {
+        utils_t::template_delete_array<uint32_t>(last_index);
+    }
     return all_clean;
 };
 

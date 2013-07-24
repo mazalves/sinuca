@@ -240,7 +240,7 @@ int main(int argc, char **argv) {
         sinuca_engine.global_clock();
     }
 
-    SINUCA_PRINTF("Evicting all cache lines... \n"
+    SINUCA_PRINTF("Evicting all cache lines... \n")
 
     /// Evict all the cache lines.
     bool all_evicted = false;

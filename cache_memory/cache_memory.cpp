@@ -791,26 +791,6 @@ void cache_memory_t::cache_miss(memory_package_t *package) {
         break;
     }
 };
-/// ============================================================================
-void cache_memory_t::cache_invalidate(bool is_writeback) {
-    if (is_writeback) {
-        this->add_stat_invalidation_writeback();
-    }
-    else {
-        this->add_stat_invalidation();
-    }
-};
-
-/// ============================================================================
-void cache_memory_t::cache_evict(bool is_writeback) {
-    if (is_writeback) {
-        this->add_stat_eviction_writeback();
-    }
-    else {
-        this->add_stat_eviction();
-    }
-};
-
 
 /// ============================================================================
 // Input: memory_address
@@ -1013,9 +993,11 @@ void cache_memory_t::periodic_check(){
 void cache_memory_t::reset_statistics() {
     this->set_stat_accesses(0);
     this->set_stat_invalidation(0);
-    this->set_stat_invalidation_writeback(0);
     this->set_stat_eviction(0);
-    this->set_stat_eviction_writeback(0);
+    this->set_stat_writeback(0);
+
+    this->set_stat_final_eviction(0);
+    this->set_stat_final_writeback(0);
 
     this->set_stat_instruction_hit(0);
     this->set_stat_read_hit(0);
@@ -1067,9 +1049,12 @@ void cache_memory_t::print_statistics() {
 
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_accesses", stat_accesses);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_invalidation", stat_invalidation);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_invalidation_writeback", stat_invalidation_writeback);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_eviction", stat_eviction);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_eviction_writeback", stat_eviction_writeback);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writeback", stat_writeback);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_final_eviction", stat_final_eviction);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_final_writeback", stat_final_writeback);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_read", stat_instruction_hit + stat_read_hit + stat_prefetch_hit +
