@@ -1,6 +1,6 @@
 /// ============================================================================
 //
-// Copyright (C) 2010, 2011, 2012
+// Copyright (C) 2010, 2011
 // Marco Antonio Zanata Alves
 //
 // GPPD - Parallel and Distributed Processing Group
@@ -21,20 +21,44 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
 /// ============================================================================
-class cache_line_t {
+class dlec_metadata_line_t {
     public:
-        uint64_t tag;
-        protocol_status_t status;
-        uint64_t last_access;
+        line_sub_block_t valid_sub_blocks;
+        uint64_t real_access_counter;
+        uint64_t access_counter;
+        bool overflow;
+        bool learn_mode;
+        aht_line_t *ahtm_pointer;
+        aht_line_t *ahtc_pointer;
+
+        /// Static Energy
+        uint64_t clock_become_alive;
+        uint64_t clock_become_dead;
+
+        /// Special Flags
+        bool is_dirty;
+        bool need_copyback;
+        bool is_dead;
+        bool is_last_access;
+        bool is_last_write;
+
+        /// Statistics
+        uint64_t stat_access_counter;
+        uint64_t stat_write_counter;
+
+        uint64_t stat_clock_first_read;
+        uint64_t stat_clock_last_read;
+
+        uint64_t stat_clock_first_write;
+        uint64_t stat_clock_last_write;
 
         /// ====================================================================
         /// Methods
         /// ====================================================================
-        cache_line_t() {
-            this->tag = 0;
-            this->status = PROTOCOL_STATUS_I;
-            this->last_access = 0;
-        };
-        ~cache_line_t() {
-        };
+        dlec_metadata_line_t();
+        ~dlec_metadata_line_t();
+
+        void clean();
+        void reset_statistics();
+        std::string content_to_string();
 };

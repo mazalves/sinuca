@@ -236,6 +236,16 @@ void sinuca_engine_t::global_clock() {
     for (uint32_t i = 0 ; i < this->get_interconnection_interface_array_size() ; i++) {
         this->interconnection_interface_array[i]->clock(sub_cycle);
     }
+
+
+    // ~ #pragma omp parallel for
+    // ~ for (uint32_t j = 0; j < this->get_processor_array_size(); j++) {
+        // ~ this->processor_array[j]->clock(sub_cycle);
+    // ~ }
+// ~ 
+    // ~ for (uint32_t i = this->get_processor_array_size(); i < this->get_interconnection_interface_array_size() ; i++) {
+        // ~ this->interconnection_interface_array[i]->clock(sub_cycle);
+    // ~ }
     this->global_cycle++;
 };
 

@@ -67,10 +67,10 @@ std::string pht_line_t::content_to_string() {
     content_string = "";
 
     content_string = content_string + "pht_line -";
-    content_string = content_string + " Opcode_Address:" + utils_t::uint64_to_char(this->opcode_address);
-    content_string = content_string + " Offset:" + utils_t::uint32_to_char(this->offset);
-    content_string = content_string + " Last_Access:" + utils_t::uint64_to_char(this->last_access);
-    content_string = content_string + " Pointer:" + utils_t::uint32_to_char(this->pointer);
+    content_string = content_string + " Opcode_Address:" + utils_t::uint64_to_string(this->opcode_address);
+    content_string = content_string + " Offset:" + utils_t::uint32_to_string(this->offset);
+    content_string = content_string + " Last_Access:" + utils_t::uint64_to_string(this->last_access);
+    content_string = content_string + " Pointer:" + utils_t::uint32_to_string(this->pointer);
     content_string = content_string + "\n";
 
     /// access_counter
@@ -79,7 +79,7 @@ std::string pht_line_t::content_to_string() {
         if (i % 4 == 0) {
             content_string = content_string + "|";
         }
-        content_string = content_string + " " + utils_t::uint64_to_char(this->access_counter[i]);
+        content_string = content_string + " " + utils_t::uint64_to_string(this->access_counter[i]);
     }
     content_string = content_string + "]\n";
 
@@ -89,7 +89,7 @@ std::string pht_line_t::content_to_string() {
         if (i % 4 == 0) {
             content_string = content_string + "|";
         }
-        content_string = content_string + " " + utils_t::bool_to_char(this->overflow[i]);
+        content_string = content_string + " " + utils_t::bool_to_string(this->overflow[i]);
     }
     content_string = content_string + "]\n";
 

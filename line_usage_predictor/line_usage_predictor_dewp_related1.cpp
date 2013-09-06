@@ -30,8 +30,8 @@
 #endif
 
 /// ============================================================================
-line_usage_predictor_dewp_oracle_t::line_usage_predictor_dewp_oracle_t() {
-    this->line_usage_predictor_type = LINE_USAGE_PREDICTOR_POLICY_DEWP_ORACLE;
+line_usage_predictor_dewp_related1_t::line_usage_predictor_dewp_related1_t() {
+    this->line_usage_predictor_type = LINE_USAGE_PREDICTOR_POLICY_DEWP_RELATED1;
 
     this->metadata_sets = NULL;
     this->metadata_line_number = 0;
@@ -40,13 +40,13 @@ line_usage_predictor_dewp_oracle_t::line_usage_predictor_dewp_oracle_t() {
 };
 
 /// ============================================================================
-line_usage_predictor_dewp_oracle_t::~line_usage_predictor_dewp_oracle_t() {
+line_usage_predictor_dewp_related1_t::~line_usage_predictor_dewp_related1_t() {
     /// De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<dewp_metadata_set_t>(metadata_sets);
 };
 
 /// ============================================================================
-void line_usage_predictor_dewp_oracle_t::allocate() {
+void line_usage_predictor_dewp_related1_t::allocate() {
     line_usage_predictor_t::allocate();
 
     // Cache Metadata
@@ -69,7 +69,7 @@ void line_usage_predictor_dewp_oracle_t::allocate() {
 };
 
 /// ============================================================================
-void line_usage_predictor_dewp_oracle_t::clock(uint32_t subcycle) {
+void line_usage_predictor_dewp_related1_t::clock(uint32_t subcycle) {
     line_usage_predictor_t::clock(subcycle);
 
     if (subcycle != 0) return;
@@ -80,7 +80,7 @@ void line_usage_predictor_dewp_oracle_t::clock(uint32_t subcycle) {
 
 
 /// ============================================================================
-void line_usage_predictor_dewp_oracle_t::fill_package_sub_blocks(memory_package_t *package) {
+void line_usage_predictor_dewp_related1_t::fill_package_sub_blocks(memory_package_t *package) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("fill_package_sub_blocks() package:%s\n", package->content_to_string().c_str())
 
     (void)package;
@@ -89,7 +89,7 @@ void line_usage_predictor_dewp_oracle_t::fill_package_sub_blocks(memory_package_
 };
 
 /// ============================================================================
-void line_usage_predictor_dewp_oracle_t::line_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
+void line_usage_predictor_dewp_related1_t::line_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_sub_blocks_to_package() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
@@ -104,7 +104,7 @@ void line_usage_predictor_dewp_oracle_t::line_sub_blocks_to_package(cache_memory
 };
 
 /// ============================================================================
-void line_usage_predictor_dewp_oracle_t::predict_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
+void line_usage_predictor_dewp_related1_t::predict_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("predict_sub_blocks_to_package() package:%s\n", package->content_to_string().c_str())
 
     (void)cache;
@@ -118,7 +118,7 @@ void line_usage_predictor_dewp_oracle_t::predict_sub_blocks_to_package(cache_mem
 
 
 /// ============================================================================
-bool line_usage_predictor_dewp_oracle_t::check_sub_block_is_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint64_t index, uint32_t way) {
+bool line_usage_predictor_dewp_related1_t::check_sub_block_is_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint64_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_sub_block_is_hit() package:%s\n", package->content_to_string().c_str())
 
     (void)cache;
@@ -132,7 +132,7 @@ bool line_usage_predictor_dewp_oracle_t::check_sub_block_is_hit(cache_memory_t *
 };
 
 /// ============================================================================
-bool line_usage_predictor_dewp_oracle_t::check_line_is_last_access(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way){
+bool line_usage_predictor_dewp_related1_t::check_line_is_last_access(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way){
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_access()\n")
 
     (void)cache;
@@ -144,7 +144,7 @@ bool line_usage_predictor_dewp_oracle_t::check_line_is_last_access(cache_memory_
 };
 
 /// ============================================================================
-bool line_usage_predictor_dewp_oracle_t::check_line_is_last_write(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way){
+bool line_usage_predictor_dewp_related1_t::check_line_is_last_write(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way){
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_write()\n")
 
     (void)cache;
@@ -158,7 +158,7 @@ bool line_usage_predictor_dewp_oracle_t::check_line_is_last_write(cache_memory_t
 /// ============================================================================
 /// Mechanism Operations
 /// ============================================================================
-void line_usage_predictor_dewp_oracle_t::line_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
+void line_usage_predictor_dewp_related1_t::line_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_hit() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
@@ -181,11 +181,30 @@ void line_usage_predictor_dewp_oracle_t::line_hit(cache_memory_t *cache, cache_l
     this->metadata_sets[index].ways[way].real_access_counter_read++;
     this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_NORMAL;
     this->metadata_sets[index].ways[way].clock_first_access = sinuca_engine.get_global_cycle();
+
+    // Find the LRU line and check if it is dirty, then evict it.
+
+    cache_line = cache->evict_address(std::numeric_limits<uint64_t>::max(), index, way);
+    if (sinuca_engine.directory_controller->coherence_is_dirty(cache_line->status)) {
+        memory_package_t *writeback_package = sinuca_engine.directory_controller->create_cache_writeback(cache, cache_line, index, way);
+        if (writeback_package != NULL) {
+            /// Add statistics to the cache
+            cache->add_stat_writeback();
+            /// Update Coherence Status and Last Access Time
+            sinuca_engine.directory_controller->coherence_new_operation(cache, cache_line, writeback_package, false);
+            /// Update Statistics
+            sinuca_engine.directory_controller->new_statistics(cache, writeback_package, true);
+            // =============================================================
+            // Line Usage Prediction
+            cache->line_usage_predictor->line_send_writeback(cache, cache_line, writeback_package, index, way);
+        }
+    }
+
 };
 
 
 /// ============================================================================
-void line_usage_predictor_dewp_oracle_t::line_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
+void line_usage_predictor_dewp_related1_t::line_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
@@ -207,7 +226,7 @@ void line_usage_predictor_dewp_oracle_t::line_miss(cache_memory_t *cache, cache_
 
 
 /// ============================================================================
-void line_usage_predictor_dewp_oracle_t::sub_block_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
+void line_usage_predictor_dewp_related1_t::sub_block_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("sub_block_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_PRINTF("Should never enter in sub_block_miss().\n");
     (void)cache;
@@ -221,9 +240,8 @@ void line_usage_predictor_dewp_oracle_t::sub_block_miss(cache_memory_t *cache, c
 };
 
 /// ============================================================================
-void line_usage_predictor_dewp_oracle_t::line_send_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
+void line_usage_predictor_dewp_related1_t::line_send_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_send_writeback() package:%s\n", index, way, package->content_to_string().c_str());
-    ERROR_PRINTF("Should never enter in line_send_writeback().\n");
     (void)cache;
     (void)cache_line;
     /// Mechanism statistics
@@ -235,7 +253,7 @@ void line_usage_predictor_dewp_oracle_t::line_send_writeback(cache_memory_t *cac
 };
 
 /// ============================================================================
-void line_usage_predictor_dewp_oracle_t::line_recv_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
+void line_usage_predictor_dewp_related1_t::line_recv_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_recv_writeback() index:%d, way:%d package:%s\n", index, way, package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
@@ -258,7 +276,7 @@ void line_usage_predictor_dewp_oracle_t::line_recv_writeback(cache_memory_t *cac
 
 
 /// ============================================================================
-void line_usage_predictor_dewp_oracle_t::line_eviction(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way) {
+void line_usage_predictor_dewp_related1_t::line_eviction(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_eviction() index:%d, way:%d\n", index, way);
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
@@ -328,7 +346,7 @@ void line_usage_predictor_dewp_oracle_t::line_eviction(cache_memory_t *cache, ca
 };
 
 /// ============================================================================
-void line_usage_predictor_dewp_oracle_t::line_invalidation(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way) {
+void line_usage_predictor_dewp_related1_t::line_invalidation(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_invalidation() index:%d, way:%d\n", index, way);
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
@@ -350,20 +368,20 @@ void line_usage_predictor_dewp_oracle_t::line_invalidation(cache_memory_t *cache
 
 
 /// ============================================================================
-void line_usage_predictor_dewp_oracle_t::print_structures() {
+void line_usage_predictor_dewp_related1_t::print_structures() {
     line_usage_predictor_t::print_structures();
 
 };
 
 /// ============================================================================
-void line_usage_predictor_dewp_oracle_t::panic() {
+void line_usage_predictor_dewp_related1_t::panic() {
     line_usage_predictor_t::panic();
 
     this->print_structures();
 };
 
 /// ============================================================================
-void line_usage_predictor_dewp_oracle_t::periodic_check(){
+void line_usage_predictor_dewp_related1_t::periodic_check(){
     line_usage_predictor_t::periodic_check();
 
     #ifdef PREFETCHER_DEBUG
@@ -374,7 +392,7 @@ void line_usage_predictor_dewp_oracle_t::periodic_check(){
 /// ============================================================================
 /// STATISTICS
 /// ============================================================================
-void line_usage_predictor_dewp_oracle_t::reset_statistics() {
+void line_usage_predictor_dewp_related1_t::reset_statistics() {
     line_usage_predictor_t::reset_statistics();
 
     this->stat_line_hit = 0;
@@ -407,7 +425,7 @@ void line_usage_predictor_dewp_oracle_t::reset_statistics() {
 };
 
 /// ============================================================================
-void line_usage_predictor_dewp_oracle_t::print_statistics() {
+void line_usage_predictor_dewp_related1_t::print_statistics() {
     line_usage_predictor_t::print_statistics();
 
     for (uint32_t index = 0; index < this->get_metadata_total_sets(); index++) {
@@ -460,7 +478,7 @@ void line_usage_predictor_dewp_oracle_t::print_statistics() {
 };
 
 /// ============================================================================
-void line_usage_predictor_dewp_oracle_t::print_configuration() {
+void line_usage_predictor_dewp_related1_t::print_configuration() {
     line_usage_predictor_t::print_configuration();
 
     /// metadata

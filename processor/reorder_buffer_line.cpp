@@ -56,7 +56,7 @@ std::string reorder_buffer_line_t::content_to_string() {
 
     content_string = this->uop.content_to_string();
     content_string = content_string + " | STAGE:" + get_enum_processor_stage_char(this->stage);
-    content_string = content_string + " | RegWAIT:" + utils_t::uint32_to_char(this->wait_reg_deps_number);
+    content_string = content_string + " | RegWAIT:" + utils_t::uint32_to_string(this->wait_reg_deps_number);
     return content_string;
 };
 

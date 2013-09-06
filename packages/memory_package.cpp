@@ -175,10 +175,10 @@ std::string memory_package_t::content_to_string() {
             return content_string;
         }
     #endif
-    content_string = content_string + " MEM: Owner:" + utils_t::uint32_to_char(this->id_owner);
-    content_string = content_string + " OPCode#" + utils_t::uint64_to_char(this->opcode_number);
-    content_string = content_string + " 0x" + utils_t::uint64_to_char(this->opcode_address);
-    content_string = content_string + " UOP#" + utils_t::uint64_to_char(this->uop_number);
+    content_string = content_string + " MEM: Owner:" + utils_t::uint32_to_string(this->id_owner);
+    content_string = content_string + " OPCode#" + utils_t::uint64_to_string(this->opcode_number);
+    content_string = content_string + " 0x" + utils_t::uint64_to_string(this->opcode_address);
+    content_string = content_string + " UOP#" + utils_t::uint64_to_string(this->uop_number);
 
     content_string = content_string + " | " + get_enum_memory_operation_char(this->memory_operation);
     if (this->is_answer) {
@@ -188,21 +188,21 @@ std::string memory_package_t::content_to_string() {
         content_string = content_string + " RQST";
     }
 
-    content_string = content_string + " 0x" + utils_t::uint64_to_char(this->memory_address);
-    content_string = content_string + " Size:" + utils_t::uint32_to_char(this->memory_size);
+    content_string = content_string + " 0x" + utils_t::uint64_to_string(this->memory_address);
+    content_string = content_string + " Size:" + utils_t::uint32_to_string(this->memory_size);
 
     content_string = content_string + " | " + get_enum_package_state_char(this->state);
-    content_string = content_string + " Ready:" + utils_t::uint64_to_char(this->ready_cycle);
-    content_string = content_string + " Born:" + utils_t::uint64_to_char(this->born_cycle);
+    content_string = content_string + " Ready:" + utils_t::uint64_to_string(this->ready_cycle);
+    content_string = content_string + " Born:" + utils_t::uint64_to_string(this->born_cycle);
 
 
-    content_string = content_string + " | SRC:" + utils_t::uint32_to_char(this->id_src);
-    content_string = content_string + " => DST:" + utils_t::uint32_to_char(this->id_dst);
-    content_string = content_string + " HOPS:" + utils_t::int32_to_char(this->hop_count);
+    content_string = content_string + " | SRC:" + utils_t::uint32_to_string(this->id_src);
+    content_string = content_string + " => DST:" + utils_t::uint32_to_string(this->id_dst);
+    content_string = content_string + " HOPS:" + utils_t::int32_to_string(this->hop_count);
 
     if (this->hops != NULL) {
         for (int32_t i = 0; i <= this->hop_count; i++) {
-            content_string = content_string + " [" + utils_t::uint32_to_char(this->hops[i]) + "]";
+            content_string = content_string + " [" + utils_t::uint32_to_string(this->hops[i]) + "]";
         }
     }
     return content_string;
@@ -210,6 +210,7 @@ std::string memory_package_t::content_to_string() {
 
 /// ============================================================================
 std::string memory_package_t::sub_blocks_to_string() {
+    char tmp_string[CONVERSION_SIZE];
     std::string content_string;
     content_string = "";
 
@@ -224,7 +225,8 @@ std::string memory_package_t::sub_blocks_to_string() {
         if (i % 4 == 0) {
             content_string = content_string + "|";
         }
-        content_string = content_string + utils_t::uint32_to_char(this->sub_blocks[i]);
+        utils_t::uint32_to_char(tmp_string, this->sub_blocks[i]);
+        content_string = content_string + tmp_string;
     }
     content_string = content_string + "]\n";
     return content_string;
@@ -287,6 +289,7 @@ int32_t memory_package_t::find_old_answer_state_ready(memory_package_t *input_ar
 
 /// ============================================================================
 std::string memory_package_t::print_all(memory_package_t *input_array, uint32_t size_array) {
+    char tmp_string[CONVERSION_SIZE];
     std::string content_string;
     std::string final_string;
 
@@ -295,7 +298,8 @@ std::string memory_package_t::print_all(memory_package_t *input_array, uint32_t 
         content_string = "";
         content_string = input_array[i].content_to_string();
         if (content_string.size() > 1) {
-            final_string = final_string + "[" + utils_t::uint32_to_string(i) + "] " + content_string + "\n";
+            utils_t::uint32_to_char(tmp_string, i);
+            final_string = final_string + "[" + tmp_string + "] " + content_string + "\n";
         }
     }
     return final_string;

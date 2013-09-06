@@ -58,8 +58,8 @@ std::string mshr_diff_line_t::content_to_string() {
     else {
         content_string = content_string + " INVALID";
     }
-    content_string = content_string + " 0x" + utils_t::uint64_to_char(this->memory_address);
-    content_string = content_string + "  #" + utils_t::uint32_to_char(this->usage_counter);
+    content_string = content_string + " 0x" + utils_t::uint64_to_string(this->memory_address);
+    content_string = content_string + "  #" + utils_t::uint32_to_string(this->usage_counter);
     return content_string;
 };
 

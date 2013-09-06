@@ -109,7 +109,7 @@ uint64_t utils_t::fill_bit(uint32_t start, uint32_t end) {
 //==============================================================================
 std::string utils_t::address_to_binary(uint64_t address) {
     /// Auxiliar strings
-    std::string answer;
+    static std::string answer;
     answer.clear();
 
     uint64_t z;
@@ -131,7 +131,7 @@ std::string utils_t::address_to_binary(uint64_t address) {
 };
 
 //==============================================================================
-std::string utils_t::print_mask_of_bits(uint32_t line_size, uint32_t line_number, uint32_t assoc) {
+const char* utils_t::print_mask_of_bits(uint32_t line_size, uint32_t line_number, uint32_t assoc) {
     uint32_t i, offset = 0, index = 0;
 
     /// Auxiliar strings
@@ -161,7 +161,7 @@ std::string utils_t::print_mask_of_bits(uint32_t line_size, uint32_t line_number
 //==============================================================================
 std::string utils_t::progress_pretty(uint64_t actual, uint64_t total) {
     /// Auxiliar strings
-    std::string answer;
+    static std::string answer;
     answer.clear();
 
     for (uint32_t i = 1 ; i <= 20; i++) {
@@ -180,8 +180,7 @@ std::string utils_t::progress_pretty(uint64_t actual, uint64_t total) {
 //==============================================================================
 std::string utils_t::connections_pretty(cache_memory_t *cache_memory, uint32_t level) {
     /// Auxiliar strings
-    char tmp_string[CONVERSION_SIZE];
-    std::string answer;
+    static std::string answer;
     answer.clear();
 
     for (uint32_t j = 0; j < level; j++) {
@@ -190,8 +189,7 @@ std::string utils_t::connections_pretty(cache_memory_t *cache_memory, uint32_t l
     answer += "|--- ";
     answer += cache_memory->get_label();
     answer += " (L";
-    uint32_to_char(tmp_string, cache_memory->get_hierarchy_level());
-    answer += tmp_string;
+    answer += uint32_to_char(cache_memory->get_hierarchy_level());
     answer += ")\n";
 
     /// Find Next Cache Level
@@ -220,81 +218,73 @@ std::string utils_t::connections_pretty(cache_memory_t *cache_memory, uint32_t l
 };
 
 //==============================================================================
-void utils_t::bool_to_char(char *string, bool input_int) {
-    string[0] = '\0';
-    sprintf(string , "%s", input_int ? "T" : "F");
-}
-
-
-//==============================================================================
-void utils_t::uint32_to_char(char *string, uint32_t input_int) {
-    string[0] = '\0';
-    sprintf(string , "%2u", input_int);
-}
-
-//==============================================================================
-void utils_t::int32_to_char(char *string, int32_t input_int) {
-    string[0] = '\0';
-    sprintf(string , "%2d", input_int);
-}
-
-//==============================================================================
-void utils_t::uint64_to_char(char *string, uint64_t input_int) {
-    string[0] = '\0';
-
-    if (input_int > 1000000000) {
-        sprintf(string , "%16"PRIu64"", input_int);
-    }
-    else {
-        sprintf(string , "%5"PRIu64"", input_int);
-    }
-}
-
-//==============================================================================
-void utils_t::int64_to_char(char *string, int64_t input_int) {
-    string[0] = '\0';
-
-    if (input_int > 1000000000) {
-        sprintf(string , "%16"PRId64"", input_int);
-    }
-    else {
-        sprintf(string , "%5"PRId64"", input_int);
-    }
-}
-
-//==============================================================================
-uint64_t utils_t::string_to_uint64(char *string) {
-    uint64_t result = 0;
-
-    for (char c ; ( c = *string ^ '0' ) <= 9 && c >= 0; ++string) {
-        result = result * 10 + c;
-    }
-    return result;
-}
-
-
-//==============================================================================
-std::string  utils_t::bool_to_string(bool input_int) {
+const char* utils_t::bool_to_char(bool input_int) {
     /// Auxiliar strings
-    char a[2];
+    static char a[2];
     a[0] = '\0';
 
-    std::string answer;
-    answer.clear();
-
-    a[0] = '\0';
     sprintf(a , "%s", input_int ? "T" : "F");
-    answer = a;
-    return answer;
+    return a;
 }
+
+
+//==============================================================================
+const char* utils_t::uint32_to_char(uint32_t input_int) {
+    /// Auxiliar strings
+    static char a[65];
+    a[0] = '\0';
+
+    sprintf(a , "%2u", input_int);
+    return a;
+}
+
+//==============================================================================
+const char* utils_t::int32_to_char(int32_t input_int) {
+    /// Auxiliar strings
+    static char a[65];
+    a[0] = '\0';
+
+    sprintf(a , "%2d", input_int);
+    return a;
+};
+
+//==============================================================================
+const char* utils_t::uint64_to_char(uint64_t input_int) {
+    /// Auxiliar strings
+    static char a[65];
+    a[0] = '\0';
+
+    if (input_int > 1000000000) {
+        sprintf(a , "%16"PRIu64"", input_int);
+    }
+    else {
+        sprintf(a , "%5"PRIu64"", input_int);
+    }
+    return a;
+};
+
+//==============================================================================
+const char* utils_t::int64_to_char(int64_t input_int) {
+    /// Auxiliar strings
+    static char a[65];
+    a[0] = '\0';
+
+    if (input_int > 1000000000) {
+        sprintf(a , "%16"PRId64"", input_int);
+    }
+    else {
+        sprintf(a , "%5"PRId64"", input_int);
+    }
+    return a;
+};
 
 //==============================================================================
 std::string utils_t::uint32_to_string(uint32_t input_int) {
     /// Auxiliar strings
-    char a[65];
+    static char a[65];
     a[0] = '\0';
 
-    std::string answer;
+    static std::string answer;
     answer.clear();
 
     sprintf(a , "%2u", input_int);
@@ -303,22 +293,8 @@ std::string utils_t::uint32_to_string(uint32_t input_int) {
 };
 
 //==============================================================================
-std::string utils_t::int32_to_string(int32_t input_int) {
-    /// Auxiliar strings
-    char a[65];
-    a[0] = '\0';
-
-    std::string answer;
-    answer.clear();
-
-    sprintf(a , "%2d", input_int);
-    answer = a;
-    return answer;
-};
-
-//==============================================================================
 std::string utils_t::uint64_to_string(uint64_t input_int) {
-    char a[65];
+    static char a[65];
     a[0] = '\0';
     std::string answer = "";
 
@@ -335,7 +311,7 @@ std::string utils_t::uint64_to_string(uint64_t input_int) {
 
 //==============================================================================
 std::string utils_t::int64_to_string(int64_t input_int) {
-    char a[65];
+    static char a[65];
     a[0] = '\0';
     std::string answer = "";
 

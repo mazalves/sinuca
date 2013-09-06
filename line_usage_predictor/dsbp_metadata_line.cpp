@@ -104,12 +104,12 @@ std::string dsbp_metadata_line_t::content_to_string() {
     content_string = "";
 
     content_string = content_string + "Metadata -";
-    content_string = content_string + " Learn:" + utils_t::uint32_to_char(this->learn_mode);    
-    content_string = content_string + " Dirty:" + utils_t::uint32_to_char(this->is_dirty);
-    content_string = content_string + " Dead:" + utils_t::uint32_to_char(this->is_dead);
+    content_string = content_string + " Learn:" + utils_t::uint32_to_string(this->learn_mode);    
+    content_string = content_string + " Dirty:" + utils_t::uint32_to_string(this->is_dirty);
+    content_string = content_string + " Dead:" + utils_t::uint32_to_string(this->is_dead);
     
-    content_string = content_string + " pht_ptr:" + utils_t::uint32_to_char(this->pht_pointer != NULL);
-    content_string = content_string + " Active:" + utils_t::uint32_to_char(this->active_sub_blocks);
+    content_string = content_string + " pht_ptr:" + utils_t::uint32_to_string(this->pht_pointer != NULL);
+    content_string = content_string + " Active:" + utils_t::uint32_to_string(this->active_sub_blocks);
     content_string = content_string + "\n";
     
     /// valid_sub_blocks 
@@ -118,7 +118,7 @@ std::string dsbp_metadata_line_t::content_to_string() {
         if (i % 4 == 0) {
             content_string = content_string + "|";
         }
-        content_string = content_string + " " + utils_t::uint32_to_char(this->valid_sub_blocks[i]);
+        content_string = content_string + " " + utils_t::uint32_to_string(this->valid_sub_blocks[i]);
     }
     content_string = content_string + "]\n";
 
@@ -128,7 +128,7 @@ std::string dsbp_metadata_line_t::content_to_string() {
         if (i % 4 == 0) {
             content_string = content_string + "|";
         }
-        content_string = content_string + " " + utils_t::uint32_to_char(this->real_access_counter[i]);
+        content_string = content_string + " " + utils_t::uint32_to_string(this->real_access_counter[i]);
     }
     content_string = content_string + "]\n";
 
@@ -138,7 +138,7 @@ std::string dsbp_metadata_line_t::content_to_string() {
         if (i % 4 == 0) {
             content_string = content_string + "|";
         }
-        content_string = content_string + " " + utils_t::uint32_to_char(this->real_write_counter[i]);
+        content_string = content_string + " " + utils_t::uint32_to_string(this->real_write_counter[i]);
     }
     content_string = content_string + "]\n";
 
@@ -148,7 +148,7 @@ std::string dsbp_metadata_line_t::content_to_string() {
         if (i % 4 == 0) {
             content_string = content_string + "|";
         }
-        content_string = content_string + " " + utils_t::uint32_to_char(this->access_counter[i]);
+        content_string = content_string + " " + utils_t::uint32_to_string(this->access_counter[i]);
     }
     content_string = content_string + "]\n";
 
@@ -158,7 +158,7 @@ std::string dsbp_metadata_line_t::content_to_string() {
         if (i % 4 == 0) {
             content_string = content_string + "|";
         }
-        content_string = content_string + " " + utils_t::uint32_to_char(this->overflow[i]);
+        content_string = content_string + " " + utils_t::uint32_to_string(this->overflow[i]);
     }
     content_string = content_string + "]\n";
 

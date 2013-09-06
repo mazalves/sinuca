@@ -50,9 +50,9 @@ class trace_reader_t {
         bool is_compressed_trace_file;
 
         /// Used to handle the trace reader
-        char *line_dynamic;
-        char *line_static;
-        char *line_memory;
+        char **line_dynamic;
+        char **line_static;
+        char **line_memory;
 
     public:
         /// ====================================================================

@@ -123,8 +123,8 @@ class directory_controller_t : public interconnection_interface_t {
         uint32_t find_next_obj_id(cache_memory_t *cache_memory, uint64_t memory_address);
         bool is_locked(uint64_t memory_address);
 
-        inline bool coherence_is_read(memory_operation_t memory_operation);
-        inline bool coherence_is_dirty(protocol_status_t line_status);
+        bool coherence_is_read(memory_operation_t memory_operation);
+        bool coherence_is_dirty(protocol_status_t line_status);
         inline bool coherence_is_hit(cache_line_t *cache_line, memory_operation_t memory_operation);
         inline bool coherence_need_writeback(cache_memory_t *cache_memory, cache_line_t *cache_line);
 

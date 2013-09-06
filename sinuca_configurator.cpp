@@ -821,7 +821,24 @@ void sinuca_engine_t::initialize_cache_memory() {
                                     "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
 
             }
-            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "DISABLE") ==  0) {
+            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "DEWP_RELATED1") ==  0) {
+                this->cache_memory_array[i]->line_usage_predictor = new line_usage_predictor_dewp_related1_t;
+                line_usage_predictor_dewp_related1_t *line_usage_predictor_ptr = static_cast<line_usage_predictor_dewp_related1_t*>(this->cache_memory_array[i]->line_usage_predictor);
+
+                line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_DEWP_RELATED1);
+
+                /// Metadata
+                line_usage_predictor_parameters.push_back("METADATA_LINE_NUMBER");
+                line_usage_predictor_ptr->set_metadata_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+                ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_line_number() == line_usage_predictor_ptr->get_metadata_line_number(),
+                                    "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
+
+                line_usage_predictor_parameters.push_back("METADATA_ASSOCIATIVITY");
+                line_usage_predictor_ptr->set_metadata_associativity( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+                ERROR_ASSERT_PRINTF(this->cache_memory_array[i]->get_associativity() == line_usage_predictor_ptr->get_metadata_associativity(),
+                                    "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
+
+            }            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "DISABLE") ==  0) {
                 this->cache_memory_array[i]->line_usage_predictor = new line_usage_predictor_disable_t;
                 line_usage_predictor_disable_t *line_usage_predictor_ptr = static_cast<line_usage_predictor_disable_t*>(this->cache_memory_array[i]->line_usage_predictor);
 

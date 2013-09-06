@@ -1,0 +1,36 @@
+TODO list:
+
+1st. Beat Rustam's simulator: 200.000 instructions/second with 1 core. => DONE !
+
+################ Cosmetics
+-- Use default variable names
+-- Force the use of GET/SET to get values
+-- Use return BOOL instead of uint32_t
+-- Use POSITION_FAIL, FAIL or OK on all the returns.
+-- String => Constant Char
+-- Make all printf standard
+-- Check: The usage of this->
+-- Generate Doxygen to check the comments in the code
+
+################ Long Term
+TRACE_READER -- Multiple single threaded applications
+TRACE_READER -- Fast check on the trace / fast get trace size
+PROCESSOR -- One instruction can be between two instruction cache lines.
+PROCESSOR -- Split requests when the load/store are unaligned (between two cache lines).
+PROCESSOR -- Add field NEW_DATA into MEMORY_PACKAGE, always true after write, and propagate false for others. Processor may receive only NEW_DATA==true
+PROCESSOR -- TLB - Add processor bit, when multiple applications, to change the physical address
+DIRECTORY -- Deadlock if Associativity < Directory Lines from the same set. (Not proved)
+
+################ Short Term
+STATISTICS -- Average Instruction Size and Number of cache lines
+STATISTICS -- Average Memory Size and Number of cache lines
+STATISTICS -- Average Fetched Opcodes
+
+-- CHECK:
+    -- cache state
+    -- write allocate
+    -- write back
+    ok-- inclusiveness (NON_INCLUSIVE)
+    ok-- protocol (MOESI)
+    ok-- lock (R/W/NULL)
+    ok-- parallel requests

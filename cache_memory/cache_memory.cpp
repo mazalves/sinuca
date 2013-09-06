@@ -601,7 +601,7 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
                     slot = this->allocate_request(package);
                     if (slot != POSITION_FAIL) {
                         CACHE_DEBUG_PRINTF("\t RECEIVED READ REQUEST\n");
-                        this->mshr_buffer[slot].package_untreated(1);
+                        this->mshr_buffer[slot].package_untreated(0);
                         this->recv_rqst_read_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
                         this->remove_token_list(package);
                         return OK;
@@ -619,7 +619,7 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
                     slot = this->allocate_request(package);
                     if (slot != POSITION_FAIL) {
                         CACHE_DEBUG_PRINTF("\t RECEIVED WRITE REQUEST\n");
-                        this->mshr_buffer[slot].package_untreated(1);
+                        this->mshr_buffer[slot].package_untreated(0);
                         this->recv_rqst_write_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
                         this->remove_token_list(package);
                         return OK;
@@ -861,7 +861,7 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& i
                         choosen_way = way;
 
                         /// If is_dead
-                        if (this->line_usage_predictor->check_line_is_last_access(index, way)) {
+                        if (this->line_usage_predictor->check_line_is_last_access(NULL, NULL, index, way)) {
                             dead_choosen_line = &this->sets[index].ways[way];
                             dead_choosen_way = way;
                         }
@@ -924,7 +924,9 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& i
         break;
 
     }
-
+    if (choosen_line == NULL) {
+        WARNING_PRINTF("Could not evict a cache line in this set.\n")
+    }
     return choosen_line;
 };
 
@@ -948,7 +950,6 @@ void cache_memory_t::change_status(cache_line_t *line, protocol_status_t status)
 void cache_memory_t::update_last_access(cache_line_t *line) {
     ERROR_ASSERT_PRINTF(line != NULL, "Cannot change the last_access of a NULL line.\n")
     line->last_access = sinuca_engine.get_global_cycle();
-    line->usage_counter++;
     return;
 };
 

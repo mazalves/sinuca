@@ -1,6 +1,6 @@
 /// ============================================================================
 //
-// Copyright (C) 2010, 2011, 2012
+// Copyright (C) 2010, 2011
 // Marco Antonio Zanata Alves
 //
 // GPPD - Parallel and Distributed Processing Group
@@ -21,20 +21,7 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
 /// ============================================================================
-class cache_line_t {
+class dlec_metadata_set_t {
     public:
-        uint64_t tag;
-        protocol_status_t status;
-        uint64_t last_access;
-
-        /// ====================================================================
-        /// Methods
-        /// ====================================================================
-        cache_line_t() {
-            this->tag = 0;
-            this->status = PROTOCOL_STATUS_I;
-            this->last_access = 0;
-        };
-        ~cache_line_t() {
-        };
+        dlec_metadata_line_t *ways;
 };

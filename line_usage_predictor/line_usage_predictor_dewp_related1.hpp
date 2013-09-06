@@ -21,7 +21,7 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
 /// ============================================================================
-class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
+class line_usage_predictor_dewp_related1_t : public line_usage_predictor_t {
     private:
         /// ====================================================================
         /// Set by sinuca_configurator
@@ -29,43 +29,21 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         uint32_t sub_block_size;
         uint32_t access_counter_bits;
 
-        /// metadata
         uint32_t metadata_line_number;          /// Cache Metadata
         uint32_t metadata_associativity;        /// Cache Metadata
-
-        /// pht
-        uint32_t pht_line_number;
-        uint32_t pht_associativity;
-        replacement_t pht_replacement_policy;
 
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
-
         uint32_t sub_block_total;
         uint32_t access_counter_max;
 
-        /// metadata
-        dsbp_metadata_set_t *metadata_sets;
+        dewp_metadata_set_t *metadata_sets;
         uint32_t metadata_total_sets;
-
-        /// pht
-        pht_set_t *pht_sets;
-        uint32_t pht_total_sets;
-        uint64_t pht_index_bits_mask;
-
 
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
-        uint64_t stat_line_sub_block_disable_always;
-        uint64_t stat_line_sub_block_disable_turnoff;
-        uint64_t stat_line_sub_block_normal_correct;
-        uint64_t stat_line_sub_block_normal_over;
-        uint64_t stat_line_sub_block_learn;
-        uint64_t stat_line_sub_block_wrong_first;
-        uint64_t stat_line_sub_block_writeback;
-
         uint64_t stat_line_hit;
         uint64_t stat_line_miss;
         uint64_t stat_sub_block_miss;
@@ -74,43 +52,34 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         uint64_t stat_eviction;
         uint64_t stat_invalidation;
 
-        uint64_t stat_pht_access;
-        uint64_t stat_pht_hit;
-        uint64_t stat_pht_miss;
+        uint64_t stat_line_read_0;
+        uint64_t stat_line_read_1;
+        uint64_t stat_line_read_2_3;
+        uint64_t stat_line_read_4_7;
+        uint64_t stat_line_read_8_15;
+        uint64_t stat_line_read_16_127;
+        uint64_t stat_line_read_128_bigger;
 
-        uint64_t *stat_accessed_sub_blocks;
-        uint64_t *stat_written_sub_blocks;
+        uint64_t stat_line_writeback_0;
+        uint64_t stat_line_writeback_1;
+        uint64_t stat_line_writeback_2_3;
+        uint64_t stat_line_writeback_4_7;
+        uint64_t stat_line_writeback_8_15;
+        uint64_t stat_line_writeback_16_127;
+        uint64_t stat_line_writeback_128_bigger;
 
-        uint64_t *stat_active_sub_block_per_access;     /// Number of active sub_blocks on the line during one access
-        uint64_t *stat_active_sub_block_per_cycle;      /// Number of cycles with a set of sub_blocks enabled
-
-        uint64_t stat_sub_block_access_0;
-        uint64_t stat_sub_block_access_1;
-        uint64_t stat_sub_block_access_2_3;
-        uint64_t stat_sub_block_access_4_7;
-        uint64_t stat_sub_block_access_8_15;
-        uint64_t stat_sub_block_access_16_127;
-        uint64_t stat_sub_block_access_128_bigger;
-
-        uint64_t stat_sub_block_write_0;
-        uint64_t stat_sub_block_write_1;
-        uint64_t stat_sub_block_write_2_3;
-        uint64_t stat_sub_block_write_4_7;
-        uint64_t stat_sub_block_write_8_15;
-        uint64_t stat_sub_block_write_16_127;
-        uint64_t stat_sub_block_write_128_bigger;
-
-        /// Number of sub_blocks written
-        uint64_t stat_dirty_lines_predicted_dead;
-        uint64_t stat_clean_lines_predicted_dead;
-        uint64_t stat_written_lines_miss_predicted;
-
+        uint64_t cycles_turned_on;
+        uint64_t cycles_turned_off;
+        uint64_t cycles_turned_off_since_begin;
     public:
         /// ====================================================================
         /// Methods
         /// ====================================================================
-        line_usage_predictor_dsbp_t();
-        ~line_usage_predictor_dsbp_t();
+        line_usage_predictor_dewp_related1_t();
+        ~line_usage_predictor_dewp_related1_t();
+        inline const char* get_type_component_label() {
+            return "LINE_USAGE_PREDICTOR";
+        };
 
         /// ====================================================================
         /// Inheritance from interconnection_interface_t
@@ -134,7 +103,6 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         void print_configuration();
         /// ====================================================================
 
-
         /// ====================================================================
         /// Inheritance from line_usage_predictor_t
         /// ====================================================================
@@ -157,41 +125,15 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         void line_invalidation(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
         /// ====================================================================
 
-        /// DSBP methdos
-        void compute_static_energy(uint32_t index, uint32_t way);
-        void get_start_end_sub_blocks(uint64_t base_address, uint32_t size, uint32_t& sub_block_ini, uint32_t& sub_block_end);
-
-        INSTANTIATE_GET_SET(uint32_t, sub_block_size);
-        INSTANTIATE_GET_SET(uint32_t, sub_block_total);
-        INSTANTIATE_GET_SET(uint32_t, access_counter_bits);
-        INSTANTIATE_GET_SET(uint32_t, access_counter_max);
-
         /// metadata
-        INSTANTIATE_GET_SET(dsbp_metadata_set_t*, metadata_sets);
+        INSTANTIATE_GET_SET(dewp_metadata_set_t*, metadata_sets);
         INSTANTIATE_GET_SET(uint32_t, metadata_line_number);
         INSTANTIATE_GET_SET(uint32_t, metadata_associativity);
         INSTANTIATE_GET_SET(uint32_t, metadata_total_sets);
 
-        /// pht
-        pht_line_t* pht_find_line(uint64_t opcode_address, uint64_t memory_address);
-        pht_line_t* pht_evict_address(uint64_t opcode_address, uint64_t memory_address);
-
-        INSTANTIATE_GET_SET(uint32_t, pht_line_number);
-        INSTANTIATE_GET_SET(uint32_t, pht_associativity);
-        INSTANTIATE_GET_SET(replacement_t, pht_replacement_policy);
-        INSTANTIATE_GET_SET(uint32_t, pht_total_sets);
-
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_disable_always);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_disable_turnoff);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_normal_correct);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_normal_over);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_learn);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_wrong_first);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_sub_block_writeback);
-
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_hit);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_miss);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_miss);
@@ -200,27 +142,24 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_invalidation);
 
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_pht_access);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_pht_hit);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_pht_miss);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_0);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_1);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_2_3);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_4_7);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_8_15);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_16_127);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_128_bigger);
 
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_0);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_1);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_2_3);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_4_7);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_8_15);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_16_127);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_128_bigger);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_0);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_1);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_2_3);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_4_7);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_8_15);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_16_127);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_128_bigger);
 
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_0);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_1);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_2_3);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_4_7);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_8_15);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_16_127);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_128_bigger);
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_on);
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off);
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off_since_begin);
 
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dirty_lines_predicted_dead);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_clean_lines_predicted_dead);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_written_lines_miss_predicted);
 };

@@ -509,7 +509,7 @@ void processor_t::stage_fetch() {
 
         /// If must wait Branch miss prediction
         if (this->branch_solve_stage != PROCESSOR_STAGE_FETCH ||
-        this->branch_flush_cycle_ready >= sinuca_engine.get_global_cycle()) {
+        this->branch_flush_cycle_ready > sinuca_engine.get_global_cycle()) {
             add_stat_branch_stall_cycles();
             break;
         }
@@ -1188,28 +1188,19 @@ void processor_t::stage_dispatch() {
     PROCESSOR_DEBUG_PRINTF("stage_dispatch()\n");
 
     /// Reset the number of instructions dispatched in this cycle
-    static uint32_t total_dispatched;
-    total_dispatched = 0;
+    uint32_t total_dispatched = 0;
 
     /// Control the total dispatched
-    static uint32_t fu_int_alu;
-    static uint32_t fu_int_mul;
-    static uint32_t fu_int_div;
-    fu_int_alu = 0;
-    fu_int_mul = 0;
-    fu_int_div = 0;
+    uint32_t fu_int_alu = 0;
+    uint32_t fu_int_mul = 0;
+    uint32_t fu_int_div = 0;
 
-    static uint32_t fu_fp_alu;
-    static uint32_t fu_fp_mul;
-    static uint32_t fu_fp_div;
-    fu_fp_alu = 0;
-    fu_fp_mul = 0;
-    fu_fp_div = 0;
+    uint32_t fu_fp_alu = 0;
+    uint32_t fu_fp_mul = 0;
+    uint32_t fu_fp_div = 0;
 
-    static uint32_t fu_mem_load;
-    static uint32_t fu_mem_store;
-    fu_mem_load = 0;
-    fu_mem_store = 0;
+    uint32_t fu_mem_load = 0;
+    uint32_t fu_mem_store = 0;
 
     for (uint32_t k = 0; k < this->unified_reservation_station.size() && k < unified_reservation_station_window_size; k++) {
         reorder_buffer_line_t* reorder_buffer_line = this->unified_reservation_station[k];
@@ -1431,57 +1422,6 @@ void processor_t::stage_execution() {
         }
     }
 
-    /// After selecting an old package, the processor needs to send it before gets another
-    /// Without this, the cache could allocate a token, then the processor tries to send another package, which could create a dead-lock
-    /// ========================================================================
-    /// READ_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_package()
-    position_mem = POSITION_FAIL;
-    if (this->memory_order_buffer_read_executed != 0 && oldest_read_to_send == NULL){
-        position_mem = memory_order_buffer_line_t::find_old_request_state_ready(this->memory_order_buffer_read,
-                                                                            this->memory_order_buffer_read_size, PACKAGE_STATE_TRANSMIT);
-
-        if (position_mem != POSITION_FAIL) {
-            oldest_read_to_send = &this->memory_order_buffer_read[position_mem];
-        }
-    }
-    if (oldest_read_to_send != NULL) {
-        int32_t transmission_latency = this->send_package(&oldest_read_to_send->memory_request);
-        if (transmission_latency != POSITION_FAIL) {  /// Try to send to the Data Cache.
-            /// Wait answer.
-            oldest_read_to_send->memory_request.package_wait(transmission_latency);
-            oldest_read_to_send = NULL;
-        }
-    }
-
-    /// ========================================================================
-    /// WRITE_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_package()
-    position_mem = POSITION_FAIL;
-    if (this->memory_order_buffer_write_executed != 0 && oldest_read_to_send == NULL){
-        position_mem = memory_order_buffer_line_t::find_old_request_state_ready(this->memory_order_buffer_write,
-                                                                            this->memory_order_buffer_write_size, PACKAGE_STATE_TRANSMIT);
-
-        if (position_mem != POSITION_FAIL) {
-            oldest_write_to_send = &this->memory_order_buffer_write[position_mem];
-        }
-    }
-    if (oldest_write_to_send != NULL) {
-        int32_t transmission_latency = this->send_package(&oldest_write_to_send->memory_request);
-        if (transmission_latency != POSITION_FAIL) {  /// Try to send to the DC.
-            if (this->wait_write_complete) {
-                oldest_write_to_send->rob_ptr->stage = PROCESSOR_STAGE_COMMIT;
-                oldest_write_to_send->rob_ptr->uop.package_ready(this->stage_execution_cycles + this->stage_commit_cycles);
-                oldest_write_to_send->rob_ptr->mob_ptr = NULL;
-                /// Solve dependencies(forwarding data) before the store be removed from the MOB
-                this->solve_register_dependency(oldest_write_to_send->rob_ptr);
-            }
-            /// Solve dependencies(forwarding data) before the store be removed from the MOB
-            this->solve_memory_dependency(oldest_write_to_send);
-            /// Clean MOB line.
-            oldest_write_to_send->package_clean();
-            this->memory_order_buffer_write_executed--;
-            oldest_write_to_send = NULL;
-        }
-    }
 
     /// ========================================================================
     /// Commit the executed
@@ -1578,6 +1518,61 @@ void processor_t::stage_execution() {
             }
         }
     }
+
+
+    /// After selecting an old package, the processor needs to send it before gets another
+    /// Without this, the cache could allocate a token, then the processor tries to send another package, which could create a dead-lock
+    /// ========================================================================
+    /// READ_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_package()
+    position_mem = POSITION_FAIL;
+    if (this->memory_order_buffer_read_executed != 0 && oldest_read_to_send == NULL){
+        position_mem = memory_order_buffer_line_t::find_old_request_state_ready(this->memory_order_buffer_read,
+                                                                            this->memory_order_buffer_read_size, PACKAGE_STATE_TRANSMIT);
+
+        if (position_mem != POSITION_FAIL) {
+            oldest_read_to_send = &this->memory_order_buffer_read[position_mem];
+        }
+    }
+    if (oldest_read_to_send != NULL) {
+        int32_t transmission_latency = this->send_package(&oldest_read_to_send->memory_request);
+        if (transmission_latency != POSITION_FAIL) {  /// Try to send to the Data Cache.
+            /// Wait answer.
+            oldest_read_to_send->memory_request.package_wait(transmission_latency);
+            oldest_read_to_send = NULL;
+        }
+    }
+
+    /// ========================================================================
+    /// WRITE_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_package()
+    position_mem = POSITION_FAIL;
+    if (this->memory_order_buffer_write_executed != 0 && oldest_read_to_send == NULL){
+        position_mem = memory_order_buffer_line_t::find_old_request_state_ready(this->memory_order_buffer_write,
+                                                                            this->memory_order_buffer_write_size, PACKAGE_STATE_TRANSMIT);
+
+        if (position_mem != POSITION_FAIL) {
+            oldest_write_to_send = &this->memory_order_buffer_write[position_mem];
+        }
+    }
+    if (oldest_write_to_send != NULL) {
+        int32_t transmission_latency = this->send_package(&oldest_write_to_send->memory_request);
+        if (transmission_latency != POSITION_FAIL) {  /// Try to send to the DC.
+            if (this->wait_write_complete) {
+                oldest_write_to_send->rob_ptr->stage = PROCESSOR_STAGE_COMMIT;
+                oldest_write_to_send->rob_ptr->uop.package_ready(this->stage_execution_cycles + this->stage_commit_cycles);
+                oldest_write_to_send->rob_ptr->mob_ptr = NULL;
+                /// Solve dependencies(forwarding data) before the store be removed from the MOB
+                this->solve_register_dependency(oldest_write_to_send->rob_ptr);
+            }
+            /// Solve dependencies(forwarding data) before the store be removed from the MOB
+            this->solve_memory_dependency(oldest_write_to_send);
+            /// Clean MOB line.
+            oldest_write_to_send->package_clean();
+            this->memory_order_buffer_write_executed--;
+            oldest_write_to_send = NULL;
+        }
+    }
+
+
 };
 
 
@@ -1877,7 +1872,8 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
                     this->cmp_fetch_block(package->memory_address, this->fetch_buffer[j].opcode_address)) {
                         this->add_stat_instruction_read_completed(this->fetch_buffer[j].born_cycle);
                         PROCESSOR_DEBUG_PRINTF("\t WANTED INSTRUCTION\n");
-                        this->fetch_buffer[j].package_ready(transmission_latency);
+                        // ~ this->fetch_buffer[j].package_ready(transmission_latency);
+                        this->fetch_buffer[j].package_ready(0);
                         slot = j;
                     }
                 }
@@ -1895,7 +1891,8 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
                                                                     package->content_to_string().c_str());
                 if (slot != POSITION_FAIL) {
                     PROCESSOR_DEBUG_PRINTF("\t WANTED READ.\n");
-                    this->memory_order_buffer_read[slot].memory_request.package_ready(transmission_latency);
+                    // ~ this->memory_order_buffer_read[slot].memory_request.package_ready(transmission_latency);
+                    this->memory_order_buffer_read[slot].memory_request.package_ready(0);
                     this->memory_order_buffer_read[slot].memory_request.is_answer = true;
                 }
                 ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read Request done, but it is not on the memory_order_buffer anymore.\n")

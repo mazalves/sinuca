@@ -21,7 +21,7 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
 /// ============================================================================
-class line_usage_predictor_dewp_oracle_t : public line_usage_predictor_t {
+class line_usage_predictor_line_stats_t : public line_usage_predictor_t {
     private:
         /// ====================================================================
         /// Set by sinuca_configurator
@@ -38,7 +38,7 @@ class line_usage_predictor_dewp_oracle_t : public line_usage_predictor_t {
         uint32_t sub_block_total;
         uint32_t access_counter_max;
 
-        dewp_metadata_set_t *metadata_sets;
+        dlec_metadata_set_t *metadata_sets;
         uint32_t metadata_total_sets;
 
         /// ====================================================================
@@ -47,36 +47,40 @@ class line_usage_predictor_dewp_oracle_t : public line_usage_predictor_t {
         uint64_t stat_line_hit;
         uint64_t stat_line_miss;
         uint64_t stat_sub_block_miss;
-        uint64_t stat_send_writeback;
-        uint64_t stat_recv_writeback;
+        uint64_t stat_send_copyback;
+        uint64_t stat_recv_copyback;
         uint64_t stat_eviction;
         uint64_t stat_invalidation;
 
-        uint64_t stat_line_read_0;
-        uint64_t stat_line_read_1;
-        uint64_t stat_line_read_2_3;
-        uint64_t stat_line_read_4_7;
-        uint64_t stat_line_read_8_15;
-        uint64_t stat_line_read_16_127;
-        uint64_t stat_line_read_128_bigger;
+        uint64_t stat_line_access_0;
+        uint64_t stat_line_access_1;
+        uint64_t stat_line_access_2_3;
+        uint64_t stat_line_access_4_7;
+        uint64_t stat_line_access_8_15;
+        uint64_t stat_line_access_16_127;
+        uint64_t stat_line_access_128_bigger;
 
-        uint64_t stat_line_writeback_0;
-        uint64_t stat_line_writeback_1;
-        uint64_t stat_line_writeback_2_3;
-        uint64_t stat_line_writeback_4_7;
-        uint64_t stat_line_writeback_8_15;
-        uint64_t stat_line_writeback_16_127;
-        uint64_t stat_line_writeback_128_bigger;
+        uint64_t stat_line_write_0;
+        uint64_t stat_line_write_1;
+        uint64_t stat_line_write_2_3;
+        uint64_t stat_line_write_4_7;
+        uint64_t stat_line_write_8_15;
+        uint64_t stat_line_write_16_127;
+        uint64_t stat_line_write_128_bigger;
 
-        uint64_t cycles_turned_on;
-        uint64_t cycles_turned_off;
-        uint64_t cycles_turned_off_since_begin;
+        uint64_t cycles_last_write_to_last_access;
+        uint64_t cycles_last_write_to_eviction;
+        uint64_t cycles_last_access_to_eviction;
+
+        uint64_t dead_cycles;
+        uint64_t alive_cycles;
+
     public:
         /// ====================================================================
         /// Methods
         /// ====================================================================
-        line_usage_predictor_dewp_oracle_t();
-        ~line_usage_predictor_dewp_oracle_t();
+        line_usage_predictor_line_stats_t();
+        ~line_usage_predictor_line_stats_t();
         inline const char* get_type_component_label() {
             return "LINE_USAGE_PREDICTOR";
         };
@@ -103,31 +107,28 @@ class line_usage_predictor_dewp_oracle_t : public line_usage_predictor_t {
         void print_configuration();
         /// ====================================================================
 
-
         /// ====================================================================
         /// Inheritance from line_usage_predictor_t
         /// ====================================================================
         /// Inspections
         void fill_package_sub_blocks(memory_package_t *package);
-        void line_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way);
-        void predict_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way);
-
-        bool check_sub_block_is_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint64_t index, uint32_t way);
-        bool check_line_is_last_access(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
-        bool check_line_is_last_write(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
+        void line_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way);
+        bool check_sub_block_is_hit(memory_package_t *package, uint64_t index, uint32_t way);
+        bool check_line_is_last_access(uint32_t index, uint32_t way);
+        bool check_line_is_last_write(uint32_t index, uint32_t way);
 
         /// Cache Operations
-        void line_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way);
-        void line_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way);
-        void sub_block_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way);
-        void line_send_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way);
-        void line_recv_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way);
-        void line_eviction(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
-        void line_invalidation(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
+        void line_hit(memory_package_t *package, uint32_t index, uint32_t way);
+        void line_miss(memory_package_t *package, uint32_t index, uint32_t way);
+        void sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way);
+        void line_send_copyback(memory_package_t *package, uint32_t index, uint32_t way);
+        void line_recv_copyback(memory_package_t *package, uint32_t index, uint32_t way);
+        void line_eviction(uint32_t index, uint32_t way);
+        void line_invalidation(uint32_t index, uint32_t way);
         /// ====================================================================
 
         /// metadata
-        INSTANTIATE_GET_SET(dewp_metadata_set_t*, metadata_sets);
+        INSTANTIATE_GET_SET(dlec_metadata_set_t*, metadata_sets);
         INSTANTIATE_GET_SET(uint32_t, metadata_line_number);
         INSTANTIATE_GET_SET(uint32_t, metadata_associativity);
         INSTANTIATE_GET_SET(uint32_t, metadata_total_sets);
@@ -138,29 +139,30 @@ class line_usage_predictor_dewp_oracle_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_hit);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_miss);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_miss);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_send_writeback);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_recv_writeback);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_send_copyback);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_recv_copyback);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_invalidation);
 
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_0);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_1);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_2_3);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_4_7);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_8_15);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_16_127);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_128_bigger);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_0);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_1);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_2_3);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_4_7);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_8_15);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_16_127);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_access_128_bigger);
 
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_0);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_1);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_2_3);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_4_7);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_8_15);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_16_127);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_128_bigger);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_0);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_1);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_2_3);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_4_7);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_8_15);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_16_127);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_128_bigger);
 
-        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_on);
-        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off);
-        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off_since_begin);
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_last_write_to_last_access);
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_last_write_to_eviction);
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_last_access_to_eviction);
 
+        INSTANTIATE_GET_SET_ADD(uint64_t, dead_cycles);
 };

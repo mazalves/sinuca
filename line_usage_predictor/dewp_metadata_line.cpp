@@ -77,23 +77,23 @@ std::string dewp_metadata_line_t::content_to_string() {
     content_string = content_string + "Metadata -";
     content_string = content_string + " " + get_enum_line_sub_block_t_char(this->line_status);
 
-    content_string = content_string + " READ: RealAccess:" + utils_t::uint32_to_char(this->real_access_counter_read);
-    content_string = content_string + " Predicted:" + utils_t::uint32_to_char(this->access_counter_read);
-    content_string = content_string + " Overflow:" + utils_t::bool_to_char(this->overflow_read);
+    content_string = content_string + " READ: RealAccess:" + utils_t::uint32_to_string(this->real_access_counter_read);
+    content_string = content_string + " Predicted:" + utils_t::uint32_to_string(this->access_counter_read);
+    content_string = content_string + " Overflow:" + utils_t::bool_to_string(this->overflow_read);
 
-    content_string = content_string + " WRITE: RealAccess:" + utils_t::uint32_to_char(this->real_access_counter_writeback);
-    content_string = content_string + " Predicted:" + utils_t::uint32_to_char(this->access_counter_writeback);
-    content_string = content_string + " Overflow:" + utils_t::bool_to_char(this->overflow_writeback);
+    content_string = content_string + " WRITE: RealAccess:" + utils_t::uint32_to_string(this->real_access_counter_writeback);
+    content_string = content_string + " Predicted:" + utils_t::uint32_to_string(this->access_counter_writeback);
+    content_string = content_string + " Overflow:" + utils_t::bool_to_string(this->overflow_writeback);
 
 
-    content_string = content_string + " learn_mode:" + utils_t::bool_to_char(this->learn_mode);
-    content_string = content_string + " aht_ptr:" + utils_t::bool_to_char(this->aht_pointer != NULL);
+    content_string = content_string + " learn_mode:" + utils_t::bool_to_string(this->learn_mode);
+    content_string = content_string + " aht_ptr:" + utils_t::bool_to_string(this->aht_pointer != NULL);
 
-    content_string = content_string + " is_dead_read:" + utils_t::bool_to_char(this->is_dead_read);
-    content_string = content_string + " is_dead_write:" + utils_t::bool_to_char(this->is_dead_writeback);
-    content_string = content_string + " is_dirty:" + utils_t::bool_to_char(this->is_dirty);
+    content_string = content_string + " is_dead_read:" + utils_t::bool_to_string(this->is_dead_read);
+    content_string = content_string + " is_dead_write:" + utils_t::bool_to_string(this->is_dead_writeback);
+    content_string = content_string + " is_dirty:" + utils_t::bool_to_string(this->is_dirty);
 
-    content_string = content_string + " clock_first_access:" + utils_t::uint64_to_char(this->clock_first_access);
+    content_string = content_string + " clock_first_access:" + utils_t::uint64_to_string(this->clock_first_access);
 
     content_string = content_string + "\n";
     return content_string;

@@ -127,18 +127,22 @@ class utils_t {
         static uint64_t hash_function(hash_function_t type, uint64_t input1, uint64_t input2, uint64_t bit_size);
         static uint64_t fill_bit(uint32_t start, uint32_t end);
 
-        static const char *print_mask_of_bits(uint32_t line_size, uint32_t line_number, uint32_t assoc);
-        static const char *bool_to_char(bool input_int);
-        static const char *int32_to_char(int32_t input_int);
-        static const char *uint32_to_char(uint32_t input_int);
-        static const char *uint64_to_char(uint64_t input_int);
-        static const char *int64_to_char(int64_t input_int);
+        static void bool_to_char(char *string, bool input_int);
+        static void int32_to_char(char *string, int32_t input_int);
+        static void uint32_to_char(char *string, uint32_t input_int);
+        static void uint64_to_char(char *string, uint64_t input_int);
+        static void int64_to_char(char *string, int64_t input_int);
 
+        static uint64_t string_to_uint64(char *string);
+
+        static std::string print_mask_of_bits(uint32_t line_size, uint32_t line_number, uint32_t assoc);
         static std::string progress_pretty(uint64_t actual, uint64_t total);
         static std::string connections_pretty(cache_memory_t *cache_memory, uint32_t level);
-
         static std::string address_to_binary(uint64_t address);
+
+        static std::string bool_to_string(bool input_int);
         static std::string uint32_to_string(uint32_t input_int);
+        static std::string int32_to_string(int32_t input_int);        
         static std::string uint64_to_string(uint64_t input_int);
         static std::string int64_to_string(int64_t input_int);
 

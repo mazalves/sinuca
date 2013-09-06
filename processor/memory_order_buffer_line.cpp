@@ -56,9 +56,9 @@ std::string memory_order_buffer_line_t::content_to_string() {
     #endif
 
     content_string = this->memory_request.content_to_string();
-    // ~ content_string = content_string + " | UOP#" + (this->rob_ptr == NULL ? "NO_PTR" : utils_t::uint64_to_char(this->rob_ptr->uop.uop_number));
+    // ~ content_string = content_string + " | UOP#" + (this->rob_ptr == NULL ? "NO_PTR" : utils_t::uint64_to_string(this->rob_ptr->uop.uop_number));
     content_string = content_string + " | EXECUTED:" + (this->uop_executed ? "TRUE" : "FALSE");
-    content_string = content_string + " | MemWAIT:" + utils_t::uint32_to_char(this->wait_mem_deps_number);
+    content_string = content_string + " | MemWAIT:" + utils_t::uint32_to_string(this->wait_mem_deps_number);
     return content_string;
 };
 

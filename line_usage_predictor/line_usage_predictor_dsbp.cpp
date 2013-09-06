@@ -182,10 +182,12 @@ void line_usage_predictor_dsbp_t::fill_package_sub_blocks(memory_package_t *pack
 };
 
 /// ============================================================================
-void line_usage_predictor_dsbp_t::line_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way) {
+void line_usage_predictor_dsbp_t::line_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_writeback() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+    (void)cache;
+    (void)cache_line;
 
     // Modify the package->sub_blocks (valid_sub_blocks)
     package->memory_size = 0;
@@ -201,9 +203,11 @@ void line_usage_predictor_dsbp_t::line_sub_blocks_to_package(memory_package_t *p
 };
 
 /// ============================================================================
-void line_usage_predictor_dsbp_t::predict_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way) {
+void line_usage_predictor_dsbp_t::predict_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_writeback() package:%s\n", package->content_to_string().c_str())
 
+    (void)cache;
+    (void)cache_line;
     (void)package;
     (void)index;
     (void)way;
@@ -213,10 +217,12 @@ void line_usage_predictor_dsbp_t::predict_sub_blocks_to_package(memory_package_t
 
 
 /// ============================================================================
-bool line_usage_predictor_dsbp_t::check_sub_block_is_hit(memory_package_t *package, uint64_t index, uint32_t way) {
+bool line_usage_predictor_dsbp_t::check_sub_block_is_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint64_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_sub_block_is_hit() package:%s\n", package->content_to_string().c_str())
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Package %s", package->sub_blocks_to_string().c_str())
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Cache %s", this->metadata_sets[index].ways[way].content_to_string().c_str())
+    (void)cache;
+    (void)cache_line;
 
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
         if (package->sub_blocks[i] == true &&
@@ -231,15 +237,19 @@ bool line_usage_predictor_dsbp_t::check_sub_block_is_hit(memory_package_t *packa
 };
 
 /// ============================================================================
-bool line_usage_predictor_dsbp_t::check_line_is_last_access(uint32_t index, uint32_t way){
+bool line_usage_predictor_dsbp_t::check_line_is_last_access(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way){
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_access()\n")
+    (void)cache;
+    (void)cache_line;
 
     return (this->metadata_sets[index].ways[way].is_dead);
 };
 
 /// ============================================================================
-bool line_usage_predictor_dsbp_t::check_line_is_last_write(uint32_t index, uint32_t way){
+bool line_usage_predictor_dsbp_t::check_line_is_last_write(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way){
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_write()\n")
+    (void)cache;
+    (void)cache_line;
 
     return (this->metadata_sets[index].ways[way].is_dead);
 };
@@ -248,10 +258,12 @@ bool line_usage_predictor_dsbp_t::check_line_is_last_write(uint32_t index, uint3
 /// ============================================================================
 // Mechanism Operations
 /// ============================================================================
-void line_usage_predictor_dsbp_t::line_hit(memory_package_t *package, uint32_t index, uint32_t way) {
+void line_usage_predictor_dsbp_t::line_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_hit() package:%s\n", package->content_to_string().c_str())
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Package %s", package->sub_blocks_to_string().c_str())
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Cache %s", this->metadata_sets[index].ways[way].content_to_string().c_str())
+    (void)cache;
+    (void)cache_line;
 
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
@@ -433,9 +445,11 @@ void line_usage_predictor_dsbp_t::compute_static_energy(uint32_t index, uint32_t
 
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
-void line_usage_predictor_dsbp_t::line_miss(memory_package_t *package, uint32_t index, uint32_t way) {
+void line_usage_predictor_dsbp_t::line_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Package %s", package->sub_blocks_to_string().c_str())
+    (void)cache;
+    (void)cache_line;
 
 
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -558,10 +572,13 @@ void line_usage_predictor_dsbp_t::line_miss(memory_package_t *package, uint32_t 
 
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
-void line_usage_predictor_dsbp_t::sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way) {
+void line_usage_predictor_dsbp_t::sub_block_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("sub_block_miss() package:%s\n", package->content_to_string().c_str())
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Package %s", package->sub_blocks_to_string().c_str())
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Cache %s", this->metadata_sets[index].ways[way].content_to_string().c_str())
+    (void)cache;
+    (void)cache_line;
+
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
     this->add_stat_sub_block_miss();         /// Access Statistics
@@ -662,12 +679,14 @@ void line_usage_predictor_dsbp_t::sub_block_miss(memory_package_t *package, uint
 };
 
 /// ============================================================================
-void line_usage_predictor_dsbp_t::line_send_writeback(memory_package_t *package, uint32_t index, uint32_t way) {
+void line_usage_predictor_dsbp_t::line_send_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_writeback() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
     this->add_stat_send_writeback();         /// Access Statistics
 
+    (void)cache;
+    (void)cache_line;
     (void)package;
     (void)index;
     (void)way;
@@ -676,10 +695,12 @@ void line_usage_predictor_dsbp_t::line_send_writeback(memory_package_t *package,
 
 /// ============================================================================
 // Collateral Effect: Change the package->sub_blocks[]
-void line_usage_predictor_dsbp_t::line_recv_writeback(memory_package_t *package, uint32_t index, uint32_t way) {
+void line_usage_predictor_dsbp_t::line_recv_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+    (void)cache;
+    (void)cache_line;
     this->add_stat_recv_writeback();         /// Access Statistics
 
     // Mark as dirty
@@ -702,9 +723,11 @@ void line_usage_predictor_dsbp_t::line_recv_writeback(memory_package_t *package,
 
 
 /// ============================================================================
-void line_usage_predictor_dsbp_t::line_eviction(uint32_t index, uint32_t way) {
+void line_usage_predictor_dsbp_t::line_eviction(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_eviction()\n")
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t Cache %s", this->metadata_sets[index].ways[way].content_to_string().c_str())
+    (void)cache;
+    (void)cache_line;
 
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
@@ -861,10 +884,12 @@ void line_usage_predictor_dsbp_t::line_eviction(uint32_t index, uint32_t way) {
 };
 
 /// ============================================================================
-void line_usage_predictor_dsbp_t::line_invalidation(uint32_t index, uint32_t way) {
+void line_usage_predictor_dsbp_t::line_invalidation(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_invalidation()\n")
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+    (void)cache;
+    (void)cache_line;
     this->add_stat_invalidation();         /// Access Statistics
 
     this->metadata_sets[index].ways[way].clean();
@@ -1024,7 +1049,7 @@ void line_usage_predictor_dsbp_t::print_statistics() {
 
     for (uint32_t index = 0; index < this->get_metadata_total_sets(); index++) {
         for (uint32_t way = 0; way < this->get_metadata_associativity(); way++) {
-            this->line_eviction(index, way);
+            this->line_eviction(NULL, NULL, index, way);
         }
     }
 

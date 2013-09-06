@@ -138,26 +138,27 @@ class line_usage_predictor_dewp_t : public line_usage_predictor_t {
         void print_configuration();
         /// ====================================================================
 
+
         /// ====================================================================
         /// Inheritance from line_usage_predictor_t
         /// ====================================================================
         /// Inspections
         void fill_package_sub_blocks(memory_package_t *package);
-        void line_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way);
-        void predict_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way);
+        void line_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way);
+        void predict_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way);
 
-        bool check_sub_block_is_hit(memory_package_t *package, uint64_t index, uint32_t way);
-        bool check_line_is_last_access(uint32_t index, uint32_t way);
-        bool check_line_is_last_write(uint32_t index, uint32_t way);
+        bool check_sub_block_is_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint64_t index, uint32_t way);
+        bool check_line_is_last_access(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
+        bool check_line_is_last_write(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
 
         /// Cache Operations
-        void line_hit(memory_package_t *package, uint32_t index, uint32_t way);
-        void line_miss(memory_package_t *package, uint32_t index, uint32_t way);
-        void sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way);
-        void line_send_writeback(memory_package_t *package, uint32_t index, uint32_t way);
-        void line_recv_writeback(memory_package_t *package, uint32_t index, uint32_t way);
-        void line_eviction(uint32_t index, uint32_t way);
-        void line_invalidation(uint32_t index, uint32_t way);
+        void line_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way);
+        void line_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way);
+        void sub_block_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way);
+        void line_send_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way);
+        void line_recv_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way);
+        void line_eviction(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
+        void line_invalidation(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
         /// ====================================================================
 
         INSTANTIATE_GET_SET(uint32_t, access_counter_bits_read);

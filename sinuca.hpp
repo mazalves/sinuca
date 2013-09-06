@@ -101,6 +101,7 @@ class dsbp_metadata_line_t;
 class dsbp_metadata_set_t;
 class line_usage_predictor_dsbp_t;
 class line_usage_predictor_dsbp_oracle_t;
+class line_usage_predictor_dsbp_related1_t;
 /// === DEWP
 class aht_line_t;
 class aht_set_t;
@@ -140,6 +141,7 @@ extern sinuca_engine_t sinuca_engine;
 #define INFINITE (std::numeric_limits<uint32_t>::max())             /// interconnection_controller_t
 #define UNDESIRABLE (sinuca_engine.get_processor_array_size() * 10) /// interconnection_controller_t
 #define TRACE_LINE_SIZE 512     /// trace_reader_t (should not be smaller than on trace line)
+#define CONVERSION_SIZE 65
 #define MAX_UOP_DECODED 5       /// processor_t (Max number of uops from one opcode)
 #define MAX_REGISTERS 6       /// opcode_package_t uop_package_t  (Max number of register (read or write) for one opcode/uop)
 
@@ -315,6 +317,7 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 #include "./line_usage_predictor/dewp_metadata_set.hpp"
 #include "./line_usage_predictor/line_usage_predictor_dewp.hpp"
 #include "./line_usage_predictor/line_usage_predictor_dewp_oracle.hpp"
+#include "./line_usage_predictor/line_usage_predictor_dewp_related1.hpp"
 
 /// ============================================================================
 /// Memory Devices

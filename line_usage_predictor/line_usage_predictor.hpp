@@ -70,21 +70,24 @@ class line_usage_predictor_t : public interconnection_interface_t {
         /// ====================================================================
 
         /// Inspections
-        virtual void fill_package_sub_blocks(memory_package_t *package)=0;  /// Check the offset and package size and enable correct bits
-        virtual void line_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way)=0; /// Get the line subblocks and add to package (writeback)
-        virtual void predict_sub_blocks_to_package(memory_package_t *package, uint32_t index, uint32_t way)=0; /// Predict subblocks and add to package (miss/request)
+        /// Check the offset and package size and enable correct bits
+        virtual void fill_package_sub_blocks(memory_package_t *package)=0;
+        /// Get the line subblocks and add to package (writeback)
+        virtual void line_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line,memory_package_t *package, uint32_t index, uint32_t way)=0;
+        /// Predict subblocks and add to package (miss/request)
+        virtual void predict_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way)=0;
 
-        virtual bool check_sub_block_is_hit(memory_package_t *package, uint64_t index, uint32_t way)=0;
-        virtual bool check_line_is_last_access(uint32_t index, uint32_t way)=0;
-        virtual bool check_line_is_last_write(uint32_t index, uint32_t way)=0;
+        virtual bool check_sub_block_is_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint64_t index, uint32_t way)=0;
+        virtual bool check_line_is_last_access(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way)=0;
+        virtual bool check_line_is_last_write(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way)=0;
         /// Cache Operations
-        virtual void line_hit(memory_package_t *package, uint32_t index, uint32_t way)=0;
-        virtual void line_miss(memory_package_t *package, uint32_t index, uint32_t way)=0;
-        virtual void sub_block_miss(memory_package_t *package, uint32_t index, uint32_t way)=0;
-        virtual void line_send_writeback(memory_package_t *package, uint32_t index, uint32_t way)=0;
-        virtual void line_recv_writeback(memory_package_t *package, uint32_t index, uint32_t way)=0;
-        virtual void line_eviction(uint32_t index, uint32_t way)=0;
-        virtual void line_invalidation(uint32_t index, uint32_t way)=0;
+        virtual void line_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way)=0;
+        virtual void line_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way)=0;
+        virtual void sub_block_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way)=0;
+        virtual void line_send_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way)=0;
+        virtual void line_recv_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way)=0;
+        virtual void line_eviction(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way)=0;
+        virtual void line_invalidation(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way)=0;
 
 
         INSTANTIATE_GET_SET(line_usage_predictor_policy_t, line_usage_predictor_type);

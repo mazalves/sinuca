@@ -82,7 +82,8 @@ SRC_LINE_USAGE_PREDICTOR =	line_usage_predictor/line_usage_predictor.cpp \
 							line_usage_predictor/aht_line.cpp \
 							line_usage_predictor/dewp_metadata_line.cpp \
 							line_usage_predictor/line_usage_predictor_dewp.cpp \
-							line_usage_predictor/line_usage_predictor_dewp_oracle.cpp
+							line_usage_predictor/line_usage_predictor_dewp_oracle.cpp\
+							line_usage_predictor/line_usage_predictor_dewp_related1.cpp
 
 
 SRC_CACHE_MEMORY =	cache_memory/mshr_diff_line.cpp \

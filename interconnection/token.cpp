@@ -41,13 +41,13 @@ std::string token_t::content_to_string() {
     std::string content_string;
     content_string = "";
 
-    content_string = content_string + " TOKEN: Owner:" + utils_t::uint32_to_char(this->id_owner);
-    content_string = content_string + " OPCode#" + utils_t::uint64_to_char(this->opcode_number);
-    content_string = content_string + " 0x" + utils_t::uint64_to_char(this->opcode_address);
-    content_string = content_string + " UOP#" + utils_t::uint64_to_char(this->uop_number);
+    content_string = content_string + " TOKEN: Owner:" + utils_t::uint32_to_string(this->id_owner);
+    content_string = content_string + " OPCode#" + utils_t::uint64_to_string(this->opcode_number);
+    content_string = content_string + " 0x" + utils_t::uint64_to_string(this->opcode_address);
+    content_string = content_string + " UOP#" + utils_t::uint64_to_string(this->uop_number);
 
     content_string = content_string + " | " + get_enum_memory_operation_char(this->memory_operation);
-    content_string = content_string + " 0x" + utils_t::uint64_to_char(this->memory_address);
+    content_string = content_string + " 0x" + utils_t::uint64_to_string(this->memory_address);
     if (this->is_coming) {
         content_string = content_string + " COMING ";
     }

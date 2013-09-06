@@ -245,7 +245,7 @@ std::string opcode_package_t::content_to_string() {
 // Instruction Class
 // Convert Instruction variables into String
 void opcode_package_t::opcode_to_trace_string(char *trace_string) {
-    static char *register_string = utils_t::template_allocate_array<char>(TRACE_LINE_SIZE);
+    char *register_string = utils_t::template_allocate_array<char>(TRACE_LINE_SIZE);
     uint32_t reg_count;
 
     trace_string[0] = '\0';
@@ -325,7 +325,8 @@ void opcode_package_t::opcode_to_trace_string(char *trace_string) {
 ///             W 8 0x140735291283440
 ///             W 8 0x140735291283432
 void opcode_package_t::trace_string_to_read(char *input_string, uint32_t actual_bbl) {
-    static char *sub_string;
+    char *sub_string = NULL;
+    char *tmp_ptr = NULL;
     uint32_t count = 0, i = 0;
     while (input_string[i] != '\0') {
         count += (input_string[i] == ' ');
@@ -333,25 +334,28 @@ void opcode_package_t::trace_string_to_read(char *input_string, uint32_t actual_
     }
     ERROR_ASSERT_PRINTF(count != 4, "Error converting Text to Memory (Wrong  number of fields %d)\n", count)
 
-    sub_string = strtok (input_string," ");
+    sub_string = strtok_r (input_string," ", &tmp_ptr);
     ERROR_ASSERT_PRINTF(strcmp(sub_string, "R") == 0, "MemoryTraceFile Type (R) expected.\n Inst: %s\n Mem:%s\n",
                                                                                 this->content_to_string().c_str(), input_string)
 
-    sub_string = strtok(NULL, " ");
-    this->read_size = strtoull(sub_string, NULL, 10);
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
+    // ~ this->read_size = strtoull(sub_string, NULL, 10);
+    this->read_size = utils_t::string_to_uint64(sub_string);
 
-    sub_string = strtok(NULL, " ");
-    this->read_address = strtoull(sub_string, NULL, 10);
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
+    // ~ this->read_address = strtoull(sub_string, NULL, 10);
+    this->read_address = utils_t::string_to_uint64(sub_string);
 
-    sub_string = strtok(NULL, " ");
-    ERROR_ASSERT_PRINTF((uint32_t)strtoul(sub_string, NULL, 10) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%u)\n",
-                                                                                actual_bbl, (uint32_t)strtoul(sub_string, NULL, 10))
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
+    // ~ ERROR_ASSERT_PRINTF((uint32_t)strtoul(sub_string, NULL, 10) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%s)\n", actual_bbl, sub_string)
+    ERROR_ASSERT_PRINTF((uint32_t)utils_t::string_to_uint64(sub_string) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%s)\n", actual_bbl, sub_string)    
 };
 
 
 //============================================================================== NEW
 void opcode_package_t::trace_string_to_read2(char * input_string, uint32_t actual_bbl) {
-    static char *sub_string;
+    char *sub_string = NULL;
+    char *tmp_ptr = NULL;
     uint32_t count = 0, i = 0;
     while (input_string[i] != '\0') {
         count += (input_string[i] == ' ');
@@ -359,26 +363,33 @@ void opcode_package_t::trace_string_to_read2(char * input_string, uint32_t actua
     }
     ERROR_ASSERT_PRINTF(count != 4, "Error converting Text to Memory (Wrong  number of fields %d)\n", count)
 
-    sub_string = strtok (input_string," ");
+    sub_string = strtok_r (input_string," ", &tmp_ptr);
     ERROR_ASSERT_PRINTF(strcmp(sub_string, "R") == 0, "MemoryTraceFile Type (R) expected.\n Inst: %s\n Mem:%s\n",
                                                                                 this->content_to_string().c_str(), input_string)
 
-    sub_string = strtok(NULL, " ");
-    this->read2_size = strtoull(sub_string, NULL, 10);
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
+    // ~ this->read2_size = strtoull(sub_string, NULL, 10);
+    this->read2_size = utils_t::string_to_uint64(sub_string);
 
-    sub_string = strtok(NULL, " ");
-    this->read2_address = strtoull(sub_string, NULL, 10);
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
+    // ~ this->read2_address = strtoull(sub_string, NULL, 10);
+    this->read2_address = utils_t::string_to_uint64(sub_string);
 
-    sub_string = strtok(NULL, " ");
-    ERROR_ASSERT_PRINTF((uint32_t)strtoul(sub_string, NULL, 10) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%u)\n",
-                                                                                actual_bbl, (uint32_t)strtoul(sub_string, NULL, 10))
-
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
+    // ~ ERROR_ASSERT_PRINTF((uint32_t)strtoul(sub_string, NULL, 10) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%s)\n", actual_bbl, sub_string)
+    ERROR_ASSERT_PRINTF((uint32_t)utils_t::string_to_uint64(sub_string) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%s)\n", actual_bbl, sub_string)
 };
 
 
+uint64_t mystrtol( char *&pen, uint64_t val = 0 ) {
+    for ( char c; ( c = *pen ^ '0' ) <= 9; ++ pen ) val = val * 10 + c;
+    return val;
+}
+
 //============================================================================== NEW
-void opcode_package_t::trace_string_to_write(char * input_string, uint32_t actual_bbl) {
-    static char *sub_string;
+void opcode_package_t::trace_string_to_write(char *input_string, uint32_t actual_bbl) {
+    char *sub_string = NULL;
+    char *tmp_ptr = NULL;
     uint32_t count = 0, i = 0;
     while (input_string[i] != '\0') {
         count += (input_string[i] == ' ');
@@ -386,19 +397,21 @@ void opcode_package_t::trace_string_to_write(char * input_string, uint32_t actua
     }
     ERROR_ASSERT_PRINTF(count != 4, "Error converting Text to Memory (Wrong  number of fields %d)\n", count)
 
-    sub_string = strtok (input_string," ");
+    sub_string = strtok_r(input_string, " ", &tmp_ptr);
     ERROR_ASSERT_PRINTF(strcmp(sub_string, "W") == 0, "MemoryTraceFile Type (W) expected.\n Inst: %s\n Mem:%s\n",
                                                                                 this->content_to_string().c_str(), input_string)
 
-    sub_string = strtok(NULL, " ");
-    this->write_size = strtoull(sub_string, NULL, 10);
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
+    // ~ this->write_size = strtoull(sub_string, NULL, 10);
+    this->write_size = utils_t::string_to_uint64(sub_string);
 
-    sub_string = strtok(NULL, " ");
-    this->write_address = strtoull(sub_string, NULL, 10);
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
+    // ~ this->write_address = strtoull(sub_string, NULL, 10);
+    this->write_address = utils_t::string_to_uint64(sub_string);
 
-    sub_string = strtok(NULL, " ");
-    ERROR_ASSERT_PRINTF((uint32_t)strtoul(sub_string, NULL, 10) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%u)\n",
-                                                                                actual_bbl, (uint32_t)strtoul(sub_string, NULL, 10))
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
+    // ~ ERROR_ASSERT_PRINTF((uint32_t)strtoul(sub_string, NULL, 10) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%s)\n", actual_bbl, sub_string)
+    ERROR_ASSERT_PRINTF((uint32_t)utils_t::string_to_uint64(sub_string) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%s)\n", actual_bbl, sub_string)    
 };
 
 
@@ -421,27 +434,28 @@ void opcode_package_t::trace_string_to_write(char * input_string, uint32_t actua
 /// 9 0x140647360305464 2 2 25 15 1 15 0 0
 ///
 void opcode_package_t::trace_string_to_opcode(char *input_string) {
-    static char *sub_string;
-    static uint32_t sub_fields, count, i;
+    char *sub_string = NULL;
+    char *tmp_ptr = NULL;
+    uint32_t sub_fields, count, i;
     count = 0;
-
+  
     for (i = 0; input_string[i] != '\0'; i++) {
         count += (input_string[i] == ' ');
     }
     ERROR_ASSERT_PRINTF(count >= 13, "Error converting Text to Instruction (Wrong  number of fields %d), input_string = %s\n", count, input_string)
 
-    sub_string = strtok (input_string," ");
+    sub_string = strtok_r(input_string, " ", &tmp_ptr);
     strcpy(this->opcode_assembly, sub_string);
 
-    sub_string = strtok(NULL, " ");
-    this->opcode_operation = instruction_operation_t(atoi(sub_string));
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
+    this->opcode_operation = instruction_operation_t(utils_t::string_to_uint64(sub_string));
 
-    sub_string = strtok(NULL, " ");
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
     ERROR_ASSERT_PRINTF(memcmp(sub_string, "0x", 2) == 0, "Error converting Text to Instruction (Wrong number of fields), input_string = %s\n", sub_string)
-    this->opcode_address = strtoull(sub_string + 2, NULL, 10);
+    this->opcode_address = utils_t::string_to_uint64(sub_string + 2);
 
-    sub_string = strtok(NULL, " ");
-    this->opcode_size = atoi(sub_string);
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
+    this->opcode_size = utils_t::string_to_uint64(sub_string);
 
 
     for (i = 0; i < MAX_REGISTERS; i++) {
@@ -449,44 +463,44 @@ void opcode_package_t::trace_string_to_opcode(char *input_string) {
         this->write_regs[i] = POSITION_FAIL;
     }
 
-    sub_string = strtok(NULL, " ");
-    sub_fields = atoi(sub_string);
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
+    sub_fields = utils_t::string_to_uint64(sub_string);
 
     for (i = 0; i < sub_fields; i++) {
-        sub_string = strtok(NULL, " ");
-        this->read_regs[i] = strtoull(sub_string, NULL, 10);
+        sub_string = strtok_r(NULL, " ", &tmp_ptr);
+        this->read_regs[i] = utils_t::string_to_uint64(sub_string);
     }
 
-    sub_string = strtok(NULL, " ");
-    sub_fields = atoi(sub_string);
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
+    sub_fields = utils_t::string_to_uint64(sub_string);
 
     for (i = 0; i < sub_fields; i++) {
-        sub_string = strtok(NULL, " ");
-        this->write_regs[i] = strtoull(sub_string, NULL, 10);
+        sub_string = strtok_r(NULL, " ", &tmp_ptr);
+        this->write_regs[i] = utils_t::string_to_uint64(sub_string);
     }
 
-    sub_string = strtok(NULL, " ");
-    this->base_reg = strtoull(sub_string, NULL, 10);
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
+    this->base_reg = utils_t::string_to_uint64(sub_string);
 
-    sub_string = strtok(NULL, " ");
-    this->index_reg = strtoull(sub_string, NULL, 10);
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
+    this->index_reg = utils_t::string_to_uint64(sub_string);
 
-    sub_string = strtok(NULL, " ");
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
     this->is_read = (sub_string[0] == '1');
 
-    sub_string = strtok(NULL, " ");
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
     this->is_read2 = (sub_string[0] == '1');
 
-    sub_string = strtok(NULL, " ");
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
     this->is_write = (sub_string[0] == '1');
 
-    sub_string = strtok(NULL, " ");
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
     this->is_branch = (sub_string[0] == '1');
 
-    sub_string = strtok(NULL, " ");
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
     this->is_predicated = (sub_string[0] == '1');
 
-    sub_string = strtok(NULL, " ");
+    sub_string = strtok_r(NULL, " ", &tmp_ptr);
     this->is_prefetch = (sub_string[0] == '1');
 
 };

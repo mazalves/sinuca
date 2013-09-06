@@ -381,6 +381,7 @@ const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_polic
         case LINE_USAGE_PREDICTOR_POLICY_DSBP_ORACLE:       return "DSBP_ORACLE";   break;
         case LINE_USAGE_PREDICTOR_POLICY_DEWP:              return "DEWP";          break;
         case LINE_USAGE_PREDICTOR_POLICY_DEWP_ORACLE:       return "DEWP_ORACLE";   break;
+        case LINE_USAGE_PREDICTOR_POLICY_DEWP_RELATED1:       return "DEWP_RELATED1";   break;
 
     };
     ERROR_PRINTF("Wrong LINE_USAGE_PREDICTOR_POLICY\n");

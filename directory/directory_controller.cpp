@@ -190,11 +190,11 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
         this->cmp_index_tag(directory_lines[i]->initial_memory_address, package->memory_address)) {
             // =============================================================
             // Line Usage Prediction => Check if the subblocks were requested
-            bool is_sub_block_hit = cache->line_usage_predictor->check_sub_block_is_hit(package, index, way);
+            bool is_sub_block_hit = cache->line_usage_predictor->check_sub_block_is_hit(cache, cache_line, package, index, way);
             if (is_sub_block_hit) {
                 // =============================================================
                 // Line Usage Prediction => The statistics between the cache and our mechanism will be different
-                cache->line_usage_predictor->line_hit(package, index, way);
+                cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
             }
             else {
                 /// A new request needs to be generated in the future
@@ -239,7 +239,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             if (is_line_hit) {
                 // =============================================================
                 // Line Usage Prediction
-                is_sub_block_hit = cache->line_usage_predictor->check_sub_block_is_hit(package, index, way);
+                is_sub_block_hit = cache->line_usage_predictor->check_sub_block_is_hit(cache, cache_line, package, index, way);
             }
             ///=================================================================
             /// Cache line HIT + Sub-Block HIT
@@ -247,12 +247,32 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             if (is_sub_block_hit) {
                 // =============================================================
                 // Line Usage Prediction
-                cache->line_usage_predictor->line_hit(package, index, way);
+                cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
 
                 /// Update Coherence Status and Last Access Time
                 this->coherence_new_operation(cache, cache_line, package, true);
                 /// Update Statistics
                 this->new_statistics(cache, package, true);
+
+                /// Early Writeback?
+                // =============================================================
+                // Line Usage Prediction
+                if (coherence_is_dirty(cache_line->status) && cache->line_usage_predictor->check_line_is_last_write(cache, cache_line, index, way)) {
+                    memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
+                    if (writeback_package != NULL) {
+                        /// Add statistics to the cache
+                        cache->add_stat_writeback();
+                        /// Update Coherence Status and Last Access Time
+                        this->coherence_new_operation(cache, cache_line, writeback_package, false);
+                        /// Update Statistics
+                        this->new_statistics(cache, writeback_package, true);
+                        // =============================================================
+                        // Line Usage Prediction
+                        cache->line_usage_predictor->line_send_writeback(cache, cache_line, writeback_package, index, way);
+                    }
+                }
+
+
 
                 /// THIS cache level started the request (PREFETCH)
                 if (package->id_owner == cache->get_id()) {
@@ -320,13 +340,13 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                     if (coherence_is_dirty(cache_line->status)) {
                         // =============================================================
                         // Line Usage Prediction
-                        cache->line_usage_predictor->line_recv_writeback(package, index, way);
-                        cache->line_usage_predictor->line_hit(package, index, way);
+                        cache->line_usage_predictor->line_recv_writeback(cache, cache_line, package, index, way);
+                        cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
 
-                        /// Is Last Write ?
+                        /// Early Writeback?
                         // =============================================================
                         // Line Usage Prediction
-                        if (cache->line_usage_predictor->check_line_is_last_write(index, way)) {
+                        if (cache->line_usage_predictor->check_line_is_last_write(cache, cache_line, index, way)) {
                             memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
                             if (writeback_package != NULL) {
                                 /// Add statistics to the cache
@@ -336,17 +356,16 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                                 /// Update Statistics
                                 this->new_statistics(cache, writeback_package, true);
                                 // =============================================================
-                                // Line Usage Prediction (Tag different from actual)
-                                cache->line_usage_predictor->line_send_writeback(writeback_package, index, way);
+                                // Line Usage Prediction
+                                cache->line_usage_predictor->line_send_writeback(cache, cache_line, writeback_package, index, way);
                             }
                         }
                     }
                     else {
                         // =============================================================
                         // Line Usage Prediction
-                        cache->line_usage_predictor->sub_block_miss(package, index, way);
-                        // ~ cache->line_usage_predictor->line_miss(package, index, way);
-                        cache->line_usage_predictor->line_hit(package, index, way);
+                        cache->line_usage_predictor->sub_block_miss(cache, cache_line, package, index, way);
+                        cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
                     }
 
 
@@ -360,10 +379,10 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 else {
                     // =============================================================
                     // Line Usage Prediction
-                    cache->line_usage_predictor->sub_block_miss(package, index, way);
-                    cache->line_usage_predictor->line_hit(package, index, way);
+                    cache->line_usage_predictor->sub_block_miss(cache, cache_line, package, index, way);
+                    cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
                     // Line Usage Prediction => Take all the line subblocks and put into the package
-                    cache->line_usage_predictor->predict_sub_blocks_to_package(package, index, way);
+                    cache->line_usage_predictor->predict_sub_blocks_to_package(cache, cache_line, package, index, way);
 
                     /// LATENCY = READ
                     package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read();
@@ -434,13 +453,13 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                     if (coherence_is_dirty(cache_line->status)) {
                         // =============================================================
                         // Line Usage Prediction
-                        cache->line_usage_predictor->line_recv_writeback(package, index, way);
-                        cache->line_usage_predictor->line_hit(package, index, way);
+                        cache->line_usage_predictor->line_recv_writeback(cache, cache_line, package, index, way);
+                        cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
 
-                        /// Is Last Write ?
+                        /// Early Writeback?
                         // =============================================================
                         // Line Usage Prediction
-                        if (cache->line_usage_predictor->check_line_is_last_write(index, way)) {
+                        if (cache->line_usage_predictor->check_line_is_last_write(cache, cache_line, index, way)) {
                             memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
                             if (writeback_package != NULL) {
                                 /// Add statistics to the cache
@@ -450,16 +469,16 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                                 /// Update Statistics
                                 this->new_statistics(cache, writeback_package, true);
                                 // =============================================================
-                                // Line Usage Prediction (Tag different from actual)
-                                cache->line_usage_predictor->line_send_writeback(writeback_package, index, way);
+                                // Line Usage Prediction
+                                cache->line_usage_predictor->line_send_writeback(cache, cache_line, writeback_package, index, way);
                             }
                         }
                     }
                     else {
                         // =============================================================
                         // Line Usage Prediction
-                        cache->line_usage_predictor->line_miss(package, index, way);
-                        cache->line_usage_predictor->line_hit(package, index, way);
+                        cache->line_usage_predictor->line_miss(cache, cache_line, package, index, way);
+                        cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
                     }
 
                     /// LATENCY = WRITEBACK + WRITE
@@ -472,10 +491,10 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 else {
                     // =============================================================
                     // Line Usage Prediction
-                    cache->line_usage_predictor->line_miss(package, index, way);
-                    cache->line_usage_predictor->line_hit(package, index, way);
+                    cache->line_usage_predictor->line_miss(cache, cache_line, package, index, way);
+                    cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
                     // Line Usage Prediction => Take all the line subblocks and put into the package
-                    cache->line_usage_predictor->predict_sub_blocks_to_package(package, index, way);
+                    cache->line_usage_predictor->predict_sub_blocks_to_package(cache, cache_line, package, index, way);
 
 
                     /// LATENCY = READ
@@ -522,7 +541,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
             // =============================================================
             // Line Usage Prediction
-            cache->line_usage_predictor->line_recv_writeback(package, index, way);
+            cache->line_usage_predictor->line_recv_writeback(cache, cache_line, package, index, way);
 
             /// Reserve the evicted line for the new address
             cache->change_address(cache_line, package->memory_address);
@@ -535,10 +554,10 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             /// Add Latency
             package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_write();
 
-            /// Is Last Write ?
+            /// Early Writeback?
             // =============================================================
             // Line Usage Prediction
-            if (cache->line_usage_predictor->check_line_is_last_write(index, way)) {
+            if (cache->line_usage_predictor->check_line_is_last_write(cache, cache_line, index, way)) {
                 memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
                 if (writeback_package != NULL) {
                     /// Add statistics to the cache
@@ -549,7 +568,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                     this->new_statistics(cache, writeback_package, true);
                     // =============================================================
                     // Line Usage Prediction (Tag different from actual)
-                    cache->line_usage_predictor->line_send_writeback(writeback_package, index, way);
+                    cache->line_usage_predictor->line_send_writeback(cache, cache_line, writeback_package, index, way);
                 }
             }
 
@@ -821,7 +840,7 @@ memory_package_t* directory_controller_t::create_cache_writeback(cache_memory_t 
 
     // =============================================================
     // Line Usage Prediction => Take all the line subblocks and put into the package
-    cache->line_usage_predictor->line_sub_blocks_to_package(package, index, way);
+    cache->line_usage_predictor->line_sub_blocks_to_package(cache, cache_line, package, index, way);
 
     /// Higher Level Copy Back
     package->package_set_src_dst(cache->get_id(), this->find_next_obj_id(cache, package->memory_address));
@@ -898,7 +917,7 @@ bool directory_controller_t::inclusiveness_new_eviction(cache_memory_t *cache, c
         case INCLUSIVENESS_NON_INCLUSIVE: {
             // =============================================================
             // Line Usage Prediction => Does not matter if it got writeback, it will be evicted anyway.
-            cache->line_usage_predictor->line_eviction(index, way);
+            cache->line_usage_predictor->line_eviction(cache, cache_line, index, way);
         }
         break;
 
@@ -914,7 +933,7 @@ bool directory_controller_t::inclusiveness_new_eviction(cache_memory_t *cache, c
             else {
                 // =============================================================
                 // Line Usage Prediction
-                cache->line_usage_predictor->line_eviction(index, way);
+                cache->line_usage_predictor->line_eviction(cache, cache_line, index, way);
             }
         }
         break;
@@ -950,7 +969,7 @@ void directory_controller_t::coherence_evict_higher_levels(cache_memory_t *cache
     if (cache_line != NULL) {
         // =============================================================
         // Line Usage Prediction
-        cache_memory->line_usage_predictor->line_eviction(index, way);
+        cache_memory->line_usage_predictor->line_eviction(cache_memory, cache_line, index, way);
 
         cache_memory->change_address(cache_line, 0);
         cache_memory->change_status(cache_line, PROTOCOL_STATUS_I);
@@ -1133,7 +1152,7 @@ void directory_controller_t::coherence_invalidate_all(cache_memory_t *cache_memo
             if (cache_line != NULL && this->coherence_is_hit(cache_line, MEMORY_OPERATION_READ)) {
                 // =============================================================
                 // Line Usage Prediction
-                sinuca_engine.cache_memory_array[i]->line_usage_predictor->line_invalidation(index, way);
+                sinuca_engine.cache_memory_array[i]->line_usage_predictor->line_invalidation(cache_memory, cache_line, index, way);
 
                 sinuca_engine.cache_memory_array[i]->change_status(cache_line, PROTOCOL_STATUS_I);
                 /// Cache Statistics
