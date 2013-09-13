@@ -22,25 +22,31 @@
 //
 /// ============================================================================
 /// Class for Branch Predictor
-class branch_predictor_two_level_t : public branch_predictor_t {
+class branch_predictor_two_level_pas_t : public branch_predictor_t {
     private:
         /// ====================================================================
         /// Set by sinuca_configurator
         /// ====================================================================
-        branch_predictor_policy_t branch_predictor_two_level_type;   /// Prefetch policy choosen by the user
         uint32_t btb_line_number;                   /// Branch Target Buffer Size
         uint32_t btb_associativity;                 /// Branch Target Buffer Associativity
         replacement_t btb_replacement_policy;       /// Branch Target Buffer Replacement Policy
 
-        uint32_t bht_signature_bits;                /// Signature size
-        hash_function_t bht_signature_hash;         /// Signature hash function (SIGNATURE xor PC)
-        uint32_t bht_fsm_bits;                      /// Finite State Machine size
+        uint32_t pbht_line_number;                  /// PBHT Size
+        uint32_t pbht_associativity;                /// PBHT Associativity
+        replacement_t pbht_replacement_policy;      /// PBHT Replacement Policy
+
+        uint32_t spht_line_number;                  /// Number of GPHT lines
+        uint32_t spht_set_number;                   /// Number of GPHT sets
+
+        hash_function_t spht_index_hash;            /// Index hash function (SIGNATURE xor PC)
+
+        uint32_t fsm_bits;                          /// Finite State Machine size
 
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
         branch_target_buffer_set_t *btb;    /// Branch Target Buffer
-        uint32_t btb_total_sets;            /// Branch Target Buffer Associativity
+        uint32_t btb_total_sets;            /// Branch Target Buffer Sets
 
         uint64_t btb_index_bits_mask;       /// Index mask
         uint64_t btb_index_bits_shift;
@@ -48,11 +54,20 @@ class branch_predictor_two_level_t : public branch_predictor_t {
         uint64_t btb_tag_bits_mask;         /// Tag mask
         uint64_t btb_tag_bits_shift;
 
-        uint32_t *bht;                      /// Branch History Table (2Level predictor)
-        uint32_t bht_signature;             /// Branch History signature (2Level predictor)
-        uint32_t bht_signature_bits_mask;   /// Branch History signature mask (2Level predictor)
-        uint32_t bht_fsm_bits_mask;         /// Branch History fsm mask (2Level predictor)
+        branch_history_table_set_t *pbht;    /// Per-Address Branch History Table
+        uint32_t pbht_total_sets;            /// Per-Address Branch History Table Sets
+        uint64_t pbht_index_bits_mask;       /// Index mask
+        uint64_t pbht_index_bits_shift;
+        uint64_t pbht_tag_bits_mask;         /// Tag mask
+        uint64_t pbht_tag_bits_shift;
 
+        uint32_t **spht;                    /// Per_set Patern History Table [index][set]
+        uint32_t spht_index_bits;           /// Per_set Patern History Table - Bits for Index
+        uint64_t spht_index_bits_mask;      /// Per_set Patern History Table - Index mask
+        uint64_t spht_set_bits_mask;        /// Per_set Patern History Table - Set mask
+
+        uint32_t fsm_max_counter;           /// FSM mask
+        uint32_t fsm_taken_threshold;       /// FSM mask to check if taken
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
@@ -60,12 +75,16 @@ class branch_predictor_two_level_t : public branch_predictor_t {
         uint64_t stat_btb_hit;
         uint64_t stat_btb_miss;
 
+        uint64_t stat_pbht_accesses;
+        uint64_t stat_pbht_hit;
+        uint64_t stat_pbht_miss;
+
     public:
         /// ====================================================================
         /// Methods
         /// ====================================================================
-        branch_predictor_two_level_t();
-        ~branch_predictor_two_level_t();
+        branch_predictor_two_level_pas_t();
+        ~branch_predictor_two_level_pas_t();
         inline const char* get_type_component_label() {
             return "BRANCH_PREDICTOR";
         };
@@ -91,9 +110,20 @@ class branch_predictor_two_level_t : public branch_predictor_t {
         void print_statistics();
         void print_configuration();
         /// ====================================================================
-
         uint32_t btb_evict_address(uint64_t opcode_address);
         bool btb_find_update_address(uint64_t opcode_address);
+
+        uint32_t pbht_evict_address(uint64_t opcode_address);
+        uint32_t pbht_find_update_address(uint64_t opcode_address, bool is_taken);
+
+        bool spht_find_update_prediction(const opcode_package_t& actual_opcode, const opcode_package_t& next_opcode);
+        processor_stage_t predict_branch(const opcode_package_t& actual_opcode, const opcode_package_t& next_opcode);
+
+        /// ====================================================================
+        INSTANTIATE_GET_SET(uint32_t, btb_line_number)
+        INSTANTIATE_GET_SET(uint32_t, btb_associativity)
+        INSTANTIATE_GET_SET(uint32_t, btb_total_sets)
+        INSTANTIATE_GET_SET(replacement_t, btb_replacement_policy)
 
         inline uint64_t btb_get_tag(uint64_t addr) {
             return (addr & this->btb_tag_bits_mask) >> this->btb_tag_bits_shift;
@@ -103,21 +133,31 @@ class branch_predictor_two_level_t : public branch_predictor_t {
             return (addr & this->btb_index_bits_mask) >> this->btb_index_bits_shift;
         }
 
-        bool bht_find_update_prediction(const opcode_package_t& actual_opcode, const opcode_package_t& next_opcode);
-        processor_stage_t predict_branch(const opcode_package_t& actual_opcode, const opcode_package_t& next_opcode);
+        /// ====================================================================
+        INSTANTIATE_GET_SET(uint32_t, pbht_line_number)
+        INSTANTIATE_GET_SET(uint32_t, pbht_associativity)
+        INSTANTIATE_GET_SET(uint32_t, pbht_total_sets)
+        INSTANTIATE_GET_SET(replacement_t, pbht_replacement_policy)
 
+        inline uint64_t pbht_get_tag(uint64_t addr) {
+            return (addr & this->pbht_tag_bits_mask) >> this->pbht_tag_bits_shift;
+        }
 
-        INSTANTIATE_GET_SET(branch_predictor_policy_t, branch_predictor_two_level_type)
-        INSTANTIATE_GET_SET(uint32_t, btb_line_number)
-        INSTANTIATE_GET_SET(uint32_t, btb_associativity)
-        INSTANTIATE_GET_SET(uint32_t, btb_total_sets)
-        INSTANTIATE_GET_SET(replacement_t, btb_replacement_policy)
+        inline uint64_t pbht_get_index(uint64_t addr) {
+            return (addr & this->pbht_index_bits_mask) >> this->pbht_index_bits_shift;
+        }
 
-        INSTANTIATE_GET_SET(uint32_t, bht_signature_bits)
-        INSTANTIATE_GET_SET(uint32_t, bht_signature_bits_mask)
-        INSTANTIATE_GET_SET(hash_function_t, bht_signature_hash)
-        INSTANTIATE_GET_SET(uint32_t, bht_fsm_bits)
-        INSTANTIATE_GET_SET(uint32_t, bht_fsm_bits_mask)
+        /// ====================================================================
+        INSTANTIATE_GET_SET(uint32_t, spht_line_number)
+        INSTANTIATE_GET_SET(uint32_t, spht_set_number)
+        INSTANTIATE_GET_SET(uint32_t, spht_index_bits)
+        INSTANTIATE_GET_SET(uint64_t, spht_index_bits_mask)
+        INSTANTIATE_GET_SET(uint64_t, spht_set_bits_mask)
+        INSTANTIATE_GET_SET(hash_function_t, spht_index_hash)
+
+        INSTANTIATE_GET_SET(uint32_t, fsm_bits)
+        INSTANTIATE_GET_SET(uint32_t, fsm_max_counter)
+        INSTANTIATE_GET_SET(uint32_t, fsm_taken_threshold)
 
         /// ====================================================================
         /// Statistics related
@@ -125,4 +165,8 @@ class branch_predictor_two_level_t : public branch_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_btb_accesses)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_btb_hit)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_btb_miss)
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_pbht_accesses)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_pbht_hit)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_pbht_miss)
 };

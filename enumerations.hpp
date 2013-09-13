@@ -115,7 +115,11 @@ const char *get_enum_hash_function_char(hash_function_t type);
 /// ============================================================================
 /// Enumarates the type of branch predictor
 enum branch_predictor_policy_t {
-    BRANCH_PREDICTOR_TWO_LEVEL,
+    BRANCH_PREDICTOR_TWO_LEVEL_GAG,
+    BRANCH_PREDICTOR_TWO_LEVEL_GAS,
+    BRANCH_PREDICTOR_TWO_LEVEL_PAG,
+    BRANCH_PREDICTOR_TWO_LEVEL_PAS,
+    BRANCH_PREDICTOR_BI_MODAL,
     BRANCH_PREDICTOR_STATIC_TAKEN,
     BRANCH_PREDICTOR_DISABLE
 };

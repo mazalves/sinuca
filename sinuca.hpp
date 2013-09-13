@@ -71,10 +71,16 @@ class interconnection_interface_t;
 class interconnection_controller_t;
 class interconnection_router_t;
 /// Branch Predictor
+class branch_history_table_line_t;
+class branch_history_table_set_t;
 class branch_target_buffer_line_t;
 class branch_target_buffer_set_t;
 class branch_predictor_t;
-class branch_predictor_two_level_t;
+class branch_predictor_two_level_gag_t;
+class branch_predictor_two_level_gas_t;
+class branch_predictor_two_level_pag_t;
+class branch_predictor_two_level_pas_t;
+class branch_predictor_bi_modal_t;
 class branch_predictor_static_taken_t;
 class branch_predictor_disable_t;
 /// Processor
@@ -289,8 +295,15 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 #include "./branch_predictor/branch_target_buffer_line.hpp"
 #include "./branch_predictor/branch_target_buffer_set.hpp"
 
+#include "./branch_predictor/branch_history_table_line.hpp"
+#include "./branch_predictor/branch_history_table_set.hpp"
+
 #include "./branch_predictor/branch_predictor.hpp"
-#include "./branch_predictor/branch_predictor_two_level.hpp"
+#include "./branch_predictor/branch_predictor_two_level_gag.hpp"
+#include "./branch_predictor/branch_predictor_two_level_gas.hpp"
+#include "./branch_predictor/branch_predictor_two_level_pag.hpp"
+#include "./branch_predictor/branch_predictor_two_level_pas.hpp"
+#include "./branch_predictor/branch_predictor_bi_modal.hpp"
 #include "./branch_predictor/branch_predictor_static_taken.hpp"
 #include "./branch_predictor/branch_predictor_disable.hpp"
 

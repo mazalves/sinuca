@@ -137,9 +137,13 @@ const char *get_enum_hash_function_char(hash_function_t type)  {
 /// Enumarates the type of branch predictor
 const char *get_enum_branch_predictor_policy_char(branch_predictor_policy_t type) {
     switch (type) {
-        case BRANCH_PREDICTOR_TWO_LEVEL:    return "BRANCH_PREDICTOR_TWO_LEVEL"; break;
-        case BRANCH_PREDICTOR_STATIC_TAKEN: return "BRANCH_PREDICTOR_STATIC_TAKEN"; break;
-        case BRANCH_PREDICTOR_DISABLE:      return "BRANCH_PREDICTOR_DISABLE"; break;
+        case BRANCH_PREDICTOR_TWO_LEVEL_GAG:    return "BRANCH_PREDICTOR_TWO_LEVEL_GAG"; break;
+        case BRANCH_PREDICTOR_TWO_LEVEL_GAS:    return "BRANCH_PREDICTOR_TWO_LEVEL_GAS"; break;
+        case BRANCH_PREDICTOR_TWO_LEVEL_PAG:    return "BRANCH_PREDICTOR_TWO_LEVEL_PAG"; break;
+        case BRANCH_PREDICTOR_TWO_LEVEL_PAS:    return "BRANCH_PREDICTOR_TWO_LEVEL_PAS"; break;
+        case BRANCH_PREDICTOR_BI_MODAL:         return "BRANCH_PREDICTOR_BI_MODAL"; break;
+        case BRANCH_PREDICTOR_STATIC_TAKEN:     return "BRANCH_PREDICTOR_STATIC_TAKEN"; break;
+        case BRANCH_PREDICTOR_DISABLE:          return "BRANCH_PREDICTOR_DISABLE"; break;
     };
     ERROR_PRINTF("Wrong BRANCH_PREDICTOR_POLICY\n");
     return "FAIL";
