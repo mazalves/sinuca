@@ -72,7 +72,7 @@ void branch_predictor_two_level_pas_t::allocate() {
     branch_predictor_t::allocate();
 
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_btb_line_number() / this->get_btb_associativity()), "BTB Wrong line number(%u) or associativity(%u).\n", this->get_btb_line_number(), this->get_btb_associativity());
-    ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_pbht_line_number()), "PBHT Wrong line number(%u).\n", this->get_pbht_line_number());
+    ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_pbht_line_number() / this->get_pbht_associativity()), "PBHT Wrong line number(%u) or associativity(%u).\n", this->get_pbht_line_number(), this->get_pbht_associativity());
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_spht_line_number()), "GPHT Wrong line number(%u).\n", this->get_spht_line_number());
     uint32_t i;
 
