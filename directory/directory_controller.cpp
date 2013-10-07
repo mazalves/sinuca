@@ -368,9 +368,13 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                         cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
                     }
 
+                    /// LATENCY = CACHE -> CACHE = HIGHER LEVEL READ PENALTY
+                    container_ptr_cache_memory_t *higher_level_cache = cache->get_higher_level_cache();
+                    if (higher_level_cache->empty())
+                        package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read();
+                    else
+                        package->ready_cycle = sinuca_engine.get_global_cycle() + higher_level_cache[0][0]->get_penalty_read();
 
-                    /// LATENCY = WRITEBACK + WRITE
-                    package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read() + cache->get_penalty_write();
                     package->is_answer = true;
                     DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED ANSWER (Found Higher Level)\n")
                     return PACKAGE_STATE_UNTREATED;
@@ -481,8 +485,13 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                         cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
                     }
 
-                    /// LATENCY = WRITEBACK + WRITE
-                    package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read() + cache->get_penalty_write();
+                    /// LATENCY = CACHE -> CACHE = HIGHER LEVEL READ PENALTY
+                    container_ptr_cache_memory_t *higher_level_cache = cache->get_higher_level_cache();
+                    if (higher_level_cache->empty())
+                        package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read();
+                    else
+                        package->ready_cycle = sinuca_engine.get_global_cycle() + higher_level_cache[0][0]->get_penalty_read();
+
                     package->is_answer = true;
                     DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED ANSWER (Found Higher Level)\n")
                     return PACKAGE_STATE_UNTREATED;

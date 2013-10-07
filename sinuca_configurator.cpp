@@ -330,6 +330,9 @@ void sinuca_engine_t::initialize_processor() {
             processor_parameters.push_back("REGISTER_FORWARD_LATENCY");
             this->processor_array[i]->set_register_forward_latency( cfg_processor[ processor_parameters.back() ] );
 
+            processor_parameters.push_back("SOLVE_ADDRESS_TO_ADDRESS");
+            this->processor_array[i]->set_solve_address_to_address( cfg_processor[ processor_parameters.back() ] );
+
             processor_parameters.push_back("FETCH_BLOCK_SIZE");
             this->processor_array[i]->set_fetch_block_size( cfg_processor[ processor_parameters.back() ] );
 

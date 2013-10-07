@@ -161,6 +161,8 @@ processor_t::processor_t() {
     this->disambiguation_block_size = 0;
     this->disambiguation_type = DISAMBIGUATION_DISABLE;
     this->register_forward_latency = 0;
+    this->solve_address_to_address = false;
+    this->wait_write_complete = true;
 
     this->register_alias_table_size = 0;
     this->register_alias_table = NULL;
@@ -1403,26 +1405,24 @@ void processor_t::stage_execution() {
     /// REMOVE MEMORY PACKAGE READS which are ready!
     if (this->memory_order_buffer_read_executed != 0){
         /// Control Parallel Requests
-        // ~ for (uint32_t load = 0; load <= this->loads_per_cycle; load++) {
-            for (uint32_t slot = 0; slot < this->memory_order_buffer_read_size; slot++) {
-                if (this->memory_order_buffer_read[slot].memory_request.state == PACKAGE_STATE_READY &&
-                this->memory_order_buffer_read[slot].memory_request.ready_cycle <= sinuca_engine.get_global_cycle()) {
-                    ERROR_ASSERT_PRINTF(this->memory_order_buffer_read[slot].uop_executed == true, "Removing memory read before being executed.\n")
-                    ERROR_ASSERT_PRINTF(this->memory_order_buffer_read[slot].wait_mem_deps_number == 0, "Number of memory dependencies should be zero.\n")
-                    ERROR_ASSERT_PRINTF(this->memory_order_buffer_read[slot].memory_request.is_answer == true, "Removing a package from MOB which is not answer.\n")
-                    /// Solve ROB, and send to COMMIT
-                    this->memory_order_buffer_read[slot].rob_ptr->stage = PROCESSOR_STAGE_COMMIT;
-                    this->memory_order_buffer_read[slot].rob_ptr->uop.package_ready(this->stage_commit_cycles);
-                    this->memory_order_buffer_read[slot].rob_ptr->mob_ptr = NULL;
-                    this->solve_register_dependency(this->memory_order_buffer_read[slot].rob_ptr);
-                    this->solve_memory_dependency(&this->memory_order_buffer_read[slot]);
-                    /// Clean MOB line.
-                    this->memory_order_buffer_read[slot].package_clean();
-                    this->memory_order_buffer_read_executed--;
-                    break;
-                }
+        for (uint32_t slot = 0; slot < this->memory_order_buffer_read_size; slot++) {
+            if (this->memory_order_buffer_read[slot].memory_request.state == PACKAGE_STATE_READY &&
+            this->memory_order_buffer_read[slot].memory_request.ready_cycle <= sinuca_engine.get_global_cycle()) {
+                ERROR_ASSERT_PRINTF(this->memory_order_buffer_read[slot].uop_executed == true, "Removing memory read before being executed.\n")
+                ERROR_ASSERT_PRINTF(this->memory_order_buffer_read[slot].wait_mem_deps_number == 0, "Number of memory dependencies should be zero.\n")
+                ERROR_ASSERT_PRINTF(this->memory_order_buffer_read[slot].memory_request.is_answer == true, "Removing a package from MOB which is not answer.\n")
+                /// Solve ROB, and send to COMMIT
+                this->memory_order_buffer_read[slot].rob_ptr->stage = PROCESSOR_STAGE_COMMIT;
+                this->memory_order_buffer_read[slot].rob_ptr->uop.package_ready(this->stage_commit_cycles);
+                this->memory_order_buffer_read[slot].rob_ptr->mob_ptr = NULL;
+                this->solve_register_dependency(this->memory_order_buffer_read[slot].rob_ptr);
+                this->solve_memory_dependency(&this->memory_order_buffer_read[slot]);
+                /// Clean MOB line.
+                this->memory_order_buffer_read[slot].package_clean();
+                this->memory_order_buffer_read_executed--;
+                break;
             }
-        // ~ }
+        }
     }
 
     /// ========================================================================
@@ -1528,69 +1528,58 @@ void processor_t::stage_execution() {
     /// READ_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_package()
     if (this->memory_order_buffer_read_executed != 0) {
         /// Control Parallel Requests
-        // ~ for (uint32_t load = 0; load <= this->loads_per_cycle; load++) {
-            position_mem = POSITION_FAIL;
-            if (oldest_read_to_send == NULL){
-                position_mem = memory_order_buffer_line_t::find_old_request_state_ready(this->memory_order_buffer_read,
-                                                                                    this->memory_order_buffer_read_size, PACKAGE_STATE_TRANSMIT);
 
-                if (position_mem != POSITION_FAIL) {
-                    oldest_read_to_send = &this->memory_order_buffer_read[position_mem];
-                }
-                // ~ else {
-                    // ~ break;
-                // ~ }
+        position_mem = POSITION_FAIL;
+        if (oldest_read_to_send == NULL){
+            position_mem = memory_order_buffer_line_t::find_old_request_state_ready(this->memory_order_buffer_read,
+                                                                                this->memory_order_buffer_read_size, PACKAGE_STATE_TRANSMIT);
+
+            if (position_mem != POSITION_FAIL) {
+                oldest_read_to_send = &this->memory_order_buffer_read[position_mem];
             }
-            if (oldest_read_to_send != NULL) {
-                int32_t transmission_latency = this->send_package(&oldest_read_to_send->memory_request);
-                if (transmission_latency != POSITION_FAIL) {  /// Try to send to the Data Cache.
-                    /// Wait answer.
-                    oldest_read_to_send->memory_request.package_wait(transmission_latency);
-                    oldest_read_to_send = NULL;
-                }
+        }
+        if (oldest_read_to_send != NULL) {
+            int32_t transmission_latency = this->send_package(&oldest_read_to_send->memory_request);
+            if (transmission_latency != POSITION_FAIL) {  /// Try to send to the Data Cache.
+                /// Wait answer.
+                oldest_read_to_send->memory_request.package_wait(transmission_latency);
+                oldest_read_to_send = NULL;
             }
-        // ~ }
+        }
     }
 
     /// ========================================================================
     /// WRITE_BUFFER(PACKAGE_STATE_TRANSMIT) =>  send_package()
     if (this->memory_order_buffer_write_executed != 0) {
         /// Control Parallel Requests
-        // ~ for (uint32_t store = 0; store <= this->stores_per_cycle; store++) {
-            position_mem = POSITION_FAIL;
-            if (oldest_read_to_send == NULL){
-                position_mem = memory_order_buffer_line_t::find_old_request_state_ready(this->memory_order_buffer_write,
-                                                                                    this->memory_order_buffer_write_size, PACKAGE_STATE_TRANSMIT);
+        position_mem = POSITION_FAIL;
+        if (oldest_read_to_send == NULL){
+            position_mem = memory_order_buffer_line_t::find_old_request_state_ready(this->memory_order_buffer_write,
+                                                                                this->memory_order_buffer_write_size, PACKAGE_STATE_TRANSMIT);
 
-                if (position_mem != POSITION_FAIL) {
-                    oldest_write_to_send = &this->memory_order_buffer_write[position_mem];
-                }
-                // ~ else {
-                    // ~ break;
-                // ~ }
+            if (position_mem != POSITION_FAIL) {
+                oldest_write_to_send = &this->memory_order_buffer_write[position_mem];
             }
-            if (oldest_write_to_send != NULL) {
-                int32_t transmission_latency = this->send_package(&oldest_write_to_send->memory_request);
-                if (transmission_latency != POSITION_FAIL) {  /// Try to send to the DC.
-                    if (this->wait_write_complete) {
-                        oldest_write_to_send->rob_ptr->stage = PROCESSOR_STAGE_COMMIT;
-                        oldest_write_to_send->rob_ptr->uop.package_ready(this->stage_execution_cycles + this->stage_commit_cycles);
-                        oldest_write_to_send->rob_ptr->mob_ptr = NULL;
-                        /// Solve dependencies(forwarding data) before the store be removed from the MOB
-                        this->solve_register_dependency(oldest_write_to_send->rob_ptr);
-                    }
+        }
+        if (oldest_write_to_send != NULL) {
+            int32_t transmission_latency = this->send_package(&oldest_write_to_send->memory_request);
+            if (transmission_latency != POSITION_FAIL) {  /// Try to send to the DC.
+                if (this->wait_write_complete) {
+                    oldest_write_to_send->rob_ptr->stage = PROCESSOR_STAGE_COMMIT;
+                    oldest_write_to_send->rob_ptr->uop.package_ready(this->stage_execution_cycles + this->stage_commit_cycles);
+                    oldest_write_to_send->rob_ptr->mob_ptr = NULL;
                     /// Solve dependencies(forwarding data) before the store be removed from the MOB
-                    this->solve_memory_dependency(oldest_write_to_send);
-                    /// Clean MOB line.
-                    oldest_write_to_send->package_clean();
-                    this->memory_order_buffer_write_executed--;
-                    oldest_write_to_send = NULL;
+                    this->solve_register_dependency(oldest_write_to_send->rob_ptr);
                 }
+                /// Solve dependencies(forwarding data) before the store be removed from the MOB
+                this->solve_memory_dependency(oldest_write_to_send);
+                /// Clean MOB line.
+                oldest_write_to_send->package_clean();
+                this->memory_order_buffer_write_executed--;
+                oldest_write_to_send = NULL;
             }
-        // ~ }
+        }
     }
-
-
 };
 
 
@@ -1647,22 +1636,26 @@ void processor_t::solve_memory_dependency(memory_order_buffer_line_t *mob_line) 
         else {
             mob_line->mem_deps_ptr_array[j]->wait_mem_deps_number--;
 
-            switch (this->disambiguation_type) {
-                case DISAMBIGUATION_PERFECT:
-                    if (mob_line->mem_deps_ptr_array[j]->uop_executed == true &&
-                    mob_line->mem_deps_ptr_array[j]->wait_mem_deps_number == 0 &&
-                    mob_line->mem_deps_ptr_array[j]->memory_request.memory_operation == MEMORY_OPERATION_READ &&
-                    mob_line->mem_deps_ptr_array[j]->memory_request.memory_address == mob_line->memory_request.memory_address &&
-                    mob_line->mem_deps_ptr_array[j]->memory_request.memory_size == mob_line->memory_request.memory_size) {
-                        /// Solve the LOAD->LOAD and STORE->LOAD
-                        mob_line->mem_deps_ptr_array[j]->memory_request.state = PACKAGE_STATE_READY;
-                        mob_line->mem_deps_ptr_array[j]->memory_request.ready_cycle =  sinuca_engine.get_global_cycle() + this->register_forward_latency;
-                        mob_line->mem_deps_ptr_array[j]->memory_request.is_answer = true;
-                    }
-                break;
+            if (this->solve_address_to_address) {
+                if (mob_line->mem_deps_ptr_array[j]->uop_executed == true &&
+                mob_line->mem_deps_ptr_array[j]->wait_mem_deps_number == 0 &&
+                mob_line->mem_deps_ptr_array[j]->memory_request.memory_operation == MEMORY_OPERATION_READ &&
+                mob_line->mem_deps_ptr_array[j]->memory_request.memory_address == mob_line->memory_request.memory_address &&
+                mob_line->mem_deps_ptr_array[j]->memory_request.memory_size == mob_line->memory_request.memory_size) {
+                    /// Solve the LOAD->LOAD and STORE->LOAD
 
-                case DISAMBIGUATION_DISABLE:
-                break;
+                    PROCESSOR_DEBUG_PRINTF("THIS: %s %llu \t", mob_line->memory_request.memory_operation == MEMORY_OPERATION_READ ? "READ" : "WRITE",
+                                                (long long unsigned int)mob_line->memory_request.memory_address);
+
+                    PROCESSOR_DEBUG_PRINTF("SOLVES: %s %llu\n", mob_line->mem_deps_ptr_array[j]->memory_request.memory_operation == MEMORY_OPERATION_READ ? "READ" : "WRITE",
+                                                (long long unsigned int)mob_line->mem_deps_ptr_array[j]->memory_request.memory_address);
+
+
+                    this->add_stat_address_to_address();
+                    mob_line->mem_deps_ptr_array[j]->memory_request.state = PACKAGE_STATE_READY;
+                    mob_line->mem_deps_ptr_array[j]->memory_request.ready_cycle =  sinuca_engine.get_global_cycle() + this->register_forward_latency;
+                    mob_line->mem_deps_ptr_array[j]->memory_request.is_answer = true;
+                }
             }
 
             /// This update the ready cycle, and it is usefull to compute the time each instruction waits for the functional unit
@@ -1873,56 +1866,53 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
         case MEMORY_OPERATION_INST: {
             ERROR_ASSERT_PRINTF(input_port == PROCESSOR_PORT_INST_CACHE, "Receiving instruction package from a wrong port.\n");
             /// Control Parallel Requests
-            // ~ for (uint32_t inst = 0; inst <= this->inst_per_cycle; inst++) {
-                if (this->recv_ready_cycle[input_port] <= sinuca_engine.get_global_cycle()) {
-                    /// Add to the buffer the whole line fetched
-                    this->fetch_opcode_address_line_buffer = package->memory_address;
+            if (this->recv_ready_cycle[input_port] <= sinuca_engine.get_global_cycle()) {
+                /// Add to the buffer the whole line fetched
+                this->fetch_opcode_address_line_buffer = package->memory_address;
 
-                    /// Find packages WAITING
-                    for (uint32_t k = 0; k < this->fetch_buffer_position_used; k++) {
-                        /// Update the FETCH BUFFER position
-                        uint32_t j = this->fetch_buffer_position_start + k;
-                        if (j >= this->fetch_buffer_size) {
-                            j -= this->fetch_buffer_size;
-                        }
-
-                        /// Wake up ALL instructions waiting
-                        if (this->fetch_buffer[j].state == PACKAGE_STATE_WAIT &&
-                        this->cmp_fetch_block(package->memory_address, this->fetch_buffer[j].opcode_address)) {
-                            this->add_stat_instruction_read_completed(this->fetch_buffer[j].born_cycle);
-                            PROCESSOR_DEBUG_PRINTF("\t WANTED INSTRUCTION\n");
-                            // ~ this->fetch_buffer[j].package_ready(transmission_latency);
-                            this->fetch_buffer[j].package_ready(0);
-                            slot = j;
-                        }
+                /// Find packages WAITING
+                for (uint32_t k = 0; k < this->fetch_buffer_position_used; k++) {
+                    /// Update the FETCH BUFFER position
+                    uint32_t j = this->fetch_buffer_position_start + k;
+                    if (j >= this->fetch_buffer_size) {
+                        j -= this->fetch_buffer_size;
                     }
-                    ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read Instruction done, but it is not on the fetch-buffer anymore.\n")
-                    this->recv_ready_cycle[input_port] = sinuca_engine.get_global_cycle() + transmission_latency;
-                    return OK;
+
+                    /// Wake up ALL instructions waiting
+                    if (this->fetch_buffer[j].state == PACKAGE_STATE_WAIT &&
+                    this->cmp_fetch_block(package->memory_address, this->fetch_buffer[j].opcode_address)) {
+                        this->add_stat_instruction_read_completed(this->fetch_buffer[j].born_cycle);
+                        PROCESSOR_DEBUG_PRINTF("\t WANTED INSTRUCTION\n");
+                        // ~ this->fetch_buffer[j].package_ready(transmission_latency);
+                        this->fetch_buffer[j].package_ready(0);
+                        slot = j;
+                    }
                 }
-            // ~ }
+                ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read Instruction done, but it is not on the fetch-buffer anymore.\n")
+                this->recv_ready_cycle[input_port] = sinuca_engine.get_global_cycle() + transmission_latency;
+                return OK;
+            }
         }
         break;
 
         case MEMORY_OPERATION_READ:
             ERROR_ASSERT_PRINTF(input_port == PROCESSOR_PORT_DATA_CACHE, "Receiving read package from a wrong port.\n");
             /// Control Parallel Requests
-            // ~ for (uint32_t load = 0; load <= this->loads_per_cycle; load++) {
-                if (this->recv_ready_cycle[input_port] <= sinuca_engine.get_global_cycle()) {
-                    slot = memory_order_buffer_line_t::find_uop_number(this->memory_order_buffer_read, this->memory_order_buffer_read_size, package->uop_number);
-                    ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read done, but no request in the read-buffer found.\npackage:%s\n",
-                                                                        package->content_to_string().c_str());
-                    if (slot != POSITION_FAIL) {
-                        PROCESSOR_DEBUG_PRINTF("\t WANTED READ.\n");
-                        // ~ this->memory_order_buffer_read[slot].memory_request.package_ready(transmission_latency);
-                        this->memory_order_buffer_read[slot].memory_request.package_ready(0);
-                        this->memory_order_buffer_read[slot].memory_request.is_answer = true;
-                    }
-                    ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read Request done, but it is not on the memory_order_buffer anymore.\n")
-                    this->recv_ready_cycle[input_port] = sinuca_engine.get_global_cycle() + transmission_latency;
-                    return OK;
+
+            if (this->recv_ready_cycle[input_port] <= sinuca_engine.get_global_cycle()) {
+                slot = memory_order_buffer_line_t::find_uop_number(this->memory_order_buffer_read, this->memory_order_buffer_read_size, package->uop_number);
+                ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read done, but no request in the read-buffer found.\npackage:%s\n",
+                                                                    package->content_to_string().c_str());
+                if (slot != POSITION_FAIL) {
+                    PROCESSOR_DEBUG_PRINTF("\t WANTED READ.\n");
+                    // ~ this->memory_order_buffer_read[slot].memory_request.package_ready(transmission_latency);
+                    this->memory_order_buffer_read[slot].memory_request.package_ready(0);
+                    this->memory_order_buffer_read[slot].memory_request.is_answer = true;
                 }
-            // ~ }
+                ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read Request done, but it is not on the memory_order_buffer anymore.\n")
+                this->recv_ready_cycle[input_port] = sinuca_engine.get_global_cycle() + transmission_latency;
+                return OK;
+            }
         break;
 
         case MEMORY_OPERATION_WRITE:
@@ -1993,12 +1983,6 @@ void processor_t::periodic_check(){
     ERROR_ASSERT_PRINTF(memory_order_buffer_line_t::check_age(this->memory_order_buffer_read, this->memory_order_buffer_read_size) == OK, "Check_age failed.\n");
     ERROR_ASSERT_PRINTF(memory_order_buffer_line_t::check_age(this->memory_order_buffer_write, this->memory_order_buffer_write_size) == OK, "Check_age failed.\n");
 
-    // ~ uint64_t min_cycle = 0;
-    // ~ if (sinuca_engine.get_global_cycle() > MAX_ALIVE_TIME) {
-        // ~ min_cycle = sinuca_engine.get_global_cycle() - MAX_ALIVE_TIME;
-    // ~ }
-    // ~ ERROR_ASSERT_PRINTF(this->sync_status == SYNC_FREE || this->sync_status_time >= min_cycle, "Check_age failed.\n");
-
     this->branch_predictor->periodic_check();
 };
 
@@ -2038,6 +2022,7 @@ void processor_t::reset_statistics() {
     this->set_stat_memory_read_completed(0);
     this->set_stat_instruction_read_completed(0);
     this->set_stat_memory_write_completed(0);
+    this->set_stat_address_to_address(0);
 
     /// Dispatch Cycles Stall
     this->set_stat_dispatch_cycles_fu_int_alu(0);
@@ -2141,6 +2126,8 @@ void processor_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_instruction_read_completed", stat_instruction_read_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_memory_read_completed", stat_memory_read_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_memory_write_completed", stat_memory_write_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_address_to_address", stat_address_to_address);
+
 
     /// Dispatch Cycles Stall
     sinuca_engine.write_statistics_small_separator();
@@ -2290,7 +2277,10 @@ void processor_t::print_configuration() {
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "disambiguation_block_size", disambiguation_block_size);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "disambiguation_type", get_enum_disambiguation_char(disambiguation_type));
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "disambiguation_offset_bits_mask", utils_t::address_to_binary(this->disambiguation_offset_bits_mask).c_str());
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "not_disambiguation_offset_bits_mask", utils_t::address_to_binary(this->not_disambiguation_offset_bits_mask).c_str());
 
+    sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "register_forward_latency", register_forward_latency);
 
 
