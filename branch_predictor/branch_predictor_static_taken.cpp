@@ -80,7 +80,7 @@ void branch_predictor_static_taken_t::allocate() {
 
 /// ============================================================================
 uint32_t branch_predictor_static_taken_t::btb_evict_address(uint64_t opcode_address) {
-    uint64_t index = btb_get_index(opcode_address);
+    uint64_t index = btb_get_index(opcode_address >> 2);
     uint32_t way = 0;
     uint32_t selected = 0;
 
@@ -128,8 +128,8 @@ uint32_t branch_predictor_static_taken_t::btb_evict_address(uint64_t opcode_addr
 
 /// ============================================================================
 bool branch_predictor_static_taken_t::btb_find_update_address(uint64_t opcode_address) {
-    uint64_t index = btb_get_index(opcode_address);
-    uint64_t tag = btb_get_tag(opcode_address);
+    uint64_t index = btb_get_index(opcode_address >> 2);
+    uint64_t tag = btb_get_tag(opcode_address >> 2);
     uint32_t way = 0;
 
     this->add_stat_btb_accesses();

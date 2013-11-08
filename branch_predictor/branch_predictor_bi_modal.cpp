@@ -107,7 +107,7 @@ void branch_predictor_bi_modal_t::allocate() {
 
 /// ============================================================================
 uint32_t branch_predictor_bi_modal_t::btb_evict_address(uint64_t opcode_address) {
-    uint64_t index = btb_get_index(opcode_address);
+    uint64_t index = btb_get_index(opcode_address >> 2);
     uint32_t way = 0;
     uint32_t selected = 0;
 
@@ -155,8 +155,8 @@ uint32_t branch_predictor_bi_modal_t::btb_evict_address(uint64_t opcode_address)
 
 /// ============================================================================
 bool branch_predictor_bi_modal_t::btb_find_update_address(uint64_t opcode_address) {
-    uint64_t index = btb_get_index(opcode_address);
-    uint64_t tag = btb_get_tag(opcode_address);
+    uint64_t index = btb_get_index(opcode_address >> 2);
+    uint64_t tag = btb_get_tag(opcode_address >> 2);
     uint32_t way = 0;
 
     this->add_stat_btb_accesses();
@@ -184,7 +184,7 @@ bool branch_predictor_bi_modal_t::btb_find_update_address(uint64_t opcode_addres
 /// ============================================================================
 bool branch_predictor_bi_modal_t::bht_find_update_prediction(const opcode_package_t& actual_opcode, const opcode_package_t& next_opcode) {
     /// Get the prediction
-    uint32_t bht_index = actual_opcode.opcode_address & this->bht_index_bits_mask;
+    uint32_t bht_index = this->bht_index_bits_mask & actual_opcode.opcode_address >> 2;
     bool bht_taken = false;
     if (this->bht[bht_index] >= this->fsm_taken_threshold) {   /// Get the BHT prediction
         bht_taken = true;

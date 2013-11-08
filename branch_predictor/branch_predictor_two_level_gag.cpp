@@ -110,7 +110,7 @@ void branch_predictor_two_level_gag_t::allocate() {
 
 /// ============================================================================
 uint32_t branch_predictor_two_level_gag_t::btb_evict_address(uint64_t opcode_address) {
-    uint64_t index = btb_get_index(opcode_address);
+    uint64_t index = btb_get_index(opcode_address >> 2);
     uint32_t way = 0;
     uint32_t selected = 0;
 
@@ -158,8 +158,8 @@ uint32_t branch_predictor_two_level_gag_t::btb_evict_address(uint64_t opcode_add
 
 /// ============================================================================
 bool branch_predictor_two_level_gag_t::btb_find_update_address(uint64_t opcode_address) {
-    uint64_t index = btb_get_index(opcode_address);
-    uint64_t tag = btb_get_tag(opcode_address);
+    uint64_t index = btb_get_index(opcode_address >> 2);
+    uint64_t tag = btb_get_tag(opcode_address >> 2);
     uint32_t way = 0;
 
     this->add_stat_btb_accesses();
@@ -187,7 +187,7 @@ bool branch_predictor_two_level_gag_t::btb_find_update_address(uint64_t opcode_a
 /// ============================================================================
 bool branch_predictor_two_level_gag_t::gpht_find_update_prediction(const opcode_package_t& actual_opcode, const opcode_package_t& next_opcode) {
     /// Hash function with signature and PC
-    uint32_t gpht_index = utils_t::hash_function(this->gpht_index_hash, this->gbhr, actual_opcode.opcode_address, this->gpht_index_bits);
+    uint32_t gpht_index = utils_t::hash_function(this->gpht_index_hash, actual_opcode.opcode_address >> 2, this->gbhr, this->gpht_index_bits);
 
     /// Get the prediction
     bool gpht_taken = false;

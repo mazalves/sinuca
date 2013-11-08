@@ -119,7 +119,7 @@ void branch_predictor_two_level_gas_t::allocate() {
 
 /// ============================================================================
 uint32_t branch_predictor_two_level_gas_t::btb_evict_address(uint64_t opcode_address) {
-    uint64_t index = btb_get_index(opcode_address);
+    uint64_t index = btb_get_index(opcode_address >> 2);
     uint32_t way = 0;
     uint32_t selected = 0;
 
@@ -167,8 +167,8 @@ uint32_t branch_predictor_two_level_gas_t::btb_evict_address(uint64_t opcode_add
 
 /// ============================================================================
 bool branch_predictor_two_level_gas_t::btb_find_update_address(uint64_t opcode_address) {
-    uint64_t index = btb_get_index(opcode_address);
-    uint64_t tag = btb_get_tag(opcode_address);
+    uint64_t index = btb_get_index(opcode_address >> 2);
+    uint64_t tag = btb_get_tag(opcode_address >> 2);
     uint32_t way = 0;
 
     this->add_stat_btb_accesses();
@@ -196,8 +196,8 @@ bool branch_predictor_two_level_gas_t::btb_find_update_address(uint64_t opcode_a
 /// ============================================================================
 bool branch_predictor_two_level_gas_t::spht_find_update_prediction(const opcode_package_t& actual_opcode, const opcode_package_t& next_opcode) {
     /// Hash function with signature and PC
-    uint32_t spht_index = utils_t::hash_function(this->spht_index_hash, this->gbhr, actual_opcode.opcode_address, this->spht_index_bits);
-    uint32_t spht_set = (this->spht_set_bits_mask & actual_opcode.opcode_address);
+    uint32_t spht_index = utils_t::hash_function(this->spht_index_hash, actual_opcode.opcode_address >> 2, this->gbhr, this->spht_index_bits);
+    uint32_t spht_set = (this->spht_set_bits_mask & (actual_opcode.opcode_address >> 2));
     ERROR_ASSERT_PRINTF(spht_index <= this->spht_line_number, "Wrong SPHT index %d - Max %d",spht_index, this->spht_line_number);
     ERROR_ASSERT_PRINTF(spht_set <= this->spht_set_number, "Wrong SPHT set %d - Max %d",spht_set, this->spht_set_number);
 

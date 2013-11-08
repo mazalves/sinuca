@@ -404,6 +404,21 @@ void sinuca_engine_t::initialize_processor() {
                 else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "XOR_SIMPLE") ==  0) {
                     branch_predictor_ptr->set_gpht_index_hash(HASH_FUNCTION_XOR_SIMPLE);
                 }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_2BITS") ==  0) {
+                    branch_predictor_ptr->set_gpht_index_hash(HASH_FUNCTION_INPUT1_2BITS);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_4BITS") ==  0) {
+                    branch_predictor_ptr->set_gpht_index_hash(HASH_FUNCTION_INPUT1_4BITS);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_8BITS") ==  0) {
+                    branch_predictor_ptr->set_gpht_index_hash(HASH_FUNCTION_INPUT1_8BITS);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_16BITS") ==  0) {
+                    branch_predictor_ptr->set_gpht_index_hash(HASH_FUNCTION_INPUT1_16BITS);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_32BITS") ==  0) {
+                    branch_predictor_ptr->set_gpht_index_hash(HASH_FUNCTION_INPUT1_32BITS);
+                }
                 else {
                     ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_branch_predictor[ branch_predictor_parameters.back() ].c_str(), branch_predictor_parameters.back());
                 }
@@ -456,6 +471,21 @@ void sinuca_engine_t::initialize_processor() {
                 else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "XOR_SIMPLE") ==  0) {
                     branch_predictor_ptr->set_spht_index_hash(HASH_FUNCTION_XOR_SIMPLE);
                 }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_2BITS") ==  0) {
+                    branch_predictor_ptr->set_spht_index_hash(HASH_FUNCTION_INPUT1_2BITS);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_4BITS") ==  0) {
+                    branch_predictor_ptr->set_spht_index_hash(HASH_FUNCTION_INPUT1_4BITS);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_8BITS") ==  0) {
+                    branch_predictor_ptr->set_spht_index_hash(HASH_FUNCTION_INPUT1_8BITS);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_16BITS") ==  0) {
+                    branch_predictor_ptr->set_spht_index_hash(HASH_FUNCTION_INPUT1_16BITS);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_32BITS") ==  0) {
+                    branch_predictor_ptr->set_spht_index_hash(HASH_FUNCTION_INPUT1_32BITS);
+                }                
                 else {
                     ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_branch_predictor[ branch_predictor_parameters.back() ].c_str(), branch_predictor_parameters.back());
                 }
@@ -528,6 +558,21 @@ void sinuca_engine_t::initialize_processor() {
                 else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "XOR_SIMPLE") ==  0) {
                     branch_predictor_ptr->set_gpht_index_hash(HASH_FUNCTION_XOR_SIMPLE);
                 }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_2BITS") ==  0) {
+                    branch_predictor_ptr->set_gpht_index_hash(HASH_FUNCTION_INPUT1_2BITS);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_4BITS") ==  0) {
+                    branch_predictor_ptr->set_gpht_index_hash(HASH_FUNCTION_INPUT1_4BITS);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_8BITS") ==  0) {
+                    branch_predictor_ptr->set_gpht_index_hash(HASH_FUNCTION_INPUT1_8BITS);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_16BITS") ==  0) {
+                    branch_predictor_ptr->set_gpht_index_hash(HASH_FUNCTION_INPUT1_16BITS);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_32BITS") ==  0) {
+                    branch_predictor_ptr->set_gpht_index_hash(HASH_FUNCTION_INPUT1_32BITS);
+                }                  
                 else {
                     ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_branch_predictor[ branch_predictor_parameters.back() ].c_str(), branch_predictor_parameters.back());
                 }
@@ -604,6 +649,21 @@ void sinuca_engine_t::initialize_processor() {
                 else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "XOR_SIMPLE") ==  0) {
                     branch_predictor_ptr->set_spht_index_hash(HASH_FUNCTION_XOR_SIMPLE);
                 }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_2BITS") ==  0) {
+                    branch_predictor_ptr->set_spht_index_hash(HASH_FUNCTION_INPUT1_2BITS);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_4BITS") ==  0) {
+                    branch_predictor_ptr->set_spht_index_hash(HASH_FUNCTION_INPUT1_4BITS);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_8BITS") ==  0) {
+                    branch_predictor_ptr->set_spht_index_hash(HASH_FUNCTION_INPUT1_8BITS);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_16BITS") ==  0) {
+                    branch_predictor_ptr->set_spht_index_hash(HASH_FUNCTION_INPUT1_16BITS);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_32BITS") ==  0) {
+                    branch_predictor_ptr->set_spht_index_hash(HASH_FUNCTION_INPUT1_32BITS);
+                }                   
                 else {
                     ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_branch_predictor[ branch_predictor_parameters.back() ].c_str(), branch_predictor_parameters.back());
                 }
