@@ -51,6 +51,11 @@ class sinuca_engine_t {
         uint32_t memory_controller_array_size;
         uint32_t interconnection_router_array_size;
 
+		uint32_t round_robin_processor;
+		uint32_t round_robin_cache_memory;
+		uint32_t round_robin_memory_controller;
+		uint32_t round_robin_interconnection_router;
+
         /// Control the Global Cycle
         uint64_t global_cycle;
         /// Control the line size for all components
@@ -137,6 +142,11 @@ class sinuca_engine_t {
         INSTANTIATE_GET_SET(uint32_t, cache_memory_array_size);
         INSTANTIATE_GET_SET(uint32_t, memory_controller_array_size);
         INSTANTIATE_GET_SET(uint32_t, interconnection_router_array_size);
+
+		INSTANTIATE_GET_SET(uint32_t, round_robin_processor);
+		INSTANTIATE_GET_SET(uint32_t, round_robin_cache_memory);
+		INSTANTIATE_GET_SET(uint32_t, round_robin_memory_controller);
+		INSTANTIATE_GET_SET(uint32_t, round_robin_interconnection_router);
 
         INSTANTIATE_GET_SET(bool, is_simulation_allocated);
         INSTANTIATE_GET_SET(bool, is_runtime_debug);

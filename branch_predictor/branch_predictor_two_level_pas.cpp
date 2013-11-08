@@ -48,11 +48,19 @@ branch_predictor_two_level_pas_t::branch_predictor_two_level_pas_t() {
     this->btb_total_sets = 0;
     this->btb_replacement_policy = REPLACEMENT_LRU;
 
+	this->pbht = NULL;
+    this->pbht_total_sets = 0;            /// Per-Address Branch History Table Sets
+    this->pbht_index_bits_mask = 0;       /// Index mask
+    this->pbht_index_bits_shift = 0;
+    this->pbht_tag_bits_mask = 0;         /// Tag mask
+    this->pbht_tag_bits_shift = 0;
+
     this->spht = NULL;
     this->spht_line_number = 0;
     this->spht_index_bits = 0;
     this->spht_index_bits_mask = 0;
     this->spht_index_hash = HASH_FUNCTION_INPUT1_ONLY;
+    this->spht_set_bits_mask = 0;
 
     this->fsm_bits = 0;
     this->fsm_max_counter = 0;
@@ -94,7 +102,8 @@ void branch_predictor_two_level_pas_t::allocate() {
     for (i = btb_tag_bits_shift; i < utils_t::get_power_of_two((uint64_t)INT64_MAX+1); i++) {
         this->btb_tag_bits_mask |= 1 << i;
     }
-
+    ERROR_ASSERT_PRINTF(btb_get_index((uint64_t)INT64_MAX+1) < this->get_btb_total_sets(), "Index can be bigger than btb_total_sets \n")
+    
     /// ========================================================================
     /// GPHT FSM MASK
     for (i = 0; i < this->get_fsm_bits(); i++) {
@@ -121,6 +130,8 @@ void branch_predictor_two_level_pas_t::allocate() {
     for (i = pbht_tag_bits_shift; i < utils_t::get_power_of_two((uint64_t)INT64_MAX+1); i++) {
         this->pbht_tag_bits_mask |= 1 << i;
     }
+
+    ERROR_ASSERT_PRINTF(pbht_get_index((uint64_t)INT64_MAX+1) < this->get_pbht_total_sets(), "Index can be bigger than pbht_total_sets \n")
 
     /// ========================================================================
     /// SPHT INDEX MASK
@@ -195,7 +206,6 @@ bool branch_predictor_two_level_pas_t::btb_find_update_address(uint64_t opcode_a
 
     this->add_stat_btb_accesses();
 
-    ERROR_ASSERT_PRINTF(index < this->get_btb_total_sets(), "Index >= btb_total_sets \n")
     for (way = 0 ; way < this->get_btb_associativity() ; way++) {
         /// BTB HIT
         if (this->btb[index].ways[way].tag == tag) {
@@ -273,7 +283,6 @@ uint32_t branch_predictor_two_level_pas_t::pbht_find_update_address(uint64_t opc
 
     this->add_stat_pbht_accesses();
 
-    ERROR_ASSERT_PRINTF(index < this->get_pbht_total_sets(), "Index >= pbht_total_sets \n")
     for (way = 0 ; way < this->get_pbht_associativity() ; way++) {
         /// BTB HIT
         if (this->pbht[index].ways[way].tag == tag) {

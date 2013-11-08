@@ -87,7 +87,6 @@ class line_usage_predictor_dewp_t : public line_usage_predictor_t {
         uint64_t stat_dead_writeback_sent_correct;
         uint64_t stat_dead_writeback_sent_under;
 
-
         uint64_t stat_line_read_0;
         uint64_t stat_line_read_1;
         uint64_t stat_line_read_2_3;

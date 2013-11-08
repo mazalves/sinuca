@@ -47,6 +47,10 @@ branch_predictor_two_level_pag_t::branch_predictor_two_level_pag_t() {
     this->pbht_associativity = 0;
     this->pbht_total_sets = 0;
     this->pbht_replacement_policy = REPLACEMENT_LRU;
+    this->pbht_index_bits_mask = 0;       /// Index mask
+    this->pbht_index_bits_shift = 0;
+    this->pbht_tag_bits_mask = 0;         /// Tag mask
+    this->pbht_tag_bits_shift = 0;    
 
     this->gpht = NULL;
     this->gpht_line_number = 0;
