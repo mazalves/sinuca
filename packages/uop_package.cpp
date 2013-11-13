@@ -35,20 +35,13 @@ uop_package_t::~uop_package_t(){
 //==============================================================================
 uop_package_t &uop_package_t::operator=(const uop_package_t &package) {
     /// TRACE Variables
-    strncpy(this->opcode_assembly, package.opcode_assembly, sizeof(this->opcode_assembly));
+    strncpy(this->opcode_assembly, package.opcode_assembly, sizeof(char) * MAX_ASSEMBLY_SIZE);
     this->opcode_operation = package.opcode_operation;
     this->opcode_address = package.opcode_address;
     this->opcode_size = package.opcode_size;
 
-
-    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-        this->read_regs[i] = package.read_regs[i];
-    }
-
-
-    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-        this->write_regs[i] = package.write_regs[i];
-    }
+	memcpy(this->read_regs, package.read_regs, sizeof(this->read_regs));
+	memcpy(this->write_regs, package.write_regs, sizeof(this->write_regs));
 
     this->uop_operation = package.uop_operation;
     this->memory_address = package.memory_address;
@@ -71,13 +64,8 @@ bool uop_package_t::operator==(const uop_package_t &package) {
     if (this->opcode_address != package.opcode_address) return FAIL;
     if (this->opcode_size != package.opcode_size) return FAIL;
 
-    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-        if (this->read_regs[i] != package.read_regs[i]) return FAIL;
-    }
-
-    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-        if (this->write_regs[i] != package.write_regs[i]) return FAIL;
-    }
+	if ( memcmp(this->read_regs, package.read_regs, sizeof(int32_t)*MAX_REGISTERS) != 0) return FAIL;
+	if ( memcmp(this->write_regs, package.write_regs, sizeof(int32_t)*MAX_REGISTERS) != 0) return FAIL;
 
     if (this->uop_operation != package.uop_operation) return FAIL;
     if (this->memory_address != package.memory_address) return FAIL;
@@ -104,13 +92,8 @@ void uop_package_t::opcode_to_uop(uint64_t uop_number, instruction_operation_t u
     this->opcode_address = opcode.opcode_address;
     this->opcode_size = opcode.opcode_size;
 
-    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-        this->read_regs[i] = opcode.read_regs[i];
-    }
-
-    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-        this->write_regs[i] = opcode.write_regs[i];
-    }
+	memcpy(this->read_regs, opcode.read_regs, sizeof(int32_t) * MAX_REGISTERS);
+	memcpy(this->write_regs, opcode.write_regs, sizeof(int32_t) * MAX_REGISTERS);
 
     this->uop_operation = uop_operation;
     this->memory_address = memory_address;
@@ -132,13 +115,8 @@ void uop_package_t::package_clean() {
     this->opcode_address = 0;
     this->opcode_size = 0;
 
-    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-        this->read_regs[i] = POSITION_FAIL;
-    }
-
-    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-        this->write_regs[i] = POSITION_FAIL;
-    }
+	memset(this->read_regs, POSITION_FAIL, sizeof(int32_t) * MAX_REGISTERS);
+	memset(this->write_regs, POSITION_FAIL, sizeof(int32_t) * MAX_REGISTERS);
 
     this->uop_operation = INSTRUCTION_OPERATION_NOP;
     this->memory_address = 0;

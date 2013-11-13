@@ -43,14 +43,11 @@ branch_predictor_two_level_pag_t::branch_predictor_two_level_pag_t() {
     this->btb_tag_bits_mask = 0;
 
     this->pbht = NULL;
-    this->pbht_line_number = 0;
-    this->pbht_associativity = 0;
-    this->pbht_total_sets = 0;
-    this->pbht_replacement_policy = REPLACEMENT_LRU;
+    this->pbht_line_number = 0;           /// Number of signature lines
     this->pbht_index_bits_mask = 0;       /// Index mask
-    this->pbht_index_bits_shift = 0;
-    this->pbht_tag_bits_mask = 0;         /// Tag mask
-    this->pbht_tag_bits_shift = 0;    
+    this->pbht_signature_bits = 0;         /// Bits to store signature
+    this->pbht_signature_bits_mask = 0;    /// Signature mask
+
 
     this->gpht = NULL;
     this->gpht_line_number = 0;
@@ -67,7 +64,7 @@ branch_predictor_two_level_pag_t::branch_predictor_two_level_pag_t() {
 branch_predictor_two_level_pag_t::~branch_predictor_two_level_pag_t() {
     /// De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<branch_target_buffer_set_t>(btb);
-    utils_t::template_delete_array<branch_history_table_set_t>(pbht);
+    utils_t::template_delete_array<uint64_t>(pbht);
     utils_t::template_delete_array<uint32_t>(gpht);
 };
 
@@ -76,7 +73,6 @@ void branch_predictor_two_level_pag_t::allocate() {
     branch_predictor_t::allocate();
 
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_btb_line_number() / this->get_btb_associativity()), "BTB Wrong line number(%u) or associativity(%u).\n", this->get_btb_line_number(), this->get_btb_associativity());
-    ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_pbht_line_number() / this->get_pbht_associativity()), "PBHT Wrong line number(%u) or associativity(%u).\n", this->get_pbht_line_number(), this->get_pbht_associativity());
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_gpht_line_number()), "GPHT Wrong line number(%u).\n", this->get_gpht_line_number());
     uint32_t i;
 
@@ -104,27 +100,22 @@ void branch_predictor_two_level_pag_t::allocate() {
     for (i = 0; i < this->get_fsm_bits(); i++) {
         this->fsm_max_counter |= 1 << i;
     }
-    this->fsm_taken_threshold = this->get_fsm_max_counter() / 2;
+    this->fsm_taken_threshold = (this->get_fsm_max_counter() + 1) / 2;
 
     /// ========================================================================
     /// PBHT INDEX MASK
-    this->set_pbht_total_sets(this->get_pbht_line_number() / this->get_pbht_associativity());
-    this->pbht = utils_t::template_allocate_array<branch_history_table_set_t>(this->get_pbht_total_sets());
-    for (i = 0; i < this->get_pbht_total_sets(); i++) {
-        this->pbht[i].ways = utils_t::template_allocate_array<branch_history_table_line_t>(this->get_pbht_associativity());
-    }
+    this->pbht = utils_t::template_allocate_initialize_array<uint64_t>(this->get_pbht_line_number(), 0);
 
     /// PBHT INDEX MASK
-    this->pbht_index_bits_shift = 0;
-    for (i = 0; i < utils_t::get_power_of_two(this->get_pbht_total_sets()); i++) {
-        this->pbht_index_bits_mask |= 1 << (i + pbht_index_bits_shift);
+    for (i = 0; i < utils_t::get_power_of_two(this->get_pbht_line_number()); i++) {
+        this->pbht_index_bits_mask |= 1 << i;
     }
 
-    /// PBHT TAG MASK
-    this->pbht_tag_bits_shift = pbht_index_bits_shift + utils_t::get_power_of_two(this->get_pbht_total_sets());
-    for (i = pbht_tag_bits_shift; i < utils_t::get_power_of_two((uint64_t)INT64_MAX+1); i++) {
-        this->pbht_tag_bits_mask |= 1 << i;
+    /// PBHT SIGNATURE MASK
+    for (i = 0; i < this->get_pbht_signature_bits(); i++) {
+        this->pbht_signature_bits_mask |= 1 << i;
     }
+
 
     /// ========================================================================
     /// GPHT INDEX MASK
@@ -216,88 +207,13 @@ bool branch_predictor_two_level_pag_t::btb_find_update_address(uint64_t opcode_a
 };
 
 /// ============================================================================
-uint32_t branch_predictor_two_level_pag_t::pbht_evict_address(uint64_t opcode_address) {
-    uint64_t index = pbht_get_index(opcode_address >> 2);
-    uint32_t way = 0;
-    uint32_t selected = 0;
-
-    switch (this->pbht_replacement_policy) {
-        case REPLACEMENT_LRU: {
-            uint64_t last_access = UINT64_MAX;
-            for (way = 0; way < this->get_pbht_associativity(); way++) {
-                /// If there is free space
-                if (this->pbht[index].ways[way].last_access <= last_access) {
-                    selected = way;
-                    last_access = this->pbht[index].ways[way].last_access;
-                }
-            }
-            break;
-        }
-        case REPLACEMENT_RANDOM: {
-            // initialize random seed
-            unsigned int seed = time(NULL);
-            // generate random number
-            selected = (rand_r(&seed) % this->get_pbht_associativity());
-        }
-        break;
-
-        case REPLACEMENT_INVALID_OR_LRU:
-            ERROR_PRINTF("Replacement Policy: REPLACEMENT_INVALID_OR_LRU not implemented.\n");
-        break;
-
-        case REPLACEMENT_FIFO:
-            ERROR_PRINTF("Replacement Policy: REPLACEMENT_POLICY_FIFO not implemented.\n");
-        break;
-
-        case REPLACEMENT_LRF:
-            ERROR_PRINTF("Replacement Policy: REPLACEMENT_POLICY_LRF not implemented.\n");
-        break;
-
-        case REPLACEMENT_DEAD_OR_LRU:
-            ERROR_PRINTF("Replacement Policy: REPLACEMENT_DEAD_OR_LRU should not use for branch_prediction.\n");
-        break;
-
-    }
-
-    return selected;
-};
-
-
-/// ============================================================================
-uint32_t branch_predictor_two_level_pag_t::pbht_find_update_address(uint64_t opcode_address, bool is_taken) {
+uint64_t branch_predictor_two_level_pag_t::pbht_find_update_address(uint64_t opcode_address, bool is_taken) {
     uint64_t index = this->pbht_get_index(opcode_address >> 2);
-    uint64_t tag = this->pbht_get_tag(opcode_address >> 2);
-    uint32_t way = 0;
-    uint32_t branch_history = 0;
+    uint64_t branch_history = this->pbht_get_signature(this->pbht[index]);
 
-    this->add_stat_pbht_accesses();
+    this->pbht[index] = branch_history << 1;  /// Make room for the next branch
+    this->pbht[index] |= is_taken;               /// Update the signature
 
-    ERROR_ASSERT_PRINTF(index < this->get_pbht_total_sets(), "Index >= pbht_total_sets \n")
-    for (way = 0 ; way < this->get_pbht_associativity() ; way++) {
-        /// BTB HIT
-        if (this->pbht[index].ways[way].tag == tag) {
-            this->pbht[index].ways[way].last_access = sinuca_engine.get_global_cycle();
-            this->pbht[index].ways[way].usage_counter++;
-
-            branch_history = this->pbht[index].ways[way].FSM;
-            /// Update the branch history
-            this->pbht[index].ways[way].FSM = this->pbht[index].ways[way].FSM << 1;  /// Make room for the next branch
-            this->pbht[index].ways[way].FSM |= is_taken;                    /// Update the signature
-            this->pbht[index].ways[way].FSM &= this->gpht_index_bits_mask;  /// Cut the extra bit
-
-            this->add_stat_pbht_hit();
-            return branch_history;
-        }
-    }
-
-    /// PBHT MISS
-    way = this->pbht_evict_address(opcode_address);
-    this->pbht[index].ways[way].tag = tag;
-    this->pbht[index].ways[way].last_access = sinuca_engine.get_global_cycle();
-    this->pbht[index].ways[way].usage_counter = 1;
-    /// Update the branch history
-    this->pbht[index].ways[way].FSM = is_taken;                    /// Update the signature
-    this->add_stat_pbht_miss();
     return branch_history;
 };
 
@@ -321,12 +237,19 @@ bool branch_predictor_two_level_pag_t::gpht_find_update_prediction(const opcode_
     }
 
     /// Update the prediction
-    if (is_taken && this->gpht[gpht_index] < this->fsm_max_counter) {     /// Update the GPHT prediction (TAKEN)
-        this->gpht[gpht_index]++;
+    if (is_taken){
+        this->add_stat_branch_predictor_taken();
+        if (this->gpht[gpht_index] < this->fsm_max_counter) {     /// Update the GPHT prediction (TAKEN)
+            this->gpht[gpht_index]++;
+        }
     }
-    if (!is_taken && int32_t(this->gpht[gpht_index]) > 0) {                    /// Update the GPHT prediction (NOT TAKEN)
-        this->gpht[gpht_index]--;
+    else {
+        this->add_stat_branch_predictor_not_taken();
+        if (int32_t(this->gpht[gpht_index]) > 0) {                    /// Update the GPHT prediction (NOT TAKEN)
+            this->gpht[gpht_index]--;
+        }
     }
+
 
     return gpht_taken;
 };
@@ -423,10 +346,6 @@ void branch_predictor_two_level_pag_t::reset_statistics() {
     this->set_stat_btb_accesses(0);
     this->set_stat_btb_hit(0);
     this->set_stat_btb_miss(0);
-
-    this->set_stat_pbht_accesses(0);
-    this->set_stat_pbht_hit(0);
-    this->set_stat_pbht_miss(0);
 };
 
 /// ============================================================================
@@ -438,13 +357,6 @@ void branch_predictor_two_level_pag_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_btb_hit", stat_btb_hit);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_btb_miss", stat_btb_miss);
     sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_btb_miss_ratio", stat_btb_miss, stat_btb_accesses);
-
-    sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_pbht_accesses", stat_pbht_accesses);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_pbht_hit", stat_pbht_hit);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_pbht_miss", stat_pbht_miss);
-    sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_pbht_miss_ratio", stat_pbht_miss, stat_pbht_accesses);
-
 };
 
 /// ============================================================================
@@ -459,6 +371,14 @@ void branch_predictor_two_level_pag_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "btb_tag_bits_mask", utils_t::address_to_binary(btb_tag_bits_mask).c_str());
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "btb_index_bits_mask", utils_t::address_to_binary(btb_index_bits_mask).c_str());
 
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "pbht_line_number", pbht_line_number);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "pbht_index_bits_mask", utils_t::address_to_binary(pbht_index_bits_mask).c_str());
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "pbht_signature_bits", pbht_signature_bits);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "pbht_signature_bits_mask", utils_t::address_to_binary(pbht_signature_bits_mask).c_str());
+
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "gpht_line_number", gpht_line_number);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "gpht_index_bits_mask", utils_t::address_to_binary(gpht_index_bits_mask).c_str());
@@ -466,6 +386,6 @@ void branch_predictor_two_level_pag_t::print_configuration() {
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "fsm_bits", fsm_bits);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "fsm_max_counter", utils_t::address_to_binary(fsm_max_counter).c_str());
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "fsm_taken_threshold", utils_t::address_to_binary(fsm_taken_threshold).c_str());
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "fsm_max_counter", fsm_max_counter);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "fsm_taken_threshold", fsm_taken_threshold);
 };

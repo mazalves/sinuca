@@ -24,6 +24,12 @@
 #include "./sinuca.hpp"
 #include <string>
 
+//============================================================================== NEW
+uint64_t mystrtol( char *&pen, uint64_t val = 0 ) {
+    for ( char c; ( c = *pen ^ '0' ) <= 9; ++ pen ) val = val * 10 + c;
+    return val;
+}
+
 //==============================================================================
 void utils_t::get_path(char *path, char *file_path) {
     char *posp;

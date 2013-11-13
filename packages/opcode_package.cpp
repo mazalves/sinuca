@@ -35,19 +35,13 @@ opcode_package_t::~opcode_package_t(){
 //==============================================================================
 opcode_package_t &opcode_package_t::operator=(const opcode_package_t &package) {
     /// TRACE Variables
-    strncpy(this->opcode_assembly, package.opcode_assembly, sizeof(this->opcode_assembly));
+    strncpy(this->opcode_assembly, package.opcode_assembly, sizeof(char) * MAX_ASSEMBLY_SIZE);
     this->opcode_operation = package.opcode_operation;
     this->opcode_address = package.opcode_address;
     this->opcode_size = package.opcode_size;
 
-    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-        this->read_regs[i] = package.read_regs[i];
-    }
-
-
-    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-        this->write_regs[i] = package.write_regs[i];
-    }
+	memcpy(this->read_regs, package.read_regs, sizeof(int32_t) * MAX_REGISTERS);
+	memcpy(this->write_regs, package.write_regs, sizeof(int32_t) * MAX_REGISTERS);
 
     this->base_reg = package.base_reg;
     this->index_reg = package.index_reg;
@@ -87,13 +81,8 @@ bool opcode_package_t::operator==(const opcode_package_t &package) {
     if (this->opcode_address != package.opcode_address) return FAIL;
     if (this->opcode_size != package.opcode_size) return FAIL;
 
-    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-        if (this->read_regs[i] != package.read_regs[i]) return FAIL;
-    }
-
-    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-        if (this->write_regs[i] != package.write_regs[i]) return FAIL;
-    }
+	if ( memcmp(this->read_regs, package.read_regs, sizeof(int32_t) * MAX_REGISTERS) != 0) return FAIL;
+	if ( memcmp(this->write_regs, package.write_regs, sizeof(int32_t) * MAX_REGISTERS) != 0) return FAIL;
 
     if (this->base_reg != package.base_reg) return FAIL;
     if (this->index_reg != package.index_reg) return FAIL;
@@ -132,13 +121,8 @@ void opcode_package_t::package_clean() {
     this->opcode_address = 0;
     this->opcode_size = 0;
 
-    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-        this->read_regs[i] = POSITION_FAIL;
-    }
-
-    for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
-        this->write_regs[i] = POSITION_FAIL;
-    }
+	memset(this->read_regs, POSITION_FAIL, sizeof(int32_t) * MAX_REGISTERS);
+	memset(this->write_regs, POSITION_FAIL, sizeof(int32_t) * MAX_REGISTERS);
 
     this->base_reg = 0;
     this->index_reg = 0;
@@ -334,7 +318,7 @@ void opcode_package_t::trace_string_to_read(char *input_string, uint32_t actual_
     }
     ERROR_ASSERT_PRINTF(count != 4, "Error converting Text to Memory (Wrong  number of fields %d)\n", count)
 
-    sub_string = strtok_r (input_string," ", &tmp_ptr);
+    sub_string = strtok_r(input_string," ", &tmp_ptr);
     ERROR_ASSERT_PRINTF(strcmp(sub_string, "R") == 0, "MemoryTraceFile Type (R) expected.\n Inst: %s\n Mem:%s\n",
                                                                                 this->content_to_string().c_str(), input_string)
 
@@ -380,11 +364,6 @@ void opcode_package_t::trace_string_to_read2(char * input_string, uint32_t actua
     ERROR_ASSERT_PRINTF((uint32_t)utils_t::string_to_uint64(sub_string) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%s)\n", actual_bbl, sub_string)
 };
 
-
-uint64_t mystrtol( char *&pen, uint64_t val = 0 ) {
-    for ( char c; ( c = *pen ^ '0' ) <= 9; ++ pen ) val = val * 10 + c;
-    return val;
-}
 
 //============================================================================== NEW
 void opcode_package_t::trace_string_to_write(char *input_string, uint32_t actual_bbl) {
@@ -457,11 +436,8 @@ void opcode_package_t::trace_string_to_opcode(char *input_string) {
     sub_string = strtok_r(NULL, " ", &tmp_ptr);
     this->opcode_size = utils_t::string_to_uint64(sub_string);
 
-
-    for (i = 0; i < MAX_REGISTERS; i++) {
-        this->read_regs[i] = POSITION_FAIL;
-        this->write_regs[i] = POSITION_FAIL;
-    }
+	memset(this->read_regs, POSITION_FAIL, sizeof(int32_t) * MAX_REGISTERS);
+	memset(this->write_regs, POSITION_FAIL, sizeof(int32_t) * MAX_REGISTERS);
 
     sub_string = strtok_r(NULL, " ", &tmp_ptr);
     sub_fields = utils_t::string_to_uint64(sub_string);

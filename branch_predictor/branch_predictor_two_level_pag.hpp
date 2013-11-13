@@ -32,8 +32,7 @@ class branch_predictor_two_level_pag_t : public branch_predictor_t {
         replacement_t btb_replacement_policy;       /// Branch Target Buffer Replacement Policy
 
         uint32_t pbht_line_number;                  /// PBHT Size
-        uint32_t pbht_associativity;                /// PBHT Associativity
-        replacement_t pbht_replacement_policy;      /// PBHT Replacement Policy
+        uint32_t pbht_signature_bits;               /// PBHT Signature
 
         uint32_t gpht_line_number;                  /// Number of GPHT lines
 
@@ -53,12 +52,9 @@ class branch_predictor_two_level_pag_t : public branch_predictor_t {
         uint64_t btb_tag_bits_mask;         /// Tag mask
         uint64_t btb_tag_bits_shift;
 
-        branch_history_table_set_t *pbht;    /// Per-Address Branch History Table
-        uint32_t pbht_total_sets;            /// Per-Address Branch History Table Sets
-        uint64_t pbht_index_bits_mask;       /// Index mask
-        uint64_t pbht_index_bits_shift;
-        uint64_t pbht_tag_bits_mask;         /// Tag mask
-        uint64_t pbht_tag_bits_shift;
+        uint64_t *pbht;                         /// Per-Address Branch History Table
+        uint64_t pbht_index_bits_mask;          /// Index mask
+        uint64_t pbht_signature_bits_mask;      /// Signature mask
 
         uint32_t *gpht;                     /// Global Patern History Table
         uint32_t gpht_index_bits;           /// Global Patern History Table - Bits for Index
@@ -72,10 +68,6 @@ class branch_predictor_two_level_pag_t : public branch_predictor_t {
         uint64_t stat_btb_accesses;
         uint64_t stat_btb_hit;
         uint64_t stat_btb_miss;
-
-        uint64_t stat_pbht_accesses;
-        uint64_t stat_pbht_hit;
-        uint64_t stat_pbht_miss;
 
     public:
         /// ====================================================================
@@ -111,8 +103,7 @@ class branch_predictor_two_level_pag_t : public branch_predictor_t {
         uint32_t btb_evict_address(uint64_t opcode_address);
         bool btb_find_update_address(uint64_t opcode_address);
 
-        uint32_t pbht_evict_address(uint64_t opcode_address);
-        uint32_t pbht_find_update_address(uint64_t opcode_address, bool is_taken);
+        uint64_t pbht_find_update_address(uint64_t opcode_address, bool is_taken);
 
         bool gpht_find_update_prediction(const opcode_package_t& actual_opcode, const opcode_package_t& next_opcode);
         processor_stage_t predict_branch(const opcode_package_t& actual_opcode, const opcode_package_t& next_opcode);
@@ -133,16 +124,14 @@ class branch_predictor_two_level_pag_t : public branch_predictor_t {
 
         /// ====================================================================
         INSTANTIATE_GET_SET(uint32_t, pbht_line_number)
-        INSTANTIATE_GET_SET(uint32_t, pbht_associativity)
-        INSTANTIATE_GET_SET(uint32_t, pbht_total_sets)
-        INSTANTIATE_GET_SET(replacement_t, pbht_replacement_policy)
-
-        inline uint64_t pbht_get_tag(uint64_t addr) {
-            return (addr & this->pbht_tag_bits_mask) >> this->pbht_tag_bits_shift;
-        }
+        INSTANTIATE_GET_SET(uint32_t, pbht_signature_bits)
 
         inline uint64_t pbht_get_index(uint64_t addr) {
-            return (addr & this->pbht_index_bits_mask) >> this->pbht_index_bits_shift;
+            return (addr & this->pbht_index_bits_mask);
+        }
+
+        inline uint64_t pbht_get_signature(uint64_t addr) {
+            return (addr & this->pbht_signature_bits_mask);
         }
 
         /// ====================================================================
@@ -161,9 +150,5 @@ class branch_predictor_two_level_pag_t : public branch_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_btb_accesses)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_btb_hit)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_btb_miss)
-
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_pbht_accesses)
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_pbht_hit)
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_pbht_miss)
 
 };

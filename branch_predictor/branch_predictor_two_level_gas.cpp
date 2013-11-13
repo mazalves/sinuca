@@ -98,7 +98,7 @@ void branch_predictor_two_level_gas_t::allocate() {
     for (i = 0; i < this->get_fsm_bits(); i++) {
         this->fsm_max_counter |= 1 << i;
     }
-    this->fsm_taken_threshold = this->get_fsm_max_counter() / 2;
+    this->fsm_taken_threshold = (this->get_fsm_max_counter() + 1) / 2;
 
     /// ========================================================================
     /// SPHT INDEX MASK
@@ -211,11 +211,18 @@ bool branch_predictor_two_level_gas_t::spht_find_update_prediction(const opcode_
     uint64_t next_sequential_address = actual_opcode.opcode_address + actual_opcode.opcode_size;
     bool is_taken = (next_sequential_address != next_opcode.opcode_address);
 
-    if (is_taken && this->spht[spht_index][spht_set] < this->fsm_max_counter) {     /// Update the SPHT prediction (TAKEN)
-        this->spht[spht_index][spht_set]++;
+    /// Update the prediction
+    if (is_taken){
+        this->add_stat_branch_predictor_taken();
+        if (this->spht[spht_index][spht_set] < this->fsm_max_counter) {     /// Update the GPHT prediction (TAKEN)
+            this->spht[spht_index][spht_set]++;
+        }
     }
-    if (!is_taken && int32_t(this->spht[spht_index][spht_set]) > 0) {                    /// Update the SPHT prediction (NOT TAKEN)
-        this->spht[spht_index][spht_set]--;
+    else {
+        this->add_stat_branch_predictor_not_taken();
+        if (int32_t(this->spht[spht_index][spht_set]) > 0) {                    /// Update the GPHT prediction (NOT TAKEN)
+            this->spht[spht_index][spht_set]--;
+        }
     }
 
     /// Update the branch history
@@ -355,6 +362,6 @@ void branch_predictor_two_level_gas_t::print_configuration() {
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "fsm_bits", fsm_bits);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "fsm_max_counter", utils_t::address_to_binary(fsm_max_counter).c_str());
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "fsm_taken_threshold", utils_t::address_to_binary(fsm_taken_threshold).c_str());
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "fsm_max_counter", fsm_max_counter);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "fsm_taken_threshold", fsm_taken_threshold);
 };

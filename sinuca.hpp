@@ -71,8 +71,6 @@ class interconnection_interface_t;
 class interconnection_controller_t;
 class interconnection_router_t;
 /// Branch Predictor
-class branch_history_table_line_t;
-class branch_history_table_set_t;
 class branch_target_buffer_line_t;
 class branch_target_buffer_set_t;
 class branch_predictor_t;
@@ -149,7 +147,8 @@ extern sinuca_engine_t sinuca_engine;
 #define TRACE_LINE_SIZE 512     /// trace_reader_t (should not be smaller than on trace line)
 #define CONVERSION_SIZE 65
 #define MAX_UOP_DECODED 5       /// processor_t (Max number of uops from one opcode)
-#define MAX_REGISTERS 6       /// opcode_package_t uop_package_t  (Max number of register (read or write) for one opcode/uop)
+#define MAX_REGISTERS 6         /// opcode_package_t uop_package_t  (Max number of register (read or write) for one opcode/uop)
+#define MAX_ASSEMBLY_SIZE 20
 
 #define POSITION_FAIL -1        /// FAIL when return is int32_t
 #define FAIL 0                  /// FAIL when return is uint32_t
@@ -294,9 +293,6 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 /// ============================================================================
 #include "./branch_predictor/branch_target_buffer_line.hpp"
 #include "./branch_predictor/branch_target_buffer_set.hpp"
-
-#include "./branch_predictor/branch_history_table_line.hpp"
-#include "./branch_predictor/branch_history_table_set.hpp"
 
 #include "./branch_predictor/branch_predictor.hpp"
 #include "./branch_predictor/branch_predictor_two_level_gag.hpp"

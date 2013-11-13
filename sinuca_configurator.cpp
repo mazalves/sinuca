@@ -485,7 +485,7 @@ void sinuca_engine_t::initialize_processor() {
                 }
                 else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_32BITS") ==  0) {
                     branch_predictor_ptr->set_spht_index_hash(HASH_FUNCTION_INPUT1_32BITS);
-                }                
+                }
                 else {
                     ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_branch_predictor[ branch_predictor_parameters.back() ].c_str(), branch_predictor_parameters.back());
                 }
@@ -525,25 +525,9 @@ void sinuca_engine_t::initialize_processor() {
                 branch_predictor_parameters.push_back("PBHT_LINE_NUMBER");
                 branch_predictor_ptr->set_pbht_line_number(cfg_branch_predictor[ branch_predictor_parameters.back() ]);
 
-                branch_predictor_parameters.push_back("PBHT_ASSOCIATIVITY");
-                branch_predictor_ptr->set_pbht_associativity(cfg_branch_predictor[ branch_predictor_parameters.back() ]);
+                branch_predictor_parameters.push_back("PBHT_SIGNATURE_BITS");
+                branch_predictor_ptr->set_pbht_signature_bits(cfg_branch_predictor[ branch_predictor_parameters.back() ]);
 
-                branch_predictor_parameters.push_back("PBHT_REPLACEMENT_POLICY");
-                if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "FIFO") ==  0) {
-                    branch_predictor_ptr->set_pbht_replacement_policy(REPLACEMENT_FIFO);
-                }
-                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "LRF") ==  0) {
-                    branch_predictor_ptr->set_pbht_replacement_policy(REPLACEMENT_LRF);
-                }
-                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "LRU") ==  0) {
-                    branch_predictor_ptr->set_pbht_replacement_policy(REPLACEMENT_LRU);
-                }
-                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "RANDOM") ==  0) {
-                    branch_predictor_ptr->set_pbht_replacement_policy(REPLACEMENT_RANDOM);
-                }
-                else {
-                    ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_branch_predictor[ branch_predictor_parameters.back() ].c_str(), branch_predictor_parameters.back());
-                }
 
                 branch_predictor_parameters.push_back("GPHT_LINE_NUMBER");
                 branch_predictor_ptr->set_gpht_line_number(cfg_branch_predictor[ branch_predictor_parameters.back() ]);
@@ -572,7 +556,7 @@ void sinuca_engine_t::initialize_processor() {
                 }
                 else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_32BITS") ==  0) {
                     branch_predictor_ptr->set_gpht_index_hash(HASH_FUNCTION_INPUT1_32BITS);
-                }                  
+                }
                 else {
                     ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_branch_predictor[ branch_predictor_parameters.back() ].c_str(), branch_predictor_parameters.back());
                 }
@@ -612,25 +596,8 @@ void sinuca_engine_t::initialize_processor() {
                 branch_predictor_parameters.push_back("PBHT_LINE_NUMBER");
                 branch_predictor_ptr->set_pbht_line_number(cfg_branch_predictor[ branch_predictor_parameters.back() ]);
 
-                branch_predictor_parameters.push_back("PBHT_ASSOCIATIVITY");
-                branch_predictor_ptr->set_pbht_associativity(cfg_branch_predictor[ branch_predictor_parameters.back() ]);
-
-                branch_predictor_parameters.push_back("PBHT_REPLACEMENT_POLICY");
-                if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "FIFO") ==  0) {
-                    branch_predictor_ptr->set_pbht_replacement_policy(REPLACEMENT_FIFO);
-                }
-                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "LRF") ==  0) {
-                    branch_predictor_ptr->set_pbht_replacement_policy(REPLACEMENT_LRF);
-                }
-                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "LRU") ==  0) {
-                    branch_predictor_ptr->set_pbht_replacement_policy(REPLACEMENT_LRU);
-                }
-                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "RANDOM") ==  0) {
-                    branch_predictor_ptr->set_pbht_replacement_policy(REPLACEMENT_RANDOM);
-                }
-                else {
-                    ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_branch_predictor[ branch_predictor_parameters.back() ].c_str(), branch_predictor_parameters.back());
-                }
+                branch_predictor_parameters.push_back("PBHT_SIGNATURE_BITS");
+                branch_predictor_ptr->set_pbht_signature_bits(cfg_branch_predictor[ branch_predictor_parameters.back() ]);
 
 
                 branch_predictor_parameters.push_back("SPHT_LINE_NUMBER");
@@ -663,7 +630,7 @@ void sinuca_engine_t::initialize_processor() {
                 }
                 else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "INPUT1_32BITS") ==  0) {
                     branch_predictor_ptr->set_spht_index_hash(HASH_FUNCTION_INPUT1_32BITS);
-                }                   
+                }
                 else {
                     ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_branch_predictor[ branch_predictor_parameters.back() ].c_str(), branch_predictor_parameters.back());
                 }

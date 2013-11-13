@@ -107,6 +107,10 @@ void branch_predictor_t::reset_statistics() {
     this->set_stat_branch_predictor_hit(0);
     this->set_stat_branch_predictor_miss(0);
 
+    this->set_stat_branch_predictor_taken(0);
+    this->set_stat_branch_predictor_not_taken(0);
+
+
     return;
 };
 
@@ -123,6 +127,12 @@ void branch_predictor_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_branch_predictor_hit", stat_branch_predictor_hit);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_branch_predictor_miss", stat_branch_predictor_miss);
     sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_branch_predictor_miss_ratio", stat_branch_predictor_miss, stat_branch_predictor_operation);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_branch_predictor_taken", stat_branch_predictor_taken);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_branch_predictor_not_taken", stat_branch_predictor_not_taken);
+    sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_branch_predictor_taken_ratio", stat_branch_predictor_taken, stat_branch_predictor_operation);
+
 };
 
 /// ============================================================================

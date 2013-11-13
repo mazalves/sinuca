@@ -193,7 +193,9 @@ bool line_usage_predictor_dewp_t::check_line_is_last_write(cache_memory_t *cache
 /// ============================================================================
 void line_usage_predictor_dewp_t::line_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_hit() package:%s\n", package->content_to_string().c_str())
-    ERROR_ASSERT_PRINTF(package->memory_operation != MEMORY_OPERATION_WRITEBACK && package->memory_operation != MEMORY_OPERATION_WRITE, "Line hit received a WRITEBACK or WRITE.\n");
+    (void)package;
+    ERROR_ASSERT_PRINTF(package->memory_operation != MEMORY_OPERATION_WRITEBACK, "Line hit received a WRITEBACK.\n");
+    // ~ ERROR_ASSERT_PRINTF(package->memory_operation != MEMORY_OPERATION_WRITE, "Line hit received a WRITE.\n");
     ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].line_status != LINE_SUB_BLOCK_DISABLE, "Line hit into a DISABLED sub_block.\n");
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
