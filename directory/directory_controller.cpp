@@ -156,8 +156,11 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             if (this->cmp_index_tag(this->directory_lines[i]->initial_memory_address, package->memory_address)){
                 ERROR_ASSERT_PRINTF(directory_lines[i]->lock_type != LOCK_FREE, "Found directory with LOCK_FREE\n");
                 /// If READ     Need LOCK_FREE or LOCK_READ    => LOCK_READ
-                /// If WRITE    Need LOCK_FREE                 => LOCK_WRITE
                 if (is_read && directory_lines[i]->lock_type == LOCK_READ) {
+                    break;
+                }
+                /// If WRITE    Need LOCK_FREE or WRITE in this same cache  => LOCK_WRITE
+                else if (!is_read && directory_lines[i]->lock_type == LOCK_WRITE && this->directory_lines[i]->id_owner == package->id_owner) {
                     break;
                 }
                 else {
@@ -215,6 +218,11 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             directory_line->cache_request_order[cache_id] = ++directory_line->cache_requested;
 
             DIRECTORY_CTRL_DEBUG_PRINTF("\t Parallel Request:%s\n", directory_line->directory_line_to_string().c_str())
+
+            if (package->memory_operation == MEMORY_OPERATION_WRITE) {
+                package->memory_operation = MEMORY_OPERATION_READ;
+            }
+
             /// Sit and wait for a answer for the same line
             DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN WAIT (Parallel Request)\n")
             return PACKAGE_STATE_WAIT;
@@ -627,10 +635,15 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
     for (uint32_t i = 0; i < cache_mshr_buffer_size; i++) {
         if (cache_mshr_buffer[i].state == PACKAGE_STATE_WAIT &&
         this->cmp_index_tag(cache_mshr_buffer[i].memory_address, package->memory_address)) {
-            cache_mshr_buffer[i].is_answer = package->is_answer;
+            // ~ cache_mshr_buffer[i].is_answer = package->is_answer;
+            // ~ cache_mshr_buffer[i].memory_size = package->memory_size;
+            // ~ cache_mshr_buffer[i].package_set_src_dst(package->id_src, package->id_dst);
+            // ~ cache_mshr_buffer[i].package_untreated(0);
+            cache_mshr_buffer[i].is_answer = true;
             cache_mshr_buffer[i].memory_size = package->memory_size;
-            cache_mshr_buffer[i].package_set_src_dst(package->id_src, package->id_dst);
+            // ~ cache_mshr_buffer[i].package_set_src_dst(package->id_src, package->id_dst);
             cache_mshr_buffer[i].package_untreated(0);
+
         }
     }
 
@@ -1201,7 +1214,7 @@ bool directory_controller_t::coherence_evict_all() {
                         all_clean = false;
                         memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
                         if (writeback_package != NULL) {
-                            DIRECTORY_CTRL_DEBUG_PRINTF("%s Evicted... %"PRIu32" x %"PRIu32" = %"PRIu64" \n", cache->get_label(), index, way , tag);
+                            DIRECTORY_CTRL_DEBUG_PRINTF("%s Evicted... %"PRIu32" x %"PRIu32" = %"PRIu64" \n", cache->get_label(), index, way , writeback_package->memory_address);
                             /// Add statistics to the cache
                             cache->add_stat_final_writeback();
                             cache_line->status = PROTOCOL_STATUS_I;

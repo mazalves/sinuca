@@ -366,17 +366,6 @@ void cache_memory_t::clock(uint32_t subcycle) {
                 this->mshr_born_ordered.erase(this->mshr_born_ordered.begin() + i);
                 this->insert_mshr_born_ordered(package);
             }
-            else {
-                /// =============================================================
-                /// SEND TO PREFETCH
-                /// =============================================================
-                CACHE_DEBUG_PRINTF("\t Treat REQUEST this->mshr_born_ordered[%d] %s\n", i, this->mshr_born_ordered[i]->content_to_string().c_str());
-                if (this->mshr_born_ordered[i]->id_owner != this->get_id() &&
-                this->mshr_born_ordered[i]->memory_operation != MEMORY_OPERATION_WRITEBACK) {
-                    this->prefetcher->treat_prefetch(this->mshr_born_ordered[i]);
-                }
-            }
-
             break;
         }
     }
@@ -607,6 +596,13 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
                         this->mshr_buffer[slot].package_untreated(0);
                         this->recv_rqst_read_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
                         this->remove_token_list(package);
+
+                        /// =============================================================
+                        /// SEND TO PREFETCH
+                        /// =============================================================
+                        CACHE_DEBUG_PRINTF("\t Treat REQUEST this->mshr_born_ordered[%d] %s\n", slot, this->mshr_buffer[slot].content_to_string().c_str());
+                        this->prefetcher->treat_prefetch(this->mshr_buffer + slot);
+
                         return OK;
                     }
                 }
@@ -626,6 +622,15 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
                         this->mshr_buffer[slot].package_untreated(0);
                         this->recv_rqst_write_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
                         this->remove_token_list(package);
+
+                        /// =============================================================
+                        /// SEND TO PREFETCH
+                        /// =============================================================
+                        CACHE_DEBUG_PRINTF("\t Treat REQUEST this->mshr_born_ordered[%d] %s\n", slot, this->mshr_buffer[slot].content_to_string().c_str());
+                        if (this->mshr_buffer[slot].memory_operation != MEMORY_OPERATION_WRITEBACK) {
+                            this->prefetcher->treat_prefetch(this->mshr_buffer + slot);
+                        }
+
                         return OK;
                     }
                 }

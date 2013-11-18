@@ -68,9 +68,9 @@ void prefetch_stream_t::allocate() {
 
 /// ============================================================================
 void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
+    ERROR_ASSERT_PRINTF(package->is_answer == false, "Should never receive an answer.\n")
     uint32_t slot;
-    bool found = 0;
-    bool found2 = 0;
+
     int32_t available_slot = POSITION_FAIL;
 
     ///1.gets any L2 requests --
@@ -99,17 +99,16 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
                         ///state = monitor and request
                     //else
                         ///state = allocated;
-
+/*
     /// ========================================================================
     /// Check for a MONITOR AND REQUEST entry available to match
     /// ========================================================================
     for (slot = 0; slot < this->stream_table_size; slot++){
         if (this->stream_table[slot].state == PREFETCHER_STREAM_STATE_MONITOR_AND_REQUEST) {
             if (this->stream_table[slot].direction == 1 &&                            /// direction is upstream &&
-            package->memory_address >= this->stream_table[slot].starting_address &&   /// this package is between starting address &&
+            package->memory_address > this->stream_table[slot].starting_address &&   /// this package is between starting address &&
             package->memory_address <= this->stream_table[slot].ending_address) {     /// and ending address
                 /// detected valid prefetching;
-                found = 1;
                 this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
 
                 if ((this->stream_table[slot].ending_address - package->memory_address +
@@ -162,14 +161,14 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
                         this->stream_table[slot].ending_address += sinuca_engine.get_global_line_size() * this->prefetch_degree;
                     }
                     this->stream_table[slot].starting_address = package->memory_address;
-                    break;
+                    this->add_stat_request_matches();
+                    return;
                 }
             }
             else if (this->stream_table[slot].direction == 0 &&                       /// direction is downstream &&
-            package->memory_address <= this->stream_table[slot].starting_address &&   /// this package is between starting address &&
+            package->memory_address < this->stream_table[slot].starting_address &&   /// this package is between starting address &&
             package->memory_address >= this->stream_table[slot].ending_address){      /// and ending address
                 ///detected valid prefetching;
-                found = 1;
                 this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
 
                 if ((package->memory_address - this->stream_table[slot].ending_address +
@@ -222,114 +221,240 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
                         this->stream_table[slot].ending_address -= sinuca_engine.get_global_line_size() * this->prefetch_degree;
                     }
                     this->stream_table[slot].starting_address = package->memory_address;
-                    break;
+                    this->add_stat_request_matches();
+                    return;
                 }
             }
         }
     }
-
+*/
 
     /// ========================================================================
     /// Did not match this address to any MONITOR AND REQUEST,
     /// and it is a MISS, so it can be used for allocating and training
     /// ========================================================================
-    if (!found && package->is_answer == false) {
-        for (slot = 0; slot < this->stream_table_size; slot++) {
-            switch (this->stream_table[slot].state) {
-                case PREFETCHER_STREAM_STATE_INVALID:
-                        available_slot = slot;
-                break;
+    for (slot = 0; slot < this->stream_table_size; slot++) {
+        switch (this->stream_table[slot].state) {
+            case PREFETCHER_STREAM_STATE_INVALID:
+                    available_slot = slot;
+            break;
 
-                case PREFETCHER_STREAM_STATE_ALLOCATED:
-                        /// Checking for upwards miss
-                        if (package->memory_address > this->stream_table[slot].starting_address &&
-                        package->memory_address <= (this->stream_table[slot].starting_address + (this->search_distance * sinuca_engine.get_global_line_size()))) {
+            case PREFETCHER_STREAM_STATE_ALLOCATED:
+                    /// Checking for upwards miss
+                    if (package->memory_address > this->stream_table[slot].starting_address &&
+                    package->memory_address <= (this->stream_table[slot].starting_address +
+                                            (this->search_distance * sinuca_engine.get_global_line_size()))) {
 
-                            this->stream_table[slot].ending_address = package->memory_address;
-                            this->stream_table[slot].direction = 1;
+                        this->stream_table[slot].ending_address = package->memory_address;
+                        this->stream_table[slot].direction = 1;
+                        this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
+                        this->stream_table[slot].state = PREFETCHER_STREAM_STATE_TRAINING;
+                        return;
+                    }
+                    /// Checking for downwards miss
+                    else if (package->memory_address < this->stream_table[slot].starting_address &&
+                    package->memory_address >= (this->stream_table[slot].starting_address -
+                                            (this->search_distance * sinuca_engine.get_global_line_size()))) {
+
+                        this->stream_table[slot].ending_address = package->memory_address;
+                        this->stream_table[slot].direction = 0;
+                        this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
+                        this->stream_table[slot].state = PREFETCHER_STREAM_STATE_TRAINING;
+                        return;
+                    }
+            break;
+
+            case PREFETCHER_STREAM_STATE_TRAINING:
+                    /// Checking for confirmation of direction to enter monitor and request, upwards
+                    if (package->memory_address > this->stream_table[slot].ending_address &&
+                    package->memory_address <= (this->stream_table[slot].ending_address + (this->search_distance * sinuca_engine.get_global_line_size()))){
+                        /// Success to obtain a direction pattern
+                        if (this->stream_table[slot].direction == 1) {
+                            this->stream_table[slot].ending_address = package->memory_address  + (sinuca_engine.get_global_line_size() * this->prefetch_distance);
+                            this->stream_table[slot].starting_address = package->memory_address;
                             this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
-                            this->stream_table[slot].state = PREFETCHER_STREAM_STATE_TRAINING;
-                            found2 = 1;
+                            this->stream_table[slot].state = PREFETCHER_STREAM_STATE_MONITOR_AND_REQUEST;
                         }
-                        /// Checking for downwards miss
-                        else if (package->memory_address < this->stream_table[slot].starting_address &&
-                        package->memory_address >= (this->stream_table[slot].starting_address - (this->search_distance * sinuca_engine.get_global_line_size()))) {
-
-                            this->stream_table[slot].ending_address = package->memory_address;
-                            this->stream_table[slot].direction = 0;
+                        /// Failure to obtain a direction pattern, returning to STATE_ALLOCATED considering this last access
+                        else {
+                            this->stream_table[slot].state = PREFETCHER_STREAM_STATE_ALLOCATED;
+                            this->stream_table[slot].starting_address = package->memory_address;
                             this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
-                            this->stream_table[slot].state = PREFETCHER_STREAM_STATE_TRAINING;
-                            found2 = 1;
                         }
-                break;
+                        return;
+                    }
+                    /// Checking for confirmation of direction to enter monitor and request, downwards
+                    else if (package->memory_address < this->stream_table[slot].ending_address &&
+                    package->memory_address >= (this->stream_table[slot].ending_address - (this->search_distance * sinuca_engine.get_global_line_size()))){
+                        /// Success to obtain a direction pattern
+                        if (this->stream_table[slot].direction == 0) {
+                            this->stream_table[slot].ending_address = package->memory_address - (sinuca_engine.get_global_line_size() * this->prefetch_distance);
+                            this->stream_table[slot].starting_address = package->memory_address;
+                            this->stream_table[slot].state = PREFETCHER_STREAM_STATE_MONITOR_AND_REQUEST;
+                            this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
+                        }
+                        /// Failure to obtain a direction pattern, returning to STATE_ALLOCATED considering this last access
+                        else {
+                            this->stream_table[slot].state = PREFETCHER_STREAM_STATE_ALLOCATED;
+                            this->stream_table[slot].starting_address = package->memory_address;
+                            this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
+                        }
+                        return;
+                    }
+            break;
 
-                case PREFETCHER_STREAM_STATE_TRAINING:
-                        /// Checking for confirmation of direction to enter monitor and request, upwards
-                        if (package->memory_address > this->stream_table[slot].ending_address &&
-                        package->memory_address <= (this->stream_table[slot].ending_address + (this->search_distance * sinuca_engine.get_global_line_size()))){
-                            found2 = 1;
-                            /// Success to obtain a direction pattern
-                            if (this->stream_table[slot].direction == 1) {
-                                this->stream_table[slot].ending_address = package->memory_address  + (sinuca_engine.get_global_line_size() * this->prefetch_distance);
-                                this->stream_table[slot].starting_address = package->memory_address;
-                                this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
-                                this->stream_table[slot].state = PREFETCHER_STREAM_STATE_MONITOR_AND_REQUEST;
-                            }
-                            /// Failure to obtain a direction pattern, returning to STATE_ALLOCATED considering this last access
-                            else {
-                                this->stream_table[slot].state = PREFETCHER_STREAM_STATE_ALLOCATED;
-                                this->stream_table[slot].starting_address = package->memory_address;
-                                this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
-                            }
-                        }
-                        /// Checking for confirmation of direction to enter monitor and request, downwards
-                        else if (package->memory_address < this->stream_table[slot].ending_address &&
-                        package->memory_address >= (this->stream_table[slot].ending_address - (this->search_distance * sinuca_engine.get_global_line_size()))){
-                            found2 = 1;
-                            /// Success to obtain a direction pattern
-                            if (this->stream_table[slot].direction == 0) {
-                                this->stream_table[slot].ending_address = package->memory_address - (sinuca_engine.get_global_line_size() * this->prefetch_distance);
-                                this->stream_table[slot].starting_address = package->memory_address;
-                                this->stream_table[slot].state = PREFETCHER_STREAM_STATE_MONITOR_AND_REQUEST;
-                                this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
-                            }
-                            /// Failure to obtain a direction pattern, returning to STATE_ALLOCATED considering this last access
-                            else {
-                                this->stream_table[slot].state = PREFETCHER_STREAM_STATE_ALLOCATED;
-                                this->stream_table[slot].starting_address = package->memory_address;
-                                this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
-                            }
-                        }
-                break;
+            case PREFETCHER_STREAM_STATE_MONITOR_AND_REQUEST:
+                /// Already performed the operations for Monitor and Request
 
-                case PREFETCHER_STREAM_STATE_MONITOR_AND_REQUEST:    ///should only get here on M&R, which we already checked for and got no matches.
-                break;
-            }
+
+                if (this->stream_table[slot].direction == 1 &&                            /// direction is upstream &&
+                package->memory_address > this->stream_table[slot].starting_address &&   /// this package is between starting address &&
+                package->memory_address <= this->stream_table[slot].ending_address) {     /// and ending address
+                    /// detected valid prefetching;
+                    this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
+
+                    if ((this->stream_table[slot].ending_address - package->memory_address +
+                    (sinuca_engine.get_global_line_size() * this->prefetch_degree)) <=
+                    (sinuca_engine.get_global_line_size() * this->prefetch_distance)) {
+                        for (uint32_t index = 1; index <= this->prefetch_degree; index++) {
+
+                            int32_t position = this->request_buffer_insert();
+                            if (position != POSITION_FAIL) {
+
+                                /// Statistics
+                                this->add_stat_created_prefetches();
+                                this->add_stat_upstride_prefetches();
+
+                                uint64_t opcode_address = package->opcode_address ;
+                                uint64_t memory_address = (this->stream_table[slot].ending_address & this->not_offset_bits_mask) + (sinuca_engine.get_global_line_size() * index);
+                                memory_address += this->stream_table[slot].first_address & this->offset_bits_mask; /// Line usage predictor information
+
+                                this->request_buffer[position].packager(
+                                                                    0,                                          /// Request Owner
+                                                                    0,                                          /// Opcode. Number
+                                                                    opcode_address,                             /// Opcode. Address
+                                                                    0,                                          /// Uop. Number
+
+                                                                    memory_address,                             /// Mem. Address
+                                                                    sinuca_engine.get_global_line_size(),       /// Block Size
+
+                                                                    PACKAGE_STATE_UNTREATED,                    /// Pack. State
+                                                                    0,                                          /// Ready Cycle
+
+                                                                    MEMORY_OPERATION_PREFETCH,                  /// Mem. Operation
+                                                                    false,                                      /// Is Answer
+
+                                                                    0,                                          /// Src ID
+                                                                    0,                                          /// Dst ID
+                                                                    NULL,                                       /// *Hops
+                                                                    0                                           /// Hop Counter
+                                                                    );
+
+                                PREFETCHER_DEBUG_PRINTF("\t %s", this->request_buffer[position].content_to_string().c_str());
+                                PREFETCHER_DEBUG_PRINTF("\t INSERTED on PREFETCHER_BUFFER[%d]\n", position);
+                            }
+                        }
+                        /// The following update is to avoid the START become greater than END
+                        /// If the stride of the access is bigger than the prefetch degree ... update using the stride to update the ending address
+                        if (package->memory_address - this->stream_table[slot].starting_address >  sinuca_engine.get_global_line_size() * this->prefetch_degree) {
+                            this->stream_table[slot].ending_address += package->memory_address - this->stream_table[slot].starting_address;
+                        }
+                        /// Otherwise, use the prefetch degree to update the ending address
+                        else {
+                            this->stream_table[slot].ending_address += sinuca_engine.get_global_line_size() * this->prefetch_degree;
+                        }
+                        this->stream_table[slot].starting_address = package->memory_address;
+                        this->add_stat_request_matches();
+                        return;
+                    }
+                }
+                else if (this->stream_table[slot].direction == 0 &&                       /// direction is downstream &&
+                package->memory_address < this->stream_table[slot].starting_address &&   /// this package is between starting address &&
+                package->memory_address >= this->stream_table[slot].ending_address){      /// and ending address
+                    ///detected valid prefetching;
+                    this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
+
+                    if ((package->memory_address - this->stream_table[slot].ending_address +
+                    (sinuca_engine.get_global_line_size() * this->prefetch_degree)) <=
+                    (sinuca_engine.get_global_line_size() * this->prefetch_distance)) {
+                        for (uint32_t index = 1; index <= this->prefetch_degree; index++) {
+
+                            int32_t position = this->request_buffer_insert();
+                            if (position != POSITION_FAIL) {
+
+                                /// Statistics
+                                this->add_stat_created_prefetches();
+                                this->add_stat_downstride_prefetches();
+
+                                uint64_t opcode_address = package->opcode_address ;
+                                uint64_t memory_address = (this->stream_table[slot].ending_address & this->not_offset_bits_mask) - (sinuca_engine.get_global_line_size() * index);
+                                memory_address += this->stream_table[slot].first_address & this->offset_bits_mask; /// Line_usage_predictor information
+
+                                this->request_buffer[position].packager(
+                                                                    0,                                          /// Request Owner
+                                                                    0,                                          /// Opcode. Number
+                                                                    opcode_address,                             /// Opcode. Address
+                                                                    0,                                          /// Uop. Number
+
+                                                                    memory_address,                             /// Mem. Address
+                                                                    sinuca_engine.get_global_line_size(),       /// Block Size
+
+                                                                    PACKAGE_STATE_UNTREATED,                    /// Pack. State
+                                                                    0,                                          /// Ready Cycle
+
+                                                                    MEMORY_OPERATION_PREFETCH,                  /// Mem. Operation
+                                                                    false,                                      /// Is Answer
+
+                                                                    0,                                          /// Src ID
+                                                                    0,                                          /// Dst ID
+                                                                    NULL,                                       /// *Hops
+                                                                    0                                           /// Hop Counter
+                                                                    );
+
+                                PREFETCHER_DEBUG_PRINTF("\t INSERTED on PREFETCHER_BUFFER[%d]\n", position);
+                                PREFETCHER_DEBUG_PRINTF("\t %s", this->request_buffer[position].content_to_string().c_str());
+                            }
+                        }
+                        /// The following update is to avoid the START become greater than END
+                        /// If the stride of the access is bigger than the prefetch degree ... update using the stride to update the ending address
+                        if (this->stream_table[slot].starting_address - package->memory_address > sinuca_engine.get_global_line_size() * this->prefetch_degree) {
+                            this->stream_table[slot].ending_address += package->memory_address - this->stream_table[slot].starting_address;
+                        }
+                        /// Otherwise, use the prefetch degree to update the ending address
+                        else {
+                            this->stream_table[slot].ending_address -= sinuca_engine.get_global_line_size() * this->prefetch_degree;
+                        }
+                        this->stream_table[slot].starting_address = package->memory_address;
+                        this->add_stat_request_matches();
+                        return;
+                    }
+                }
+
+            break;
         }
     }
+
 
     /// ========================================================================
     /// Did not detect the pattern for ANY other stream,
     /// create a new stream if there is an available slot
     /// ========================================================================
-    if (!found && !found2 && package->is_answer == false) {
-        if (available_slot != POSITION_FAIL) {
-            this->stream_table[available_slot].clean();
-            this->stream_table[available_slot].state = PREFETCHER_STREAM_STATE_ALLOCATED;
-            this->stream_table[available_slot].first_address = package->memory_address; /// Line_usage_predictor
-            this->stream_table[available_slot].starting_address = package->memory_address;
-            this->stream_table[available_slot].cycle_last_activation = sinuca_engine.get_global_cycle();
-        }
-        else {
-            for (slot = 0; slot < this->stream_table_size; slot++) {
-                if ((this->stream_table[slot].cycle_last_activation + this->lifetime_cycles) < sinuca_engine.get_global_cycle()) {
-                    this->stream_table[slot].clean();
-                    this->stream_table[slot].state = PREFETCHER_STREAM_STATE_ALLOCATED;
-                    this->stream_table[slot].first_address = package->memory_address; /// Line_usage_predictor
-                    this->stream_table[slot].starting_address = package->memory_address;
-                    this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
-                    break;
-                }
+    if (available_slot != POSITION_FAIL) {
+        this->stream_table[available_slot].clean();
+        this->stream_table[available_slot].state = PREFETCHER_STREAM_STATE_ALLOCATED;
+        this->stream_table[available_slot].first_address = package->memory_address; /// Line_usage_predictor
+        this->stream_table[available_slot].starting_address = package->memory_address;
+        this->stream_table[available_slot].cycle_last_activation = sinuca_engine.get_global_cycle();
+    }
+    else {
+        for (slot = 0; slot < this->stream_table_size; slot++) {
+            if ((this->stream_table[slot].cycle_last_activation + this->lifetime_cycles) < sinuca_engine.get_global_cycle()) {
+                this->stream_table[slot].clean();
+                this->stream_table[slot].state = PREFETCHER_STREAM_STATE_ALLOCATED;
+                this->stream_table[slot].first_address = package->memory_address; /// Line_usage_predictor
+                this->stream_table[slot].starting_address = package->memory_address;
+                this->stream_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
+                return;
             }
         }
     }

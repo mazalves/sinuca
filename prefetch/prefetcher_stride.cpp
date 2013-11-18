@@ -56,6 +56,7 @@ void prefetch_stride_t::allocate() {
 
 /// ============================================================================
 void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
+    ERROR_ASSERT_PRINTF(package->is_answer == false, "Should never receive an answer.\n")
     uint32_t slot;
 
     /// Try to match the request with some Stream
