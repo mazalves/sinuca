@@ -1883,8 +1883,8 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
                     this->cmp_fetch_block(package->memory_address, this->fetch_buffer[j].opcode_address)) {
                         this->add_stat_instruction_read_completed(this->fetch_buffer[j].born_cycle);
                         PROCESSOR_DEBUG_PRINTF("\t WANTED INSTRUCTION\n");
-                        // ~ this->fetch_buffer[j].package_ready(transmission_latency);
-                        this->fetch_buffer[j].package_ready(0);
+                        this->fetch_buffer[j].package_ready(transmission_latency);
+                        // ~ this->fetch_buffer[j].package_ready(0);
                         slot = j;
                     }
                 }
@@ -1905,8 +1905,8 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
                                                                     package->content_to_string().c_str());
                 if (slot != POSITION_FAIL) {
                     PROCESSOR_DEBUG_PRINTF("\t WANTED READ.\n");
-                    // ~ this->memory_order_buffer_read[slot].memory_request.package_ready(transmission_latency);
-                    this->memory_order_buffer_read[slot].memory_request.package_ready(0);
+                    this->memory_order_buffer_read[slot].memory_request.package_ready(transmission_latency);
+                    // ~ this->memory_order_buffer_read[slot].memory_request.package_ready(0);
                     this->memory_order_buffer_read[slot].memory_request.is_answer = true;
                 }
                 ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read Request done, but it is not on the memory_order_buffer anymore.\n")
@@ -1933,12 +1933,6 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
 bool processor_t::check_token_list(memory_package_t *package) {
     ERROR_PRINTF("check_token_list %s.\n", package->content_to_string().c_str())
     return FAIL;
-};
-
-/// ============================================================================
-uint32_t processor_t::check_token_space(memory_package_t *package) {
-    ERROR_PRINTF("check_token_space %s.\n", package->content_to_string().c_str())
-    return 0;
 };
 
 /// ============================================================================

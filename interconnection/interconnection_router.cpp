@@ -209,12 +209,6 @@ bool interconnection_router_t::check_token_list(memory_package_t *package) {
 };
 
 /// ============================================================================
-uint32_t interconnection_router_t::check_token_space(memory_package_t *package) {
-    ERROR_PRINTF("check_token_space %s.\n", get_enum_memory_operation_char(package->memory_operation))
-    return 0;
-};
-
-/// ============================================================================
 void interconnection_router_t::remove_token_list(memory_package_t *package) {
     ERROR_PRINTF("remove_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
 };

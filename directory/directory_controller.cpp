@@ -112,12 +112,6 @@ bool directory_controller_t::check_token_list(memory_package_t *package) {
 };
 
 /// ============================================================================
-uint32_t directory_controller_t::check_token_space(memory_package_t *package) {
-    ERROR_PRINTF("check_token_space %s.\n", package->content_to_string().c_str())
-    return 0;
-};
-
-/// ============================================================================
 void directory_controller_t::remove_token_list(memory_package_t *package) {
     ERROR_PRINTF("remove_token_list %s.\n", package->content_to_string().c_str())
 };

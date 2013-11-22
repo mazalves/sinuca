@@ -78,6 +78,7 @@ class cache_memory_t : public interconnection_interface_t {
         container_ptr_memory_package_t mshr_born_ordered;
 
         mshr_diff_line_t *mshr_request_different_lines;
+        uint32_t mshr_buffer_request_per_different_line_size;
         uint32_t mshr_request_different_lines_used;
 
         uint64_t send_ans_ready_cycle;
@@ -154,7 +155,6 @@ class cache_memory_t : public interconnection_interface_t {
         bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
         /// Token Controller Methods
         bool check_token_list(memory_package_t *package);
-        uint32_t check_token_space(memory_package_t *package);
         void remove_token_list(memory_package_t *package);
         /// Debug Methods
         void periodic_check();
@@ -242,6 +242,8 @@ class cache_memory_t : public interconnection_interface_t {
 
         INSTANTIATE_GET_SET(uint32_t, mshr_request_different_lines_size)
         INSTANTIATE_GET_SET(uint32_t, mshr_request_token_window_size)
+
+        INSTANTIATE_GET_SET(uint32_t, mshr_buffer_request_per_different_line_size)
 
         /// ====================================================================
         /// Statistics related

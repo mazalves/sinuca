@@ -98,6 +98,8 @@ void cache_memory_t::allocate() {
         }
     }
 
+    ERROR_ASSERT_PRINTF(mshr_buffer_request_reserved_size >= this->mshr_request_different_lines_size, "mshr_buffer_request_reserved_size should >= mshr_request_different_lines_size.\n");
+    ERROR_ASSERT_PRINTF(mshr_buffer_request_reserved_size % this->mshr_request_different_lines_size == 0, "mshr_buffer_request_reserved_size should divisible by mshr_request_different_lines_size.\n");
     ERROR_ASSERT_PRINTF(mshr_buffer_request_reserved_size > 0, "mshr_buffer_request_reserved_size should be bigger than zero.\n");
     ERROR_ASSERT_PRINTF(mshr_buffer_writeback_reserved_size > 0, "mshr_buffer_writeback_reserved_size should be bigger than zero.\n");
     ERROR_ASSERT_PRINTF(mshr_buffer_prefetch_reserved_size > 0, "mshr_buffer_prefetch_reserved_size should be bigger than zero.\n");
@@ -113,6 +115,8 @@ void cache_memory_t::allocate() {
 
     this->mshr_request_different_lines_used = 0;
     this->mshr_request_different_lines = utils_t::template_allocate_array<mshr_diff_line_t>(this->mshr_request_different_lines_size);
+
+    this->mshr_buffer_request_per_different_line_size = this->mshr_buffer_request_reserved_size / this->mshr_request_different_lines_size;
 
     ERROR_ASSERT_PRINTF(this->get_total_banks() == 1 || this->prefetcher->get_prefetcher_type() == PREFETCHER_DISABLE, "Cannot use a multibanked cache with prefetch. (Some requests may be generated in the wrong bank)\n");
 
@@ -632,7 +636,7 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
                         }
 
                         return OK;
-                    }
+                        }
                 }
                 CACHE_DEBUG_PRINTF("\tRECV DATA FAIL (BUSY)\n");
                 return FAIL;
@@ -649,6 +653,7 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
 bool cache_memory_t::check_token_list(memory_package_t *package) {
     ERROR_ASSERT_PRINTF(package->is_answer == false, "check_token_list received a Answer.\n")
     uint32_t token_pos = 0, number_tokens_coming = 0;
+
 
     /// 1. Check if the name is already in the guest (token) list.
     for (token_pos = 0; token_pos < this->token_list.size(); token_pos++) {
@@ -677,26 +682,41 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
         this->token_list.push_back(new_token);
     }
 
-    /// 3. Check if the guest can come now, or it needs to wait for free space.
-    if (token_pos < this->check_token_space(package) && token_pos < this->mshr_request_token_window_size) {
+    /// 3. If received already the ticket
+    if (this->token_list[token_pos].is_coming) {
+        /// Come on in! Lets Party !
+        return OK;
+    }
+
+    /// 4. Check if the guest can come now, or it needs to wait for free space.
+    if (token_pos < this->mshr_request_token_window_size) {
 
         /// Check if MSHR is already working on the same line.
         for (uint32_t same_line = 0; same_line < this->mshr_request_different_lines_size; same_line++) {
             /// Check for same_address
             if (this->mshr_request_different_lines[same_line].valid &&
             cmp_tag_index_bank(this->mshr_request_different_lines[same_line].memory_address, package->memory_address)) {
-                /// Avoid increment the usage_counter twice
-                this->mshr_request_different_lines[same_line].usage_counter += !this->token_list[token_pos].is_coming;
-                this->token_list[token_pos].is_coming = true;
 
-                /// Come on in! Lets Party !
-                return OK;
+                if (this->mshr_request_different_lines[same_line].usage_counter < mshr_buffer_request_per_different_line_size) {
+                    /// Avoid increment the usage_counter twice
+                    this->mshr_request_different_lines[same_line].usage_counter++;
+                    this->token_list[token_pos].is_coming = true;
+
+                    /// Come on in! Lets Party !
+                    return OK;
+                }
+                else {
+                    /// Hold on, wait in the line!
+                    add_stat_full_mshr_buffer_request();
+                    return FAIL;
+                }
             }
         }
 
         /// Not found the same address - Check if can create a new entry
-        if ((token_pos - number_tokens_coming) < (this->mshr_request_different_lines_size - this->mshr_request_different_lines_used)) {
-            /// Check if MSHR is already working on the same line.
+        //~ if ((token_pos - number_tokens_coming) < (this->mshr_request_different_lines_size - this->mshr_request_different_lines_used)) {
+        if (this->mshr_request_different_lines_used < this->mshr_request_different_lines_size) {
+            /// Check for an empty MSHR diff line.
             for (uint32_t slot = 0; slot < this->mshr_request_different_lines_size; slot++) {
                 /// Find an empty entry for different_line
                 if (this->mshr_request_different_lines[slot].valid == false) {
@@ -712,20 +732,14 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
                 }
             }
         }
+        else {
+            /// Hold on, wait in the line!
+            add_stat_full_mshr_buffer_request();
+            return FAIL;
+        }
     }
 
-    /// Hold on, wait in the line!
-    add_stat_full_mshr_buffer_request();
-    return FAIL;
-};
-
-/// ============================================================================
-uint32_t cache_memory_t::check_token_space(memory_package_t *package) {
-    CACHE_DEBUG_PRINTF("check_token_space() %s\n", package->content_to_string().c_str());
-    ERROR_ASSERT_PRINTF(get_bank(package->memory_address) == this->get_bank_number(), "Wrong bank.\n%s\n", package->content_to_string().c_str());
-
-    uint32_t free_space = memory_package_t::count_free(this->mshr_buffer, this->mshr_buffer_request_reserved_size);
-    return free_space;
+    ERROR_PRINTF("Should never reach this point.")
 };
 
 /// ============================================================================

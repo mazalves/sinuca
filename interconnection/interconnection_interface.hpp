@@ -99,7 +99,6 @@ class interconnection_interface_t {
 
         /// Token Controller Methods
         virtual bool check_token_list(memory_package_t *package) = 0;       /// Check for available position to receive a package and allocate a token
-        virtual uint32_t check_token_space(memory_package_t *package) = 0;  /// Should check the internal structure of the component to see if there is space for more tokens
         virtual void remove_token_list(memory_package_t *package) = 0;      /// After arrive the package remove from token list
 
         /// Debug Methods

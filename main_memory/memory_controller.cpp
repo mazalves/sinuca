@@ -591,7 +591,7 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
     switch (package->memory_operation) {
         case MEMORY_OPERATION_READ:
         case MEMORY_OPERATION_INST:
-            if (request_number < this->check_token_space(package)) {
+            if (request_number < memory_package_t::count_free(this->mshr_buffer, this->mshr_buffer_request_reserved_size)) {
                 /// Lets party !
                 return OK;
             }
@@ -601,7 +601,8 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
         break;
 
         case MEMORY_OPERATION_PREFETCH:
-            if (prefetch_number < this->check_token_space(package)) {
+            if (prefetch_number < memory_package_t::count_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_writeback_reserved_size,
+                                                    this->mshr_buffer_prefetch_reserved_size)) {
                 /// Lets party !
                 return OK;
             }
@@ -612,7 +613,8 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
 
         case MEMORY_OPERATION_WRITEBACK:
         case MEMORY_OPERATION_WRITE:
-            if (writeback_number < this->check_token_space(package)) {
+            if (writeback_number < memory_package_t::count_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size,
+                                                    this->mshr_buffer_writeback_reserved_size)) {
                 /// Lets party !
                 return OK;
             }
@@ -624,34 +626,6 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
 
     return FAIL;
 
-};
-
-/// ============================================================================
-uint32_t memory_controller_t::check_token_space(memory_package_t *package) {
-    MEMORY_CONTROLLER_DEBUG_PRINTF("check_token_space() %s\n", package->content_to_string().c_str());
-    ERROR_ASSERT_PRINTF(get_controller(package->memory_address) == this->get_controller_number(), "Wrong controller.\n%s\n", package->content_to_string().c_str());
-
-    uint32_t free_space = 0;
-
-    switch (package->memory_operation) {
-        case MEMORY_OPERATION_READ:
-        case MEMORY_OPERATION_INST:
-            free_space = memory_package_t::count_free(this->mshr_buffer, this->mshr_buffer_request_reserved_size);
-        break;
-
-        case MEMORY_OPERATION_PREFETCH:
-            free_space = memory_package_t::count_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_writeback_reserved_size,
-                                                    this->mshr_buffer_prefetch_reserved_size);
-        break;
-
-        case MEMORY_OPERATION_WRITEBACK:
-        case MEMORY_OPERATION_WRITE:
-            free_space = memory_package_t::count_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size,
-                                                    this->mshr_buffer_writeback_reserved_size);
-        break;
-    }
-
-    return free_space;
 };
 
 /// ============================================================================
