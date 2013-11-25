@@ -36,10 +36,10 @@ sinuca_engine_t::sinuca_engine_t() {
     this->memory_controller_array = NULL;
     this->interconnection_router_array = NULL;
 
-	this->round_robin_processor = 0;
-	this->round_robin_cache_memory = 0;
-	this->round_robin_memory_controller = 0;
-	this->round_robin_interconnection_router = 0;
+    this->round_robin_processor = 0;
+    this->round_robin_cache_memory = 0;
+    this->round_robin_memory_controller = 0;
+    this->round_robin_interconnection_router = 0;
 
     this->stat_vm_start = 0.0;
     this->stat_rss_start = 0.0;
@@ -239,44 +239,9 @@ void sinuca_engine_t::global_clock() {
     DEBUG_PRINTF("========================================================================================================\n")
     DEBUG_PRINTF("======================================== Sinuca_Cycle %"PRIu64"/%u ========================================\n\n\n", this->get_global_cycle(), sub_cycle)
 
-    // ~ for (uint32_t i = 0 ; i < this->get_interconnection_interface_array_size() ; i++) {
-    // ~ 	this->interconnection_interface_array[i]->clock(sub_cycle);
-    // ~ }
-
-	uint32_t i, k;
-	
-    for (i = 0; i < this->get_processor_array_size(); i++) {
-		k = (round_robin_processor + i) % this->get_processor_array_size();
-        this->processor_array[k]->clock(sub_cycle);
+    for (uint32_t i = 0 ; i < this->get_interconnection_interface_array_size() ; i++) {
+        this->interconnection_interface_array[i]->clock(sub_cycle);
     }
-    for (i = 0; i < this->get_cache_memory_array_size(); i++) {
-		k = (round_robin_cache_memory + i) % this->get_cache_memory_array_size();
-        this->cache_memory_array[k]->clock(sub_cycle);
-    }
-    for (i = 0; i < this->get_memory_controller_array_size(); i++) {
-		k = (round_robin_memory_controller + i) % this->get_memory_controller_array_size();
-        this->memory_controller_array[k]->clock(sub_cycle);
-    }
-    for (i = 0; i < this->get_interconnection_router_array_size(); i++) {
-		k = (round_robin_interconnection_router + i) % this->get_interconnection_router_array_size();
-        this->interconnection_router_array[k]->clock(sub_cycle);
-    }
-
-	/// Every HEART_BEAT cycles, change the simulation priority (the component which will simulate first)
-	if ((sinuca_engine.get_global_cycle() % HEART_BEAT) == 0) {
-		round_robin_processor++;
-		if (round_robin_processor >= this->get_processor_array_size()) round_robin_processor = 0;
-		
-		round_robin_cache_memory++;
-		if (round_robin_cache_memory >= this->get_cache_memory_array_size()) round_robin_cache_memory = 0;
-		
-		round_robin_memory_controller++;
-		if (round_robin_memory_controller >= this->get_memory_controller_array_size()) round_robin_memory_controller = 0;
-		
-		round_robin_interconnection_router++;		
-		if (round_robin_interconnection_router >= this->get_interconnection_router_array_size()) round_robin_interconnection_router = 0;
-	}
-
     this->global_cycle++;
 };
 

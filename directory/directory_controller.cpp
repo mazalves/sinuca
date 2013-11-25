@@ -149,6 +149,19 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             /// Transaction on the same address was found
             if (this->cmp_index_tag(this->directory_lines[i]->initial_memory_address, package->memory_address)){
                 ERROR_ASSERT_PRINTF(directory_lines[i]->lock_type != LOCK_FREE, "Found directory with LOCK_FREE\n");
+                // ~ if (this->directory_lines[i]->id_owner == package->id_owner)
+                    // ~ continue;
+                // ~ if (this->directory_lines[i]->id_owner == cache_id)
+                    // ~ continue;
+                // ~ else if (is_read && directory_lines[i]->lock_type == LOCK_READ) {
+                    // ~ continue;
+                // ~ }
+                // ~ else {
+                    // ~ /// Cannot continue right now
+                    // ~ DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED (Found incompatible LOCK)\n")
+                    // ~ return PACKAGE_STATE_UNTREATED;
+                // ~ }
+
                 /// If READ     Need LOCK_FREE or LOCK_READ    => LOCK_READ
                 if (is_read && directory_lines[i]->lock_type == LOCK_READ) {
                     break;
@@ -507,7 +520,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                     // Line Usage Prediction => Take all the line subblocks and put into the package
                     cache->line_usage_predictor->predict_sub_blocks_to_package(cache, cache_line, package, index, way);
 
-
                     /// LATENCY = READ
                     package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read();
                     package->package_set_src_dst(cache->get_id(), this->find_next_obj_id(cache, package->memory_address));
@@ -629,15 +641,8 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
     for (uint32_t i = 0; i < cache_mshr_buffer_size; i++) {
         if (cache_mshr_buffer[i].state == PACKAGE_STATE_WAIT &&
         this->cmp_index_tag(cache_mshr_buffer[i].memory_address, package->memory_address)) {
-            // ~ cache_mshr_buffer[i].is_answer = package->is_answer;
-            // ~ cache_mshr_buffer[i].memory_size = package->memory_size;
-            // ~ cache_mshr_buffer[i].package_set_src_dst(package->id_src, package->id_dst);
-            // ~ cache_mshr_buffer[i].package_untreated(0);
             cache_mshr_buffer[i].is_answer = true;
-            cache_mshr_buffer[i].memory_size = package->memory_size;
-            // ~ cache_mshr_buffer[i].package_set_src_dst(package->id_src, package->id_dst);
             cache_mshr_buffer[i].package_untreated(0);
-
         }
     }
 

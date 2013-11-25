@@ -714,7 +714,6 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
         }
 
         /// Not found the same address - Check if can create a new entry
-        //~ if ((token_pos - number_tokens_coming) < (this->mshr_request_different_lines_size - this->mshr_request_different_lines_used)) {
         if (this->mshr_request_different_lines_used < this->mshr_request_different_lines_size) {
             /// Check for an empty MSHR diff line.
             for (uint32_t slot = 0; slot < this->mshr_request_different_lines_size; slot++) {
@@ -739,7 +738,9 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
         }
     }
 
-    ERROR_PRINTF("Should never reach this point.")
+    /// Hold on, wait in the line!
+    add_stat_full_mshr_buffer_request();
+    return FAIL;
 };
 
 /// ============================================================================
