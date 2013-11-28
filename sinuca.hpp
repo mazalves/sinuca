@@ -132,10 +132,10 @@ extern sinuca_engine_t sinuca_engine;
 /// ============================================================================
 /// Definitions for Log, Debug, Warning, Error and Statistics
 /// ============================================================================
-#define HEART_BEAT      1000000  /// Period to inform the Progress
-#define MAX_ALIVE_TIME   100000  /// Max Time for a request to be solved
+#define HEART_BEAT      10000000  /// Period to inform the Progress
+#define MAX_ALIVE_TIME   1000000  /// Max Time for a request to be solved
 // ~ #define PERIODIC_CHECK   1  /// Period between the Periodic Check
-#define PERIODIC_CHECK  1000000  /// Period between the Periodic Check
+#define PERIODIC_CHECK  10000000  /// Period between the Periodic Check
 
 // ~ #define INITIALIZE_DEBUG 900000    /// Cycle to start the DEBUG_PRINTF (0 to disable)
 #define INITIALIZE_DEBUG 0    /// Cycle to start the DEBUG_PRINTF (0 to disable)

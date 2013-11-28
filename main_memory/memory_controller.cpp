@@ -116,19 +116,46 @@ void memory_controller_t::allocate() {
 
         /// Consider the latency in terms of processor cycles
         this->channels[i].timing_burst = this->timing_burst * this->core_to_bus_clock_ratio;
+        this->channels[i].timing_burst += this->timing_burst * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_burst ? 1 : 0;
+
         this->channels[i].timing_al = this->timing_al * this->core_to_bus_clock_ratio;
+        this->channels[i].timing_al += this->timing_al * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_al ? 1 : 0;
+
         this->channels[i].timing_cas = this->timing_cas * this->core_to_bus_clock_ratio;
+        this->channels[i].timing_cas += this->timing_cas * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_cas ? 1 : 0;
+
         this->channels[i].timing_ccd = this->timing_ccd * this->core_to_bus_clock_ratio;
+        this->channels[i].timing_ccd += this->timing_ccd * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_ccd ? 1 : 0;
+
         this->channels[i].timing_cwd = this->timing_cwd * this->core_to_bus_clock_ratio;
+        this->channels[i].timing_cwd += this->timing_cwd * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_cwd ? 1 : 0;
+
         this->channels[i].timing_faw = this->timing_faw * this->core_to_bus_clock_ratio;
+        this->channels[i].timing_faw += this->timing_faw * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_faw ? 1 : 0;
+
         this->channels[i].timing_ras = this->timing_ras * this->core_to_bus_clock_ratio;
+        this->channels[i].timing_ras += this->timing_ras * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_ras ? 1 : 0;
+
         this->channels[i].timing_rc = this->timing_rc * this->core_to_bus_clock_ratio;
+        this->channels[i].timing_rc += this->timing_rc * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_rc ? 1 : 0;
+
         this->channels[i].timing_rcd = this->timing_rcd * this->core_to_bus_clock_ratio;
+        this->channels[i].timing_rcd += this->timing_rcd * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_rcd ? 1 : 0;
+
         this->channels[i].timing_rp = this->timing_rp * this->core_to_bus_clock_ratio;
+        this->channels[i].timing_rp += this->timing_rp * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_rp ? 1 : 0;
+
         this->channels[i].timing_rrd = this->timing_rrd * this->core_to_bus_clock_ratio;
+        this->channels[i].timing_rrd += this->timing_rrd * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_rrd ? 1 : 0;
+
         this->channels[i].timing_rtp = this->timing_rtp * this->core_to_bus_clock_ratio;
+        this->channels[i].timing_rtp += this->timing_rtp * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_rtp ? 1 : 0;
+
         this->channels[i].timing_wr = this->timing_wr * this->core_to_bus_clock_ratio;
+        this->channels[i].timing_wr += this->timing_wr * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_wr ? 1 : 0;
+
         this->channels[i].timing_wtr = this->timing_wtr * this->core_to_bus_clock_ratio;
+        this->channels[i].timing_wtr += this->timing_wtr * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_wtr ? 1 : 0;
 
         /// Copy the masks
         this->channels[i].column_bits_mask = this->column_bits_mask;

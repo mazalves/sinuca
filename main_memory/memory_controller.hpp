@@ -48,7 +48,7 @@ class memory_controller_t : public interconnection_interface_t {
         /// DRAM configuration
         uint32_t bus_frequency; // DRAM to core bus frequency
         uint32_t burst_length;  // DDR1 has a BL=2, DDR2 has a BL=4, DDR3 has a BL=8
-        uint32_t core_to_bus_clock_ratio;  // Ratio between PROCESSOR and BUS frequency
+        float core_to_bus_clock_ratio;  // Ratio between PROCESSOR and BUS frequency
 
         /// All parameters given in nCK
         /// 1 nCK = (IO Bus Cycle)
@@ -199,7 +199,7 @@ class memory_controller_t : public interconnection_interface_t {
         /// DRAM configuration
         INSTANTIATE_GET_SET(uint32_t, bus_frequency)
         INSTANTIATE_GET_SET(uint32_t, burst_length)
-        INSTANTIATE_GET_SET(uint32_t, core_to_bus_clock_ratio)
+        INSTANTIATE_GET_SET(float, core_to_bus_clock_ratio)
 
         /// All parameters given in nCK
         /// 1 nCK = (IO Bus Cycle)
