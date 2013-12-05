@@ -159,6 +159,7 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
                                 /// Find free position into the request buffer
                                 int32_t position = this->request_buffer_insert();
                                 if (position != POSITION_FAIL) {
+                                    this->request_buffer[position].package_clean();
 
                                     /// Statistics
                                     this->add_stat_created_prefetches();
@@ -181,7 +182,7 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
                                                                         sinuca_engine.get_global_line_size(),       /// Block Size
 
                                                                         PACKAGE_STATE_UNTREATED,                    /// Pack. State
-                                                                        0,                                          /// Ready Cycle
+                                                                        0,                                      /// Ready Cycle
 
                                                                         MEMORY_OPERATION_PREFETCH,                  /// Mem. Operation
                                                                         false,                                      /// Is Answer
@@ -246,7 +247,7 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
 
     /// Could not find a STRIDE, Evict the LRU position to create a new stride.
     uint64_t old_position = this->stride_table_size;
-    uint64_t old_cycle = sinuca_engine.get_global_cycle() + 1;
+    uint64_t old_cycle = std::numeric_limits<uint64_t>::max();
     for (slot = 0 ; slot < this->stride_table_size ; slot++) {
         /// Free slot
         if (old_cycle > this->stride_table[slot].cycle_last_activation) {

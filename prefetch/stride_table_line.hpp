@@ -26,7 +26,7 @@ class stride_table_line_t {
         uint64_t last_opcode_address;           /// Last Opcode Request which matched into this stride
         uint64_t last_memory_address;           /// Last Memory Request which matched into this stride
         int64_t memory_address_difference;      /// Difference between one access to another
-        uint32_t prefetch_ahead;                /// Number of prefetchs ahead, already done
+        uint32_t prefetch_ahead;                /// Number of prefetches ahead, already requested
         uint64_t cycle_last_activation;         /// Last time a Memory Request matched into this stride
         prefetch_stride_state_t stride_state;
 

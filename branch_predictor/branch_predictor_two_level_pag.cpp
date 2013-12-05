@@ -213,6 +213,7 @@ uint64_t branch_predictor_two_level_pag_t::pbht_find_update_address(uint64_t opc
 
     this->pbht[index] = branch_history << 1;  /// Make room for the next branch
     this->pbht[index] |= is_taken;               /// Update the signature
+    this->pbht[index] &= this->gpht_index_bits_mask;   /// Cut the extra bit
 
     return branch_history;
 };
@@ -281,17 +282,7 @@ processor_stage_t branch_predictor_two_level_pag_t::predict_branch(const opcode_
         bool is_btb_hit = this->btb_find_update_address(actual_opcode.opcode_address);
         bool is_taken_gpht = this->gpht_find_update_prediction(actual_opcode, next_opcode);
 
-        if (is_btb_hit == FAIL) {
-            BRANCH_PREDICTOR_DEBUG_PRINTF("BTB NOT FOUND => PROCESSOR_STAGE_EXECUTION\n");
-            /// If NOT TAKEN, it will not generate extra latency
-            if (!is_taken){
-                solve_stage = PROCESSOR_STAGE_FETCH;
-            }
-            else {
-                solve_stage = PROCESSOR_STAGE_EXECUTION;
-            }
-        }
-        else {
+        if (is_btb_hit) {
             BRANCH_PREDICTOR_DEBUG_PRINTF("BTB FOUND - ");
             if (is_taken_gpht == is_taken) {
                 BRANCH_PREDICTOR_DEBUG_PRINTF("CORRECT PREDICTED => PROCESSOR_STAGE_FETCH\n");
@@ -299,6 +290,16 @@ processor_stage_t branch_predictor_two_level_pag_t::predict_branch(const opcode_
             }
             else {
                 BRANCH_PREDICTOR_DEBUG_PRINTF("MISS PREDICTED => PROCESSOR_STAGE_EXECUTION\n");
+                solve_stage = PROCESSOR_STAGE_EXECUTION;
+            }
+        }
+        else {
+            BRANCH_PREDICTOR_DEBUG_PRINTF("BTB NOT FOUND => PROCESSOR_STAGE_EXECUTION\n");
+            /// If NOT TAKEN, it will not generate extra latency
+            if (!is_taken){
+                solve_stage = PROCESSOR_STAGE_FETCH;
+            }
+            else {
                 solve_stage = PROCESSOR_STAGE_EXECUTION;
             }
         }
