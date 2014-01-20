@@ -23,23 +23,22 @@
 /// ============================================================================
 class dsbp_metadata_line_t {
     public:
-        line_sub_block_t *valid_sub_blocks;
-        uint64_t *real_access_counter;
-        uint64_t *real_write_counter;
-        
-        uint64_t *access_counter;
-        bool *overflow;
+        line_sub_block_t line_status;
+        bool *sub_blocks;
+
+        uint64_t *real_access_counter_read;
+        uint64_t *access_counter_read;
+        bool *overflow_read;
+
         bool learn_mode;
         pht_line_t *pht_pointer;
 
-        /// Static Energy
-        uint64_t *clock_become_alive;
-        uint64_t *clock_become_dead;
-
         /// Special Flags
+        bool is_dead_read;
         bool is_dirty;
-        bool is_dead;
-        
+
+        /// Static Energy
+        uint64_t clock_last_access;
         uint32_t active_sub_blocks;
         /// ====================================================================
         /// Methods

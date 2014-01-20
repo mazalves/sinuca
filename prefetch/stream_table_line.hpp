@@ -25,6 +25,7 @@
 class stream_table_line_t {
     public:
         uint64_t first_address;             /// First address that generated this stream (line_usage_predictor information)
+
         uint64_t starting_address;          /// Starting address for this stream
         uint64_t ending_address;            /// Last address for this stream
         uint32_t direction;                 /// Direction of this stream (0 downstream, 1 upstream)

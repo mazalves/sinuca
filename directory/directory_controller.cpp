@@ -135,7 +135,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     /// Find the existing directory line
     directory_line_t *directory_line = NULL;
     int32_t directory_line_number = POSITION_FAIL;
-    /// If NOT Cache L1 (New directory line may be created)
+    /// If NOT Cache L1 (New directory line may already exist)
     if (cache->get_hierarchy_level() != 1 && cache->get_id() != package->id_owner) {
         directory_line_number = find_directory_line(package);
         ERROR_ASSERT_PRINTF(directory_line_number != POSITION_FAIL,
@@ -149,18 +149,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             /// Transaction on the same address was found
             if (this->cmp_index_tag(this->directory_lines[i]->initial_memory_address, package->memory_address)){
                 ERROR_ASSERT_PRINTF(directory_lines[i]->lock_type != LOCK_FREE, "Found directory with LOCK_FREE\n");
-                // ~ if (this->directory_lines[i]->id_owner == package->id_owner)
-                    // ~ continue;
-                // ~ if (this->directory_lines[i]->id_owner == cache_id)
-                    // ~ continue;
-                // ~ else if (is_read && directory_lines[i]->lock_type == LOCK_READ) {
-                    // ~ continue;
-                // ~ }
-                // ~ else {
-                    // ~ /// Cannot continue right now
-                    // ~ DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED (Found incompatible LOCK)\n")
-                    // ~ return PACKAGE_STATE_UNTREATED;
-                // ~ }
 
                 /// If READ     Need LOCK_FREE or LOCK_READ    => LOCK_READ
                 if (is_read && directory_lines[i]->lock_type == LOCK_READ) {
@@ -249,15 +237,15 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
         case MEMORY_OPERATION_WRITE:
         {
             /// Inspect IS_HIT
-            bool is_line_hit = this->coherence_is_hit(cache_line, package->memory_operation);
+            bool is_tag_hit = this->coherence_is_hit(cache_line, package->memory_operation);
             bool is_sub_block_hit = false;
-            if (is_line_hit) {
+            if (is_tag_hit) {
                 // =============================================================
                 // Line Usage Prediction
                 is_sub_block_hit = cache->line_usage_predictor->check_sub_block_is_hit(cache, cache_line, package, index, way);
             }
             ///=================================================================
-            /// Cache line HIT + Sub-Block HIT
+            /// TAG hit *AND* SUB-BLOCK hit
             ///=================================================================
             if (is_sub_block_hit) {
                 // =============================================================
@@ -286,7 +274,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                         cache->line_usage_predictor->line_send_writeback(cache, cache_line, writeback_package, index, way);
                     }
                 }
-
 
 
                 /// THIS cache level started the request (PREFETCH)
@@ -320,121 +307,32 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 }
             }
             ///=================================================================
-            /// Cache line HIT + Sub-Block MISS
-            ///=================================================================
-            else if (is_line_hit) {
-                /// The request can be treated now !
-                /// New Directory_Line + LOCK
-                if (directory_line == NULL) {
-                    this->directory_lines.push_back(new directory_line_t());
-                    directory_line = this->directory_lines.back();
-
-                    directory_line->packager(package->id_owner, package->opcode_number, package->opcode_address, package->uop_number,
-                                                is_read ? LOCK_READ : LOCK_WRITE,
-                                                package->memory_operation, package->memory_address, package->memory_size);
-                    DIRECTORY_CTRL_DEBUG_PRINTF("\t New Directory Line:%s\n", directory_line->directory_line_to_string().c_str())
-                }
-
-                /// Update the Directory_Line
-                directory_line->cache_request_order[cache_id] = ++directory_line->cache_requested;
-                DIRECTORY_CTRL_DEBUG_PRINTF("\t Update Directory Line:%s\n", directory_line->directory_line_to_string().c_str())
-
-                /// Send Request to fill the cache line
-                if (package->memory_operation == MEMORY_OPERATION_WRITE) {
-                    package->memory_operation = MEMORY_OPERATION_READ;
-                }
-
-                /// Coherence Invalidate
-                cache->change_status(cache_line, PROTOCOL_STATUS_I);
-
-                /// Check if some HIGHER LEVEL has the cache line Modified
-                cache->change_status(cache_line, this->find_cache_line_higher_levels(cache, package->memory_address, true));
-
-                /// Higher Level Hit
-                if (cache_line->status != PROTOCOL_STATUS_I) {
-                    if (coherence_is_dirty(cache_line->status)) {
-                        // =============================================================
-                        // Line Usage Prediction
-                        cache->line_usage_predictor->line_recv_writeback(cache, cache_line, package, index, way);
-                        cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
-
-                        /// Early Writeback?
-                        // =============================================================
-                        // Line Usage Prediction
-                        if (cache->line_usage_predictor->check_line_is_last_write(cache, cache_line, index, way)) {
-                            memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
-                            if (writeback_package != NULL) {
-                                /// Add statistics to the cache
-                                cache->add_stat_writeback();
-                                /// Update Coherence Status and Last Access Time
-                                this->coherence_new_operation(cache, cache_line, writeback_package, false);
-                                /// Update Statistics
-                                this->new_statistics(cache, writeback_package, true);
-                                // =============================================================
-                                // Line Usage Prediction
-                                cache->line_usage_predictor->line_send_writeback(cache, cache_line, writeback_package, index, way);
-                            }
-                        }
-                    }
-                    else {
-                        // =============================================================
-                        // Line Usage Prediction
-                        cache->line_usage_predictor->sub_block_miss(cache, cache_line, package, index, way);
-                        cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
-                    }
-
-                    /// LATENCY = CACHE-TO-CACHE = HIGHER LEVEL READ PENALTY
-                    container_ptr_cache_memory_t *higher_level_cache = cache->get_higher_level_cache();
-                    if (higher_level_cache->empty())
-                        package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read();
-                    else
-                        package->ready_cycle = sinuca_engine.get_global_cycle(); // + higher_level_cache[0][0]->get_penalty_read();
-
-                    package->is_answer = true;
-                    DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED ANSWER (Found Higher Level)\n")
-                    return PACKAGE_STATE_UNTREATED;
-                }
-                /// Higher Level Miss
-                else {
-                    // =============================================================
-                    // Line Usage Prediction
-                    cache->line_usage_predictor->sub_block_miss(cache, cache_line, package, index, way);
-                    cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
-                    // Line Usage Prediction => Take all the line subblocks and put into the package
-                    cache->line_usage_predictor->predict_sub_blocks_to_package(cache, cache_line, package, index, way);
-
-                    /// LATENCY = READ
-                    package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read();
-                    package->package_set_src_dst(cache->get_id(), this->find_next_obj_id(cache, package->memory_address));
-
-                    DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT RQST (Miss)\n")
-                    return PACKAGE_STATE_TRANSMIT;
-                }
-            }
-            ///=================================================================
-            /// Cache line MISS
+            /// TAG miss *OR* SUB-BLOCK miss
             ///=================================================================
             else {
-                ///=================================================================
-                /// Make room for the new cache line
-                ///=================================================================
-                /// Do not have a line with same TAG
-                if (cache_line == NULL) {
-                    cache_line = cache->evict_address(package->memory_address, index, way);
-                    /// Could not evict any line
+                /// Tag is not allocated
+                if (!is_tag_hit) {
+                    ///=================================================================
+                    /// Make room for the new cache line
+                    ///=================================================================
+                    /// Do not have a line with same TAG
                     if (cache_line == NULL) {
-                        /// Cannot continue right now
-                        DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED (Cache_line == NULL)\n")
-                        return PACKAGE_STATE_UNTREATED;
-                    }
-                    /// Found a line to evict
-                    ///=====================================================
-                    /// Takes care about INCLUSIVENESS / WRITEBACK
-                    ///=====================================================
-                    if (this->inclusiveness_new_eviction(cache, cache_line, index, way, package) == FAIL) {
-                        /// Cannot continue right now
-                        DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED (Cache_line == NULL)\n")
-                        return PACKAGE_STATE_UNTREATED;
+                        cache_line = cache->evict_address(package->memory_address, index, way);
+                        /// Could not evict any line
+                        if (cache_line == NULL) {
+                            /// Cannot continue right now
+                            DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED (Cache_line == NULL)\n")
+                            return PACKAGE_STATE_UNTREATED;
+                        }
+                        /// Found a line to evict
+                        ///=====================================================
+                        /// Takes care about INCLUSIVENESS / WRITEBACK
+                        ///=====================================================
+                        if (this->inclusiveness_new_eviction(cache, cache_line, index, way, package) == FAIL) {
+                            /// Cannot continue right now
+                            DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED (Cache_line == NULL)\n")
+                            return PACKAGE_STATE_UNTREATED;
+                        }
                     }
                 }
 
@@ -459,74 +357,94 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 directory_line->cache_request_order[cache_id] = ++directory_line->cache_requested;
                 DIRECTORY_CTRL_DEBUG_PRINTF("\t Update Directory Line:%s\n", directory_line->directory_line_to_string().c_str())
 
-                /// Check if some HIGHER LEVEL has the cache line
-                cache->change_status(cache_line, this->find_cache_line_higher_levels(cache, package->memory_address, true));
+                /// If line miss OR line_turned_off -> try to find on higher level
+                if (!is_tag_hit ||
+                cache->line_usage_predictor->check_line_is_disabled(NULL, NULL, index, way)) {
+
+                    /// Coherence Invalidate
+                    cache->change_status(cache_line, PROTOCOL_STATUS_I);
+
+                    /// Check if some HIGHER LEVEL has the cache line
+                    cache->change_status(cache_line, this->find_cache_line_higher_levels(cache, package->memory_address, true));
+
+                    /// Higher Level Hit
+                    if (cache_line->status != PROTOCOL_STATUS_I) {
+                        if (coherence_is_dirty(cache_line->status)) {
+                            // =============================================================
+                            // Line Usage Prediction
+                            cache->line_usage_predictor->line_recv_writeback(cache, cache_line, package, index, way);
+                            cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
+
+                            /// Early Writeback?
+                            // =============================================================
+                            // Line Usage Prediction
+                            if (cache->line_usage_predictor->check_line_is_last_write(cache, cache_line, index, way)) {
+                                memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
+                                if (writeback_package != NULL) {
+                                    /// Add statistics to the cache
+                                    cache->add_stat_writeback();
+                                    /// Update Coherence Status and Last Access Time
+                                    this->coherence_new_operation(cache, cache_line, writeback_package, false);
+                                    /// Update Statistics
+                                    this->new_statistics(cache, writeback_package, true);
+                                    // =============================================================
+                                    // Line Usage Prediction
+                                    cache->line_usage_predictor->line_send_writeback(cache, cache_line, writeback_package, index, way);
+                                }
+                            }
+                        }
+                        else {
+                            // =============================================================
+                            // Line Usage Prediction
+                            if (is_tag_hit) {
+                                cache->line_usage_predictor->sub_block_miss(cache, cache_line, package, index, way);
+                            }
+                            else {
+                                cache->line_usage_predictor->line_miss(cache, cache_line, package, index, way);
+                            }
+
+                            cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
+                        }
+
+                        /// LATENCY = CACHE-TO-CACHE = No extra penalty
+                        package->ready_cycle = sinuca_engine.get_global_cycle();
+
+                        /// Send Request to fill the cache line
+                        if (package->memory_operation == MEMORY_OPERATION_WRITE) {
+                            package->memory_operation = MEMORY_OPERATION_READ;
+                        }
+
+
+                        package->is_answer = true;
+                        DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED ANSWER (Found Higher Level)\n")
+                        return PACKAGE_STATE_UNTREATED;
+                    }
+                }
+                /// Missing only some sub-block or Higher Level Miss
+
+                // =============================================================
+                // Line Usage Prediction
+                if (is_tag_hit) {
+                    cache->line_usage_predictor->sub_block_miss(cache, cache_line, package, index, way);
+                }
+                else {
+                    cache->line_usage_predictor->line_miss(cache, cache_line, package, index, way);
+                }
+                cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
+                cache->line_usage_predictor->line_sub_blocks_to_package(cache, cache_line, package, index, way);
+
 
                 /// Send Request to fill the cache line
                 if (package->memory_operation == MEMORY_OPERATION_WRITE) {
                     package->memory_operation = MEMORY_OPERATION_READ;
                 }
 
-                /// Higher Level Hit
-                if (cache_line->status != PROTOCOL_STATUS_I) {
-                    if (coherence_is_dirty(cache_line->status)) {
-                        // =============================================================
-                        // Line Usage Prediction
-                        cache->line_usage_predictor->line_recv_writeback(cache, cache_line, package, index, way);
-                        cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
+                /// LATENCY = READ
+                package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read();
+                package->package_set_src_dst(cache->get_id(), this->find_next_obj_id(cache, package->memory_address));
 
-                        /// Early Writeback?
-                        // =============================================================
-                        // Line Usage Prediction
-                        if (cache->line_usage_predictor->check_line_is_last_write(cache, cache_line, index, way)) {
-                            memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
-                            if (writeback_package != NULL) {
-                                /// Add statistics to the cache
-                                cache->add_stat_writeback();
-                                /// Update Coherence Status and Last Access Time
-                                this->coherence_new_operation(cache, cache_line, writeback_package, false);
-                                /// Update Statistics
-                                this->new_statistics(cache, writeback_package, true);
-                                // =============================================================
-                                // Line Usage Prediction
-                                cache->line_usage_predictor->line_send_writeback(cache, cache_line, writeback_package, index, way);
-                            }
-                        }
-                    }
-                    else {
-                        // =============================================================
-                        // Line Usage Prediction
-                        cache->line_usage_predictor->line_miss(cache, cache_line, package, index, way);
-                        cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
-                    }
-
-                    /// LATENCY = CACHE-TO-CACHE = HIGHER LEVEL READ PENALTY
-                    container_ptr_cache_memory_t *higher_level_cache = cache->get_higher_level_cache();
-                    if (higher_level_cache->empty())
-                        package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read();
-                    else
-                        package->ready_cycle = sinuca_engine.get_global_cycle(); // + higher_level_cache[0][0]->get_penalty_read();
-
-                    package->is_answer = true;
-                    DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED ANSWER (Found Higher Level)\n")
-                    return PACKAGE_STATE_UNTREATED;
-                }
-                /// Higher Level Miss
-                else {
-                    // =============================================================
-                    // Line Usage Prediction
-                    cache->line_usage_predictor->line_miss(cache, cache_line, package, index, way);
-                    cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
-                    // Line Usage Prediction => Take all the line subblocks and put into the package
-                    cache->line_usage_predictor->predict_sub_blocks_to_package(cache, cache_line, package, index, way);
-
-                    /// LATENCY = READ
-                    package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read();
-                    package->package_set_src_dst(cache->get_id(), this->find_next_obj_id(cache, package->memory_address));
-
-                    DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT RQST (Miss)\n")
-                    return PACKAGE_STATE_TRANSMIT;
-                }
+                DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT RQST (Miss)\n")
+                return PACKAGE_STATE_TRANSMIT;
             }
         }
         break;

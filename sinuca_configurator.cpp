@@ -949,11 +949,22 @@ void sinuca_engine_t::initialize_cache_memory() {
 
                 line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_DSBP);
 
-                line_usage_predictor_parameters.push_back("SUB_BLOCK_SIZE");
-                line_usage_predictor_ptr->set_sub_block_size( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+                line_usage_predictor_parameters.push_back("BYTES_PER_SUBBLOCK");
+                line_usage_predictor_ptr->set_bytes_per_subblock( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
 
-                line_usage_predictor_parameters.push_back("USAGE_COUNTER_BITS");
-                line_usage_predictor_ptr->set_access_counter_bits( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+                line_usage_predictor_parameters.push_back("USAGE_COUNTER_BITS_READ");
+                line_usage_predictor_ptr->set_access_counter_bits_read( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+                line_usage_predictor_parameters.push_back("EARLY_EVICTION");
+                line_usage_predictor_ptr->set_early_eviction( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+                line_usage_predictor_parameters.push_back("EARLY_WRITEBACK");
+                line_usage_predictor_ptr->set_early_writeback( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+
+                line_usage_predictor_parameters.push_back("TURNOFF_DEAD_LINES");
+                line_usage_predictor_ptr->set_turnoff_dead_lines( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
 
                 /// Metadata
                 line_usage_predictor_parameters.push_back("METADATA_LINE_NUMBER");
@@ -996,8 +1007,8 @@ void sinuca_engine_t::initialize_cache_memory() {
 
                 line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_DSBP_ORACLE);
 
-                line_usage_predictor_parameters.push_back("SUB_BLOCK_SIZE");
-                line_usage_predictor_ptr->set_sub_block_size( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+                line_usage_predictor_parameters.push_back("BYTES_PER_SUBBLOCK");
+                line_usage_predictor_ptr->set_bytes_per_subblock( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
 
                 /// Metadata
                 line_usage_predictor_parameters.push_back("METADATA_LINE_NUMBER");

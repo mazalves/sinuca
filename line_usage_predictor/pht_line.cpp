@@ -34,21 +34,22 @@ pht_line_t::pht_line_t() {
     this->opcode_address = 0;
     this->offset = 0;
     this->last_access = 0;
-    this->pointer = 0;
-    this->access_counter = NULL;
-    this->overflow = NULL;
+    this->pointer = false;
+
+    this->access_counter_read = 0;
+    this->overflow_read = 0;
 };
 
 /// ============================================================================
 pht_line_t::~pht_line_t() {
-    if (this->access_counter) delete [] access_counter;
-    if (this->overflow) delete [] overflow;
+    if (this->access_counter_read) delete [] access_counter_read;
+    if (this->overflow_read) delete [] overflow_read;
 };
 
 /// ============================================================================
 void pht_line_t::clean() {
-    ERROR_ASSERT_PRINTF(this->access_counter != NULL, "Cleanning a not allocated line.\n")
-    // ~ ERROR_ASSERT_PRINTF(this->overflow != NULL, "Cleanning a not allocated line.\n")
+    ERROR_ASSERT_PRINTF(this->access_counter_read != NULL, "Cleanning a not allocated line.\n")
+    ERROR_ASSERT_PRINTF(this->overflow_read != NULL, "Cleanning a not allocated line.\n")
 
     this->opcode_address = 0;
     this->offset = 0;
@@ -56,8 +57,8 @@ void pht_line_t::clean() {
     this->pointer = false;
 
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        this->access_counter[i] = 0;
-        this->overflow[i] = false;
+        this->access_counter_read[i] = 0;
+        this->overflow_read[i] = false;
     }
 }
 
@@ -74,24 +75,24 @@ std::string pht_line_t::content_to_string() {
     content_string = content_string + "\n";
 
     /// access_counter
-    content_string = content_string + "\t access_counter [";
+    content_string = content_string + "Predicted\t";
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
         if (i % 4 == 0) {
             content_string = content_string + "|";
         }
-        content_string = content_string + " " + utils_t::uint64_to_string(this->access_counter[i]);
+        content_string = content_string + " " + utils_t::uint32_to_string(this->access_counter_read[i]);
     }
-    content_string = content_string + "]\n";
+    content_string = content_string + "|\n";
 
     /// overflow
-    content_string = content_string + "\t overflow      [";
+    content_string = content_string + "Overflow\t";
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
         if (i % 4 == 0) {
             content_string = content_string + "|";
         }
-        content_string = content_string + " " + utils_t::bool_to_string(this->overflow[i]);
+        content_string = content_string + "  " + utils_t::bool_to_string(this->overflow_read[i]);
     }
-    content_string = content_string + "]\n";
+    content_string = content_string + "|\n";
 
     return content_string;
 };

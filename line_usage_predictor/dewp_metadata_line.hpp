@@ -43,7 +43,7 @@ class dewp_metadata_line_t {
         bool is_dirty;
 
         /// Static Energy
-        uint64_t clock_first_access;
+        uint64_t clock_last_access;
         /// ====================================================================
         /// Methods
         /// ====================================================================
@@ -51,6 +51,5 @@ class dewp_metadata_line_t {
         ~dewp_metadata_line_t();
 
         void clean();
-        void reset_statistics();
         std::string content_to_string();
 };

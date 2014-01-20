@@ -26,8 +26,9 @@ class line_usage_predictor_dsbp_oracle_t : public line_usage_predictor_t {
         /// ====================================================================
         /// Set by sinuca_configurator
         /// ====================================================================
-        uint32_t sub_block_size;
+        uint32_t bytes_per_subblock;
 
+        /// metadata
         uint32_t metadata_line_number;          /// Cache Metadata
         uint32_t metadata_associativity;        /// Cache Metadata
 
@@ -50,24 +51,27 @@ class line_usage_predictor_dsbp_oracle_t : public line_usage_predictor_t {
         uint64_t stat_eviction;
         uint64_t stat_invalidation;
 
-        uint64_t stat_sub_block_access_0;
-        uint64_t stat_sub_block_access_1;
-        uint64_t stat_sub_block_access_2_3;
-        uint64_t stat_sub_block_access_4_7;
-        uint64_t stat_sub_block_access_8_15;
-        uint64_t stat_sub_block_access_16_127;
-        uint64_t stat_sub_block_access_128_bigger;
+        uint64_t stat_line_read_0;
+        uint64_t stat_line_read_1;
+        uint64_t stat_line_read_2_3;
+        uint64_t stat_line_read_4_7;
+        uint64_t stat_line_read_8_15;
+        uint64_t stat_line_read_16_127;
+        uint64_t stat_line_read_128_bigger;
 
-        uint64_t stat_sub_block_write_0;
-        uint64_t stat_sub_block_write_1;
-        uint64_t stat_sub_block_write_2_3;
-        uint64_t stat_sub_block_write_4_7;
-        uint64_t stat_sub_block_write_8_15;
-        uint64_t stat_sub_block_write_16_127;
-        uint64_t stat_sub_block_write_128_bigger;
+        uint64_t stat_line_write_0;
+        uint64_t stat_line_write_1;
+        uint64_t stat_line_write_2_3;
+        uint64_t stat_line_write_4_7;
+        uint64_t stat_line_write_8_15;
+        uint64_t stat_line_write_16_127;
+        uint64_t stat_line_write_128_bigger;
 
-        uint64_t *stat_accessed_sub_blocks;     /// Number of sub_blocks accessed
-        uint64_t *stat_real_write_counter;     /// Number of sub_blocks written
+        uint64_t *cycles_turned_on;
+        uint64_t *cycles_turned_off;
+
+        uint64_t *stat_subblock_read_per_line;
+        uint64_t *stat_subblock_write_per_line;
 
     public:
         /// ====================================================================
@@ -108,9 +112,9 @@ class line_usage_predictor_dsbp_oracle_t : public line_usage_predictor_t {
         /// Inspections
         void fill_package_sub_blocks(memory_package_t *package);
         void line_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way);
-        void predict_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way);
 
         bool check_sub_block_is_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint64_t index, uint32_t way);
+        bool check_line_is_disabled(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
         bool check_line_is_last_access(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
         bool check_line_is_last_write(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
 
@@ -126,8 +130,7 @@ class line_usage_predictor_dsbp_oracle_t : public line_usage_predictor_t {
 
         void get_start_end_sub_blocks(uint64_t base_address, uint32_t size, uint32_t& sub_block_ini, uint32_t& sub_block_end);
 
-        INSTANTIATE_GET_SET(uint32_t, sub_block_size);
-        INSTANTIATE_GET_SET(uint32_t, sub_block_total);
+        INSTANTIATE_GET_SET(uint32_t, bytes_per_subblock);
 
         /// metadata
         INSTANTIATE_GET_SET(dsbp_metadata_set_t*, metadata_sets);
@@ -147,19 +150,19 @@ class line_usage_predictor_dsbp_oracle_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_invalidation);
 
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_0);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_1);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_2_3);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_4_7);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_8_15);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_16_127);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_access_128_bigger);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_0);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_1);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_2_3);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_4_7);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_8_15);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_16_127);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_128_bigger);
 
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_0);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_1);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_2_3);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_4_7);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_8_15);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_16_127);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_write_128_bigger);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_0);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_1);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_2_3);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_4_7);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_8_15);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_16_127);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_128_bigger);
 };

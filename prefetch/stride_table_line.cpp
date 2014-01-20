@@ -37,6 +37,7 @@ stride_table_line_t::~stride_table_line_t() {
 void stride_table_line_t::clean() {
     this->last_opcode_address = 0;
     this->last_memory_address = 0;
+    // ~ this->last_memory_size = 0;
     this->memory_address_difference = 0;
     this->prefetch_ahead = 0;
     this->cycle_last_activation = 0;
@@ -58,6 +59,7 @@ std::string stride_table_line_t::content_to_string() {
     content_string = content_string + " STRIDE:";
     content_string = content_string + " Last Opcode Address:" + utils_t::uint64_to_string(this->last_opcode_address);
     content_string = content_string + " Last Memory Address:" + utils_t::uint64_to_string(this->last_memory_address);
+    // ~ content_string = content_string + " Last Memory Size:" + utils_t::uint64_to_string(this->last_memory_size);
     content_string = content_string + " Address Difference:" + utils_t::int64_to_string(this->memory_address_difference);
     content_string = content_string + " Prefetch Ahead:" + utils_t::uint32_to_string(this->prefetch_ahead);
     content_string = content_string + " Cycle Last Activation:" + utils_t::uint64_to_string(this->cycle_last_activation);

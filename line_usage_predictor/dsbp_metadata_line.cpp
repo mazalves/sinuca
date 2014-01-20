@@ -31,71 +31,57 @@
 
 /// ============================================================================
 dsbp_metadata_line_t::dsbp_metadata_line_t() {
-    this->valid_sub_blocks = NULL;
-    
+    this->line_status = LINE_SUB_BLOCK_DISABLE;
+
+    this->sub_blocks = NULL;
+    this->real_access_counter_read = NULL;
+    this->access_counter_read = NULL;
+    this->overflow_read = NULL;
+
     this->learn_mode = false;
-    this->is_dirty = false;
-    this->is_dead = false;
-
-    this->real_access_counter = NULL;
-    this->real_write_counter = NULL;
-    
-    this->access_counter = NULL;
-    this->overflow = NULL;
-
     this->pht_pointer = NULL;
-    this->clock_become_alive = NULL;
-    this->clock_become_dead = NULL;
 
+    /// Special Flags
+    this->is_dead_read = true;
+    this->is_dirty = false;
+
+    /// Static Energy
+    this->clock_last_access = 0;
     this->active_sub_blocks = 0;
 };
 
 /// ============================================================================
 dsbp_metadata_line_t::~dsbp_metadata_line_t() {
-    utils_t::template_delete_array<line_sub_block_t>(this->valid_sub_blocks);
+    utils_t::template_delete_array<bool>(this->sub_blocks);
 
-    utils_t::template_delete_array<uint64_t>(this->real_access_counter);
-    utils_t::template_delete_array<uint64_t>(this->real_write_counter);
-
-    utils_t::template_delete_array<uint64_t>(this->access_counter);
-    utils_t::template_delete_array<bool>(this->overflow);
+    utils_t::template_delete_array<uint64_t>(this->real_access_counter_read);
+    utils_t::template_delete_array<uint64_t>(this->access_counter_read);
+    utils_t::template_delete_array<bool>(this->overflow_read);
 };
 
 /// ============================================================================
 void dsbp_metadata_line_t::clean() {
-    ERROR_ASSERT_PRINTF(this->valid_sub_blocks != NULL, "Cleanning a not allocated line.\n")
+    ERROR_ASSERT_PRINTF(this->sub_blocks != NULL, "Cleanning a not allocated line.\n")
 
-    // ~ ERROR_ASSERT_PRINTF(this->real_access_counter != NULL, "Cleanning a not allocated line.\n")
-    // ~ ERROR_ASSERT_PRINTF(this->real_write_counter != NULL, "Cleanning a not allocated line.\n")    
-    // ~ ERROR_ASSERT_PRINTF(this->access_counter != NULL, "Cleanning a not allocated line.\n")
-    // ~ ERROR_ASSERT_PRINTF(this->overflow != NULL, "Cleanning a not allocated line.\n")
-// ~ 
-    // ~ ERROR_ASSERT_PRINTF(this->clock_become_alive != NULL, "Cleanning a not allocated line.\n")
-    // ~ ERROR_ASSERT_PRINTF(this->clock_become_dead != NULL, "Cleanning a not allocated line.\n")
-// ~ 
-    // ~ ERROR_ASSERT_PRINTF(this->real_write_counter != NULL, "Cleanning a not allocated line.\n")
-  
-    this->learn_mode = false;
-    this->is_dirty = false;
-    this->is_dead = false;
-    this->pht_pointer = NULL;
-    
-    this->active_sub_blocks = 0;
+    this->line_status = LINE_SUB_BLOCK_DISABLE;
 
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        this->valid_sub_blocks[i] = LINE_SUB_BLOCK_DISABLE;
-
-        this->real_access_counter[i] = 0;
-        this->real_write_counter[i] = 0;
-                
-        this->access_counter[i] = 0;
-        this->overflow[i] = false;
-
-        this->clock_become_alive[i] = 0;
-        this->clock_become_dead[i] = 0;
-
-        this->real_write_counter[i] = 0;
+        this->sub_blocks[i] = false;
+        this->real_access_counter_read[i] = 0;
+        this->access_counter_read[i] = 0;
+        this->overflow_read[i] = false;
     }
+
+    this->learn_mode = false;
+    this->pht_pointer = NULL;
+
+    /// Special Flags
+    this->is_dead_read = true;
+    this->is_dirty = false;
+
+    /// Static Energy
+    this->clock_last_access = 0;
+    this->active_sub_blocks = 0;
 };
 
 /// ============================================================================
@@ -104,64 +90,59 @@ std::string dsbp_metadata_line_t::content_to_string() {
     content_string = "";
 
     content_string = content_string + "Metadata -";
-    content_string = content_string + " Learn:" + utils_t::uint32_to_string(this->learn_mode);    
-    content_string = content_string + " Dirty:" + utils_t::uint32_to_string(this->is_dirty);
-    content_string = content_string + " Dead:" + utils_t::uint32_to_string(this->is_dead);
-    
-    content_string = content_string + " pht_ptr:" + utils_t::uint32_to_string(this->pht_pointer != NULL);
-    content_string = content_string + " Active:" + utils_t::uint32_to_string(this->active_sub_blocks);
+    content_string = content_string + " " + get_enum_line_sub_block_t_char(this->line_status);
+
+    /// line_status
+    content_string = content_string + "\n SubBlocks:\t";
+    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
+        if (i % 4 == 0) {
+            content_string = content_string + "|";
+        }
+        content_string = content_string + "  " + utils_t::bool_to_string(this->sub_blocks[i]);
+    }
+    content_string = content_string + "|\n";
+
+
+    content_string = content_string + " RealAccess:\t";
+    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
+        if (i % 4 == 0) {
+            content_string = content_string + "|";
+        }
+        content_string = content_string + " " + utils_t::uint32_to_string(this->real_access_counter_read[i]);
+    }
+    content_string = content_string + "|\n";
+
+
+    content_string = content_string + " Predicted:\t";
+    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
+        if (i % 4 == 0) {
+            content_string = content_string + "|";
+        }
+        content_string = content_string + " " + utils_t::uint32_to_string(this->access_counter_read[i]);
+    }
+    content_string = content_string + "|\n";
+
+
+    content_string = content_string + " Overflow:\t";
+    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
+        if (i % 4 == 0) {
+            content_string = content_string + "|";
+        }
+        content_string = content_string + "  " + utils_t::bool_to_string(this->overflow_read[i]);
+    }
+    content_string = content_string + "|\n";
+
+
+    content_string = content_string + " learn_mode:" + utils_t::bool_to_string(this->learn_mode);
+    content_string = content_string + " pht_ptr:" + utils_t::bool_to_string(this->pht_pointer != NULL);
+
+    content_string = content_string + " is_dead_read:" + utils_t::bool_to_string(this->is_dead_read);
+    content_string = content_string + " is_dirty:" + utils_t::bool_to_string(this->is_dirty);
+
+    content_string = content_string + " clock_last_access:" + utils_t::uint64_to_string(this->clock_last_access);
+    content_string = content_string + " active:" + utils_t::uint32_to_string(this->active_sub_blocks);
+
     content_string = content_string + "\n";
-    
-    /// valid_sub_blocks 
-    content_string = content_string + "\t valid_sub_blocks      [";
-    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        if (i % 4 == 0) {
-            content_string = content_string + "|";
-        }
-        content_string = content_string + " " + utils_t::uint32_to_string(this->valid_sub_blocks[i]);
-    }
-    content_string = content_string + "]\n";
-
-    /// real_access_counter
-    content_string = content_string + "\t real_access_counter    [";
-    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        if (i % 4 == 0) {
-            content_string = content_string + "|";
-        }
-        content_string = content_string + " " + utils_t::uint32_to_string(this->real_access_counter[i]);
-    }
-    content_string = content_string + "]\n";
-
-    /// real_write_counter
-    content_string = content_string + "\t real_write_counter    [";
-    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        if (i % 4 == 0) {
-            content_string = content_string + "|";
-        }
-        content_string = content_string + " " + utils_t::uint32_to_string(this->real_write_counter[i]);
-    }
-    content_string = content_string + "]\n";
-
-    /// access_counter
-    content_string = content_string + "\t access_counter         [";
-    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        if (i % 4 == 0) {
-            content_string = content_string + "|";
-        }
-        content_string = content_string + " " + utils_t::uint32_to_string(this->access_counter[i]);
-    }
-    content_string = content_string + "]\n";
-
-    /// overflow
-    content_string = content_string + "\t overflow              [";
-    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        if (i % 4 == 0) {
-            content_string = content_string + "|";
-        }
-        content_string = content_string + " " + utils_t::uint32_to_string(this->overflow[i]);
-    }
-    content_string = content_string + "]\n";
-
     return content_string;
 };
 

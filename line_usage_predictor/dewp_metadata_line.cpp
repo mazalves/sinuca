@@ -32,7 +32,6 @@
 /// ============================================================================
 dewp_metadata_line_t::dewp_metadata_line_t() {
     this->clean();
-    this->reset_statistics();
 };
 
 /// ============================================================================
@@ -61,13 +60,9 @@ void dewp_metadata_line_t::clean() {
     this->is_dirty = false;
 
     /// Static Energy
-    this->clock_first_access = 0;
+    this->clock_last_access = 0;
 };
 
-/// ============================================================================
-void dewp_metadata_line_t::reset_statistics() {
-
-};
 
 /// ============================================================================
 std::string dewp_metadata_line_t::content_to_string() {
@@ -93,7 +88,7 @@ std::string dewp_metadata_line_t::content_to_string() {
     content_string = content_string + " is_dead_write:" + utils_t::bool_to_string(this->is_dead_writeback);
     content_string = content_string + " is_dirty:" + utils_t::bool_to_string(this->is_dirty);
 
-    content_string = content_string + " clock_first_access:" + utils_t::uint64_to_string(this->clock_first_access);
+    content_string = content_string + " clock_last_access:" + utils_t::uint64_to_string(this->clock_last_access);
 
     content_string = content_string + "\n";
     return content_string;

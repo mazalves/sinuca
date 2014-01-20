@@ -59,7 +59,7 @@ memory_package_t &memory_package_t::operator=(const memory_package_t &package) {
 
     // =============================================================
     // Line Usage Predictor
-	// ~ memcpy(this->sub_blocks, package.sub_blocks, sizeof(bool) * sinuca_engine.get_global_line_size());
+    memcpy(this->sub_blocks, package.sub_blocks, sizeof(bool) * sinuca_engine.get_global_line_size());
 
     /// Routing Control
     this->id_src = package.id_src;
@@ -88,7 +88,7 @@ void memory_package_t::package_clean() {
 
     // =============================================================
     // Line Usage Predictor
-    // ~ memset(this->sub_blocks, false, sizeof(bool) * sinuca_engine.get_global_line_size());
+    memset(this->sub_blocks, false, sizeof(bool) * sinuca_engine.get_global_line_size());
 
     /// Routing Control
     this->id_src = 0;
@@ -202,12 +202,20 @@ std::string memory_package_t::content_to_string() {
             content_string = content_string + " [" + utils_t::uint32_to_string(this->hops[i]) + "]";
         }
     }
+    /// line_status
+    content_string = content_string + "\n SubBlocks:\t";
+    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
+        if (i % 4 == 0) {
+            content_string = content_string + "|";
+        }
+        content_string = content_string + "  " + utils_t::bool_to_string(this->sub_blocks[i]);
+    }
+    content_string = content_string + "|";
     return content_string;
 };
 
 /// ============================================================================
 std::string memory_package_t::sub_blocks_to_string() {
-    char tmp_string[CONVERSION_SIZE];
     std::string content_string;
     content_string = "";
 
@@ -217,15 +225,14 @@ std::string memory_package_t::sub_blocks_to_string() {
         }
     #endif
 
-    content_string = content_string + " SUB_BLOCKS:[";
+    content_string = content_string + " SUB_BLOCKS:\t";
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
         if (i % 4 == 0) {
             content_string = content_string + "|";
         }
-        utils_t::uint32_to_char(tmp_string, this->sub_blocks[i]);
-        content_string = content_string + tmp_string;
+        content_string = content_string + "  " + utils_t::bool_to_string(this->sub_blocks[i]);
     }
-    content_string = content_string + "]\n";
+    content_string = content_string + "|";
     return content_string;
 };
 
