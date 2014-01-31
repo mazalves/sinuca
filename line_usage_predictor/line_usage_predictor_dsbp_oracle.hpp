@@ -27,6 +27,7 @@ class line_usage_predictor_dsbp_oracle_t : public line_usage_predictor_t {
         /// Set by sinuca_configurator
         /// ====================================================================
         uint32_t bytes_per_subblock;
+        bool bring_whole_line;
 
         /// metadata
         uint32_t metadata_line_number;          /// Cache Metadata
@@ -40,7 +41,7 @@ class line_usage_predictor_dsbp_oracle_t : public line_usage_predictor_t {
         dsbp_metadata_set_t *metadata_sets;
         uint32_t metadata_total_sets;
 
-        /// ====================================================================
+         /// ====================================================================
         /// Statistics related
         /// ====================================================================
         uint64_t stat_line_hit;
@@ -59,19 +60,12 @@ class line_usage_predictor_dsbp_oracle_t : public line_usage_predictor_t {
         uint64_t stat_line_read_16_127;
         uint64_t stat_line_read_128_bigger;
 
-        uint64_t stat_line_write_0;
-        uint64_t stat_line_write_1;
-        uint64_t stat_line_write_2_3;
-        uint64_t stat_line_write_4_7;
-        uint64_t stat_line_write_8_15;
-        uint64_t stat_line_write_16_127;
-        uint64_t stat_line_write_128_bigger;
+        uint64_t *stat_subblock_read_per_line;
+        uint64_t *stat_subblock_turned_on_during_read;
 
         uint64_t *cycles_turned_on;
-        uint64_t *cycles_turned_off;
-
-        uint64_t *stat_subblock_read_per_line;
-        uint64_t *stat_subblock_write_per_line;
+        uint64_t cycles_turned_off;
+        uint64_t cycles_turned_off_since_begin;
 
     public:
         /// ====================================================================
@@ -131,13 +125,13 @@ class line_usage_predictor_dsbp_oracle_t : public line_usage_predictor_t {
         void get_start_end_sub_blocks(uint64_t base_address, uint32_t size, uint32_t& sub_block_ini, uint32_t& sub_block_end);
 
         INSTANTIATE_GET_SET(uint32_t, bytes_per_subblock);
+        INSTANTIATE_GET_SET(bool, bring_whole_line);
 
         /// metadata
         INSTANTIATE_GET_SET(dsbp_metadata_set_t*, metadata_sets);
         INSTANTIATE_GET_SET(uint32_t, metadata_line_number);
         INSTANTIATE_GET_SET(uint32_t, metadata_associativity);
         INSTANTIATE_GET_SET(uint32_t, metadata_total_sets);
-
 
         /// ====================================================================
         /// Statistics related
@@ -158,11 +152,6 @@ class line_usage_predictor_dsbp_oracle_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_16_127);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_128_bigger);
 
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_0);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_1);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_2_3);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_4_7);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_8_15);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_16_127);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_write_128_bigger);
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off);
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off_since_begin);
 };

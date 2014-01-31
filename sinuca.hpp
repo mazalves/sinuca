@@ -255,6 +255,7 @@ extern sinuca_engine_t sinuca_engine;
 /// ============================================================================
 /// TYPES
 /// ============================================================================
+typedef std::vector <uint64_t>                      container_uint64_t;
 typedef std::vector <token_t>                       container_token_t;
 typedef std::vector <opcode_package_t>              container_opcode_package_t;
 typedef std::vector <container_opcode_package_t>    container_static_dictionary_t;

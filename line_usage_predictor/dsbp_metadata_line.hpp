@@ -40,6 +40,9 @@ class dsbp_metadata_line_t {
         /// Static Energy
         uint64_t clock_last_access;
         uint32_t active_sub_blocks;
+
+        container_uint64_t cycle_access_list;
+        uint64_t *clock_last_access_subblock; // ORACLE
         /// ====================================================================
         /// Methods
         /// ====================================================================

@@ -42,7 +42,6 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         uint32_t pht_associativity;
         replacement_t pht_replacement_policy;
 
-
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
@@ -56,7 +55,6 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         pht_set_t *pht_sets;
         uint32_t pht_total_sets;
         uint64_t pht_index_bits_mask;
-
 
          /// ====================================================================
         /// Statistics related
@@ -92,7 +90,7 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         uint64_t *stat_subblock_turned_on_during_read;
 
         uint64_t *cycles_turned_on;
-        uint64_t *cycles_turned_off;
+        uint64_t cycles_turned_off;
         uint64_t cycles_turned_off_since_begin;
 
     public:
@@ -171,8 +169,6 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET(replacement_t, pht_replacement_policy);
         INSTANTIATE_GET_SET(uint32_t, pht_total_sets);
 
-
-
         /// ====================================================================
         /// Statistics related
         /// ====================================================================
@@ -203,8 +199,6 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_16_127);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_128_bigger);
 
-
-        // ~ INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_on);
-        // ~ INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off);
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off);
         INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off_since_begin);
 };

@@ -48,6 +48,8 @@ dsbp_metadata_line_t::dsbp_metadata_line_t() {
     /// Static Energy
     this->clock_last_access = 0;
     this->active_sub_blocks = 0;
+
+    this->clock_last_access_subblock = NULL;
 };
 
 /// ============================================================================
@@ -57,6 +59,8 @@ dsbp_metadata_line_t::~dsbp_metadata_line_t() {
     utils_t::template_delete_array<uint64_t>(this->real_access_counter_read);
     utils_t::template_delete_array<uint64_t>(this->access_counter_read);
     utils_t::template_delete_array<bool>(this->overflow_read);
+
+    utils_t::template_delete_array<uint64_t>(this->clock_last_access_subblock);
 };
 
 /// ============================================================================
@@ -82,6 +86,14 @@ void dsbp_metadata_line_t::clean() {
     /// Static Energy
     this->clock_last_access = 0;
     this->active_sub_blocks = 0;
+
+    if (this->clock_last_access_subblock != NULL) {
+        for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
+            this->clock_last_access_subblock[i] = 0;
+        }
+    }
+
+    this->cycle_access_list.clear();
 };
 
 /// ============================================================================

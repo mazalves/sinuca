@@ -564,22 +564,22 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
 /// ============================================================================
 bool memory_controller_t::check_token_list(memory_package_t *package) {
     ERROR_ASSERT_PRINTF(package->is_answer == false, "check_token_list received a Answer.\n")
-    uint32_t token = 0;
+    uint32_t token_pos = 0;
 
     /// 1. Check if the name is already in the guest list.
-    for (token = 0; token < this->token_list.size(); token++) {
+    for (token_pos = 0; token_pos < this->token_list.size(); token_pos++) {
         /// Requested Address Found
-        if (this->token_list[token].id_owner == package->id_owner &&
-        this->token_list[token].opcode_number == package->opcode_number &&
-        this->token_list[token].uop_number == package->uop_number &&
-        this->token_list[token].memory_address == package->memory_address &&
-        this->token_list[token].memory_operation == package->memory_operation) {
+        if (this->token_list[token_pos].opcode_number == package->opcode_number &&
+        this->token_list[token_pos].uop_number == package->uop_number &&
+        this->token_list[token_pos].memory_address == package->memory_address &&
+        this->token_list[token_pos].memory_operation == package->memory_operation &&
+        this->token_list[token_pos].id_owner == package->id_owner) {
             break;
         }
     }
 
     /// 2. Name is not in the guest list, lets add it.
-    if (token == this->token_list.size()) {
+    if (token_pos == this->token_list.size()) {
         /// Allocate the new token
         token_t new_token;
         new_token.id_owner = package->id_owner;
@@ -595,7 +595,7 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
     /// But we only have one token_list, we are counting how many requests of each type exists
     /// so we know if we can or cannot receive the package.
     uint32_t slot, request_number = 0, writeback_number = 0, prefetch_number = 0;
-    for (slot = 0; slot < token; slot++) {
+    for (slot = 0; slot < token_pos; slot++) {
         switch (this->token_list[slot].memory_operation) {
             case MEMORY_OPERATION_READ:
             case MEMORY_OPERATION_INST:

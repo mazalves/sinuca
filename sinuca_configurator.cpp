@@ -1010,6 +1010,10 @@ void sinuca_engine_t::initialize_cache_memory() {
                 line_usage_predictor_parameters.push_back("BYTES_PER_SUBBLOCK");
                 line_usage_predictor_ptr->set_bytes_per_subblock( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
 
+                line_usage_predictor_parameters.push_back("BRING_WHOLE_LINE");
+                line_usage_predictor_ptr->set_bring_whole_line( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+
                 /// Metadata
                 line_usage_predictor_parameters.push_back("METADATA_LINE_NUMBER");
                 line_usage_predictor_ptr->set_metadata_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
