@@ -158,6 +158,7 @@ bool line_usage_predictor_dewp_t::check_line_is_disabled(cache_memory_t *cache, 
 
     (void)cache;
     (void)cache_line;
+
     if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE) {
         LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t sub_blocks MISS\n")
         return true;
@@ -175,6 +176,7 @@ bool line_usage_predictor_dewp_t::check_line_is_last_access(cache_memory_t *cach
 
     (void)cache;
     (void)cache_line;
+
     return (this->metadata_sets[index].ways[way].learn_mode == false &&
             this->metadata_sets[index].ways[way].is_dead_read &&
             this->metadata_sets[index].ways[way].is_dead_writeback &&
@@ -187,6 +189,7 @@ bool line_usage_predictor_dewp_t::check_line_is_last_write(cache_memory_t *cache
 
     (void)cache;
     (void)cache_line;
+
     return (this->metadata_sets[index].ways[way].learn_mode == false &&
             this->metadata_sets[index].ways[way].is_dead_writeback &&
             this->metadata_sets[index].ways[way].is_dirty &&
@@ -198,19 +201,21 @@ bool line_usage_predictor_dewp_t::check_line_is_last_write(cache_memory_t *cache
 /// ============================================================================
 void line_usage_predictor_dewp_t::line_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_hit() package:%s\n", package->content_to_string().c_str())
-    (void)package;
-    ERROR_ASSERT_PRINTF(package->memory_operation != MEMORY_OPERATION_WRITEBACK, "Line hit received a WRITEBACK.\n");
-    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].line_status != LINE_SUB_BLOCK_DISABLE, "Line hit into a DISABLED sub_block.\n");
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+
+    ERROR_ASSERT_PRINTF(package->memory_operation != MEMORY_OPERATION_WRITEBACK, "Line hit received a WRITEBACK.\n");
+    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].line_status != LINE_SUB_BLOCK_DISABLE, "Line hit into a DISABLED sub_block.\n");
+
     (void)cache;
     (void)cache_line;
+    (void)package;
+
     /// Mechanism statistics
     this->add_stat_line_hit();
 
     /// Statistics
     this->cycles_turned_on += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
-
     this->metadata_sets[index].ways[way].real_access_counter_read++;
 
     /// ================================================================
@@ -264,9 +269,12 @@ void line_usage_predictor_dewp_t::line_miss(cache_memory_t *cache, cache_line_t 
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+
     ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE, "Metadata Line should be clean\n");
+
     (void)cache;
     (void)cache_line;
+
     /// Mechanism statistics
     this->add_stat_line_miss();
 
@@ -364,12 +372,13 @@ void line_usage_predictor_dewp_t::sub_block_miss(cache_memory_t *cache, cache_li
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("sub_block_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+
     (void)cache;
     (void)cache_line;
+    (void)package;
+
     /// Mechanism statistics
     this->add_stat_sub_block_miss();
-
-    (void)package;
 
     /// Statistics
     if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE) {
@@ -428,26 +437,31 @@ void line_usage_predictor_dewp_t::sub_block_miss(cache_memory_t *cache, cache_li
 /// ============================================================================
 void line_usage_predictor_dewp_t::line_send_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_send_writeback() package:%s\n", package->content_to_string().c_str())
-    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].learn_mode == false, "Learn mode should be enabled.\n")
-    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].line_status != LINE_SUB_BLOCK_DISABLE, "Metadata Line should be dirty\n"); // NEW
+    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].line_status != LINE_SUB_BLOCK_DISABLE, "Metadata Line should be dirty\n");
+
     (void)cache;
     (void)cache_line;
-    this->add_stat_send_writeback();         /// Access Statistics
-
     (void)package;
 
+    /// Mechanism statistics
+    this->add_stat_send_writeback();
+
     /// Statistics
-    this->cycles_turned_on += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access; // NEW
+    this->cycles_turned_on += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
 
     /// ================================================================
     /// METADATA Not Learn Mode
     /// ================================================================
-    this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_WRITEBACK;
-    this->metadata_sets[index].ways[way].is_dirty = false; // NEW
-    // If predicted as dead
-    if (this->metadata_sets[index].ways[way].is_dead_read == true && this->turnoff_dead_lines == true) {
-        // METADATA Turn off the sub_blocks
-        this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_DISABLE;
+    this->metadata_sets[index].ways[way].is_dirty = false;
+
+    if (this->metadata_sets[index].ways[way].learn_mode == false) {
+        this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_WRITEBACK;
+
+        // If predicted as dead
+        if (this->metadata_sets[index].ways[way].is_dead_read == true && this->turnoff_dead_lines == true) {
+            // METADATA Turn off the sub_blocks
+            this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_DISABLE;
+        }
     }
     this->metadata_sets[index].ways[way].clock_last_access = sinuca_engine.get_global_cycle();
 };
@@ -456,13 +470,14 @@ void line_usage_predictor_dewp_t::line_send_writeback(cache_memory_t *cache, cac
 void line_usage_predictor_dewp_t::line_recv_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_recv_writeback() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
+
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
     (void)cache;
     (void)cache_line;
+    (void)package;
+
     /// Mechanism statistics
     this->add_stat_recv_writeback();
-
-    (void)package;
 
     /// Statistics
     if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE) {
@@ -576,8 +591,10 @@ void line_usage_predictor_dewp_t::line_eviction(cache_memory_t *cache, cache_lin
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_eviction()\n")
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+
     (void)cache;
     (void)cache_line;
+
     /// Mechanism statistics
     this->add_stat_eviction();
 
@@ -746,6 +763,7 @@ void line_usage_predictor_dewp_t::line_eviction(cache_memory_t *cache, cache_lin
 /// ============================================================================
 void line_usage_predictor_dewp_t::line_invalidation(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_invalidation()\n")
+
     (void)cache;
     (void)cache_line;
 
@@ -760,11 +778,7 @@ void line_usage_predictor_dewp_t::line_invalidation(cache_memory_t *cache, cache
         this->cycles_turned_on += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     }
 
-
-    // ~ if (this->metadata_sets[index].ways[way].learn_mode == false) {
-        this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_DISABLE;
-    // ~ }
-
+    this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_DISABLE;
 
     this->metadata_sets[index].ways[way].clock_last_access = sinuca_engine.get_global_cycle();
 };

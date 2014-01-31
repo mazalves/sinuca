@@ -160,11 +160,13 @@ void line_usage_predictor_dewp_oracle_t::line_hit(cache_memory_t *cache, cache_l
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_hit() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+
     (void)cache;
     (void)cache_line;
+    (void)package;
+
     /// Mechanism statistics
     this->add_stat_line_hit();
-    (void)package;
 
     /// Statistics
     if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE) {
@@ -187,11 +189,13 @@ void line_usage_predictor_dewp_oracle_t::line_miss(cache_memory_t *cache, cache_
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+
     (void)cache;
     (void)cache_line;
+    (void)package;
+
     /// Mechanism statistics
     this->add_stat_line_miss();
-    (void)package;
 
     /// Statistics
     this->cycles_turned_off += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
@@ -208,28 +212,43 @@ void line_usage_predictor_dewp_oracle_t::line_miss(cache_memory_t *cache, cache_
 void line_usage_predictor_dewp_oracle_t::sub_block_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("sub_block_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_PRINTF("Should never enter in sub_block_miss().\n");
+
     (void)cache;
     (void)cache_line;
-    /// Mechanism statistics
-    this->add_stat_sub_block_miss();
-
     (void)package;
     (void)index;
     (void)way;
+
+    /// Mechanism statistics
+    this->add_stat_sub_block_miss();
 };
 
 /// ============================================================================
 void line_usage_predictor_dewp_oracle_t::line_send_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_send_writeback() package:%s\n", package->content_to_string().c_str());
-    ERROR_PRINTF("Should never enter in line_send_writeback().\n");
+
     (void)cache;
     (void)cache_line;
-    /// Mechanism statistics
-    this->add_stat_send_writeback();
-
     (void)package;
     (void)index;
     (void)way;
+
+    /// Mechanism statistics
+    this->add_stat_send_writeback();
+
+    /// Statistics
+    if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE) {
+        this->cycles_turned_off += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+        if (this->metadata_sets[index].ways[way].clock_last_access == 0){
+            cycles_turned_off_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+        }
+    }
+    else {
+        this->cycles_turned_on += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+    }
+
+    this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_NORMAL;
+    this->metadata_sets[index].ways[way].clock_last_access = sinuca_engine.get_global_cycle();
 };
 
 /// ============================================================================
@@ -237,11 +256,13 @@ void line_usage_predictor_dewp_oracle_t::line_recv_writeback(cache_memory_t *cac
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_recv_writeback() index:%d, way:%d package:%s\n", index, way, package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+
     (void)cache;
     (void)cache_line;
+    (void)package;
+
     /// Mechanism statistics
     this->add_stat_recv_writeback();
-    (void)package;
 
     /// Statistics
     this->cycles_turned_off += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
@@ -260,8 +281,10 @@ void line_usage_predictor_dewp_oracle_t::line_eviction(cache_memory_t *cache, ca
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_eviction() index:%d, way:%d\n", index, way);
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+
     (void)cache;
     (void)cache_line;
+
     /// Mechanism statistics
     this->add_stat_eviction();
 
@@ -330,8 +353,10 @@ void line_usage_predictor_dewp_oracle_t::line_invalidation(cache_memory_t *cache
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_invalidation() index:%d, way:%d\n", index, way);
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+
     (void)cache;
     (void)cache_line;
+
     /// Mechanism statistics
     this->add_stat_invalidation();
 

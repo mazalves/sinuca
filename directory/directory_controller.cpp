@@ -263,6 +263,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 if (coherence_is_dirty(cache_line->status) && cache->line_usage_predictor->check_line_is_last_write(cache, cache_line, index, way)) {
                     memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
                     if (writeback_package != NULL) {
+                        DIRECTORY_CTRL_DEBUG_PRINTF("\t Early Writeback cache_id:%u, package:%s\n", cache->get_id(), writeback_package->content_to_string().c_str())
                         /// Add statistics to the cache
                         cache->add_stat_writeback();
                         /// Update Coherence Status and Last Access Time
@@ -381,6 +382,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                             if (cache->line_usage_predictor->check_line_is_last_write(cache, cache_line, index, way)) {
                                 memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
                                 if (writeback_package != NULL) {
+                                    DIRECTORY_CTRL_DEBUG_PRINTF("\t Early Writeback cache_id:%u, package:%s\n", cache->get_id(), writeback_package->content_to_string().c_str())
                                     /// Add statistics to the cache
                                     cache->add_stat_writeback();
                                     /// Update Coherence Status and Last Access Time
@@ -413,7 +415,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                         if (package->memory_operation == MEMORY_OPERATION_WRITE) {
                             package->memory_operation = MEMORY_OPERATION_READ;
                         }
-
 
                         package->is_answer = true;
                         DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED ANSWER (Found Higher Level)\n")
@@ -501,6 +502,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             if (cache->line_usage_predictor->check_line_is_last_write(cache, cache_line, index, way)) {
                 memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
                 if (writeback_package != NULL) {
+                    DIRECTORY_CTRL_DEBUG_PRINTF("\t Early Writeback cache_id:%u, package:%s\n", cache->get_id(), writeback_package->content_to_string().c_str())
                     /// Add statistics to the cache
                     cache->add_stat_writeback();
                     /// Update Coherence Status and Last Access Time
@@ -735,7 +737,10 @@ memory_package_t* directory_controller_t::create_cache_writeback(cache_memory_t 
                 cache->get_id(),                        /// Request Owner
                 0,                                      /// Opcode. Number
                 0,                                      /// Opcode. Address
-                0,                                      /// Uop. Number
+                // ~ 0,                                      /// Uop. Number
+                /// To identify the COPYBACK, the UOP=CYCLE
+                sinuca_engine.get_global_cycle(),                                      /// Uop. Number
+
 
                 cache_line->tag,                        /// Mem. Address
                 sinuca_engine.get_global_line_size(),   /// Block Size
@@ -759,8 +764,10 @@ memory_package_t* directory_controller_t::create_cache_writeback(cache_memory_t 
     if (slot == POSITION_FAIL) {
         return NULL;
     }
+
     memory_package_t *cache_mshr_buffer = cache->get_mshr_buffer();
     memory_package_t *package = &cache_mshr_buffer[slot];
+    DIRECTORY_CTRL_DEBUG_PRINTF("create_cache_writeback() cache_id:%u, package:%s\n", cache->get_id(), package->content_to_string().c_str())
 
     ///=========================================================================
     /// Allocate CopyBack at the Directory_Line + LOCK
@@ -784,7 +791,6 @@ memory_package_t* directory_controller_t::create_cache_writeback(cache_memory_t 
     /// Higher Level Copy Back
     package->package_set_src_dst(cache->get_id(), this->find_next_obj_id(cache, package->memory_address));
 
-    DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT RQST (Miss)\n")
     return package;
 };
 
@@ -814,6 +820,13 @@ bool directory_controller_t::inclusiveness_new_eviction(cache_memory_t *cache, c
                 if (lower_level_cache->empty()) {
                     /// Check if some HIGHER LEVEL has the cache line Modified
                     cache->change_status(cache_line, this->find_cache_line_higher_levels(cache, cache_line->tag, false));
+
+                    /// Higher Level Hit
+                    if (cache_line->status != PROTOCOL_STATUS_I && coherence_is_dirty(cache_line->status)) {
+                        // =============================================================
+                        // Line Usage Prediction
+                        cache->line_usage_predictor->line_recv_writeback(cache, cache_line, package, index, way);
+                    }
                 }
             }
             break;
@@ -822,10 +835,18 @@ bool directory_controller_t::inclusiveness_new_eviction(cache_memory_t *cache, c
             case INCLUSIVENESS_INCLUSIVE_ALL: {
                 /// Check if some HIGHER LEVEL has the cache line Modified
                 cache->change_status(cache_line, this->find_cache_line_higher_levels(cache, cache_line->tag, false));
+
+                /// Higher Level Hit
+                if (cache_line->status != PROTOCOL_STATUS_I && coherence_is_dirty(cache_line->status)) {
+                    // =============================================================
+                    // Line Usage Prediction
+                    cache->line_usage_predictor->line_recv_writeback(cache, cache_line, package, index, way);
+                }
             }
             break;
         }
     }
+
 
     /// Need CopyBack After all?
     if (coherence_need_writeback(cache, cache_line)) {
@@ -837,6 +858,10 @@ bool directory_controller_t::inclusiveness_new_eviction(cache_memory_t *cache, c
             this->coherence_new_operation(cache, cache_line, writeback_package, false);
             /// Update Statistics
             this->new_statistics(cache, writeback_package, true);
+
+            // =============================================================
+            // Line Usage Prediction (Tag different from actual) //////////////////////////////////////////////// NEW
+            cache->line_usage_predictor->line_send_writeback(cache, cache_line, writeback_package, index, way);
         }
         else {
             /// Cannot continue right now

@@ -523,7 +523,7 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
             case MEMORY_OPERATION_PREFETCH:
                 slot = this->allocate_prefetch(package);
                 if (slot != POSITION_FAIL) {
-                    MEMORY_CONTROLLER_DEBUG_PRINTF("\t RECEIVED READ REQUEST\n");
+                    MEMORY_CONTROLLER_DEBUG_PRINTF("\t RECEIVED PREFETCH REQUEST\n");
                     this->mshr_buffer[slot].package_untreated(1);
                     /// Prepare for answer later
                     this->mshr_buffer[slot].package_set_src_dst(this->get_id(), package->id_src);
@@ -538,7 +538,7 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
             case MEMORY_OPERATION_WRITE:
                 slot = this->allocate_writeback(package);
                 if (slot != POSITION_FAIL) {
-                    MEMORY_CONTROLLER_DEBUG_PRINTF("\t RECEIVED READ REQUEST\n");
+                    MEMORY_CONTROLLER_DEBUG_PRINTF("\t RECEIVED WRITE/WRITEBACK REQUEST\n");
                     this->mshr_buffer[slot].package_untreated(1);
                     /// Prepare for answer later
                     this->mshr_buffer[slot].package_set_src_dst(this->get_id(), package->id_src);
@@ -551,7 +551,7 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
         }
     }
     else {
-        MEMORY_CONTROLLER_DEBUG_PRINTF("\tRECV READ/INST FAIL (BUSY)\n");
+        MEMORY_CONTROLLER_DEBUG_PRINTF("\tRECV FAIL (BUSY)\n");
         return FAIL;
     }
     ERROR_PRINTF("Memory receiving %s.\n", get_enum_memory_operation_char(package->memory_operation))
@@ -574,6 +574,7 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
         this->token_list[token_pos].memory_address == package->memory_address &&
         this->token_list[token_pos].memory_operation == package->memory_operation &&
         this->token_list[token_pos].id_owner == package->id_owner) {
+            MEMORY_CONTROLLER_DEBUG_PRINTF("\tFound token %s\n", this->token_list[token_pos].content_to_string().c_str());
             break;
         }
     }
@@ -589,7 +590,15 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
         new_token.memory_operation = package->memory_operation;
 
         this->token_list.push_back(new_token);
+        MEMORY_CONTROLLER_DEBUG_PRINTF("\tAdding token %s\n", this->token_list[token_pos].content_to_string().c_str());
     }
+
+    /// 3. If received already the ticket
+    if (this->token_list[token_pos].is_coming) {
+        /// Come on in! Lets Party !
+        return OK;
+    }
+
 
     /// Attention: Since we classify the incoming requests into request, prefetch and writeback
     /// But we only have one token_list, we are counting how many requests of each type exists
@@ -619,6 +628,8 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
         case MEMORY_OPERATION_READ:
         case MEMORY_OPERATION_INST:
             if (request_number < memory_package_t::count_free(this->mshr_buffer, this->mshr_buffer_request_reserved_size)) {
+                this->token_list[token_pos].is_coming = true;
+
                 /// Lets party !
                 return OK;
             }
@@ -630,6 +641,7 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
         case MEMORY_OPERATION_PREFETCH:
             if (prefetch_number < memory_package_t::count_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_writeback_reserved_size,
                                                     this->mshr_buffer_prefetch_reserved_size)) {
+                this->token_list[token_pos].is_coming = true;
                 /// Lets party !
                 return OK;
             }
@@ -642,6 +654,7 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
         case MEMORY_OPERATION_WRITE:
             if (writeback_number < memory_package_t::count_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size,
                                                     this->mshr_buffer_writeback_reserved_size)) {
+                this->token_list[token_pos].is_coming = true;
                 /// Lets party !
                 return OK;
             }
@@ -652,18 +665,18 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
     }
 
     return FAIL;
-
 };
 
 /// ============================================================================
 void memory_controller_t::remove_token_list(memory_package_t *package) {
     for (uint32_t token = 0; token < this->token_list.size(); token++) {
         /// Requested Address Found
-        if (this->token_list[token].id_owner == package->id_owner &&
-        this->token_list[token].opcode_number == package->opcode_number &&
+        if (this->token_list[token].opcode_number == package->opcode_number &&
         this->token_list[token].uop_number == package->uop_number &&
         this->token_list[token].memory_address == package->memory_address &&
-        this->token_list[token].memory_operation == package->memory_operation) {
+        this->token_list[token].memory_operation == package->memory_operation &&
+        this->token_list[token].id_owner == package->id_owner) {
+            MEMORY_CONTROLLER_DEBUG_PRINTF("\tRemoving token %s\n", this->token_list[token].content_to_string().c_str());
             this->token_list.erase(this->token_list.begin() + token);
             return;
         }
@@ -675,6 +688,11 @@ void memory_controller_t::remove_token_list(memory_package_t *package) {
 /// ============================================================================
 void memory_controller_t::print_structures() {
     SINUCA_PRINTF("%s MSHR_BUFFER:\n%s", this->get_label(), memory_package_t::print_all(this->mshr_buffer, this->mshr_buffer_size).c_str())
+
+    SINUCA_PRINTF("%s TOKEN_LIST:\n", this->get_label())
+    for (uint32_t i = 0; i < this->token_list.size(); i++) {
+        SINUCA_PRINTF("%s\n", this->token_list[i].content_to_string().c_str())
+    }
 
     for (uint32_t i = 0; i < this->channels_per_controller; i++) {
         this->channels[i].print_structures();

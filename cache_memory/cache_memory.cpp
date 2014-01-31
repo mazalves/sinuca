@@ -652,13 +652,11 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
 /// ============================================================================
 bool cache_memory_t::check_token_list(memory_package_t *package) {
     ERROR_ASSERT_PRINTF(package->is_answer == false, "check_token_list received a Answer.\n")
-    uint32_t token_pos = 0, number_tokens_coming = 0;
+    uint32_t token_pos = 0;//, number_tokens_coming = 0;
 
 
     /// 1. Check if the name is already in the guest (token) list.
     for (token_pos = 0; token_pos < this->token_list.size(); token_pos++) {
-        number_tokens_coming += this->token_list[token_pos].is_coming;
-
         /// Requested Address Found
         if (this->token_list[token_pos].opcode_number == package->opcode_number &&
         this->token_list[token_pos].uop_number == package->uop_number &&
