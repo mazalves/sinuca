@@ -40,8 +40,8 @@ opcode_package_t &opcode_package_t::operator=(const opcode_package_t &package) {
     this->opcode_address = package.opcode_address;
     this->opcode_size = package.opcode_size;
 
-	memcpy(this->read_regs, package.read_regs, sizeof(int32_t) * MAX_REGISTERS);
-	memcpy(this->write_regs, package.write_regs, sizeof(int32_t) * MAX_REGISTERS);
+    memcpy(this->read_regs, package.read_regs, sizeof(int32_t) * MAX_REGISTERS);
+    memcpy(this->write_regs, package.write_regs, sizeof(int32_t) * MAX_REGISTERS);
 
     this->base_reg = package.base_reg;
     this->index_reg = package.index_reg;
@@ -81,8 +81,8 @@ bool opcode_package_t::operator==(const opcode_package_t &package) {
     if (this->opcode_address != package.opcode_address) return FAIL;
     if (this->opcode_size != package.opcode_size) return FAIL;
 
-	if ( memcmp(this->read_regs, package.read_regs, sizeof(int32_t) * MAX_REGISTERS) != 0) return FAIL;
-	if ( memcmp(this->write_regs, package.write_regs, sizeof(int32_t) * MAX_REGISTERS) != 0) return FAIL;
+    if ( memcmp(this->read_regs, package.read_regs, sizeof(int32_t) * MAX_REGISTERS) != 0) return FAIL;
+    if ( memcmp(this->write_regs, package.write_regs, sizeof(int32_t) * MAX_REGISTERS) != 0) return FAIL;
 
     if (this->base_reg != package.base_reg) return FAIL;
     if (this->index_reg != package.index_reg) return FAIL;
@@ -121,8 +121,8 @@ void opcode_package_t::package_clean() {
     this->opcode_address = 0;
     this->opcode_size = 0;
 
-	memset(this->read_regs, POSITION_FAIL, sizeof(int32_t) * MAX_REGISTERS);
-	memset(this->write_regs, POSITION_FAIL, sizeof(int32_t) * MAX_REGISTERS);
+    memset(this->read_regs, POSITION_FAIL, sizeof(int32_t) * MAX_REGISTERS);
+    memset(this->write_regs, POSITION_FAIL, sizeof(int32_t) * MAX_REGISTERS);
 
     this->base_reg = 0;
     this->index_reg = 0;
@@ -183,23 +183,24 @@ std::string opcode_package_t::content_to_string() {
             return PackageString;
         }
     #endif
-    PackageString = PackageString + " OPCODE#" + utils_t::uint64_to_string(this->opcode_number);
+    PackageString = PackageString + " OpCode#" + utils_t::uint64_to_string(this->opcode_number);
     PackageString = PackageString + " " + get_enum_instruction_operation_char(this->opcode_operation);
-    PackageString = PackageString + " 0x" + utils_t::uint64_to_string(this->opcode_address);
-    PackageString = PackageString + " SIZE:" + utils_t::uint32_to_string(this->opcode_size);
+    PackageString = PackageString + " 0x" + utils_t::big_uint64_to_string(this->opcode_address);
+    PackageString = PackageString + " Size:" + utils_t::uint32_to_string(this->opcode_size);
 
-    PackageString = PackageString + " | R1 0x" + utils_t::uint64_to_string(this->read_address);
-    PackageString = PackageString + " SIZE:" + utils_t::uint32_to_string(this->read_size);
+    PackageString = PackageString + " | R1 0x" + utils_t::big_uint64_to_string(this->read_address);
+    PackageString = PackageString + " Size:" + utils_t::uint32_to_string(this->read_size);
 
-    PackageString = PackageString + " | R2 0x" + utils_t::uint64_to_string(this->read2_address);
-    PackageString = PackageString + " SIZE:" + utils_t::uint32_to_string(this->read2_size);
+    PackageString = PackageString + " | R2 0x" + utils_t::big_uint64_to_string(this->read2_address);
+    PackageString = PackageString + " Size:" + utils_t::uint32_to_string(this->read2_size);
 
-    PackageString = PackageString + " | W 0x" + utils_t::uint64_to_string(this->write_address);
-    PackageString = PackageString + " SIZE:" + utils_t::uint32_to_string(this->write_size);
+    PackageString = PackageString + " | W 0x" + utils_t::big_uint64_to_string(this->write_address);
+    PackageString = PackageString + " Size:" + utils_t::uint32_to_string(this->write_size);
 
     PackageString = PackageString + " | " + get_enum_package_state_char(this->state);
-    PackageString = PackageString + " BORN:" + utils_t::uint64_to_string(this->born_cycle);
-    PackageString = PackageString + " READY:" + utils_t::uint64_to_string(this->ready_cycle);
+    PackageString = PackageString + " Ready:" + utils_t::uint64_to_string(this->ready_cycle);
+    PackageString = PackageString + " Born:" + utils_t::uint64_to_string(this->born_cycle);
+
 
     PackageString = PackageString + " | RRegs[";
     for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
@@ -217,9 +218,9 @@ std::string opcode_package_t::content_to_string() {
     PackageString = PackageString + " ]";
 
     if (this->is_branch == true)
-        PackageString = PackageString + " | JUMP  ";
+        PackageString = PackageString + " | is_brch";
     else
-        PackageString = PackageString + " | NO JMP";
+        PackageString = PackageString + " | no_brch";
 
     return PackageString;
 };
@@ -332,7 +333,7 @@ void opcode_package_t::trace_string_to_read(char *input_string, uint32_t actual_
 
     sub_string = strtok_r(NULL, " ", &tmp_ptr);
     // ~ ERROR_ASSERT_PRINTF((uint32_t)strtoul(sub_string, NULL, 10) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%s)\n", actual_bbl, sub_string)
-    ERROR_ASSERT_PRINTF((uint32_t)utils_t::string_to_uint64(sub_string) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%s)\n", actual_bbl, sub_string)    
+    ERROR_ASSERT_PRINTF((uint32_t)utils_t::string_to_uint64(sub_string) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%s)\n", actual_bbl, sub_string)
 };
 
 
@@ -390,7 +391,7 @@ void opcode_package_t::trace_string_to_write(char *input_string, uint32_t actual
 
     sub_string = strtok_r(NULL, " ", &tmp_ptr);
     // ~ ERROR_ASSERT_PRINTF((uint32_t)strtoul(sub_string, NULL, 10) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%s)\n", actual_bbl, sub_string)
-    ERROR_ASSERT_PRINTF((uint32_t)utils_t::string_to_uint64(sub_string) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%s)\n", actual_bbl, sub_string)    
+    ERROR_ASSERT_PRINTF((uint32_t)utils_t::string_to_uint64(sub_string) == actual_bbl, "Wrong bbl inside memory_trace. Actual bbl (%u) - trace has (%s)\n", actual_bbl, sub_string)
 };
 
 
@@ -417,7 +418,7 @@ void opcode_package_t::trace_string_to_opcode(char *input_string) {
     char *tmp_ptr = NULL;
     uint32_t sub_fields, count, i;
     count = 0;
-  
+
     for (i = 0; input_string[i] != '\0'; i++) {
         count += (input_string[i] == ' ');
     }
@@ -436,8 +437,8 @@ void opcode_package_t::trace_string_to_opcode(char *input_string) {
     sub_string = strtok_r(NULL, " ", &tmp_ptr);
     this->opcode_size = utils_t::string_to_uint64(sub_string);
 
-	memset(this->read_regs, POSITION_FAIL, sizeof(int32_t) * MAX_REGISTERS);
-	memset(this->write_regs, POSITION_FAIL, sizeof(int32_t) * MAX_REGISTERS);
+    memset(this->read_regs, POSITION_FAIL, sizeof(int32_t) * MAX_REGISTERS);
+    memset(this->write_regs, POSITION_FAIL, sizeof(int32_t) * MAX_REGISTERS);
 
     sub_string = strtok_r(NULL, " ", &tmp_ptr);
     sub_fields = utils_t::string_to_uint64(sub_string);

@@ -134,16 +134,15 @@ extern sinuca_engine_t sinuca_engine;
 /// ============================================================================
 #define HEART_BEAT      10000000  /// Period to inform the Progress
 #define MAX_ALIVE_TIME   1000000  /// Max Time for a request to be solved
-// ~ #define PERIODIC_CHECK   1  /// Period between the Periodic Check
 #define PERIODIC_CHECK  10000000  /// Period between the Periodic Check
 
-// ~ #define INITIALIZE_DEBUG 180000000    /// Cycle to start the DEBUG_PRINTF (0 to disable)
+// ~ #define INITIALIZE_DEBUG 2558810    /// Cycle to start the DEBUG_PRINTF (0 to disable)
 #define INITIALIZE_DEBUG 0    /// Cycle to start the DEBUG_PRINTF (0 to disable)
 #define FINALIZE_DEBUG 0      /// Cycle to stop the DEBUG_PRINTF (0 to disable)
 
 /// Class specific definitions
 #define INFINITE (std::numeric_limits<uint32_t>::max())             /// interconnection_controller_t
-#define UNDESIRABLE (sinuca_engine.get_processor_array_size() * 10) /// interconnection_controller_t
+#define UNDESIRABLE (sinuca_engine.get_interconnection_interface_array_size()) /// interconnection_controller_t
 #define TRACE_LINE_SIZE 512     /// trace_reader_t (should not be smaller than on trace line)
 #define CONVERSION_SIZE 65
 #define MAX_UOP_DECODED 5       /// processor_t (Max number of uops from one opcode)
@@ -167,7 +166,7 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define PROCESSOR_DEBUG
     // ~ #define SYNC_DEBUG
     // ~ #define BRANCH_PREDICTOR_DEBUG
-    // ~ #define CACHE_DEBUG
+    #define CACHE_DEBUG
     // ~ #define PREFETCHER_DEBUG
     // ~ #define LINE_USAGE_PREDICTOR_DEBUG
     #define MEMORY_CONTROLLER_DEBUG

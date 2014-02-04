@@ -933,7 +933,7 @@ void processor_t::stage_decode() {
 
 /// ============================================================================
 bool processor_t::check_if_memory_overlaps(uint64_t memory_address1, uint32_t size1, uint64_t memory_address2, uint32_t size2) {
-    PROCESSOR_DEBUG_PRINTF("check_if_memory_overlaps()\n");
+    PROCESSOR_DEBUG_PRINTF("check_if_memory_overlaps()");
 
     /// Address of the new load
     uint64_t new_read_start = memory_address1 & not_disambiguation_offset_bits_mask;
@@ -944,6 +944,7 @@ bool processor_t::check_if_memory_overlaps(uint64_t memory_address1, uint32_t si
     /// |     XX    | Last Write
     uint64_t last_write_start = memory_address2 & not_disambiguation_offset_bits_mask;
     if (new_read_end < last_write_start) {
+        PROCESSOR_DEBUG_PRINTF("\t FALSE\n");
         return false;
     }
 
@@ -952,9 +953,11 @@ bool processor_t::check_if_memory_overlaps(uint64_t memory_address1, uint32_t si
     /// | XX        | Last Write
     uint64_t last_write_end = (last_write_start + size2 - 1) & not_disambiguation_offset_bits_mask;
     if (last_write_end < new_read_start) {
+        PROCESSOR_DEBUG_PRINTF("\t FALSE\n");
         return false;
     }
 
+    PROCESSOR_DEBUG_PRINTF("\t TRUE\n");
     return true;
 };
 
@@ -964,9 +967,9 @@ void processor_t::make_memory_dependencies(memory_order_buffer_line_t *new_mob_l
     for (uint32_t j = 0; j < size_array; j++) {
         memory_order_buffer_line_t *old_mob_line = &input_array[j];
 
-        /// Skip if (FREE) or (SAME MOB_LINE) or (ALREADY EXECUTED)
+        /// Skip if (FREE) or (SAME MOB_LINE) or  ?!(ALREADY EXECUTED)
         if (old_mob_line->memory_request.state == PACKAGE_STATE_FREE ||
-        old_mob_line->memory_request.uop_number == new_mob_line->memory_request.uop_number) {
+        old_mob_line->memory_request.uop_number == new_mob_line->memory_request.uop_number ) {
             continue;
         }
 
@@ -977,8 +980,8 @@ void processor_t::make_memory_dependencies(memory_order_buffer_line_t *new_mob_l
                 if ((new_mob_line->memory_request.memory_operation == MEMORY_OPERATION_WRITE &&
                     old_mob_line->memory_request.memory_operation == MEMORY_OPERATION_WRITE) ||
 
-                check_if_memory_overlaps(new_mob_line->memory_request.memory_address, new_mob_line->memory_request.memory_size,
-                old_mob_line->memory_request.memory_address, old_mob_line->memory_request.memory_size)) {
+                this->check_if_memory_overlaps(new_mob_line->memory_request.memory_address, new_mob_line->memory_request.memory_size,
+                                                old_mob_line->memory_request.memory_address, old_mob_line->memory_request.memory_size)) {
                     /// Make dependencies to be solved
                     for (uint32_t k = 0; k < this->reorder_buffer_size; k++) {
                         if (old_mob_line->mem_deps_ptr_array[k] == NULL) {
@@ -995,7 +998,8 @@ void processor_t::make_memory_dependencies(memory_order_buffer_line_t *new_mob_l
                 /// For every old memory write
                 /// Make dependencies to be solved
                 /// However, read to read will never generate deps nor suffer READ-TO-READ solutions
-                if (new_mob_line->memory_request.memory_operation == MEMORY_OPERATION_READ && old_mob_line->memory_request.memory_operation == MEMORY_OPERATION_READ){
+                if (new_mob_line->memory_request.memory_operation == MEMORY_OPERATION_READ &&
+                old_mob_line->memory_request.memory_operation == MEMORY_OPERATION_READ){
                     break;
                 }
                 else {

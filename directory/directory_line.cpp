@@ -78,21 +78,25 @@ std::string directory_line_t::directory_line_to_string() {
     PackageString = "";
 
     PackageString = PackageString + " DIR: Owner:" + utils_t::uint32_to_string(this->id_owner);
-    PackageString = PackageString + " OPCode#:" + utils_t::uint64_to_string(this->opcode_number);
+    PackageString = PackageString + " OpCode#:" + utils_t::uint64_to_string(this->opcode_number);
     PackageString = PackageString + " 0x" + utils_t::uint64_to_string(this->opcode_address);
     PackageString = PackageString + " UOP#:" + utils_t::uint64_to_string(this->uop_number);
 
-    PackageString = PackageString + " | LOCK:" + get_enum_lock_char(this->lock_type);
+    PackageString = PackageString + " | Lock:" + get_enum_lock_char(this->lock_type);
 
     PackageString = PackageString + " | " + get_enum_memory_operation_char(this->initial_memory_operation);
     PackageString = PackageString + " 0x" + utils_t::uint64_to_string(this->initial_memory_address);
     PackageString = PackageString + " Size:" + utils_t::uint64_to_string(this->initial_memory_size);
 
-    PackageString = PackageString + " | BORN:" + utils_t::uint64_to_string(this->born_cycle);
+    PackageString = PackageString + " | Born:" + utils_t::uint64_to_string(this->born_cycle);
 
-    PackageString = PackageString + " | RQST:" + utils_t::uint32_to_string(this->cache_requested);
+    PackageString = PackageString + " | RQST Seq:" + utils_t::uint32_to_string(this->cache_requested);
     for (uint32_t i = 0; i < sinuca_engine.get_cache_memory_array_size(); i++) {
-        PackageString = PackageString + "[" + utils_t::uint32_to_string(this->cache_request_order[i]) + "]";
+        if (this->cache_request_order[i] != 0)
+        PackageString = PackageString + "["  + utils_t::uint32_to_string(this->cache_request_order[i]) +
+                                        "=" + sinuca_engine.cache_memory_array[i][0].get_label() + "]";
+
+        // ~ PackageString = PackageString + "[" + utils_t::uint32_to_string(this->cache_request_order[i]) + "]";
     }
     return PackageString;
 };

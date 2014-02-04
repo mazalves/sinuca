@@ -173,8 +173,8 @@ std::string memory_package_t::content_to_string() {
         }
     #endif
     content_string = content_string + " MEM: Owner:" + utils_t::uint32_to_string(this->id_owner);
-    content_string = content_string + " OPCode#" + utils_t::uint64_to_string(this->opcode_number);
-    content_string = content_string + " 0x" + utils_t::uint64_to_string(this->opcode_address);
+    content_string = content_string + " OpCode#" + utils_t::uint64_to_string(this->opcode_number);
+    content_string = content_string + " 0x" + utils_t::big_uint64_to_string(this->opcode_address);
     content_string = content_string + " UOP#" + utils_t::uint64_to_string(this->uop_number);
 
     content_string = content_string + " | " + get_enum_memory_operation_char(this->memory_operation);
@@ -185,7 +185,7 @@ std::string memory_package_t::content_to_string() {
         content_string = content_string + " RQST";
     }
 
-    content_string = content_string + " 0x" + utils_t::uint64_to_string(this->memory_address);
+    content_string = content_string + " 0x" + utils_t::big_uint64_to_string(this->memory_address);
     content_string = content_string + " Size:" + utils_t::uint32_to_string(this->memory_size);
 
     content_string = content_string + " | " + get_enum_package_state_char(this->state);
@@ -193,9 +193,9 @@ std::string memory_package_t::content_to_string() {
     content_string = content_string + " Born:" + utils_t::uint64_to_string(this->born_cycle);
 
 
-    content_string = content_string + " | SRC:" + utils_t::uint32_to_string(this->id_src);
-    content_string = content_string + " => DST:" + utils_t::uint32_to_string(this->id_dst);
-    content_string = content_string + " HOPS:" + utils_t::int32_to_string(this->hop_count);
+    content_string = content_string + " | Src/Dst:" + utils_t::uint32_to_string(this->id_src);
+    content_string = content_string + "=>" + utils_t::uint32_to_string(this->id_dst);
+    content_string = content_string + " Hops:" + utils_t::int32_to_string(this->hop_count);
 
     if (this->hops != NULL) {
         for (int32_t i = 0; i <= this->hop_count; i++) {
@@ -203,12 +203,12 @@ std::string memory_package_t::content_to_string() {
         }
     }
     /// line_status
-    content_string = content_string + "\n SubBlocks:\t";
+    content_string = content_string + "\n\t SubBlocks:";
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        if (i % 4 == 0) {
-            content_string = content_string + "|";
+        if (i % 8 == 0) {
+            content_string = content_string + " | ";
         }
-        content_string = content_string + "  " + utils_t::bool_to_string(this->sub_blocks[i]);
+        content_string = content_string + utils_t::bool_to_string(this->sub_blocks[i]);
     }
     content_string = content_string + "|";
     return content_string;

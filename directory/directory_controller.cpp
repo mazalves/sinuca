@@ -183,13 +183,14 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     /// ================================================================================
     /// Check for parallel requests
     for (uint32_t i = 0; i < this->directory_lines.size(); i++) {
-        /// Find Parallel Request
+        /// Find Parallel Request (Cannot be an Writeback operation leaving the cache)
         if (directory_lines[i]->cache_request_order[cache_id] != 0 &&
         this->cmp_index_tag(directory_lines[i]->initial_memory_address, package->memory_address)) {
             // =============================================================
             // Line Usage Prediction => Check if the subblocks were requested
             bool is_sub_block_hit = cache->line_usage_predictor->check_sub_block_is_hit(cache, cache_line, package, index, way);
-            if (is_sub_block_hit) {
+            if (is_sub_block_hit &&
+            directory_lines[i]->initial_memory_operation != MEMORY_OPERATION_WRITEBACK) {
                 // =============================================================
                 // Line Usage Prediction => The statistics between the cache and our mechanism will be different
                 cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);

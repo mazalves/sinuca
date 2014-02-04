@@ -40,8 +40,8 @@ uop_package_t &uop_package_t::operator=(const uop_package_t &package) {
     this->opcode_address = package.opcode_address;
     this->opcode_size = package.opcode_size;
 
-	memcpy(this->read_regs, package.read_regs, sizeof(this->read_regs));
-	memcpy(this->write_regs, package.write_regs, sizeof(this->write_regs));
+    memcpy(this->read_regs, package.read_regs, sizeof(this->read_regs));
+    memcpy(this->write_regs, package.write_regs, sizeof(this->write_regs));
 
     this->uop_operation = package.uop_operation;
     this->memory_address = package.memory_address;
@@ -64,8 +64,8 @@ bool uop_package_t::operator==(const uop_package_t &package) {
     if (this->opcode_address != package.opcode_address) return FAIL;
     if (this->opcode_size != package.opcode_size) return FAIL;
 
-	if ( memcmp(this->read_regs, package.read_regs, sizeof(int32_t)*MAX_REGISTERS) != 0) return FAIL;
-	if ( memcmp(this->write_regs, package.write_regs, sizeof(int32_t)*MAX_REGISTERS) != 0) return FAIL;
+    if ( memcmp(this->read_regs, package.read_regs, sizeof(int32_t)*MAX_REGISTERS) != 0) return FAIL;
+    if ( memcmp(this->write_regs, package.write_regs, sizeof(int32_t)*MAX_REGISTERS) != 0) return FAIL;
 
     if (this->uop_operation != package.uop_operation) return FAIL;
     if (this->memory_address != package.memory_address) return FAIL;
@@ -92,8 +92,8 @@ void uop_package_t::opcode_to_uop(uint64_t uop_number, instruction_operation_t u
     this->opcode_address = opcode.opcode_address;
     this->opcode_size = opcode.opcode_size;
 
-	memcpy(this->read_regs, opcode.read_regs, sizeof(int32_t) * MAX_REGISTERS);
-	memcpy(this->write_regs, opcode.write_regs, sizeof(int32_t) * MAX_REGISTERS);
+    memcpy(this->read_regs, opcode.read_regs, sizeof(int32_t) * MAX_REGISTERS);
+    memcpy(this->write_regs, opcode.write_regs, sizeof(int32_t) * MAX_REGISTERS);
 
     this->uop_operation = uop_operation;
     this->memory_address = memory_address;
@@ -115,8 +115,8 @@ void uop_package_t::package_clean() {
     this->opcode_address = 0;
     this->opcode_size = 0;
 
-	memset(this->read_regs, POSITION_FAIL, sizeof(int32_t) * MAX_REGISTERS);
-	memset(this->write_regs, POSITION_FAIL, sizeof(int32_t) * MAX_REGISTERS);
+    memset(this->read_regs, POSITION_FAIL, sizeof(int32_t) * MAX_REGISTERS);
+    memset(this->write_regs, POSITION_FAIL, sizeof(int32_t) * MAX_REGISTERS);
 
     this->uop_operation = INSTRUCTION_OPERATION_NOP;
     this->memory_address = 0;
@@ -165,19 +165,20 @@ std::string uop_package_t::content_to_string() {
             return PackageString;
         }
     #endif
-    PackageString = PackageString + " UOP: OPCODE#" + utils_t::uint64_to_string(this->opcode_number);
-    PackageString = PackageString + " | UOP#" + utils_t::uint64_to_string(this->uop_number);
-    PackageString = PackageString + " | " + get_enum_instruction_operation_char(this->opcode_operation);
-    PackageString = PackageString + " | 0x" + utils_t::uint64_to_string(this->opcode_address);
-    PackageString = PackageString + " SIZE:" + utils_t::utils_t::uint32_to_string(this->opcode_size);
+    PackageString = PackageString + " UOP: OpCode#" + utils_t::uint64_to_string(this->opcode_number);
+    PackageString = PackageString + " UOP#" + utils_t::uint64_to_string(this->uop_number);
+    PackageString = PackageString + " " + get_enum_instruction_operation_char(this->opcode_operation);
+    PackageString = PackageString + " 0x" + utils_t::big_uint64_to_string(this->opcode_address);
+    PackageString = PackageString + " Size:" + utils_t::utils_t::uint32_to_string(this->opcode_size);
 
     PackageString = PackageString + " | " + get_enum_instruction_operation_char(this->uop_operation);
-    PackageString = PackageString + " MEM:0x" + utils_t::uint64_to_string(this->memory_address);
-    PackageString = PackageString + " SIZE:" + utils_t::uint32_to_string(this->memory_size);
+    PackageString = PackageString + " MEM:0x" + utils_t::big_uint64_to_string(this->memory_address);
+    PackageString = PackageString + " Size:" + utils_t::uint32_to_string(this->memory_size);
 
     PackageString = PackageString + " | " + get_enum_package_state_char(this->state);
-    PackageString = PackageString + " BORN:" + utils_t::uint64_to_string(this->born_cycle);
-    PackageString = PackageString + " READY:" + utils_t::uint64_to_string(this->ready_cycle);
+    PackageString = PackageString + " | Ready:" + utils_t::uint64_to_string(this->ready_cycle);
+    PackageString = PackageString + " Born:" + utils_t::uint64_to_string(this->born_cycle);
+
 
     PackageString = PackageString + " | RRegs[";
     for (uint32_t i = 0; i < MAX_REGISTERS; i++) {

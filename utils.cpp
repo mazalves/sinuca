@@ -415,13 +415,25 @@ std::string utils_t::int32_to_string(int32_t input_int) {
 };
 
 //==============================================================================
+std::string utils_t::big_uint64_to_string(uint64_t input_int) {
+    char a[65];
+    a[0] = '\0';
+    std::string answer = "";
+
+    sprintf(a , "%15"PRIu64"", input_int);
+    answer = a;
+
+    return answer;
+};
+
+//==============================================================================
 std::string utils_t::uint64_to_string(uint64_t input_int) {
     char a[65];
     a[0] = '\0';
     std::string answer = "";
 
     if (input_int > 1000000000) {
-        sprintf(a , "%16"PRIu64"", input_int);
+        sprintf(a , "%14"PRIu64"", input_int);
         answer = a;
     }
     else {
@@ -438,7 +450,7 @@ std::string utils_t::int64_to_string(int64_t input_int) {
     std::string answer = "";
 
     if (input_int > 1000000000) {
-        sprintf(a , "%16"PRId64"", input_int);
+        sprintf(a , "%14"PRId64"", input_int);
         answer = a;
     }
     else {

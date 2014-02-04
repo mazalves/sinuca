@@ -142,7 +142,8 @@ class utils_t {
 
         static std::string bool_to_string(bool input_int);
         static std::string uint32_to_string(uint32_t input_int);
-        static std::string int32_to_string(int32_t input_int);        
+        static std::string int32_to_string(int32_t input_int);
+        static std::string big_uint64_to_string(uint64_t input_int);
         static std::string uint64_to_string(uint64_t input_int);
         static std::string int64_to_string(int64_t input_int);
 
