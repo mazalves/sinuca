@@ -63,9 +63,6 @@ void line_usage_predictor_dewp_oracle_t::allocate() {
         this->metadata_sets[i].ways = utils_t::template_allocate_array<dewp_metadata_line_t>(this->get_metadata_associativity());
     }
 
-    /// ================================================================
-    /// Statistics
-    /// ================================================================
 };
 
 /// ============================================================================
@@ -119,7 +116,7 @@ bool line_usage_predictor_dewp_oracle_t::check_sub_block_is_hit(cache_memory_t *
 
 /// ============================================================================
 bool line_usage_predictor_dewp_oracle_t::check_line_is_disabled(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way){
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_access()\n")
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_disabled()\n")
 
     (void)cache;
     (void)cache_line;
@@ -170,13 +167,13 @@ void line_usage_predictor_dewp_oracle_t::line_hit(cache_memory_t *cache, cache_l
 
     /// Statistics
     if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE) {
-        this->cycles_turned_off += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+        this->cycles_turned_off_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
         if (this->metadata_sets[index].ways[way].clock_last_access == 0){
-            cycles_turned_off_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+            cycles_turned_off_whole_line_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
         }
     }
     else {
-        this->cycles_turned_on += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+        this->cycles_turned_on_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     }
     this->metadata_sets[index].ways[way].real_access_counter_read++;
     this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_NORMAL;
@@ -198,9 +195,9 @@ void line_usage_predictor_dewp_oracle_t::line_miss(cache_memory_t *cache, cache_
     this->add_stat_line_miss();
 
     /// Statistics
-    this->cycles_turned_off += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+    this->cycles_turned_off_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     if (this->metadata_sets[index].ways[way].clock_last_access == 0){
-        cycles_turned_off_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+        cycles_turned_off_whole_line_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     }
 
     this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_DISABLE;
@@ -238,13 +235,13 @@ void line_usage_predictor_dewp_oracle_t::line_send_writeback(cache_memory_t *cac
 
     /// Statistics
     if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE) {
-        this->cycles_turned_off += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+        this->cycles_turned_off_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
         if (this->metadata_sets[index].ways[way].clock_last_access == 0){
-            cycles_turned_off_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+            cycles_turned_off_whole_line_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
         }
     }
     else {
-        this->cycles_turned_on += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+        this->cycles_turned_on_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     }
 
     this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_NORMAL;
@@ -265,9 +262,9 @@ void line_usage_predictor_dewp_oracle_t::line_recv_writeback(cache_memory_t *cac
     this->add_stat_recv_writeback();
 
     /// Statistics
-    this->cycles_turned_off += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+    this->cycles_turned_off_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     if (this->metadata_sets[index].ways[way].clock_last_access == 0){
-        cycles_turned_off_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+        cycles_turned_off_whole_line_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     }
     this->metadata_sets[index].ways[way].real_access_counter_writeback++;
     this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_NORMAL;
@@ -289,9 +286,9 @@ void line_usage_predictor_dewp_oracle_t::line_eviction(cache_memory_t *cache, ca
     this->add_stat_eviction();
 
     /// Statistics
-    this->cycles_turned_off += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+    this->cycles_turned_off_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     if (this->metadata_sets[index].ways[way].clock_last_access == 0){
-        cycles_turned_off_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+        cycles_turned_off_whole_line_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     }
 
         // Reads before eviction
@@ -301,16 +298,20 @@ void line_usage_predictor_dewp_oracle_t::line_eviction(cache_memory_t *cache, ca
         else if (this->metadata_sets[index].ways[way].real_access_counter_read == 1) {
             this->add_stat_line_read_1();
         }
-        else if (this->metadata_sets[index].ways[way].real_access_counter_read >= 2 && this->metadata_sets[index].ways[way].real_access_counter_read <= 3) {
+        else if (this->metadata_sets[index].ways[way].real_access_counter_read >= 2 &&
+        this->metadata_sets[index].ways[way].real_access_counter_read <= 3) {
             this->add_stat_line_read_2_3();
         }
-        else if (this->metadata_sets[index].ways[way].real_access_counter_read >= 4 && this->metadata_sets[index].ways[way].real_access_counter_read <= 7) {
+        else if (this->metadata_sets[index].ways[way].real_access_counter_read >= 4 &&
+        this->metadata_sets[index].ways[way].real_access_counter_read <= 7) {
             this->add_stat_line_read_4_7();
         }
-        else if (this->metadata_sets[index].ways[way].real_access_counter_read >= 8 && this->metadata_sets[index].ways[way].real_access_counter_read <= 15) {
+        else if (this->metadata_sets[index].ways[way].real_access_counter_read >= 8 &&
+        this->metadata_sets[index].ways[way].real_access_counter_read <= 15) {
             this->add_stat_line_read_8_15();
         }
-        else if (this->metadata_sets[index].ways[way].real_access_counter_read >= 16 && this->metadata_sets[index].ways[way].real_access_counter_read <= 127) {
+        else if (this->metadata_sets[index].ways[way].real_access_counter_read >= 16 &&
+        this->metadata_sets[index].ways[way].real_access_counter_read <= 127) {
             this->add_stat_line_read_16_127();
         }
         else if (this->metadata_sets[index].ways[way].real_access_counter_read >=128) {
@@ -324,16 +325,20 @@ void line_usage_predictor_dewp_oracle_t::line_eviction(cache_memory_t *cache, ca
         else if (this->metadata_sets[index].ways[way].real_access_counter_writeback == 1) {
             this->add_stat_line_writeback_1();
         }
-        else if (this->metadata_sets[index].ways[way].real_access_counter_writeback >= 2 && this->metadata_sets[index].ways[way].real_access_counter_writeback <= 3) {
+        else if (this->metadata_sets[index].ways[way].real_access_counter_writeback >= 2 &&
+        this->metadata_sets[index].ways[way].real_access_counter_writeback <= 3) {
             this->add_stat_line_writeback_2_3();
         }
-        else if (this->metadata_sets[index].ways[way].real_access_counter_writeback >= 4 && this->metadata_sets[index].ways[way].real_access_counter_writeback <= 7) {
+        else if (this->metadata_sets[index].ways[way].real_access_counter_writeback >= 4 &&
+        this->metadata_sets[index].ways[way].real_access_counter_writeback <= 7) {
             this->add_stat_line_writeback_4_7();
         }
-        else if (this->metadata_sets[index].ways[way].real_access_counter_writeback >= 8 && this->metadata_sets[index].ways[way].real_access_counter_writeback <= 15) {
+        else if (this->metadata_sets[index].ways[way].real_access_counter_writeback >= 8 &&
+        this->metadata_sets[index].ways[way].real_access_counter_writeback <= 15) {
             this->add_stat_line_writeback_8_15();
         }
-        else if (this->metadata_sets[index].ways[way].real_access_counter_writeback >= 16 && this->metadata_sets[index].ways[way].real_access_counter_writeback <= 127) {
+        else if (this->metadata_sets[index].ways[way].real_access_counter_writeback >= 16 &&
+        this->metadata_sets[index].ways[way].real_access_counter_writeback <= 127) {
             this->add_stat_line_writeback_16_127();
         }
         else if (this->metadata_sets[index].ways[way].real_access_counter_writeback >=128) {
@@ -361,12 +366,13 @@ void line_usage_predictor_dewp_oracle_t::line_invalidation(cache_memory_t *cache
     this->add_stat_invalidation();
 
     /// Statistics
-    this->cycles_turned_off += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+    this->cycles_turned_off_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     if (this->metadata_sets[index].ways[way].clock_last_access == 0){
-        cycles_turned_off_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+        cycles_turned_off_whole_line_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     }
 
     this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_DISABLE;
+    this->metadata_sets[index].ways[way].is_dirty = false;
     this->metadata_sets[index].ways[way].clock_last_access = sinuca_engine.get_global_cycle();
 };
 
@@ -389,7 +395,7 @@ void line_usage_predictor_dewp_oracle_t::panic() {
 void line_usage_predictor_dewp_oracle_t::periodic_check(){
     line_usage_predictor_t::periodic_check();
 
-    #ifdef PREFETCHER_DEBUG
+    #ifdef LINE_USAGE_PREDICTOR_DEBUG
         this->print_structures();
     #endif
 };
@@ -424,9 +430,9 @@ void line_usage_predictor_dewp_oracle_t::reset_statistics() {
     this->stat_line_writeback_16_127 = 0;
     this->stat_line_writeback_128_bigger = 0;
 
-    this->cycles_turned_on = 0;
-    this->cycles_turned_off = 0;
-    this->cycles_turned_off_since_begin = 0;
+    this->cycles_turned_on_whole_line = 0;
+    this->cycles_turned_off_whole_line = 0;
+    this->cycles_turned_off_whole_line_since_begin = 0;
 };
 
 /// ============================================================================
@@ -467,17 +473,17 @@ void line_usage_predictor_dewp_oracle_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_line_writeback_128_bigger", stat_line_writeback_128_bigger);
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_on", cycles_turned_on);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_off", cycles_turned_off);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_on_whole_line", cycles_turned_on_whole_line);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_off_whole_line", cycles_turned_off_whole_line);
 
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_on_per_lines", cycles_turned_on/ metadata_line_number);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_off_per_lines", cycles_turned_off/ metadata_line_number);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_on_whole_cache", cycles_turned_on_whole_line/ metadata_line_number);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_off_whole_cache", cycles_turned_off_whole_line/ metadata_line_number);
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_off_since_begin", cycles_turned_off_since_begin);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_off_since_begin_per_lines", cycles_turned_off_since_begin/ metadata_line_number);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_off_whole_line_since_begin", cycles_turned_off_whole_line_since_begin);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_off_since_begin_whole_cache", cycles_turned_off_whole_line_since_begin/ metadata_line_number);
 
-    if ((this->cycles_turned_on + this->cycles_turned_off) / metadata_line_number != sinuca_engine.get_global_cycle()) {
+    if ((this->cycles_turned_on_whole_line + this->cycles_turned_off_whole_line) / metadata_line_number != sinuca_engine.get_global_cycle()) {
         WARNING_PRINTF("Total of cycles (alive + dead) does not match with global cycle.\n")
     }
 };

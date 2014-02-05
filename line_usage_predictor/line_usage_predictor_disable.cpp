@@ -92,7 +92,7 @@ bool line_usage_predictor_disable_t::check_sub_block_is_hit(cache_memory_t *cach
 
 /// ============================================================================
 bool line_usage_predictor_disable_t::check_line_is_disabled(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way){
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_access()\n")
+    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_disabled()\n")
 
     (void)cache;
     (void)cache_line;
@@ -234,7 +234,7 @@ void line_usage_predictor_disable_t::panic() {
 void line_usage_predictor_disable_t::periodic_check(){
     line_usage_predictor_t::periodic_check();
 
-    #ifdef PREFETCHER_DEBUG
+    #ifdef LINE_USAGE_PREDICTOR_DEBUG
         this->print_structures();
     #endif
 };

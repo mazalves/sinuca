@@ -215,7 +215,7 @@ void line_usage_predictor_dewp_t::line_hit(cache_memory_t *cache, cache_line_t *
     this->add_stat_line_hit();
 
     /// Statistics
-    this->cycles_turned_on += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+    this->cycles_turned_on_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     this->metadata_sets[index].ways[way].real_access_counter_read++;
 
     /// ================================================================
@@ -279,9 +279,9 @@ void line_usage_predictor_dewp_t::line_miss(cache_memory_t *cache, cache_line_t 
     this->add_stat_line_miss();
 
     /// Statistics
-    this->cycles_turned_off += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+    this->cycles_turned_off_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     if (this->metadata_sets[index].ways[way].clock_last_access == 0){
-        cycles_turned_off_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+        cycles_turned_off_whole_line_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     }
 
     aht_line_t *aht_line = this->aht_find_line(package->opcode_address, package->memory_address);
@@ -382,13 +382,13 @@ void line_usage_predictor_dewp_t::sub_block_miss(cache_memory_t *cache, cache_li
 
     /// Statistics
     if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE) {
-        this->cycles_turned_off += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+        this->cycles_turned_off_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
         if (this->metadata_sets[index].ways[way].clock_last_access == 0){
-            cycles_turned_off_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+            cycles_turned_off_whole_line_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
         }
     }
     else {
-        this->cycles_turned_on += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+        this->cycles_turned_on_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     }
 
 
@@ -447,7 +447,7 @@ void line_usage_predictor_dewp_t::line_send_writeback(cache_memory_t *cache, cac
     this->add_stat_send_writeback();
 
     /// Statistics
-    this->cycles_turned_on += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+    this->cycles_turned_on_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
 
     /// ================================================================
     /// METADATA Not Learn Mode
@@ -470,8 +470,8 @@ void line_usage_predictor_dewp_t::line_send_writeback(cache_memory_t *cache, cac
 void line_usage_predictor_dewp_t::line_recv_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_recv_writeback() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
-
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
+
     (void)cache;
     (void)cache_line;
     (void)package;
@@ -481,13 +481,13 @@ void line_usage_predictor_dewp_t::line_recv_writeback(cache_memory_t *cache, cac
 
     /// Statistics
     if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE) {
-        this->cycles_turned_off += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+        this->cycles_turned_off_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
         if (this->metadata_sets[index].ways[way].clock_last_access == 0){
-            cycles_turned_off_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+            cycles_turned_off_whole_line_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
         }
     }
     else {
-        this->cycles_turned_on += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+        this->cycles_turned_on_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     }
 
     this->metadata_sets[index].ways[way].real_access_counter_writeback++;
@@ -605,16 +605,20 @@ void line_usage_predictor_dewp_t::line_eviction(cache_memory_t *cache, cache_lin
     else if (this->metadata_sets[index].ways[way].real_access_counter_read == 1) {
         this->add_stat_line_read_1();
     }
-    else if (this->metadata_sets[index].ways[way].real_access_counter_read >= 2 && this->metadata_sets[index].ways[way].real_access_counter_read <= 3) {
+    else if (this->metadata_sets[index].ways[way].real_access_counter_read >= 2 &&
+    this->metadata_sets[index].ways[way].real_access_counter_read <= 3) {
         this->add_stat_line_read_2_3();
     }
-    else if (this->metadata_sets[index].ways[way].real_access_counter_read >= 4 && this->metadata_sets[index].ways[way].real_access_counter_read <= 7) {
+    else if (this->metadata_sets[index].ways[way].real_access_counter_read >= 4 &&
+    this->metadata_sets[index].ways[way].real_access_counter_read <= 7) {
         this->add_stat_line_read_4_7();
     }
-    else if (this->metadata_sets[index].ways[way].real_access_counter_read >= 8 && this->metadata_sets[index].ways[way].real_access_counter_read <= 15) {
+    else if (this->metadata_sets[index].ways[way].real_access_counter_read >= 8 &&
+    this->metadata_sets[index].ways[way].real_access_counter_read <= 15) {
         this->add_stat_line_read_8_15();
     }
-    else if (this->metadata_sets[index].ways[way].real_access_counter_read >= 16 && this->metadata_sets[index].ways[way].real_access_counter_read <= 127) {
+    else if (this->metadata_sets[index].ways[way].real_access_counter_read >= 16 &&
+    this->metadata_sets[index].ways[way].real_access_counter_read <= 127) {
         this->add_stat_line_read_16_127();
     }
     else if (this->metadata_sets[index].ways[way].real_access_counter_read >=128) {
@@ -628,16 +632,20 @@ void line_usage_predictor_dewp_t::line_eviction(cache_memory_t *cache, cache_lin
     else if (this->metadata_sets[index].ways[way].real_access_counter_writeback == 1) {
         this->add_stat_line_writeback_1();
     }
-    else if (this->metadata_sets[index].ways[way].real_access_counter_writeback >= 2 && this->metadata_sets[index].ways[way].real_access_counter_writeback <= 3) {
+    else if (this->metadata_sets[index].ways[way].real_access_counter_writeback >= 2 &&
+    this->metadata_sets[index].ways[way].real_access_counter_writeback <= 3) {
         this->add_stat_line_writeback_2_3();
     }
-    else if (this->metadata_sets[index].ways[way].real_access_counter_writeback >= 4 && this->metadata_sets[index].ways[way].real_access_counter_writeback <= 7) {
+    else if (this->metadata_sets[index].ways[way].real_access_counter_writeback >= 4 &&
+    this->metadata_sets[index].ways[way].real_access_counter_writeback <= 7) {
         this->add_stat_line_writeback_4_7();
     }
-    else if (this->metadata_sets[index].ways[way].real_access_counter_writeback >= 8 && this->metadata_sets[index].ways[way].real_access_counter_writeback <= 15) {
+    else if (this->metadata_sets[index].ways[way].real_access_counter_writeback >= 8 &&
+    this->metadata_sets[index].ways[way].real_access_counter_writeback <= 15) {
         this->add_stat_line_writeback_8_15();
     }
-    else if (this->metadata_sets[index].ways[way].real_access_counter_writeback >= 16 && this->metadata_sets[index].ways[way].real_access_counter_writeback <= 127) {
+    else if (this->metadata_sets[index].ways[way].real_access_counter_writeback >= 16 &&
+    this->metadata_sets[index].ways[way].real_access_counter_writeback <= 127) {
         this->add_stat_line_writeback_16_127();
     }
     else if (this->metadata_sets[index].ways[way].real_access_counter_writeback >=128) {
@@ -665,7 +673,7 @@ void line_usage_predictor_dewp_t::line_eviction(cache_memory_t *cache, cache_lin
 
             case LINE_SUB_BLOCK_DISABLE:
             case LINE_SUB_BLOCK_WRITEBACK:
-                this->add_stat_dead_writeback_sent_correct();
+                this->add_stat_dead_writeback_sent_under();
             break;
 
             case LINE_SUB_BLOCK_WRONG_FIRST:
@@ -698,20 +706,20 @@ void line_usage_predictor_dewp_t::line_eviction(cache_memory_t *cache, cache_lin
             break;
 
             case LINE_SUB_BLOCK_WRITEBACK:
-                this->add_stat_dead_writeback_sent_under();
+                this->add_stat_dead_writeback_sent_correct();
             break;
         }
     }
 
     /// Statistics
     if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE) {
-        this->cycles_turned_off += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+        this->cycles_turned_off_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
         if (this->metadata_sets[index].ways[way].clock_last_access == 0){
-            cycles_turned_off_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+            cycles_turned_off_whole_line_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
         }
     }
     else {
-        this->cycles_turned_on += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+        this->cycles_turned_on_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     }
 
     // AHT UPDATE
@@ -767,19 +775,22 @@ void line_usage_predictor_dewp_t::line_invalidation(cache_memory_t *cache, cache
     (void)cache;
     (void)cache_line;
 
+    /// Mechanism statistics
+    this->add_stat_invalidation();
+
     /// Statistics
     if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE) {
-        this->cycles_turned_off += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+        this->cycles_turned_off_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
         if (this->metadata_sets[index].ways[way].clock_last_access == 0){
-            cycles_turned_off_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+            cycles_turned_off_whole_line_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
         }
     }
     else {
-        this->cycles_turned_on += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
+        this->cycles_turned_on_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     }
 
     this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_DISABLE;
-
+    this->metadata_sets[index].ways[way].is_dirty = false;
     this->metadata_sets[index].ways[way].clock_last_access = sinuca_engine.get_global_cycle();
 };
 
@@ -867,7 +878,7 @@ void line_usage_predictor_dewp_t::panic() {
 void line_usage_predictor_dewp_t::periodic_check(){
     line_usage_predictor_t::periodic_check();
 
-    #ifdef PREFETCHER_DEBUG
+    #ifdef LINE_USAGE_PREDICTOR_DEBUG
         this->print_structures();
     #endif
 };
@@ -919,9 +930,9 @@ void line_usage_predictor_dewp_t::reset_statistics() {
     this->stat_line_writeback_16_127 = 0;
     this->stat_line_writeback_128_bigger = 0;
 
-    this->cycles_turned_on = 0;
-    this->cycles_turned_off = 0;
-    this->cycles_turned_off_since_begin = 0;
+    this->cycles_turned_on_whole_line = 0;
+    this->cycles_turned_off_whole_line = 0;
+    this->cycles_turned_off_whole_line_since_begin = 0;
 };
 
 /// ============================================================================
@@ -984,17 +995,17 @@ void line_usage_predictor_dewp_t::print_statistics() {
 
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_on", cycles_turned_on);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_off", cycles_turned_off);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_on_whole_line", cycles_turned_on_whole_line);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_off_whole_line", cycles_turned_off_whole_line);
 
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_on_per_lines", cycles_turned_on/ metadata_line_number);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_off_per_lines", cycles_turned_off/ metadata_line_number);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_on_whole_cache", cycles_turned_on_whole_line/ metadata_line_number);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_off_whole_cache", cycles_turned_off_whole_line/ metadata_line_number);
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_off_since_begin", cycles_turned_off_since_begin);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_off_since_begin_per_lines", cycles_turned_off_since_begin/ metadata_line_number);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_off_whole_line_since_begin", cycles_turned_off_whole_line_since_begin);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "cycles_turned_off_since_begin_whole_cache", cycles_turned_off_whole_line_since_begin/ metadata_line_number);
 
-    if ((this->cycles_turned_on + this->cycles_turned_off) / metadata_line_number != sinuca_engine.get_global_cycle()) {
+    if ((this->cycles_turned_on_whole_line + this->cycles_turned_off_whole_line) / metadata_line_number != sinuca_engine.get_global_cycle()) {
         WARNING_PRINTF("Total of cycles (alive + dead) does not match with global cycle.\n")
     }
 

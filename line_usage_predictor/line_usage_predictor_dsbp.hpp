@@ -86,12 +86,12 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         uint64_t stat_line_read_16_127;
         uint64_t stat_line_read_128_bigger;
 
-        uint64_t *stat_subblock_read_per_line;
-        uint64_t *stat_subblock_turned_on_during_read;
+        uint64_t *stat_touched_sub_blocks_per_line;
+        uint64_t *stat_turned_on_sub_blocks_per_access;
 
-        uint64_t *cycles_turned_on;
-        uint64_t cycles_turned_off;
-        uint64_t cycles_turned_off_since_begin;
+        uint64_t *cycles_turned_on_whole_line;
+        uint64_t cycles_turned_off_whole_line;
+        uint64_t cycles_turned_off_whole_line_since_begin;
 
     public:
         /// ====================================================================
@@ -199,6 +199,6 @@ class line_usage_predictor_dsbp_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_16_127);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_128_bigger);
 
-        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off);
-        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off_since_begin);
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off_whole_line);
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off_whole_line_since_begin);
 };

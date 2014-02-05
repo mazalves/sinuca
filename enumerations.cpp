@@ -385,12 +385,12 @@ const char *get_enum_write_priority_char(write_priority_t type) {
 /// Line Usage Predictor type
 const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_policy_t type) {
     switch (type) {
-        case LINE_USAGE_PREDICTOR_POLICY_DISABLE:           return "DISABLE";       break;
-        case LINE_USAGE_PREDICTOR_POLICY_DSBP:              return "DSBP";          break;
-        case LINE_USAGE_PREDICTOR_POLICY_DSBP_ORACLE:       return "DSBP_ORACLE";   break;
-        case LINE_USAGE_PREDICTOR_POLICY_DEWP:              return "DEWP";          break;
-        case LINE_USAGE_PREDICTOR_POLICY_DEWP_ORACLE:       return "DEWP_ORACLE";   break;
-        case LINE_USAGE_PREDICTOR_POLICY_DEWP_RELATED1:       return "DEWP_RELATED1";   break;
+        case LINE_USAGE_PREDICTOR_POLICY_DISABLE:       return "DISABLE";       break;
+        case LINE_USAGE_PREDICTOR_POLICY_DSBP:          return "DSBP";          break;
+        case LINE_USAGE_PREDICTOR_POLICY_DSBP_ORACLE:   return "DSBP_ORACLE";   break;
+        case LINE_USAGE_PREDICTOR_POLICY_DEWP:          return "DEWP";          break;
+        case LINE_USAGE_PREDICTOR_POLICY_DEWP_ORACLE:   return "DEWP_ORACLE";   break;
+        case LINE_USAGE_PREDICTOR_POLICY_SKEWED:        return "SKEWED";   break;
 
     };
     ERROR_PRINTF("Wrong LINE_USAGE_PREDICTOR_POLICY\n");

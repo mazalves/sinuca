@@ -21,25 +21,41 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 //
 /// ============================================================================
-class line_usage_predictor_dewp_related1_t : public line_usage_predictor_t {
+class line_usage_predictor_skewed_t : public line_usage_predictor_t {
     private:
         /// ====================================================================
         /// Set by sinuca_configurator
         /// ====================================================================
-        uint32_t sub_block_size;
-        uint32_t access_counter_bits;
+        bool early_eviction;
+        bool early_writeback;
+        bool turnoff_dead_lines;
 
         uint32_t metadata_line_number;          /// Cache Metadata
         uint32_t metadata_associativity;        /// Cache Metadata
 
+        /// skewed table
+        uint32_t skewed_table_line_number;
+
+        uint32_t fsm_bits;
+
         /// ====================================================================
         /// Set by this->allocate()
         /// ====================================================================
-        uint32_t sub_block_total;
-        uint32_t access_counter_max;
 
-        dewp_metadata_set_t *metadata_sets;
+        /// metadata
+        skewed_metadata_set_t *metadata_sets;
         uint32_t metadata_total_sets;
+
+        /// aht
+        uint32_t *skewed_table_1;
+        uint32_t *skewed_table_2;
+        uint32_t *skewed_table_3;
+
+        uint64_t skewed_table_bits_mask;    /// Index mask
+
+        uint32_t fsm_max_counter;           /// fsm mask
+        uint32_t fsm_dead_threshold;       /// fsm mask to check if taken
+
 
         /// ====================================================================
         /// Statistics related
@@ -51,6 +67,19 @@ class line_usage_predictor_dewp_related1_t : public line_usage_predictor_t {
         uint64_t stat_recv_writeback;
         uint64_t stat_eviction;
         uint64_t stat_invalidation;
+
+        /// prediction accuracy
+        uint64_t stat_dead_read_learn;
+        uint64_t stat_dead_read_normal_over;
+        uint64_t stat_dead_read_normal_correct;
+        uint64_t stat_dead_read_disable_correct;
+        uint64_t stat_dead_read_disable_under;
+
+        uint64_t stat_dead_writeback_learn;
+        uint64_t stat_dead_writeback_notsent_over;
+        uint64_t stat_dead_writeback_notsent_correct;
+        uint64_t stat_dead_writeback_sent_correct;
+        uint64_t stat_dead_writeback_sent_under;
 
         uint64_t stat_line_read_0;
         uint64_t stat_line_read_1;
@@ -68,15 +97,15 @@ class line_usage_predictor_dewp_related1_t : public line_usage_predictor_t {
         uint64_t stat_line_writeback_16_127;
         uint64_t stat_line_writeback_128_bigger;
 
-        uint64_t cycles_turned_on;
-        uint64_t cycles_turned_off;
-        uint64_t cycles_turned_off_since_begin;
+        uint64_t cycles_turned_on_whole_line;
+        uint64_t cycles_turned_off_whole_line;
+        uint64_t cycles_turned_off_whole_line_since_begin;
     public:
         /// ====================================================================
         /// Methods
         /// ====================================================================
-        line_usage_predictor_dewp_related1_t();
-        ~line_usage_predictor_dewp_related1_t();
+        line_usage_predictor_skewed_t();
+        ~line_usage_predictor_skewed_t();
         inline const char* get_type_component_label() {
             return "LINE_USAGE_PREDICTOR";
         };
@@ -103,6 +132,7 @@ class line_usage_predictor_dewp_related1_t : public line_usage_predictor_t {
         void print_configuration();
         /// ====================================================================
 
+
         /// ====================================================================
         /// Inheritance from line_usage_predictor_t
         /// ====================================================================
@@ -125,11 +155,29 @@ class line_usage_predictor_dewp_related1_t : public line_usage_predictor_t {
         void line_invalidation(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
         /// ====================================================================
 
+        /// skewed table
+        INSTANTIATE_GET_SET(uint32_t, skewed_table_line_number);
+
+        INSTANTIATE_GET_SET(uint32_t, fsm_bits);
+        INSTANTIATE_GET_SET(uint32_t, fsm_max_counter);
+        INSTANTIATE_GET_SET(uint32_t, fsm_dead_threshold);
+
+
+        INSTANTIATE_GET_SET(bool, early_eviction);
+        INSTANTIATE_GET_SET(bool, early_writeback);
+        INSTANTIATE_GET_SET(bool, turnoff_dead_lines);
+
         /// metadata
-        INSTANTIATE_GET_SET(dewp_metadata_set_t*, metadata_sets);
+        INSTANTIATE_GET_SET(skewed_metadata_set_t*, metadata_sets);
         INSTANTIATE_GET_SET(uint32_t, metadata_line_number);
         INSTANTIATE_GET_SET(uint32_t, metadata_associativity);
         INSTANTIATE_GET_SET(uint32_t, metadata_total_sets);
+
+
+        inline uint64_t skewed_table_get_index(uint64_t addr) {
+            return (addr & this->skewed_table_bits_mask);
+        }
+
 
         /// ====================================================================
         /// Statistics related
@@ -141,6 +189,19 @@ class line_usage_predictor_dewp_related1_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_recv_writeback);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_invalidation);
+
+        /// Prediction Accuracy
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dead_read_learn);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dead_read_normal_over);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dead_read_normal_correct);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dead_read_disable_correct);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dead_read_disable_under);
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dead_writeback_learn);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dead_writeback_notsent_over);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dead_writeback_notsent_correct);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dead_writeback_sent_correct);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_dead_writeback_sent_under);
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_0);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_read_1);
@@ -158,8 +219,8 @@ class line_usage_predictor_dewp_related1_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_16_127);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_128_bigger);
 
-        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_on);
-        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off);
-        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off_since_begin);
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_on_whole_line);
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off_whole_line);
+        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off_whole_line_since_begin);
 
 };

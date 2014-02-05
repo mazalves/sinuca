@@ -86,7 +86,7 @@ void line_usage_predictor_t::panic() {
 
 /// ============================================================================
 void line_usage_predictor_t::periodic_check(){
-    #ifdef PREFETCHER_DEBUG
+    #ifdef LINE_USAGE_PREDICTOR_DEBUG
         this->print_structures();
     #endif
 };

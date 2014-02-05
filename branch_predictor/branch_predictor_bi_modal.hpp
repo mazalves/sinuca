@@ -49,8 +49,8 @@ class branch_predictor_bi_modal_t : public branch_predictor_t {
 
         uint32_t *bht;                      /// Branch History Table
         uint32_t bht_index_bits_mask;       /// Branch History signature mask
-        uint32_t fsm_max_counter;         /// Branch History fsm mask
-        uint32_t fsm_taken_threshold;   /// Branch History fsm mask to check if taken
+        uint32_t fsm_max_counter;           /// Branch History fsm mask
+        uint32_t fsm_taken_threshold;       /// Branch History fsm mask to check if taken
 
         /// ====================================================================
         /// Statistics related

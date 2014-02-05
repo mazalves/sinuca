@@ -105,7 +105,6 @@ class dsbp_metadata_line_t;
 class dsbp_metadata_set_t;
 class line_usage_predictor_dsbp_t;
 class line_usage_predictor_dsbp_oracle_t;
-class line_usage_predictor_dsbp_related1_t;
 /// === DEWP
 class aht_line_t;
 class aht_set_t;
@@ -113,6 +112,10 @@ class dewp_metadata_line_t;
 class dewp_metadata_set_t;
 class line_usage_predictor_dewp_t;
 class line_usage_predictor_dewp_oracle_t;
+/// === SDP
+class skewed_metadata_line_t;
+class skewed_metadata_set_t;
+class line_usage_predictor_skewed_t;
 /// Cache Memory
 class mshr_diff_line_t;
 class cache_line_t;
@@ -326,7 +329,10 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 #include "./line_usage_predictor/dewp_metadata_set.hpp"
 #include "./line_usage_predictor/line_usage_predictor_dewp.hpp"
 #include "./line_usage_predictor/line_usage_predictor_dewp_oracle.hpp"
-#include "./line_usage_predictor/line_usage_predictor_dewp_related1.hpp"
+
+#include "./line_usage_predictor/skewed_metadata_line.hpp"
+#include "./line_usage_predictor/skewed_metadata_set.hpp"
+#include "./line_usage_predictor/line_usage_predictor_skewed.hpp"
 
 /// ============================================================================
 /// Memory Devices

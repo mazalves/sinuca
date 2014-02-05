@@ -955,12 +955,12 @@ void sinuca_engine_t::initialize_cache_memory() {
                 line_usage_predictor_parameters.push_back("USAGE_COUNTER_BITS_READ");
                 line_usage_predictor_ptr->set_access_counter_bits_read( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
 
+
                 line_usage_predictor_parameters.push_back("EARLY_EVICTION");
                 line_usage_predictor_ptr->set_early_eviction( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
 
                 line_usage_predictor_parameters.push_back("EARLY_WRITEBACK");
                 line_usage_predictor_ptr->set_early_writeback( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
-
 
                 line_usage_predictor_parameters.push_back("TURNOFF_DEAD_LINES");
                 line_usage_predictor_ptr->set_turnoff_dead_lines( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
@@ -1101,11 +1101,27 @@ void sinuca_engine_t::initialize_cache_memory() {
                                     "CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_prefetcher[ line_usage_predictor_parameters.back() ].c_str(), line_usage_predictor_parameters.back());
 
             }
-            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "DEWP_RELATED1") ==  0) {
-                this->cache_memory_array[i]->line_usage_predictor = new line_usage_predictor_dewp_related1_t;
-                line_usage_predictor_dewp_related1_t *line_usage_predictor_ptr = static_cast<line_usage_predictor_dewp_related1_t*>(this->cache_memory_array[i]->line_usage_predictor);
+            else if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "SKEWED") ==  0) {
+                this->cache_memory_array[i]->line_usage_predictor = new line_usage_predictor_skewed_t;
+                line_usage_predictor_skewed_t *line_usage_predictor_ptr = static_cast<line_usage_predictor_skewed_t*>(this->cache_memory_array[i]->line_usage_predictor);
 
-                line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_DEWP_RELATED1);
+                line_usage_predictor_ptr->set_line_usage_predictor_type(LINE_USAGE_PREDICTOR_POLICY_SKEWED);
+
+                line_usage_predictor_parameters.push_back("EARLY_EVICTION");
+                line_usage_predictor_ptr->set_early_eviction( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+                line_usage_predictor_parameters.push_back("EARLY_WRITEBACK");
+                line_usage_predictor_ptr->set_early_writeback( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+                line_usage_predictor_parameters.push_back("TURNOFF_DEAD_LINES");
+                line_usage_predictor_ptr->set_turnoff_dead_lines( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+                /// Skewed Table
+                line_usage_predictor_parameters.push_back("SKEWED_TABLE_LINE_NUMBER");
+                line_usage_predictor_ptr->set_skewed_table_line_number( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
+
+                line_usage_predictor_parameters.push_back("FSM_BITS");
+                line_usage_predictor_ptr->set_fsm_bits( cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ] );
 
                 /// Metadata
                 line_usage_predictor_parameters.push_back("METADATA_LINE_NUMBER");

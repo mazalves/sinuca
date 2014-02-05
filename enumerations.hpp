@@ -317,7 +317,7 @@ enum line_usage_predictor_policy_t {
     LINE_USAGE_PREDICTOR_POLICY_DSBP_ORACLE,
     LINE_USAGE_PREDICTOR_POLICY_DEWP,
     LINE_USAGE_PREDICTOR_POLICY_DEWP_ORACLE,
-    LINE_USAGE_PREDICTOR_POLICY_DEWP_RELATED1
+    LINE_USAGE_PREDICTOR_POLICY_SKEWED
 };
 const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_policy_t type);
 
