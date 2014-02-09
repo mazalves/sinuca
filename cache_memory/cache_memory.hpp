@@ -106,13 +106,13 @@ class cache_memory_t : public interconnection_interface_t {
         uint64_t stat_read_hit;
         uint64_t stat_prefetch_hit;
         uint64_t stat_write_hit;
-        uint64_t stat_writeback_hit;
+        uint64_t stat_writeback_recv;
 
         uint64_t stat_instruction_miss;
         uint64_t stat_read_miss;
         uint64_t stat_prefetch_miss;
         uint64_t stat_write_miss;
-        uint64_t stat_writeback_miss;
+        uint64_t stat_writeback_send;
 
         uint64_t stat_min_instruction_wait_time;
         uint64_t stat_max_instruction_wait_time;
@@ -217,8 +217,8 @@ class cache_memory_t : public interconnection_interface_t {
         void update_last_access(cache_line_t *line);
 
         /// Methods called by the directory to add statistics and others
-        void cache_hit(memory_package_t *package);
-        void cache_miss(memory_package_t *package);
+        void cache_stats(memory_operation_t memory_operation, bool is_hit);
+        void cache_wait(memory_package_t *package);
 
         INSTANTIATE_GET_SET(uint32_t, cache_id)
         INSTANTIATE_GET_SET(uint32_t, bank_number)
@@ -260,53 +260,48 @@ class cache_memory_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_read_hit)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_prefetch_hit)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_write_hit)
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_writeback_hit)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_writeback_recv)
 
-        INSTANTIATE_GET_SET(uint64_t, stat_instruction_miss)
-        INSTANTIATE_GET_SET(uint64_t, stat_read_miss)
-        INSTANTIATE_GET_SET(uint64_t, stat_prefetch_miss)
-        INSTANTIATE_GET_SET(uint64_t, stat_write_miss)
-        INSTANTIATE_GET_SET(uint64_t, stat_writeback_miss)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_instruction_miss)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_read_miss)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_prefetch_miss)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_write_miss)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_writeback_send)
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_buffer_request);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_buffer_writeback);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_buffer_prefetch);
 
 
-        inline void add_stat_instruction_miss(uint64_t born_cycle) {
-            this->stat_instruction_miss++;
+        inline void add_stat_instruction_wait(uint64_t born_cycle) {
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
             this->stat_acumulated_instruction_wait_time += new_time;
             if (this->stat_min_instruction_wait_time > new_time) this->stat_min_instruction_wait_time = new_time;
             if (this->stat_max_instruction_wait_time < new_time) this->stat_max_instruction_wait_time = new_time;
         };
 
-        inline void add_stat_read_miss(uint64_t born_cycle) {
-            this->stat_read_miss++;
+        inline void add_stat_read_wait(uint64_t born_cycle) {
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
             this->stat_acumulated_read_wait_time += new_time;
             if (this->stat_min_read_wait_time > new_time) this->stat_min_read_wait_time = new_time;
             if (this->stat_max_read_wait_time < new_time) this->stat_max_read_wait_time = new_time;
         };
 
-        inline void add_stat_prefetch_miss(uint64_t born_cycle) {
-            this->stat_prefetch_miss++;
+        inline void add_stat_prefetch_wait(uint64_t born_cycle) {
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
             this->stat_acumulated_prefetch_wait_time += new_time;
             if (this->stat_min_prefetch_wait_time > new_time) this->stat_min_prefetch_wait_time = new_time;
             if (this->stat_max_prefetch_wait_time < new_time) this->stat_max_prefetch_wait_time = new_time;
         };
 
-        inline void add_stat_write_miss(uint64_t born_cycle) {
-            this->stat_write_miss++;
+        inline void add_stat_write_wait(uint64_t born_cycle) {
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
             this->stat_acumulated_write_wait_time += new_time;
             if (this->stat_min_write_wait_time > new_time) this->stat_min_write_wait_time = new_time;
             if (this->stat_max_write_wait_time < new_time) this->stat_max_write_wait_time = new_time;
         };
 
-        inline void add_stat_writeback_miss(uint64_t born_cycle) {
-            this->stat_writeback_miss++;
+        inline void add_stat_writeback_wait(uint64_t born_cycle) {
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
             this->stat_acumulated_writeback_wait_time += new_time;
             if (this->stat_min_writeback_wait_time > new_time) this->stat_min_writeback_wait_time = new_time;

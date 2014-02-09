@@ -256,7 +256,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 /// Update Coherence Status and Last Access Time
                 this->coherence_new_operation(cache, cache_line, package, true);
                 /// Update Statistics
-                this->new_statistics(cache, package, true);
+                this->new_statistics(cache, package->memory_operation, true);
 
                 /// Early Writeback?
                 // =============================================================
@@ -270,7 +270,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                         /// Update Coherence Status and Last Access Time
                         this->coherence_new_operation(cache, cache_line, writeback_package, false);
                         /// Update Statistics
-                        this->new_statistics(cache, writeback_package, true);
+                        this->new_statistics(cache, writeback_package->memory_operation, false);
                         // =============================================================
                         // Line Usage Prediction
                         cache->line_usage_predictor->line_send_writeback(cache, cache_line, writeback_package, index, way);
@@ -377,6 +377,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                             cache->line_usage_predictor->line_recv_writeback(cache, cache_line, package, index, way);
                             cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
 
+                            /// Update Statistics
+                            this->new_statistics(cache, MEMORY_OPERATION_WRITEBACK, true);
+
                             /// Early Writeback?
                             // =============================================================
                             // Line Usage Prediction
@@ -389,7 +392,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                                     /// Update Coherence Status and Last Access Time
                                     this->coherence_new_operation(cache, cache_line, writeback_package, false);
                                     /// Update Statistics
-                                    this->new_statistics(cache, writeback_package, true);
+                                    this->new_statistics(cache, writeback_package->memory_operation, false);
                                     // =============================================================
                                     // Line Usage Prediction
                                     cache->line_usage_predictor->line_send_writeback(cache, cache_line, writeback_package, index, way);
@@ -493,7 +496,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             /// Update Coherence Status and Last Access Time
             this->coherence_new_operation(cache, cache_line, package, true);
             /// Update Statistics
-            this->new_statistics(cache, package, true);
+            this->new_statistics(cache, package->memory_operation, true);
             /// Add Latency
             package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_write();
 
@@ -509,7 +512,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                     /// Update Coherence Status and Last Access Time
                     this->coherence_new_operation(cache, cache_line, writeback_package, false);
                     /// Update Statistics
-                    this->new_statistics(cache, writeback_package, true);
+                    this->new_statistics(cache, writeback_package->memory_operation, false);
                     // =============================================================
                     // Line Usage Prediction (Tag different from actual)
                     cache->line_usage_predictor->line_send_writeback(cache, cache_line, writeback_package, index, way);
@@ -585,7 +588,7 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
         /// Update Coherence Status
         this->coherence_new_operation(cache, cache_line, package, false);
         /// Update Statistics
-        this->new_statistics(cache, package, false);
+        this->new_statistics(cache, package->memory_operation, false);
         /// Erase the package
         DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (Requester = This)\n")
         return PACKAGE_STATE_READY;
@@ -615,7 +618,7 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
             /// Update Coherence Status
             this->coherence_new_operation(cache, cache_line, package, false);
             /// Update Statistics
-            this->new_statistics(cache, package, false);
+            this->new_statistics(cache, package->memory_operation, false);
 
             if (package->memory_operation == MEMORY_OPERATION_WRITE) {
                 /// Add Latency
@@ -643,7 +646,7 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
                     /// Update Coherence Status
                     this->coherence_new_operation(cache, cache_line, package, false);
                     /// Update Statistics
-                    this->new_statistics(cache, package, false);
+                    this->new_statistics(cache, package->memory_operation, false);
                     /// Send the package answer
                     DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT ANS (NOT First Cache Requested)\n")
 
@@ -827,6 +830,8 @@ bool directory_controller_t::inclusiveness_new_eviction(cache_memory_t *cache, c
                         // =============================================================
                         // Line Usage Prediction
                         cache->line_usage_predictor->line_recv_writeback(cache, cache_line, package, index, way);
+                        /// Update Statistics
+                        this->new_statistics(cache, MEMORY_OPERATION_WRITEBACK, true);
                     }
                 }
             }
@@ -842,6 +847,8 @@ bool directory_controller_t::inclusiveness_new_eviction(cache_memory_t *cache, c
                     // =============================================================
                     // Line Usage Prediction
                     cache->line_usage_predictor->line_recv_writeback(cache, cache_line, package, index, way);
+                    /// Update Statistics
+                    this->new_statistics(cache, MEMORY_OPERATION_WRITEBACK, true);
                 }
             }
             break;
@@ -858,7 +865,7 @@ bool directory_controller_t::inclusiveness_new_eviction(cache_memory_t *cache, c
             /// Update Coherence Status and Last Access Time
             this->coherence_new_operation(cache, cache_line, writeback_package, false);
             /// Update Statistics
-            this->new_statistics(cache, writeback_package, true);
+            this->new_statistics(cache, writeback_package->memory_operation, false);
 
             // =============================================================
             // Line Usage Prediction (Tag different from actual) //////////////////////////////////////////////// NEW
@@ -1161,8 +1168,8 @@ bool directory_controller_t::coherence_evict_all() {
                             /// Add statistics to the cache
                             cache->add_stat_final_writeback();
                             cache_line->status = PROTOCOL_STATUS_I;
-                            /// Update Statistics
-                            this->new_statistics(cache, writeback_package, true);
+                            // ~ /// Update Statistics
+                            // ~ this->new_statistics(cache, writeback_package->memory_operation, false);
                         }
                         /// Go for the next cache
                         index = cache->get_total_sets();
@@ -1336,11 +1343,12 @@ bool directory_controller_t::is_locked(uint64_t memory_address) {
 
 
 /// ============================================================================
-void directory_controller_t::new_statistics(cache_memory_t *cache, memory_package_t *package, bool is_hit) {
+void directory_controller_t::new_statistics(cache_memory_t *cache, memory_operation_t memory_operation, bool is_hit) {
+
+    cache->cache_stats(memory_operation, is_hit);
     /// Statistics - HIT
     if (is_hit) {
-        cache->cache_hit(package);
-        switch (package->memory_operation) {
+        switch (memory_operation) {
             case MEMORY_OPERATION_READ:
                 this->add_stat_read_hit();
             break;
@@ -1358,33 +1366,32 @@ void directory_controller_t::new_statistics(cache_memory_t *cache, memory_packag
             break;
 
             case MEMORY_OPERATION_WRITEBACK:
-                this->add_stat_writeback_hit();
+                this->add_stat_writeback_recv();
             break;
         }
     }
 
     /// Statistics - MISS
     else {
-        cache->cache_miss(package);
-        switch (package->memory_operation) {
+        switch (memory_operation) {
             case MEMORY_OPERATION_READ:
-                this->add_stat_read_miss(package->born_cycle);
+                this->add_stat_read_miss();
             break;
 
             case MEMORY_OPERATION_INST:
-                this->add_stat_instruction_miss(package->born_cycle);
+                this->add_stat_instruction_miss();
             break;
 
             case MEMORY_OPERATION_PREFETCH:
-                this->add_stat_prefetch_miss(package->born_cycle);
+                this->add_stat_prefetch_miss();
             break;
 
             case MEMORY_OPERATION_WRITE:
-                this->add_stat_write_miss(package->born_cycle);
+                this->add_stat_write_miss();
             break;
 
             case MEMORY_OPERATION_WRITEBACK:
-                this->add_stat_writeback_miss(package->born_cycle);
+                this->add_stat_writeback_send();
             break;
         }
     }
@@ -1422,36 +1429,15 @@ void directory_controller_t::reset_statistics() {
     this->set_stat_read_hit(0);
     this->set_stat_prefetch_hit(0);
     this->set_stat_write_hit(0);
-    this->set_stat_writeback_hit(0);
+    this->set_stat_writeback_recv(0);
 
     this->set_stat_instruction_miss(0);
     this->set_stat_read_miss(0);
     this->set_stat_prefetch_miss(0);
     this->set_stat_write_miss(0);
-    this->set_stat_writeback_miss(0);
+    this->set_stat_writeback_send(0);
 
     this->set_stat_final_writeback_all_cycles(0);
-
-    this->stat_min_instruction_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_instruction_wait_time = 0;
-    this->stat_acumulated_instruction_wait_time = 0;
-
-    this->stat_min_read_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_read_wait_time = 0;
-    this->stat_acumulated_read_wait_time = 0;
-
-    this->stat_min_prefetch_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_prefetch_wait_time = 0;
-    this->stat_acumulated_prefetch_wait_time = 0;
-
-    this->stat_min_write_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_write_wait_time = 0;
-    this->stat_acumulated_write_wait_time = 0;
-
-    this->stat_min_writeback_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_writeback_wait_time = 0;
-    this->stat_acumulated_writeback_wait_time = 0;
-
 };
 
 /// ============================================================================
@@ -1467,14 +1453,14 @@ void directory_controller_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_read_hit", stat_read_hit);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_prefetch_hit", stat_prefetch_hit);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_write_hit", stat_write_hit);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writeback_hit", stat_writeback_hit);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writeback_recv", stat_writeback_recv);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_instruction_miss", stat_instruction_miss);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_read_miss", stat_read_miss);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_prefetch_miss", stat_prefetch_miss);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_write_miss", stat_write_miss);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writeback_miss", stat_writeback_miss);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writeback_send", stat_writeback_send);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_final_writeback_all_cycles", stat_final_writeback_all_cycles);
@@ -1484,28 +1470,7 @@ void directory_controller_t::print_statistics() {
     sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_read_miss_percentage",stat_read_miss, stat_read_miss + stat_read_hit);
     sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_prefetch_miss_percentage",stat_prefetch_miss, stat_prefetch_miss + stat_prefetch_hit);
     sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_write_miss_percentage",stat_write_miss, stat_write_miss + stat_write_hit);
-    sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_writeback_miss_percentage",stat_writeback_miss, stat_writeback_miss + stat_writeback_hit);
-
-    sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_instruction_wait_time", stat_min_instruction_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_read_wait_time", stat_min_read_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_prefetch_wait_time", stat_min_prefetch_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_write_wait_time", stat_min_write_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_writeback_wait_time", stat_min_writeback_wait_time);
-
-    sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_instruction_wait_time", stat_max_instruction_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_read_wait_time", stat_max_read_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_prefetch_wait_time", stat_max_prefetch_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_write_wait_time", stat_max_write_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_writeback_wait_time", stat_max_writeback_wait_time);
-
-    sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_instruction_wait_time_ratio",stat_acumulated_instruction_wait_time, stat_instruction_miss);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_read_wait_time_ratio",stat_acumulated_read_wait_time, stat_read_miss);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_prefetch_wait_time_ratio",stat_acumulated_prefetch_wait_time, stat_prefetch_miss);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_write_wait_time_ratio",stat_acumulated_write_wait_time, stat_write_miss);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_writeback_wait_time_ratio",stat_acumulated_writeback_wait_time, stat_writeback_miss);
+    sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_writeback_send_percentage",stat_writeback_send, stat_writeback_send + stat_writeback_recv);
 };
 
 /// ============================================================================

@@ -64,9 +64,9 @@ class line_usage_predictor_dewp_oracle_t : public line_usage_predictor_t {
         uint64_t stat_line_writeback_16_127;
         uint64_t stat_line_writeback_128_bigger;
 
-        uint64_t cycles_turned_on_whole_line;
-        uint64_t cycles_turned_off_whole_line;
-        uint64_t cycles_turned_off_whole_line_since_begin;
+        uint64_t stat_cycles_turned_on_whole_line;
+        uint64_t stat_cycles_turned_off_whole_line;
+        uint64_t stat_cycles_turned_off_whole_line_since_begin;
     public:
         /// ====================================================================
         /// Methods
@@ -155,8 +155,8 @@ class line_usage_predictor_dewp_oracle_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_16_127);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_128_bigger);
 
-        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_on_whole_line);
-        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off_whole_line);
-        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off_whole_line_since_begin);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_cycles_turned_on_whole_line);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_cycles_turned_off_whole_line);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_cycles_turned_off_whole_line_since_begin);
 
 };

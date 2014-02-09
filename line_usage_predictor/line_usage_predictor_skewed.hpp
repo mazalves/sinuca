@@ -56,6 +56,7 @@ class line_usage_predictor_skewed_t : public line_usage_predictor_t {
         uint32_t fsm_max_counter;           /// fsm mask
         uint32_t fsm_dead_threshold;       /// fsm mask to check if taken
 
+        uint64_t stat_skewed_table_access;
 
         /// ====================================================================
         /// Statistics related
@@ -97,9 +98,9 @@ class line_usage_predictor_skewed_t : public line_usage_predictor_t {
         uint64_t stat_line_writeback_16_127;
         uint64_t stat_line_writeback_128_bigger;
 
-        uint64_t cycles_turned_on_whole_line;
-        uint64_t cycles_turned_off_whole_line;
-        uint64_t cycles_turned_off_whole_line_since_begin;
+        uint64_t stat_cycles_turned_on_whole_line;
+        uint64_t stat_cycles_turned_off_whole_line;
+        uint64_t stat_cycles_turned_off_whole_line_since_begin;
     public:
         /// ====================================================================
         /// Methods
@@ -190,6 +191,8 @@ class line_usage_predictor_skewed_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_invalidation);
 
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_skewed_table_access);
+
         /// Prediction Accuracy
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_dead_read_learn);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_dead_read_normal_over);
@@ -219,8 +222,8 @@ class line_usage_predictor_skewed_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_16_127);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_writeback_128_bigger);
 
-        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_on_whole_line);
-        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off_whole_line);
-        INSTANTIATE_GET_SET_ADD(uint64_t, cycles_turned_off_whole_line_since_begin);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_cycles_turned_on_whole_line);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_cycles_turned_off_whole_line);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_cycles_turned_off_whole_line_since_begin);
 
 };

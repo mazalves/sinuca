@@ -282,7 +282,7 @@ void cache_memory_t::clock(uint32_t subcycle) {
                     }
                 }
             }
-
+            this->cache_wait(this->mshr_born_ordered[i]);
             this->mshr_born_ordered[i]->package_clean();
             this->mshr_born_ordered.erase(this->mshr_born_ordered.begin() + i);
         }
@@ -760,56 +760,79 @@ void cache_memory_t::remove_token_list(memory_package_t *package) {
 /// ============================================================================
 /// Methods called by the directory to add statistics and others
 /// ============================================================================
-void cache_memory_t::cache_hit(memory_package_t *package) {
-    switch (package->memory_operation) {
-        case MEMORY_OPERATION_READ:
-            this->add_stat_read_hit();
-            this->add_stat_accesses();
-        break;
+void cache_memory_t::cache_stats(memory_operation_t memory_operation, bool is_hit) {
 
-        case MEMORY_OPERATION_INST:
-            this->add_stat_instruction_hit();
-            this->add_stat_accesses();
-        break;
+    this->add_stat_accesses();
 
-        case MEMORY_OPERATION_WRITE:
-            this->add_stat_write_hit();
-            this->add_stat_accesses();
-        break;
+    if (is_hit){
+        switch (memory_operation) {
+            case MEMORY_OPERATION_READ:
+                    this->add_stat_read_hit();
+            break;
 
-        case MEMORY_OPERATION_PREFETCH:
-            this->add_stat_prefetch_hit();
-        break;
+            case MEMORY_OPERATION_INST:
+                this->add_stat_instruction_hit();
+            break;
 
-        case MEMORY_OPERATION_WRITEBACK:
-            this->add_stat_writeback_hit();
-        break;
+            case MEMORY_OPERATION_WRITE:
+                this->add_stat_write_hit();
+            break;
+
+            case MEMORY_OPERATION_PREFETCH:
+                this->add_stat_prefetch_hit();
+            break;
+
+            case MEMORY_OPERATION_WRITEBACK:
+                this->add_stat_writeback_recv();
+            break;
+        }
+    }
+    else {
+        switch (memory_operation) {
+            case MEMORY_OPERATION_READ:
+                this->add_stat_read_miss();
+            break;
+
+            case MEMORY_OPERATION_INST:
+                this->add_stat_instruction_miss();
+            break;
+
+            case MEMORY_OPERATION_WRITE:
+                this->add_stat_write_miss();
+            break;
+
+            case MEMORY_OPERATION_PREFETCH:
+                this->add_stat_prefetch_miss();
+            break;
+
+            case MEMORY_OPERATION_WRITEBACK:
+                this->add_stat_writeback_send();
+            break;
+        }
     }
 };
 /// ============================================================================
-void cache_memory_t::cache_miss(memory_package_t *package) {
+void cache_memory_t::cache_wait(memory_package_t *package) {
+
     switch (package->memory_operation) {
         case MEMORY_OPERATION_READ:
-            this->add_stat_read_miss(package->born_cycle);
-            this->add_stat_accesses();
+            this->add_stat_read_wait(package->born_cycle);
         break;
 
         case MEMORY_OPERATION_INST:
-            this->add_stat_instruction_miss(package->born_cycle);
-            this->add_stat_accesses();
+            this->add_stat_instruction_wait(package->born_cycle);
         break;
 
         case MEMORY_OPERATION_WRITE:
-            this->add_stat_write_miss(package->born_cycle);
-            this->add_stat_accesses();
+            this->add_stat_write_wait(package->born_cycle);
         break;
 
         case MEMORY_OPERATION_PREFETCH:
-            this->add_stat_prefetch_miss(package->born_cycle);
+            this->add_stat_prefetch_wait(package->born_cycle);
         break;
 
         case MEMORY_OPERATION_WRITEBACK:
-            this->add_stat_writeback_miss(package->born_cycle);
+            this->add_stat_writeback_wait(package->born_cycle);
         break;
     }
 };
@@ -1026,13 +1049,13 @@ void cache_memory_t::reset_statistics() {
     this->set_stat_read_hit(0);
     this->set_stat_prefetch_hit(0);
     this->set_stat_write_hit(0);
-    this->set_stat_writeback_hit(0);
+    this->set_stat_writeback_recv(0);
 
     this->set_stat_instruction_miss(0);
     this->set_stat_read_miss(0);
     this->set_stat_prefetch_miss(0);
     this->set_stat_write_miss(0);
-    this->set_stat_writeback_miss(0);
+    this->set_stat_writeback_send(0);
 
     this->stat_min_instruction_wait_time = 0;
     this->stat_max_instruction_wait_time = 0;
@@ -1085,23 +1108,23 @@ void cache_memory_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_read_hit", stat_instruction_hit + stat_read_hit + stat_prefetch_hit);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_read_miss", stat_instruction_miss + stat_read_miss + stat_prefetch_miss);
 
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write", stat_write_hit + stat_writeback_hit + stat_write_miss + stat_writeback_miss);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write_hit", stat_write_hit + stat_writeback_hit);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write_miss", stat_write_miss + stat_writeback_miss);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write", stat_write_hit + stat_writeback_recv + stat_write_miss + stat_writeback_send);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write_hit", stat_write_hit + stat_writeback_recv);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write_miss", stat_write_miss + stat_writeback_send);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_instruction_hit", stat_instruction_hit);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_read_hit", stat_read_hit);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_prefetch_hit", stat_prefetch_hit);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_write_hit", stat_write_hit);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writeback_hit", stat_writeback_hit);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writeback_recv", stat_writeback_recv);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_instruction_miss", stat_instruction_miss);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_read_miss", stat_read_miss);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_prefetch_miss", stat_prefetch_miss);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_write_miss", stat_write_miss);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writeback_miss", stat_writeback_miss);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writeback_send", stat_writeback_send);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_instruction_miss_percentage",stat_instruction_miss, stat_instruction_miss + stat_instruction_hit);
@@ -1128,7 +1151,7 @@ void cache_memory_t::print_statistics() {
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_read_wait_time_ratio",stat_acumulated_read_wait_time, stat_read_miss);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_prefetch_wait_time_ratio",stat_acumulated_prefetch_wait_time, stat_prefetch_miss);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_write_wait_time_ratio",stat_acumulated_write_wait_time, stat_write_miss);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_writeback_wait_time_ratio",stat_acumulated_writeback_wait_time, stat_writeback_miss);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_writeback_wait_time_ratio",stat_acumulated_writeback_wait_time, stat_writeback_send);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_buffer_request", stat_full_mshr_buffer_request);

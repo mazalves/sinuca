@@ -46,35 +46,15 @@ class directory_controller_t : public interconnection_interface_t {
         uint64_t stat_read_hit;
         uint64_t stat_prefetch_hit;
         uint64_t stat_write_hit;
-        uint64_t stat_writeback_hit;
+        uint64_t stat_writeback_recv;
 
         uint64_t stat_instruction_miss;
         uint64_t stat_read_miss;
         uint64_t stat_prefetch_miss;
         uint64_t stat_write_miss;
-        uint64_t stat_writeback_miss;
+        uint64_t stat_writeback_send;
 
         uint64_t stat_final_writeback_all_cycles;
-
-        uint64_t stat_min_instruction_wait_time;
-        uint64_t stat_max_instruction_wait_time;
-        uint64_t stat_acumulated_instruction_wait_time;
-
-        uint64_t stat_min_read_wait_time;
-        uint64_t stat_max_read_wait_time;
-        uint64_t stat_acumulated_read_wait_time;
-
-        uint64_t stat_min_prefetch_wait_time;
-        uint64_t stat_max_prefetch_wait_time;
-        uint64_t stat_acumulated_prefetch_wait_time;
-
-        uint64_t stat_min_write_wait_time;
-        uint64_t stat_max_write_wait_time;
-        uint64_t stat_acumulated_write_wait_time;
-
-        uint64_t stat_min_writeback_wait_time;
-        uint64_t stat_max_writeback_wait_time;
-        uint64_t stat_acumulated_writeback_wait_time;
 
     public:
         /// ====================================================================
@@ -134,7 +114,7 @@ class directory_controller_t : public interconnection_interface_t {
         bool coherence_evict_all();
         void coherence_evict_higher_levels(cache_memory_t *cache_memory, uint64_t memory_address);
 
-        void new_statistics(cache_memory_t *cache, memory_package_t *package, bool is_hit);
+        void new_statistics(cache_memory_t *cache, memory_operation_t memory_operation, bool is_hit);
         void coherence_new_operation(cache_memory_t *cache_memory, cache_line_t *cache_line,  memory_package_t *package, bool is_hit);
         bool inclusiveness_new_eviction(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way, memory_package_t *package);
 
@@ -161,53 +141,13 @@ class directory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_read_hit)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_prefetch_hit)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_write_hit)
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_writeback_hit)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_writeback_recv)
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_instruction_miss)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_read_miss)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_prefetch_miss)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_write_miss)
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_writeback_miss)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_writeback_send)
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_final_writeback_all_cycles)
-
-        inline void add_stat_instruction_miss(uint64_t born_cycle) {
-            this->stat_instruction_miss++;
-            uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
-            this->stat_acumulated_instruction_wait_time += new_time;
-            if (this->stat_min_instruction_wait_time > new_time || this->stat_min_instruction_wait_time == 0) this->stat_min_instruction_wait_time = new_time;
-            if (this->stat_max_instruction_wait_time < new_time) this->stat_max_instruction_wait_time = new_time;
-        };
-
-        inline void add_stat_read_miss(uint64_t born_cycle) {
-            this->stat_read_miss++;
-            uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
-            this->stat_acumulated_read_wait_time += new_time;
-            if (this->stat_min_read_wait_time > new_time || this->stat_min_read_wait_time == 0) this->stat_min_read_wait_time = new_time;
-            if (this->stat_max_read_wait_time < new_time) this->stat_max_read_wait_time = new_time;
-        };
-
-        inline void add_stat_prefetch_miss(uint64_t born_cycle) {
-            this->stat_prefetch_miss++;
-            uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
-            this->stat_acumulated_prefetch_wait_time += new_time;
-            if (this->stat_min_prefetch_wait_time > new_time || this->stat_min_prefetch_wait_time == 0) this->stat_min_prefetch_wait_time = new_time;
-            if (this->stat_max_prefetch_wait_time < new_time) this->stat_max_prefetch_wait_time = new_time;
-        };
-
-        inline void add_stat_write_miss(uint64_t born_cycle) {
-            this->stat_write_miss++;
-            uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
-            this->stat_acumulated_write_wait_time += new_time;
-            if (this->stat_min_write_wait_time > new_time || this->stat_min_write_wait_time == 0) this->stat_min_write_wait_time = new_time;
-            if (this->stat_max_write_wait_time < new_time) this->stat_max_write_wait_time = new_time;
-        };
-
-        inline void add_stat_writeback_miss(uint64_t born_cycle) {
-            this->stat_writeback_miss++;
-            uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
-            this->stat_acumulated_writeback_wait_time += new_time;
-            if (this->stat_min_writeback_wait_time > new_time || this->stat_min_writeback_wait_time == 0) this->stat_min_writeback_wait_time = new_time;
-            if (this->stat_max_writeback_wait_time < new_time) this->stat_max_writeback_wait_time = new_time;
-        };
 };

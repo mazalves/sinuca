@@ -270,6 +270,6 @@ void line_usage_predictor_disable_t::print_statistics() {
 
 /// ============================================================================
 void line_usage_predictor_disable_t::print_configuration() {
-    line_usage_predictor_t::allocate();
+    line_usage_predictor_t::print_configuration();
 };
 
