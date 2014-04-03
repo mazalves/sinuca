@@ -702,6 +702,35 @@ void sinuca_engine_t::initialize_processor() {
                     ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_branch_predictor[ branch_predictor_parameters.back() ].c_str(), branch_predictor_parameters.back());
                 }
             }
+            else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "PERFECT") ==  0) {
+                this->processor_array[i]->branch_predictor = new branch_predictor_perfect_t;
+                branch_predictor_perfect_t *branch_predictor_ptr = static_cast<branch_predictor_perfect_t*>(this->processor_array[i]->branch_predictor);
+
+                branch_predictor_ptr->set_branch_predictor_type(BRANCH_PREDICTOR_PERFECT);
+
+                branch_predictor_parameters.push_back("BTB_LINE_NUMBER");
+                branch_predictor_ptr->set_btb_line_number(cfg_branch_predictor[ branch_predictor_parameters.back() ]);
+
+                branch_predictor_parameters.push_back("BTB_ASSOCIATIVITY");
+                branch_predictor_ptr->set_btb_associativity(cfg_branch_predictor[ branch_predictor_parameters.back() ]);
+
+                branch_predictor_parameters.push_back("BTB_REPLACEMENT_POLICY");
+                if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "FIFO") ==  0) {
+                    branch_predictor_ptr->set_btb_replacement_policy(REPLACEMENT_FIFO);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "LRF") ==  0) {
+                    branch_predictor_ptr->set_btb_replacement_policy(REPLACEMENT_LRF);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "LRU") ==  0) {
+                    branch_predictor_ptr->set_btb_replacement_policy(REPLACEMENT_LRU);
+                }
+                else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "RANDOM") ==  0) {
+                    branch_predictor_ptr->set_btb_replacement_policy(REPLACEMENT_RANDOM);
+                }
+                else {
+                    ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_branch_predictor[ branch_predictor_parameters.back() ].c_str(), branch_predictor_parameters.back());
+                }
+            }
             else if (strcasecmp(cfg_branch_predictor[ branch_predictor_parameters.back() ], "DISABLE") ==  0) {
                 this->processor_array[i]->branch_predictor = new branch_predictor_disable_t;
                 branch_predictor_disable_t *branch_predictor_ptr = static_cast<branch_predictor_disable_t*>(this->processor_array[i]->branch_predictor);
@@ -709,6 +738,7 @@ void sinuca_engine_t::initialize_processor() {
                 branch_predictor_ptr->set_branch_predictor_type(BRANCH_PREDICTOR_DISABLE);
 
             }
+
             else {
                 ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_branch_predictor[ branch_predictor_parameters.back() ].c_str(), branch_predictor_parameters.back());
             }

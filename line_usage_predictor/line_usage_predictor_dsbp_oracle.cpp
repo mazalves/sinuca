@@ -238,6 +238,7 @@ void line_usage_predictor_dsbp_oracle_t::line_hit(cache_memory_t *cache, cache_l
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
         if (package->sub_blocks[i]) {
             this->metadata_sets[index].ways[way].real_access_counter_read[i]++ ;
+            this->metadata_sets[index].ways[way].access_counter_read[i]++ ;
             this->metadata_sets[index].ways[way].clock_last_access_subblock[i] = sinuca_engine.get_global_cycle();
 
         }
@@ -407,38 +408,40 @@ void line_usage_predictor_dsbp_oracle_t::line_eviction(cache_memory_t *cache, ca
     /// Mechanism statistics
     this->add_stat_eviction();
 
-    uint32_t touched_sub_blocks = sinuca_engine.get_global_line_size();
+    uint32_t touched_sub_blocks = 0;
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        // Reads before eviction
-        if (this->metadata_sets[index].ways[way].real_access_counter_read[i] == 0) {
+        touched_sub_blocks += (this->metadata_sets[index].ways[way].real_access_counter_read[i] != 0);
+    }
+    this->stat_touched_sub_blocks_per_line[touched_sub_blocks]++;
+
+    // Reads before eviction
+    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
+        if (this->metadata_sets[index].ways[way].access_counter_read[i] == 0) {
             this->add_stat_line_read_0();
-            touched_sub_blocks--;
         }
-        else if (this->metadata_sets[index].ways[way].real_access_counter_read[i] == 1) {
+        else if (this->metadata_sets[index].ways[way].access_counter_read[i] == 1) {
             this->add_stat_line_read_1();
         }
-        else if (this->metadata_sets[index].ways[way].real_access_counter_read[i] >= 2 &&
-        this->metadata_sets[index].ways[way].real_access_counter_read[i] <= 3) {
+        else if (this->metadata_sets[index].ways[way].access_counter_read[i] >= 2 &&
+        this->metadata_sets[index].ways[way].access_counter_read[i] <= 3) {
             this->add_stat_line_read_2_3();
         }
-        else if (this->metadata_sets[index].ways[way].real_access_counter_read[i] >= 4 &&
-        this->metadata_sets[index].ways[way].real_access_counter_read[i] <= 7) {
+        else if (this->metadata_sets[index].ways[way].access_counter_read[i] >= 4 &&
+        this->metadata_sets[index].ways[way].access_counter_read[i] <= 7) {
             this->add_stat_line_read_4_7();
         }
-        else if (this->metadata_sets[index].ways[way].real_access_counter_read[i] >= 8 &&
-        this->metadata_sets[index].ways[way].real_access_counter_read[i] <= 15) {
+        else if (this->metadata_sets[index].ways[way].access_counter_read[i] >= 8 &&
+        this->metadata_sets[index].ways[way].access_counter_read[i] <= 15) {
             this->add_stat_line_read_8_15();
         }
-        else if (this->metadata_sets[index].ways[way].real_access_counter_read[i] >= 16 &&
-        this->metadata_sets[index].ways[way].real_access_counter_read[i] <= 127) {
+        else if (this->metadata_sets[index].ways[way].access_counter_read[i] >= 16 &&
+        this->metadata_sets[index].ways[way].access_counter_read[i] <= 127) {
             this->add_stat_line_read_16_127();
         }
-        else if (this->metadata_sets[index].ways[way].real_access_counter_read[i] >=128) {
+        else if (this->metadata_sets[index].ways[way].access_counter_read[i] >=128) {
             this->add_stat_line_read_128_bigger();
         }
     }
-
-    this->stat_touched_sub_blocks_per_line[touched_sub_blocks]++;
 
     // Compute the number of sub-blocks active in the moment of each access
     uint32_t active_blocks;

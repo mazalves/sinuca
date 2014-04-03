@@ -1557,7 +1557,7 @@ void processor_t::stage_execution() {
     if (this->memory_order_buffer_write_executed != 0) {
         /// Control Parallel Requests
         position_mem = POSITION_FAIL;
-        if (oldest_read_to_send == NULL){
+        if (oldest_write_to_send == NULL){
             position_mem = memory_order_buffer_line_t::find_old_request_state_ready(this->memory_order_buffer_write,
                                                                                 this->memory_order_buffer_write_size, PACKAGE_STATE_TRANSMIT);
 

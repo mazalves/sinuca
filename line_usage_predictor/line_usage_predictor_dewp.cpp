@@ -216,7 +216,14 @@ void line_usage_predictor_dewp_t::line_hit(cache_memory_t *cache, cache_line_t *
 
     /// Statistics
     this->stat_cycles_turned_on_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
-    this->metadata_sets[index].ways[way].real_access_counter_read++;
+
+    if (package->memory_operation == MEMORY_OPERATION_WRITE) {
+        this->metadata_sets[index].ways[way].real_access_counter_writeback++;
+        this->metadata_sets[index].ways[way].is_dirty = true;
+    }
+    else {
+        this->metadata_sets[index].ways[way].real_access_counter_read++;
+    }
 
     /// ================================================================
     /// METADATA Learn Mode
@@ -234,12 +241,23 @@ void line_usage_predictor_dewp_t::line_hit(cache_memory_t *cache, cache_line_t *
             // Update the aht entry
             this->metadata_sets[index].ways[way].aht_pointer->last_access = sinuca_engine.get_global_cycle();
 
-            // Check the aht Overflow
-            if (this->metadata_sets[index].ways[way].aht_pointer->access_counter_read >= this->access_counter_max_read) {
-                this->metadata_sets[index].ways[way].aht_pointer->overflow_read = true;
+            if (package->memory_operation == MEMORY_OPERATION_WRITE) {
+                // Check the aht Overflow
+                if (this->metadata_sets[index].ways[way].aht_pointer->access_counter_writeback >= this->access_counter_max_writeback) {
+                    this->metadata_sets[index].ways[way].aht_pointer->overflow_writeback = true;
+                }
+                else {
+                    this->metadata_sets[index].ways[way].aht_pointer->access_counter_writeback++;
+                }
             }
             else {
-                this->metadata_sets[index].ways[way].aht_pointer->access_counter_read++;
+                // Check the aht Overflow
+                if (this->metadata_sets[index].ways[way].aht_pointer->access_counter_read >= this->access_counter_max_read) {
+                    this->metadata_sets[index].ways[way].aht_pointer->overflow_read = true;
+                }
+                else {
+                    this->metadata_sets[index].ways[way].aht_pointer->access_counter_read++;
+                }
             }
         }
     }
@@ -248,13 +266,24 @@ void line_usage_predictor_dewp_t::line_hit(cache_memory_t *cache, cache_line_t *
     /// ================================================================
     else {
         LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t LEARN MODE OFF\n");
-        //Predicted as DEAD-READ
-        if (this->metadata_sets[index].ways[way].overflow_read == false &&
-        this->metadata_sets[index].ways[way].real_access_counter_read == this->metadata_sets[index].ways[way].access_counter_read) {
-            this->metadata_sets[index].ways[way].is_dead_read = true;
-            // Can Turn off the sub_blocks
-            if (this->metadata_sets[index].ways[way].is_dirty == false && this->turnoff_dead_lines == true) {
-                this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_DISABLE;
+
+        if (package->memory_operation == MEMORY_OPERATION_WRITE) {
+            // METADATA Not Overflow + METADATA Used Predicted Number of Times
+            if (this->metadata_sets[index].ways[way].overflow_writeback == false &&
+            this->metadata_sets[index].ways[way].real_access_counter_writeback == this->metadata_sets[index].ways[way].access_counter_writeback) {
+                //Predicted as DEAD
+                this->metadata_sets[index].ways[way].is_dead_writeback = true;
+            }
+        }
+        else {
+            //Predicted as DEAD-READ
+            if (this->metadata_sets[index].ways[way].overflow_read == false &&
+            this->metadata_sets[index].ways[way].real_access_counter_read == this->metadata_sets[index].ways[way].access_counter_read) {
+                this->metadata_sets[index].ways[way].is_dead_read = true;
+                // Can Turn off the sub_blocks
+                if (this->metadata_sets[index].ways[way].is_dirty == false && this->turnoff_dead_lines == true) {
+                    this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_DISABLE;
+                }
             }
         }
     }

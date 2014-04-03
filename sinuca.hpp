@@ -80,6 +80,7 @@ class branch_predictor_two_level_pag_t;
 class branch_predictor_two_level_pas_t;
 class branch_predictor_bi_modal_t;
 class branch_predictor_static_taken_t;
+class branch_predictor_perfect_t;
 class branch_predictor_disable_t;
 /// Processor
 class memory_order_buffer_line_t;
@@ -159,6 +160,9 @@ extern sinuca_engine_t sinuca_engine;
 /// DETAIL DESCRIPTION: Almost all errors and messages use this definition.
 /// It will DEACTIVATE all the other messages below
 #define SINUCA_PRINTF(...) printf(__VA_ARGS__);
+
+/// Create an trace with all the requests arriving on the memory controller
+// ~ #define BURST_TRACE
 
 /// DEBUG DESCRIPTION: Lots of details do help during the debug phase.
 // ~ #define SINUCA_DEBUG
@@ -304,6 +308,7 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 #include "./branch_predictor/branch_predictor_two_level_pas.hpp"
 #include "./branch_predictor/branch_predictor_bi_modal.hpp"
 #include "./branch_predictor/branch_predictor_static_taken.hpp"
+#include "./branch_predictor/branch_predictor_perfect.hpp"
 #include "./branch_predictor/branch_predictor_disable.hpp"
 
 #include "./processor/memory_order_buffer_line.hpp"

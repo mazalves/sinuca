@@ -56,6 +56,7 @@ SRC_BRANCH_PREDICTOR =	 	branch_predictor/branch_predictor.cpp \
 							branch_predictor/branch_predictor_two_level_pas.cpp \
 							branch_predictor/branch_predictor_bi_modal.cpp \
 							branch_predictor/branch_predictor_static_taken.cpp \
+							branch_predictor/branch_predictor_perfect.cpp \
 							branch_predictor/branch_predictor_disable.cpp
 
 SRC_PROCESSOR =	 	processor/processor.cpp \
