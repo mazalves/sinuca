@@ -890,6 +890,9 @@ void sinuca_engine_t::initialize_cache_memory() {
             else if (strcasecmp(cfg_cache_memory[ cache_memory_parameters.back() ], "TAG_INDEX_BANK_OFFSET") ==  0) {
                 this->cache_memory_array[i]->set_address_mask_type(CACHE_MASK_TAG_INDEX_BANK_OFFSET);
             }
+            else if (strcasecmp(cfg_cache_memory[ cache_memory_parameters.back() ], "TAG_BANK_INDEX_OFFSET") ==  0) {
+                this->cache_memory_array[i]->set_address_mask_type(CACHE_MASK_TAG_BANK_INDEX_OFFSET);
+            }
             else {
                 ERROR_PRINTF("CACHE MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_cache_memory[ cache_memory_parameters.back() ].c_str(), cache_memory_parameters.back());
             }

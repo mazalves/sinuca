@@ -43,6 +43,9 @@ class branch_predictor_t : public interconnection_interface_t {
         uint64_t stat_branch_predictor_taken;
         uint64_t stat_branch_predictor_not_taken;
 
+        uint64_t stat_branch_predictor_conditional;
+        uint64_t stat_branch_predictor_unconditional;
+
 
     public:
         /// ====================================================================
@@ -88,4 +91,8 @@ class branch_predictor_t : public interconnection_interface_t {
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_branch_predictor_taken)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_branch_predictor_not_taken)
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_branch_predictor_conditional)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_branch_predictor_unconditional)
+
 };

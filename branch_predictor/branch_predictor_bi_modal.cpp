@@ -225,30 +225,41 @@ processor_stage_t branch_predictor_bi_modal_t::predict_branch(const opcode_packa
     else {
         uint64_t next_sequential_address = actual_opcode.opcode_address + actual_opcode.opcode_size;
         bool is_taken = (next_sequential_address != next_opcode.opcode_address);
+        bool is_taken_bht = is_taken;
 
         BRANCH_PREDICTOR_DEBUG_PRINTF("BRANCH OPCODE FOUND TAKEN?(%d) - ", is_taken);
 
+        /// Checks for Conditional and Unconditional Branches
         bool is_btb_hit = this->btb_find_update_address(actual_opcode.opcode_address);
-        bool is_taken_bht = this->bht_find_update_prediction(actual_opcode, next_opcode);
 
-        if (is_btb_hit == FAIL) {
+        /// Only update the BHT for Conditional Branches
+        if (actual_opcode.is_branch) {
+            is_taken_bht = this->bht_find_update_prediction(actual_opcode, next_opcode);
+            add_stat_branch_predictor_conditional();
+        }
+        else {
+            add_stat_branch_predictor_unconditional();
+        }
+
+        if (is_btb_hit) {
+            BRANCH_PREDICTOR_DEBUG_PRINTF("BTB FOUND - ");
+
+            if (!actual_opcode.is_branch || is_taken_bht == is_taken) {
+                BRANCH_PREDICTOR_DEBUG_PRINTF("CORRECT PREDICTED => PROCESSOR_STAGE_FETCH\n");
+                solve_stage = PROCESSOR_STAGE_FETCH;
+            }
+            else {
+                BRANCH_PREDICTOR_DEBUG_PRINTF("MISS PREDICTED => PROCESSOR_STAGE_EXECUTION\n");
+                solve_stage = PROCESSOR_STAGE_EXECUTION;
+            }
+        }
+        else {
             BRANCH_PREDICTOR_DEBUG_PRINTF("BTB NOT FOUND => PROCESSOR_STAGE_EXECUTION\n");
             /// If NOT TAKEN, it will not generate extra latency
             if (!is_taken){
                 solve_stage = PROCESSOR_STAGE_FETCH;
             }
             else {
-                solve_stage = PROCESSOR_STAGE_EXECUTION;
-            }
-        }
-        else {
-            BRANCH_PREDICTOR_DEBUG_PRINTF("BTB FOUND - ");
-            if (is_taken_bht == is_taken) {
-                BRANCH_PREDICTOR_DEBUG_PRINTF("CORRECT PREDICTED => PROCESSOR_STAGE_FETCH\n");
-                solve_stage = PROCESSOR_STAGE_FETCH;
-            }
-            else {
-                BRANCH_PREDICTOR_DEBUG_PRINTF("MISS PREDICTED => PROCESSOR_STAGE_EXECUTION\n");
                 solve_stage = PROCESSOR_STAGE_EXECUTION;
             }
         }

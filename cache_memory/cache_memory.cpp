@@ -161,6 +161,19 @@ uint64_t cache_memory_t::get_fake_address(uint32_t index, uint32_t way){
             // ~ CACHE_DEBUG_PRINTF("%"PRIu64"\n", final_address);
         break;
 
+        case CACHE_MASK_TAG_BANK_INDEX_OFFSET:
+            // ~ CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+
+            final_address = (way << this->tag_bits_shift);
+            // ~ CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+
+            final_address += (this->get_bank_number() << this->bank_bits_shift);
+            // ~ CACHE_DEBUG_PRINTF("%"PRIu64"\n", final_address);
+
+            final_address += (index << this->index_bits_shift);
+            // ~ CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+        break;
+
         case CACHE_MASK_TAG_INDEX_OFFSET:
             // ~ CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
 
@@ -211,6 +224,36 @@ void cache_memory_t::set_masks() {
             /// INDEX MASK
             for (i = 0; i < utils_t::get_power_of_two(this->get_total_sets()); i++) {
                 this->index_bits_mask |= 1 << (i + index_bits_shift);
+            }
+
+            /// TAG MASK
+            for (i = tag_bits_shift; i < utils_t::get_power_of_two((uint64_t)INT64_MAX+1); i++) {
+                this->tag_bits_mask |= 1 << i;
+            }
+        break;
+
+        case CACHE_MASK_TAG_BANK_INDEX_OFFSET:
+            ERROR_ASSERT_PRINTF(this->get_total_banks() > 1 && utils_t::check_if_power_of_two(this->get_total_banks()), "Wrong number of banks (%u).\n", this->get_total_banks());
+
+            this->offset_bits_shift = 0;
+            this->index_bits_shift = utils_t::get_power_of_two(this->get_line_size());
+            this->bank_bits_shift = index_bits_shift + utils_t::get_power_of_two(this->get_total_sets());
+            this->tag_bits_shift = bank_bits_shift + utils_t::get_power_of_two(this->get_total_banks());
+
+            /// OFFSET MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_line_size()); i++) {
+                this->offset_bits_mask |= 1 << i;
+            }
+            this->not_offset_bits_mask = ~offset_bits_mask;
+
+            /// INDEX MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_total_sets()); i++) {
+                this->index_bits_mask |= 1 << (i + index_bits_shift);
+            }
+
+            /// BANK MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_total_banks()); i++) {
+                this->bank_bits_mask |= 1 << (i + bank_bits_shift);
             }
 
             /// TAG MASK

@@ -268,7 +268,8 @@ const char *get_enum_lock_char(lock_t type);
 /// How the memory cache will create its address mask
 enum cache_mask_t {
     CACHE_MASK_TAG_INDEX_OFFSET,
-    CACHE_MASK_TAG_INDEX_BANK_OFFSET
+    CACHE_MASK_TAG_INDEX_BANK_OFFSET,
+    CACHE_MASK_TAG_BANK_INDEX_OFFSET
 };
 const char *get_enum_cache_mask_char(cache_mask_t type);
 

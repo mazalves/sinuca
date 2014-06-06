@@ -252,7 +252,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 // =============================================================
                 // Line Usage Prediction
                 cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
-
                 /// Update Coherence Status and Last Access Time
                 this->coherence_new_operation(cache, cache_line, package, true);
                 /// Update Statistics

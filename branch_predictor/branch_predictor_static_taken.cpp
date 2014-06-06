@@ -178,11 +178,7 @@ processor_stage_t branch_predictor_static_taken_t::predict_branch(const opcode_p
 
         bool is_btb_hit = this->btb_find_update_address(actual_opcode.opcode_address);
 
-        if (is_btb_hit == FAIL) {
-            BRANCH_PREDICTOR_DEBUG_PRINTF("BTB NOT FOUND => PROCESSOR_STAGE_EXECUTION\n");
-            solve_stage = PROCESSOR_STAGE_EXECUTION;
-        }
-        else {
+        if (is_btb_hit) {
             BRANCH_PREDICTOR_DEBUG_PRINTF("BTB FOUND - ");
             if (is_taken) {
                 BRANCH_PREDICTOR_DEBUG_PRINTF("CORRECT PREDICTED => PROCESSOR_STAGE_FETCH\n");
@@ -192,6 +188,10 @@ processor_stage_t branch_predictor_static_taken_t::predict_branch(const opcode_p
                 BRANCH_PREDICTOR_DEBUG_PRINTF("MISS PREDICTED => PROCESSOR_STAGE_EXECUTION\n");
                 solve_stage = PROCESSOR_STAGE_EXECUTION;
             }
+        }
+        else {
+            BRANCH_PREDICTOR_DEBUG_PRINTF("BTB NOT FOUND => PROCESSOR_STAGE_EXECUTION\n");
+            solve_stage = PROCESSOR_STAGE_EXECUTION;
         }
 
         /// Increment the statistics

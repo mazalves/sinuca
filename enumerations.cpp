@@ -328,6 +328,7 @@ const char *get_enum_cache_mask_char(cache_mask_t type) {
     switch (type) {
         case CACHE_MASK_TAG_INDEX_OFFSET:       return "TAG_INDEX_OFFSET"; break;
         case CACHE_MASK_TAG_INDEX_BANK_OFFSET:  return "TAG_INDEX_BANK_OFFSET"; break;
+        case CACHE_MASK_TAG_BANK_INDEX_OFFSET:  return "TAG_BANK_INDEX_OFFSET"; break;
     };
     ERROR_PRINTF("Wrong CACHE_MASK\n");
     return "FAIL";

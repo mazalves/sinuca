@@ -290,15 +290,25 @@ processor_stage_t branch_predictor_two_level_pas_t::predict_branch(const opcode_
     else {
         uint64_t next_sequential_address = actual_opcode.opcode_address + actual_opcode.opcode_size;
         bool is_taken = (next_sequential_address != next_opcode.opcode_address);
+        bool is_taken_spht = is_taken;
 
         BRANCH_PREDICTOR_DEBUG_PRINTF("BRANCH OPCODE FOUND TAKEN?(%d) - ", is_taken);
 
         bool is_btb_hit = this->btb_find_update_address(actual_opcode.opcode_address);
-        bool is_taken_spht = this->spht_find_update_prediction(actual_opcode, next_opcode);
+
+        /// Only update the BHT for Conditional Branches
+        if (actual_opcode.is_branch) {
+            is_taken_spht = this->spht_find_update_prediction(actual_opcode, next_opcode);
+            add_stat_branch_predictor_conditional();
+        }
+        else {
+            add_stat_branch_predictor_unconditional();
+        }
+
 
         if (is_btb_hit) {
             BRANCH_PREDICTOR_DEBUG_PRINTF("BTB FOUND - ");
-            if (is_taken_spht == is_taken) {
+            if (!actual_opcode.is_branch || is_taken_spht == is_taken) {
                 BRANCH_PREDICTOR_DEBUG_PRINTF("CORRECT PREDICTED => PROCESSOR_STAGE_FETCH\n");
                 solve_stage = PROCESSOR_STAGE_FETCH;
             }
