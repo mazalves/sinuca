@@ -59,7 +59,7 @@ opcode_package_t &opcode_package_t::operator=(const opcode_package_t &package) {
     this->write_address = package.write_address;
     this->write_size = package.write_size;
 
-    this->is_branch = package.is_branch;
+    this->is_conditional = package.is_conditional;
     this->is_predicated = package.is_predicated;
     this->is_prefetch = package.is_prefetch;
 
@@ -99,7 +99,7 @@ bool opcode_package_t::operator==(const opcode_package_t &package) {
     if (this->write_address != package.write_address) return FAIL;
     if (this->write_size != package.write_size) return FAIL;
 
-    if (this->is_branch != package.is_branch) return FAIL;
+    if (this->is_conditional != package.is_conditional) return FAIL;
     if (this->is_predicated != package.is_predicated) return FAIL;
     if (this->is_prefetch != package.is_prefetch) return FAIL;
 
@@ -139,7 +139,7 @@ void opcode_package_t::package_clean() {
     this->write_address = 0;
     this->write_size = 0;
 
-    this->is_branch = false;
+    this->is_conditional = false;
     this->is_predicated = false;
     this->is_prefetch = false;
 
@@ -217,10 +217,10 @@ std::string opcode_package_t::content_to_string() {
     }
     PackageString = PackageString + " ]";
 
-    if (this->is_branch == true)
-        PackageString = PackageString + " | is_brch";
+    if (this->is_conditional == true)
+        PackageString = PackageString + " | is_condt";
     else
-        PackageString = PackageString + " | no_brch";
+        PackageString = PackageString + " | not_cond";
 
     return PackageString;
 };
@@ -283,7 +283,7 @@ void opcode_package_t::opcode_to_trace_string(char *trace_string) {
     else
         strcat(register_string," 0");
 
-    if (this->is_branch == true)
+    if (this->is_conditional == true)
         strcat(register_string," 1");
     else
         strcat(register_string, " 0");
@@ -472,7 +472,7 @@ void opcode_package_t::trace_string_to_opcode(char *input_string) {
     this->is_write = (sub_string[0] == '1');
 
     sub_string = strtok_r(NULL, " ", &tmp_ptr);
-    this->is_branch = (sub_string[0] == '1');
+    this->is_conditional = (sub_string[0] == '1');
 
     sub_string = strtok_r(NULL, " ", &tmp_ptr);
     this->is_predicated = (sub_string[0] == '1');

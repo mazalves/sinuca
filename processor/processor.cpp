@@ -837,7 +837,7 @@ void processor_t::stage_decode() {
         }
 
         /// DECODE BRANCH ==================================================
-        if (this->fetch_buffer[fetch_buffer_position_start].is_branch) {
+        if (this->fetch_buffer[fetch_buffer_position_start].opcode_operation == INSTRUCTION_OPERATION_BRANCH) {
             position_buffer = this->decode_buffer_insert();
             ERROR_ASSERT_PRINTF(position_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
             this->decode_buffer[position_buffer].opcode_to_uop(this->decode_uop_counter++, INSTRUCTION_OPERATION_BRANCH,

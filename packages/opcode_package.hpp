@@ -52,7 +52,7 @@ class opcode_package_t {
         uint64_t write_address;
         uint32_t write_size;
 
-        bool is_branch;
+        bool is_conditional;
         bool is_predicated;
         bool is_prefetch;
 

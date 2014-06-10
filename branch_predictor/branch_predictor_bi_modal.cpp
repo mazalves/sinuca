@@ -233,7 +233,7 @@ processor_stage_t branch_predictor_bi_modal_t::predict_branch(const opcode_packa
         bool is_btb_hit = this->btb_find_update_address(actual_opcode.opcode_address);
 
         /// Only update the BHT for Conditional Branches
-        if (actual_opcode.is_branch) {
+        if (actual_opcode.is_conditional) {
             is_taken_bht = this->bht_find_update_prediction(actual_opcode, next_opcode);
             add_stat_branch_predictor_conditional();
         }
@@ -244,7 +244,7 @@ processor_stage_t branch_predictor_bi_modal_t::predict_branch(const opcode_packa
         if (is_btb_hit) {
             BRANCH_PREDICTOR_DEBUG_PRINTF("BTB FOUND - ");
 
-            if (!actual_opcode.is_branch || is_taken_bht == is_taken) {
+            if (!actual_opcode.is_conditional || is_taken_bht == is_taken) {
                 BRANCH_PREDICTOR_DEBUG_PRINTF("CORRECT PREDICTED => PROCESSOR_STAGE_FETCH\n");
                 solve_stage = PROCESSOR_STAGE_FETCH;
             }
