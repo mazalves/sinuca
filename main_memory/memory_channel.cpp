@@ -48,7 +48,6 @@ memory_channel_t::memory_channel_t() {
     this->bank_bits_mask = 0;
     this->bank_bits_shift = 0;
 
-
     this->bank_buffer = NULL;
     this->bank_buffer_actual_position = NULL;
 

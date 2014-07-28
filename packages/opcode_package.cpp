@@ -397,7 +397,7 @@ void opcode_package_t::trace_string_to_write(char *input_string, uint32_t actual
 
 //============================================================================== NEW
 /// Convert Static Trace line into Instruction
-/// Field N.:   01                 |   02                | 03           | 04        |   05      |    06   |   07        |     08        |     09
+/// Field N.:   01            |   02                | 03           | 04        |   05      |    06   |   07        |     08        |     09
 /// Type:    opcode_operation | instruction_address | Inst. Size   | N.Rregs   | read_regs | N.Wregs | write_regs  | IsPredicated  | IsPrefetch
 /// Static File Example:
 /// #
