@@ -749,7 +749,7 @@ memory_package_t* directory_controller_t::create_cache_writeback(cache_memory_t 
                 sinuca_engine.get_global_line_size(),   /// Block Size
 
                 PACKAGE_STATE_TRANSMIT,                 /// Pack. State
-                0,                                      /// Ready Cycle
+                cache->get_penalty_read(),              /// Ready Cycle - It takes time to read from the cache the whole data
 
                 MEMORY_OPERATION_WRITEBACK,              /// Mem. Operation
                 false,                                  /// Is Answer
@@ -763,6 +763,7 @@ memory_package_t* directory_controller_t::create_cache_writeback(cache_memory_t 
     ///=========================================================================
     /// Allocate CopyBack at the MSHR
     ///=========================================================================
+
     int32_t slot = cache->allocate_writeback(&writeback_package);
     if (slot == POSITION_FAIL) {
         return NULL;

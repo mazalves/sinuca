@@ -140,7 +140,7 @@ extern sinuca_engine_t sinuca_engine;
 #define MAX_ALIVE_TIME   1000000  /// Max Time for a request to be solved
 #define PERIODIC_CHECK  10000000  /// Period between the Periodic Check
 
-// ~ #define INITIALIZE_DEBUG 2558810    /// Cycle to start the DEBUG_PRINTF (0 to disable)
+// ~ #define INITIALIZE_DEBUG 8800000    /// Cycle to start the DEBUG_PRINTF (0 to disable)
 #define INITIALIZE_DEBUG 0    /// Cycle to start the DEBUG_PRINTF (0 to disable)
 #define FINALIZE_DEBUG 0      /// Cycle to stop the DEBUG_PRINTF (0 to disable)
 

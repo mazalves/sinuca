@@ -51,7 +51,8 @@ memory_package_t &memory_package_t::operator=(const memory_package_t &package) {
     this->memory_size = package.memory_size;
 
     this->state = package.state;
-    this->ready_cycle = sinuca_engine.get_global_cycle();
+    // ~ this->ready_cycle = sinuca_engine.get_global_cycle();
+    this->ready_cycle = package.ready_cycle;
     this->born_cycle = sinuca_engine.get_global_cycle();
 
     this->memory_operation = package.memory_operation;
