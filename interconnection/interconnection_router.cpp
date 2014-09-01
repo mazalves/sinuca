@@ -208,14 +208,9 @@ uint32_t interconnection_router_t::selection_random() {
 // ============================================================================
 /// Selection strategy: Round Robin
 uint32_t interconnection_router_t::selection_round_robin() {
-    this->last_selected++;
-    if (this->last_selected >= this->get_max_ports()) this->last_selected = 0;
-
-    return this->last_selected;
-
+    this->last_selected = (this->last_selected + 1) % this->get_max_ports();
     for (uint32_t i = 0; i < this->get_max_ports(); i++) {
-        uint32_t index = this->last_selected + i;
-        if (index >= this->get_max_ports()) index = 0;
+        uint32_t index = (this->last_selected + i) % this->get_max_ports();
         if (!this->input_buffer[index].is_empty()) {
             this->last_selected = index;
             break;
