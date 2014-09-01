@@ -1,34 +1,33 @@
-//==============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-//==============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "./sinuca.hpp"
-//==============================================================================
+// =============================================================================
 sinuca_engine_t::sinuca_engine_t() {
     this->arg_configuration_file_name = NULL;
+    this->arg_configuration_path = NULL;
     this->arg_trace_file_name = NULL;
     this->arg_result_file_name = NULL;
     this->arg_warmup_instructions = 0;
     this->arg_is_compressed = true;
+    this->arg_graph_file_name = NULL;
 
     this->interconnection_interface_array = NULL;
     this->processor_array = NULL;
@@ -64,22 +63,23 @@ sinuca_engine_t::sinuca_engine_t() {
     this->interconnection_router_array_size = 0;
 
     this->global_cycle = 0;
-    this->global_line_size = 0;
+    this->global_line_size = 64;
 
     this->is_simulation_allocated = false;
     this->is_processor_trace_eof = NULL;
     this->is_simulation_eof = false;
     this->is_runtime_debug = true;
     this->is_warm_up = false;
+    this->is_global_panic = false;
 
     this->trace_reader = new trace_reader_t;
     this->directory_controller = NULL;
     this->interconnection_controller = NULL;
 
-    utils_t::process_mem_usage(stat_vm_start, stat_rss_start);
+    utils_t::process_mem_usage(&stat_vm_start, &stat_rss_start);
 };
 
-//==============================================================================
+// =============================================================================
 sinuca_engine_t::~sinuca_engine_t() {
     // Do not free these argment pointers
     // ~ utils_t::template_delete_variable<char>(this->arg_configuration_file_name);
@@ -94,7 +94,6 @@ sinuca_engine_t::~sinuca_engine_t() {
         }
         utils_t::template_delete_array<processor_t*>(this->processor_array);
     }
-
 
     if (this->cache_memory_array != NULL) {
         for (uint32_t i = 0; i < this->get_cache_memory_array_size(); ++i) {
@@ -124,7 +123,7 @@ sinuca_engine_t::~sinuca_engine_t() {
     utils_t::template_delete_variable<interconnection_controller_t>(interconnection_controller);
 };
 
-//==============================================================================
+// =============================================================================
 void sinuca_engine_t::set_global_line_size(uint32_t new_size) {
     if (this->global_line_size == 0) {
         this->global_line_size = new_size;
@@ -137,13 +136,13 @@ void sinuca_engine_t::set_global_line_size(uint32_t new_size) {
     ERROR_ASSERT_PRINTF(this->get_global_line_size() == new_size, "All the line_size must be equal.\n")
 };
 
-//==============================================================================
+// =============================================================================
 uint32_t sinuca_engine_t::get_global_line_size() {
     return (this->global_line_size);
 };
 
 
-//==============================================================================
+// =============================================================================
 void sinuca_engine_t::premature_termination() {
     SINUCA_PRINTF("Termination request sent to program.\n");
 
@@ -154,7 +153,7 @@ void sinuca_engine_t::premature_termination() {
     SINUCA_PRINTF("Abnormal termination!\n");
 };
 
-//==============================================================================
+// =============================================================================
 bool sinuca_engine_t::alive() {
     /// Wait the all TRACES EOF
     if (!this->is_simulation_eof) {
@@ -174,7 +173,7 @@ bool sinuca_engine_t::alive() {
     return FAIL;
 };
 
-//==============================================================================
+// =============================================================================
 void sinuca_engine_t::set_is_processor_trace_eof(uint32_t cpuid) {
     uint32_t i;
     this->is_processor_trace_eof[cpuid] = true;
@@ -185,8 +184,17 @@ void sinuca_engine_t::set_is_processor_trace_eof(uint32_t cpuid) {
     this->set_is_simulation_eof(true);
 };
 
-//==============================================================================
+// =============================================================================
 void sinuca_engine_t::global_panic() {
+
+    if (this->is_global_panic) {
+        SINUCA_PRINTF("Abnormal termination!\n");
+        SINUCA_PRINTF("Two panics in a row!\n");
+        exit(EXIT_FAILURE);
+    }
+    this->is_global_panic = true;
+
+
     #ifndef SINUCA_DEBUG
     if (this->get_is_simulation_allocated()) {
         SINUCA_PRINTF("---------------------------------------------\nPANIC\n\n");
@@ -203,7 +211,7 @@ void sinuca_engine_t::global_panic() {
     #endif
 };
 
-//==============================================================================
+// =============================================================================
 void sinuca_engine_t::global_periodic_check() {
     if (sinuca_engine.get_is_runtime_debug()) {
         for (uint32_t i = 0 ; i < this->get_interconnection_interface_array_size() ; i++) {
@@ -215,14 +223,15 @@ void sinuca_engine_t::global_periodic_check() {
         /// Get the max VM (virtual memory) and RSS (resident set size)
         double vm = 0;
         double rss = 0;
-        utils_t::process_mem_usage(vm, rss);
+        utils_t::process_mem_usage(&vm, &rss);
         if (vm > stat_vm_max) stat_vm_max = vm;
         if (rss > stat_rss_max) stat_rss_max = rss;
     }
 };
 
-//==============================================================================
+// =============================================================================
 void sinuca_engine_t::global_clock() {
+    uint32_t sub_cycle = 0;
 
     if (INITIALIZE_DEBUG != 0 && INITIALIZE_DEBUG >= this->get_global_cycle()) {
         this->set_is_runtime_debug(false);
@@ -233,7 +242,6 @@ void sinuca_engine_t::global_clock() {
     else {
         this->set_is_runtime_debug(true);
     }
-    uint32_t sub_cycle = 0;
 
     DEBUG_PRINTF("\n\n\n")
     DEBUG_PRINTF("========================================================================================================\n")
@@ -245,7 +253,7 @@ void sinuca_engine_t::global_clock() {
     this->global_cycle++;
 };
 
-//==============================================================================
+// =============================================================================
 void sinuca_engine_t::global_print_graph() {
     /// Open the statistics file
     if (this->graph_file.is_open() == false && this->arg_graph_file_name != NULL) {
@@ -262,7 +270,7 @@ void sinuca_engine_t::global_print_graph() {
 };
 
 
-//==============================================================================
+// =============================================================================
 void sinuca_engine_t::write_graph(const char *buffer) {
     if (this->graph_file.is_open() == true && this->arg_graph_file_name != NULL) {
         this->graph_file.write(buffer, strlen(buffer));
@@ -272,10 +280,10 @@ void sinuca_engine_t::write_graph(const char *buffer) {
     }
 };
 
-//==============================================================================
+// =============================================================================
 void sinuca_engine_t::global_reset_statistics() {
     if (global_cycle == 0) {
-        utils_t::process_mem_usage(this->stat_vm_allocate, this->stat_rss_allocate);
+        utils_t::process_mem_usage(&this->stat_vm_allocate, &this->stat_rss_allocate);
         gettimeofday(&stat_timer_start, NULL);
         gettimeofday(&stat_timer_end, NULL);
     }
@@ -291,7 +299,7 @@ void sinuca_engine_t::global_reset_statistics() {
     this->interconnection_controller->reset_statistics();
 };
 
-//==============================================================================
+// =============================================================================
 void sinuca_engine_t::write_statistics(const char *buffer) {
     if (this->result_file.is_open() == true && this->arg_result_file_name != NULL) {
         this->result_file.write(buffer, strlen(buffer));
@@ -301,72 +309,72 @@ void sinuca_engine_t::write_statistics(const char *buffer) {
     }
 };
 
-//==============================================================================
+// =============================================================================
 void sinuca_engine_t::write_statistics_small_separator() {
     char buffer[TRACE_LINE_SIZE * 4] = "\0";
-    sprintf(buffer, "#=======================================\n");
+    snprintf(buffer, sizeof(buffer), "#=======================================\n");
     this->write_statistics(buffer);
 };
 
 void sinuca_engine_t::write_statistics_big_separator() {
     char buffer[TRACE_LINE_SIZE * 4] = "\0";
-    sprintf(buffer, "#===============================================================================\n");
+    snprintf(buffer, sizeof(buffer), "#===============================================================================\n");
     this->write_statistics(buffer);
 };
 
-//==============================================================================
+// =============================================================================
 void sinuca_engine_t::write_statistics_comments(const char *comment) {
     char buffer[TRACE_LINE_SIZE * 4] = "\0";
-    sprintf(buffer, "#%s\n", comment);
+    snprintf(buffer, sizeof(buffer), "#%s\n", comment);
     this->write_statistics(buffer);
 };
 
 
-//==============================================================================
+// =============================================================================
 void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, const char *value) {
     char buffer[TRACE_LINE_SIZE * 4] = "\0";
-    sprintf(buffer, "%s.%s.%s:%s\n", obj_type, obj_label, variable_name, value);
+    snprintf(buffer, sizeof(buffer), "%s.%s.%s:%s\n", obj_type, obj_label, variable_name, value);
     this->write_statistics(buffer);
 };
 
 void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, bool value) {
     char buffer[TRACE_LINE_SIZE * 4] = "\0";
-    sprintf(buffer, "%s.%s.%s:%s\n", obj_type, obj_label, variable_name, value ? "TRUE" : "FALSE");
+    snprintf(buffer, sizeof(buffer), "%s.%s.%s:%s\n", obj_type, obj_label, variable_name, value ? "TRUE" : "FALSE");
     this->write_statistics(buffer);
 };
 
 
 void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, uint32_t value) {
     char buffer[TRACE_LINE_SIZE * 4] = "\0";
-    sprintf(buffer, "%s.%s.%s:%u\n", obj_type, obj_label, variable_name, value);
+    snprintf(buffer, sizeof(buffer), "%s.%s.%s:%u\n", obj_type, obj_label, variable_name, value);
     this->write_statistics(buffer);
 };
 
 void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, uint64_t value) {
     char buffer[TRACE_LINE_SIZE * 4] = "\0";
-    sprintf(buffer, "%s.%s.%s:%"PRIu64"\n", obj_type, obj_label, variable_name, value);
+    snprintf(buffer, sizeof(buffer), "%s.%s.%s:%"PRIu64"\n", obj_type, obj_label, variable_name, value);
     this->write_statistics(buffer);
 };
 
 void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, float value) {
     char buffer[TRACE_LINE_SIZE * 4] = "\0";
-    sprintf(buffer, "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, value);
+    snprintf(buffer, sizeof(buffer), "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, value);
     this->write_statistics(buffer);
 };
 
 void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, double value) {
     char buffer[TRACE_LINE_SIZE * 4] = "\0";
-    sprintf(buffer, "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, value);
+    snprintf(buffer, sizeof(buffer), "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, value);
     this->write_statistics(buffer);
 };
 
 void sinuca_engine_t::write_statistics_value_percentage(const char *obj_type, const char *obj_label, const char *variable_name, uint64_t value, uint64_t total) {
     char buffer[TRACE_LINE_SIZE * 4] = "\0";
     if (value != 0 || total != 0) {
-        sprintf(buffer, "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (100.0 *value/total));
+        snprintf(buffer, sizeof(buffer), "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (100.0 *value/total));
     }
     else {
-        sprintf(buffer, "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (0));
+        snprintf(buffer, sizeof(buffer), "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (0));
     }
     this->write_statistics(buffer);
 };
@@ -374,10 +382,10 @@ void sinuca_engine_t::write_statistics_value_percentage(const char *obj_type, co
 void sinuca_engine_t::write_statistics_value_ratio(const char *obj_type, const char *obj_label, const char *variable_name, uint64_t value, uint64_t total) {
     char buffer[TRACE_LINE_SIZE * 4] = "\0";
     if (value != 0 || total != 0) {
-        sprintf(buffer, "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (1.0 *value/total));
+        snprintf(buffer, sizeof(buffer), "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (1.0 *value/total));
     }
     else {
-        sprintf(buffer, "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (0));
+        snprintf(buffer, sizeof(buffer), "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (0));
     }
     this->write_statistics(buffer);
 };
@@ -385,16 +393,16 @@ void sinuca_engine_t::write_statistics_value_ratio(const char *obj_type, const c
 void sinuca_engine_t::write_statistics_value_ratio(const char *obj_type, const char *obj_label, const char *variable_name, double value, uint64_t total) {
     char buffer[TRACE_LINE_SIZE * 4] = "\0";
     if (value != 0 || total != 0) {
-        sprintf(buffer, "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (1.0 *value/total));
+        snprintf(buffer, sizeof(buffer), "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (1.0 *value/total));
     }
     else {
-        sprintf(buffer, "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (0));
+        snprintf(buffer, sizeof(buffer), "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (0));
     }
     this->write_statistics(buffer);
 };
 
 
-//==============================================================================
+// =============================================================================
 void sinuca_engine_t::global_print_statistics() {
     /// Open the statistics file
     if (this->result_file.is_open() == false && this->arg_result_file_name != NULL) {
@@ -403,7 +411,7 @@ void sinuca_engine_t::global_print_statistics() {
     }
 
     char title[50] = "";
-    sprintf(title, "Statistics of %s", this->get_label());
+    snprintf(title, sizeof(title), "Statistics of %s", this->get_label());
     this->write_statistics_big_separator();
     this->write_statistics_comments(title);
     this->write_statistics_big_separator();
@@ -415,7 +423,7 @@ void sinuca_engine_t::global_print_statistics() {
     this->write_statistics_value(get_type_component_label(), get_label(), "time_spent_h", time_spent / 3600.0);
 
     this->write_statistics_small_separator();
-    utils_t::process_mem_usage(this->stat_vm_end, this->stat_rss_end);
+    utils_t::process_mem_usage(&this->stat_vm_end, &this->stat_rss_end);
     if (stat_vm_end > stat_vm_allocate + 10) {
         WARNING_PRINTF("Check for Memory Leak   VM End > VM Allocate\n")
     }
@@ -435,7 +443,7 @@ void sinuca_engine_t::global_print_statistics() {
     this->write_statistics_value(get_type_component_label(), get_label(), "stat_old_uop_package", stat_old_uop_package);
     this->write_statistics_value(get_type_component_label(), get_label(), "stat_old_memory_package", stat_old_memory_package);
 
-    ///=========================================================================
+    // =========================================================================
     /// Total (with warm-up)
     this->write_statistics_small_separator();
 
@@ -459,7 +467,7 @@ void sinuca_engine_t::global_print_statistics() {
     this->write_statistics_value_ratio(get_type_component_label(), get_label(), "cycles_per_second_khz", global_cycle / 1000.0, time_spent);
     this->write_statistics_value_ratio(get_type_component_label(), get_label(), "instruction_per_second_kips", kilo_instructions_simulated, time_spent);
 
-    ///=========================================================================
+    // =========================================================================
     for (uint32_t i = 0 ; i < this->get_interconnection_interface_array_size() ; i++) {
         this->interconnection_interface_array[i]->print_statistics();
     }
@@ -472,7 +480,7 @@ void sinuca_engine_t::global_print_statistics() {
     }
 };
 
-//==============================================================================
+// =============================================================================
 void sinuca_engine_t::global_print_configuration() {
     /// Open the statistics file
     if (this->result_file.is_open() == false && this->arg_result_file_name != NULL) {
@@ -481,7 +489,7 @@ void sinuca_engine_t::global_print_configuration() {
     }
 
     char comment[50] = "";
-    sprintf(comment, "Configuration of %s", this->get_label());
+    snprintf(comment, sizeof(comment), "Configuration of %s", this->get_label());
     this->write_statistics_big_separator();
     this->write_statistics_comments(comment);
     this->write_statistics_big_separator();
@@ -493,7 +501,7 @@ void sinuca_engine_t::global_print_configuration() {
     this->write_statistics_value(get_type_component_label(), get_label(), "arg_is_compressed", arg_is_compressed ? "TRUE": "FALSE");
 
     this->write_statistics_small_separator();
-    sprintf(comment, "Defines:");
+    snprintf(comment, sizeof(comment), "Defines:");
     this->write_statistics_comments(comment);
     this->write_statistics_value(get_type_component_label(), get_label(), "HEART_BEAT", (uint32_t)HEART_BEAT);
     this->write_statistics_value(get_type_component_label(), get_label(), "MAX_ALIVE_TIME", (uint32_t)MAX_ALIVE_TIME);

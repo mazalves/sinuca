@@ -1,26 +1,23 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "../sinuca.hpp"
 
 #ifdef LINE_USAGE_PREDICTOR_DEBUG
@@ -29,7 +26,7 @@
     #define LINE_USAGE_PREDICTOR_DEBUG_PRINTF(...)
 #endif
 
-/// ============================================================================
+// ============================================================================
 line_usage_predictor_dewp_t::line_usage_predictor_dewp_t() {
     this->line_usage_predictor_type = LINE_USAGE_PREDICTOR_POLICY_DEWP;
 
@@ -58,21 +55,21 @@ line_usage_predictor_dewp_t::line_usage_predictor_dewp_t() {
 
 };
 
-/// ============================================================================
+// ============================================================================
 line_usage_predictor_dewp_t::~line_usage_predictor_dewp_t() {
     /// De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<dewp_metadata_set_t>(metadata_sets);
     utils_t::template_delete_array<aht_set_t>(aht_sets);
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dewp_t::allocate() {
     line_usage_predictor_t::allocate();
 
     this->access_counter_max_read = pow(2, this->access_counter_bits_read) - 1;
     this->access_counter_max_writeback = pow(2, this->access_counter_bits_writeback) - 1;
 
-    ///=========================================================================
+    // =========================================================================
     /// metadata
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_metadata_line_number() / this->get_metadata_associativity()), "Wrong line_number(%u) or associativity(%u).\n", this->get_metadata_line_number(), this->get_metadata_associativity());
     this->set_metadata_total_sets(this->get_metadata_line_number() / this->get_metadata_associativity());
@@ -84,7 +81,7 @@ void line_usage_predictor_dewp_t::allocate() {
         this->metadata_sets[i].ways = utils_t::template_allocate_array<dewp_metadata_line_t>(this->get_metadata_associativity());
     }
 
-    ///=========================================================================
+    // =========================================================================
     /// aht misses
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_aht_line_number() / this->get_aht_associativity()),
                         "Wrong line number(%u) or associativity(%u).\n", this->get_aht_line_number(), this->get_aht_associativity());
@@ -104,7 +101,7 @@ void line_usage_predictor_dewp_t::allocate() {
     }
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dewp_t::clock(uint32_t subcycle) {
     line_usage_predictor_t::clock(subcycle);
 
@@ -115,12 +112,12 @@ void line_usage_predictor_dewp_t::clock(uint32_t subcycle) {
 };
 
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dewp_t::fill_package_sub_blocks(memory_package_t *package) {
     (void)package;
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dewp_t::line_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_sub_blocks_to_package() package:%s\n", package->content_to_string().c_str())
 
@@ -134,7 +131,7 @@ void line_usage_predictor_dewp_t::line_sub_blocks_to_package(cache_memory_t *cac
 };
 
 
-/// ============================================================================
+// ============================================================================
 bool line_usage_predictor_dewp_t::check_sub_block_is_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint64_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_sub_block_is_hit() package:%s\n", package->content_to_string().c_str())
 
@@ -152,7 +149,7 @@ bool line_usage_predictor_dewp_t::check_sub_block_is_hit(cache_memory_t *cache, 
     }
 };
 
-/// ============================================================================
+// ============================================================================
 bool line_usage_predictor_dewp_t::check_line_is_disabled(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way){
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_access()\n")
 
@@ -170,7 +167,7 @@ bool line_usage_predictor_dewp_t::check_line_is_disabled(cache_memory_t *cache, 
 };
 
 
-/// ============================================================================
+// ============================================================================
 bool line_usage_predictor_dewp_t::check_line_is_last_access(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way){
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_access()\n")
 
@@ -183,7 +180,7 @@ bool line_usage_predictor_dewp_t::check_line_is_last_access(cache_memory_t *cach
             this->early_eviction);
 };
 
-/// ============================================================================
+// ============================================================================
 bool line_usage_predictor_dewp_t::check_line_is_last_write(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way){
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_write()\n")
 
@@ -196,9 +193,9 @@ bool line_usage_predictor_dewp_t::check_line_is_last_write(cache_memory_t *cache
             this->early_writeback);
 };
 
-/// ============================================================================
+// ============================================================================
 /// Cache Memory Operations
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dewp_t::line_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_hit() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -225,9 +222,9 @@ void line_usage_predictor_dewp_t::line_hit(cache_memory_t *cache, cache_line_t *
         this->metadata_sets[index].ways[way].real_access_counter_read++;
     }
 
-    /// ================================================================
+    // ================================================================
     /// METADATA Learn Mode
-    /// ================================================================
+    // ================================================================
     if (this->metadata_sets[index].ways[way].learn_mode == true) {
         LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t LEARN MODE ON\n");
 
@@ -261,9 +258,9 @@ void line_usage_predictor_dewp_t::line_hit(cache_memory_t *cache, cache_line_t *
             }
         }
     }
-    /// ================================================================
+    // ================================================================
     /// METADATA Not Learn Mode
-    /// ================================================================
+    // ================================================================
     else {
         LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t LEARN MODE OFF\n");
 
@@ -293,7 +290,7 @@ void line_usage_predictor_dewp_t::line_hit(cache_memory_t *cache, cache_line_t *
 
 
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dewp_t::line_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -314,9 +311,9 @@ void line_usage_predictor_dewp_t::line_miss(cache_memory_t *cache, cache_line_t 
     }
 
     aht_line_t *aht_line = this->aht_find_line(package->opcode_address, package->memory_address);
-    ///=================================================================
+    // =================================================================
     /// AHT HIT
-    ///=================================================================
+    // =================================================================
     if (aht_line != NULL) {
         LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t aht HIT\n")
         LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t %s", aht_line->content_to_string().c_str())
@@ -366,9 +363,9 @@ void line_usage_predictor_dewp_t::line_miss(cache_memory_t *cache, cache_line_t 
         }
     }
 
-    ///=================================================================
+    // =================================================================
     /// AHT MISS
-    ///=================================================================
+    // =================================================================
     else {
         LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t aht MISS\n")
         // Statistics
@@ -396,7 +393,7 @@ void line_usage_predictor_dewp_t::line_miss(cache_memory_t *cache, cache_line_t 
 };
 
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dewp_t::sub_block_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("sub_block_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -434,9 +431,9 @@ void line_usage_predictor_dewp_t::sub_block_miss(cache_memory_t *cache, cache_li
     this->metadata_sets[index].ways[way].overflow_read = true;
     this->metadata_sets[index].ways[way].overflow_writeback = true;
 
-    ///=================================================================
+    // =================================================================
     /// AHT HIT
-    ///=================================================================
+    // =================================================================
     if (this->metadata_sets[index].ways[way].aht_pointer != NULL &&
     this->metadata_sets[index].ways[way].aht_pointer->pointer == true) {
         LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t aht HIT\n")
@@ -463,7 +460,7 @@ void line_usage_predictor_dewp_t::sub_block_miss(cache_memory_t *cache, cache_li
     this->metadata_sets[index].ways[way].clock_last_access = sinuca_engine.get_global_cycle();
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dewp_t::line_send_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_send_writeback() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].line_status != LINE_SUB_BLOCK_DISABLE, "Metadata Line should be dirty\n");
@@ -478,9 +475,9 @@ void line_usage_predictor_dewp_t::line_send_writeback(cache_memory_t *cache, cac
     /// Statistics
     this->stat_cycles_turned_on_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
 
-    /// ================================================================
+    // ================================================================
     /// METADATA Not Learn Mode
-    /// ================================================================
+    // ================================================================
     this->metadata_sets[index].ways[way].is_dirty = false;
 
     if (this->metadata_sets[index].ways[way].learn_mode == false) {
@@ -495,7 +492,7 @@ void line_usage_predictor_dewp_t::line_send_writeback(cache_memory_t *cache, cac
     this->metadata_sets[index].ways[way].clock_last_access = sinuca_engine.get_global_cycle();
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dewp_t::line_recv_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_recv_writeback() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -522,15 +519,15 @@ void line_usage_predictor_dewp_t::line_recv_writeback(cache_memory_t *cache, cac
     this->metadata_sets[index].ways[way].real_access_counter_writeback++;
     this->metadata_sets[index].ways[way].is_dirty = true;
 
-    ///=========================================================================
+    // =========================================================================
     /// If it was correct predicted
-    ///=========================================================================
+    // =========================================================================
     if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE) {
         this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_NORMAL;
 
-        /// ================================================================
+        // ================================================================
         /// METADATA Learn Mode
-        /// ================================================================
+        // ================================================================
         if (this->metadata_sets[index].ways[way].learn_mode == true) {
             LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t LEARN MODE ON\n");
 
@@ -554,9 +551,9 @@ void line_usage_predictor_dewp_t::line_recv_writeback(cache_memory_t *cache, cac
                 }
             }
         }
-        /// ================================================================
+        // ================================================================
         /// METADATA Not Learn Mode
-        /// ================================================================
+        // ================================================================
         else {
             LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t LEARN MODE OFF\n");
             // METADATA Not Overflow + METADATA Used Predicted Number of Times
@@ -567,9 +564,9 @@ void line_usage_predictor_dewp_t::line_recv_writeback(cache_memory_t *cache, cac
             }
         }
     }
-    ///=========================================================================
+    // =========================================================================
     /// Misspredicted (already did the write_back)
-    ///=========================================================================
+    // =========================================================================
     else if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_WRITEBACK) {
         // Enable Learn_mode
         this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_WRONG_FIRST;
@@ -585,9 +582,9 @@ void line_usage_predictor_dewp_t::line_recv_writeback(cache_memory_t *cache, cac
         this->metadata_sets[index].ways[way].overflow_writeback = true;
 
 
-        ///=================================================================
+        // =================================================================
         /// AHT HIT
-        ///=================================================================
+        // =================================================================
         if (this->metadata_sets[index].ways[way].aht_pointer != NULL &&
         this->metadata_sets[index].ways[way].aht_pointer->pointer == true) {
             LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t aht HIT\n")
@@ -615,7 +612,7 @@ void line_usage_predictor_dewp_t::line_recv_writeback(cache_memory_t *cache, cac
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t After Hit %s", this->metadata_sets[index].ways[way].content_to_string().c_str());
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dewp_t::line_eviction(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_eviction()\n")
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -683,7 +680,7 @@ void line_usage_predictor_dewp_t::line_eviction(cache_memory_t *cache, cache_lin
 
 
 
-    //==================================================================
+    // =================================================================
     // Prediction Accuracy Statistics
     if (this->metadata_sets[index].ways[way].is_dirty == true) {
         switch (this->metadata_sets[index].ways[way].line_status) {
@@ -797,7 +794,7 @@ void line_usage_predictor_dewp_t::line_eviction(cache_memory_t *cache, cache_lin
     this->metadata_sets[index].ways[way].clock_last_access = sinuca_engine.get_global_cycle();
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dewp_t::line_invalidation(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_invalidation()\n")
 
@@ -824,9 +821,9 @@ void line_usage_predictor_dewp_t::line_invalidation(cache_memory_t *cache, cache
 };
 
 
-/// ============================================================================
+// ============================================================================
 /// aht Miss
-/// ============================================================================
+// ============================================================================
 aht_line_t* line_usage_predictor_dewp_t::aht_find_line(uint64_t opcode_address, uint64_t memory_address) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("aht_find_line()\n")
     uint32_t aht_offset = memory_address & sinuca_engine.get_global_offset_bits_mask();
@@ -845,7 +842,7 @@ aht_line_t* line_usage_predictor_dewp_t::aht_find_line(uint64_t opcode_address, 
     return NULL;
 }
 
-/// ============================================================================
+// ============================================================================
 aht_line_t* line_usage_predictor_dewp_t::aht_evict_address(uint64_t opcode_address, uint64_t memory_address) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("aht_evict_address()\n")
     uint32_t aht_offset = memory_address & sinuca_engine.get_global_offset_bits_mask();
@@ -891,19 +888,19 @@ aht_line_t* line_usage_predictor_dewp_t::aht_evict_address(uint64_t opcode_addre
 };
 
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dewp_t::print_structures() {
     line_usage_predictor_t::print_structures();
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dewp_t::panic() {
     line_usage_predictor_t::panic();
 
     this->print_structures();
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dewp_t::periodic_check(){
     line_usage_predictor_t::periodic_check();
 
@@ -912,9 +909,9 @@ void line_usage_predictor_dewp_t::periodic_check(){
     #endif
 };
 
-/// ============================================================================
+// ============================================================================
 /// STATISTICS
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dewp_t::reset_statistics() {
     line_usage_predictor_t::reset_statistics();
 
@@ -964,7 +961,7 @@ void line_usage_predictor_dewp_t::reset_statistics() {
     this->stat_cycles_turned_off_whole_line_since_begin = 0;
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dewp_t::print_statistics() {
     line_usage_predictor_t::print_statistics();
 
@@ -1040,7 +1037,7 @@ void line_usage_predictor_dewp_t::print_statistics() {
 
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dewp_t::print_configuration() {
     line_usage_predictor_t::print_configuration();
 

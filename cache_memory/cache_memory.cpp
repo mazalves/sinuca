@@ -1,26 +1,23 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "../sinuca.hpp"
 
 #ifdef CACHE_DEBUG
@@ -29,7 +26,7 @@
     #define CACHE_DEBUG_PRINTF(...)
 #endif
 
-/// ============================================================================
+// ============================================================================
 cache_memory_t::cache_memory_t() {
     this->set_type_component(COMPONENT_CACHE_MEMORY);
 
@@ -71,16 +68,18 @@ cache_memory_t::cache_memory_t() {
     this->recv_rqst_write_ready_cycle = 0;
 };
 
-/// ============================================================================
+// ============================================================================
 cache_memory_t::~cache_memory_t() {
     /// De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<cache_set_t>(sets);
     utils_t::template_delete_array<memory_package_t>(mshr_buffer);
+    utils_t::template_delete_array<mshr_diff_line_t>(mshr_request_different_lines);
+
     utils_t::template_delete_variable<container_ptr_cache_memory_t>(lower_level_cache);
     utils_t::template_delete_variable<container_ptr_cache_memory_t>(higher_level_cache);
 };
 
-/// ============================================================================
+// ============================================================================
 void cache_memory_t::allocate() {
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_line_number() / this->get_associativity()), "Wrong line number(%u) or associativity(%u).\n", this->get_line_number(), this->get_associativity());
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_line_size()), "Wrong line size.\n");
@@ -120,17 +119,17 @@ void cache_memory_t::allocate() {
 
     ERROR_ASSERT_PRINTF(this->get_total_banks() == 1 || this->prefetcher->get_prefetcher_type() == PREFETCHER_DISABLE, "Cannot use a multibanked cache with prefetch. (Some requests may be generated in the wrong bank)\n");
 
-    /// ================================================================================
+    // ================================================================================
     /// PREFETCH
-    /// ================================================================================
+    // ================================================================================
     char label[50] = "";
     sprintf(label, "%s_PREFETCH", this->get_label());
     this->prefetcher->set_label(label);
     this->prefetcher->allocate();
 
-    /// ================================================================================
+    // ================================================================================
     /// LINE_USAGE_PREDICTOR
-    /// ================================================================================
+    // ================================================================================
     sprintf(label, "%s_LINE_USAGE_PREDICTOR", this->get_label());
     this->line_usage_predictor->set_label(label);
     this->line_usage_predictor->allocate();
@@ -140,7 +139,7 @@ void cache_memory_t::allocate() {
     #endif
 };
 
-/// ============================================================================
+// ============================================================================
 uint64_t cache_memory_t::get_fake_address(uint32_t index, uint32_t way){
     // ~ CACHE_DEBUG_PRINTF("index:%d way:%d\n", index, way);
     // ~ CACHE_DEBUG_PRINTF("tag:%"PRIu64" index:%"PRIu64" bank:%"PRIu64" offset:%"PRIu64"\n", tag_bits_shift, index_bits_shift, bank_bits_shift, offset_bits_shift );
@@ -190,7 +189,7 @@ uint64_t cache_memory_t::get_fake_address(uint32_t index, uint32_t way){
 
 };
 
-/// ============================================================================
+// ============================================================================
 void cache_memory_t::set_masks() {
     ERROR_ASSERT_PRINTF(this->get_total_banks() > this->get_bank_number(), "Wrong number of banks (%u/%u).\n", this->get_bank_number(), this->get_total_banks());
     ERROR_ASSERT_PRINTF(this->get_total_sets() > 0, "Wrong number of sets (%u).\n", this->get_total_sets());
@@ -290,10 +289,10 @@ void cache_memory_t::set_masks() {
     }
 };
 
-/// ============================================================================
+// ============================================================================
 void cache_memory_t::clock(uint32_t subcycle) {
     (void) subcycle;
-    CACHE_DEBUG_PRINTF("==================== ID(%u) ",this->get_id());
+    CACHE_DEBUG_PRINTF("==================== ID(%u) ", this->get_id());
     CACHE_DEBUG_PRINTF("====================\n");
     CACHE_DEBUG_PRINTF("cycle() \n");
 
@@ -301,9 +300,9 @@ void cache_memory_t::clock(uint32_t subcycle) {
     if (this->mshr_born_ordered.empty() &&
     this->prefetcher->get_request_buffer_position_used() == 0) return;
 
-    /// =================================================================
+    // =================================================================
     /// MSHR_BUFFER - REMOVE THE READY PACKAGES
-    /// =================================================================
+    // =================================================================
     for (uint32_t i = 0; i < this->mshr_born_ordered.size(); i++){
         if (mshr_born_ordered[i]->state == PACKAGE_STATE_READY &&
         this->mshr_born_ordered[i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
@@ -332,9 +331,9 @@ void cache_memory_t::clock(uint32_t subcycle) {
     }
 
 
-    /// =================================================================
+    // =================================================================
     /// MSHR_BUFFER - TRANSMISSION
-    /// =================================================================
+    // =================================================================
     /// Control Parallel Requests
     for (uint32_t i = 0; i < this->mshr_born_ordered.size(); i++){
         if (mshr_born_ordered[i]->state == PACKAGE_STATE_TRANSMIT &&
@@ -374,9 +373,9 @@ void cache_memory_t::clock(uint32_t subcycle) {
     }
 
 
-    /// =================================================================
+    // =================================================================
     /// MSHR_BUFFER - UNTREATED
-    /// =================================================================
+    // =================================================================
     /// Control Parallel Requests
     for (uint32_t i = 0; i < this->mshr_born_ordered.size(); i++){
         if (mshr_born_ordered[i]->state == PACKAGE_STATE_UNTREATED &&
@@ -417,9 +416,9 @@ void cache_memory_t::clock(uint32_t subcycle) {
         }
     }
 
-    /// =================================================================
+    // =================================================================
     /// GET FROM PREFETCHER
-    /// =================================================================
+    // =================================================================
     memory_package_t* memory_package = this->prefetcher->request_buffer_get_older();
     if (memory_package != NULL) {
         CACHE_DEBUG_PRINTF("\t Has New Prefetch.\n");
@@ -435,7 +434,7 @@ void cache_memory_t::clock(uint32_t subcycle) {
 };
 
 
-/// ============================================================================
+// ============================================================================
 void cache_memory_t::insert_mshr_born_ordered(memory_package_t* package){
     /// this->mshr_born_ordered            = [OLDER --------> NEWER]
     /// this->mshr_born_ordered.born_cycle = [SMALLER -----> BIGGER]
@@ -465,7 +464,7 @@ void cache_memory_t::insert_mshr_born_ordered(memory_package_t* package){
     #endif
 };
 
-/// ============================================================================
+// ============================================================================
 int32_t cache_memory_t::allocate_request(memory_package_t* package){
 
     int32_t slot = memory_package_t::find_free(this->mshr_buffer, this->mshr_buffer_request_reserved_size);
@@ -481,7 +480,7 @@ int32_t cache_memory_t::allocate_request(memory_package_t* package){
 };
 
 
-/// ============================================================================
+// ============================================================================
 int32_t cache_memory_t::allocate_writeback(memory_package_t* package){
 
     int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size, this->mshr_buffer_writeback_reserved_size);
@@ -497,7 +496,7 @@ int32_t cache_memory_t::allocate_writeback(memory_package_t* package){
     return slot;
 };
 
-/// ============================================================================
+// ============================================================================
 int32_t cache_memory_t::allocate_prefetch(memory_package_t* package){
 
     int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_writeback_reserved_size,
@@ -522,7 +521,7 @@ int32_t cache_memory_t::allocate_prefetch(memory_package_t* package){
     return slot;
 };
 
-/// ============================================================================
+// ============================================================================
 int32_t cache_memory_t::send_package(memory_package_t *package) {
     CACHE_DEBUG_PRINTF("send_package() package:%s\n", package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
@@ -592,7 +591,7 @@ int32_t cache_memory_t::send_package(memory_package_t *package) {
 };
 
 
-/// ============================================================================
+// ============================================================================
 bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
     CACHE_DEBUG_PRINTF("receive_package() port:%u, package:%s\n", input_port, package->content_to_string().c_str());
 
@@ -644,9 +643,9 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
                         this->recv_rqst_read_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
                         this->remove_token_list(package);
 
-                        /// =============================================================
+                        // =============================================================
                         /// SEND TO PREFETCH
-                        /// =============================================================
+                        // =============================================================
                         CACHE_DEBUG_PRINTF("\t Treat REQUEST this->mshr_born_ordered[%d] %s\n", slot, this->mshr_buffer[slot].content_to_string().c_str());
                         this->prefetcher->treat_prefetch(this->mshr_buffer + slot);
 
@@ -670,9 +669,9 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
                         this->recv_rqst_write_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
                         this->remove_token_list(package);
 
-                        /// =============================================================
+                        // =============================================================
                         /// SEND TO PREFETCH
-                        /// =============================================================
+                        // =============================================================
                         CACHE_DEBUG_PRINTF("\t Treat REQUEST this->mshr_born_ordered[%d] %s\n", slot, this->mshr_buffer[slot].content_to_string().c_str());
                         if (this->mshr_buffer[slot].memory_operation != MEMORY_OPERATION_WRITEBACK) {
                             this->prefetcher->treat_prefetch(this->mshr_buffer + slot);
@@ -690,9 +689,9 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
     return FAIL;
 };
 
-/// ============================================================================
+// ============================================================================
 /// Token Controller Methods
-/// ============================================================================
+// ============================================================================
 bool cache_memory_t::check_token_list(memory_package_t *package) {
     ERROR_ASSERT_PRINTF(package->is_answer == false, "check_token_list received a Answer.\n")
     uint32_t token_pos = 0;//, number_tokens_coming = 0;
@@ -784,7 +783,7 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
     return FAIL;
 };
 
-/// ============================================================================
+// ============================================================================
 void cache_memory_t::remove_token_list(memory_package_t *package) {
     for (uint32_t token = 0; token < this->token_list.size(); token++) {
         /// Requested Address Found
@@ -800,9 +799,9 @@ void cache_memory_t::remove_token_list(memory_package_t *package) {
     ERROR_PRINTF("Could not find the previous allocated token.\n%s\n", package->content_to_string().c_str())
 };
 
-/// ============================================================================
+// ============================================================================
 /// Methods called by the directory to add statistics and others
-/// ============================================================================
+// ============================================================================
 void cache_memory_t::cache_stats(memory_operation_t memory_operation, bool is_hit) {
 
     this->add_stat_accesses();
@@ -854,7 +853,7 @@ void cache_memory_t::cache_stats(memory_operation_t memory_operation, bool is_hi
         }
     }
 };
-/// ============================================================================
+// ============================================================================
 void cache_memory_t::cache_wait(memory_package_t *package) {
 
     switch (package->memory_operation) {
@@ -880,18 +879,18 @@ void cache_memory_t::cache_wait(memory_package_t *package) {
     }
 };
 
-/// ============================================================================
+// ============================================================================
 // Input: memory_address
 // Output: cache_line_t*, &index, &way
 cache_line_t* cache_memory_t::get_line(uint32_t index, uint32_t way) {
-    ERROR_ASSERT_PRINTF(index < this->index_bits_mask,"Wrong index number\n")
+    ERROR_ASSERT_PRINTF(index < this->index_bits_mask, "Wrong index number\n")
     ERROR_ASSERT_PRINTF(way < this->get_associativity(), "Wrong way number\n")
 
     return &this->sets[index].ways[way];
 }
 
 
-/// ============================================================================
+// ============================================================================
 // Input: memory_address
 // Output: cache_line_t*, &index, &way
 cache_line_t* cache_memory_t::find_line(uint64_t memory_address, uint32_t& index, uint32_t& choosen_way) {
@@ -906,7 +905,7 @@ cache_line_t* cache_memory_t::find_line(uint64_t memory_address, uint32_t& index
     return NULL;
 }
 
-/// ============================================================================
+// ============================================================================
 // Input: memory_address
 // Output: cache_line_t*, &index, &way
 cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& index, uint32_t& choosen_way) {
@@ -1019,7 +1018,7 @@ cache_line_t* cache_memory_t::evict_address(uint64_t memory_address, uint32_t& i
 };
 
 
-/// ============================================================================
+// ============================================================================
 void cache_memory_t::change_address(cache_line_t *line, uint64_t new_memory_address) {
     ERROR_ASSERT_PRINTF(line != NULL, "Cannot change the tag address of a NULL line.\n")
     line->tag = new_memory_address;
@@ -1027,14 +1026,14 @@ void cache_memory_t::change_address(cache_line_t *line, uint64_t new_memory_addr
 };
 
 
-/// ============================================================================
+// ============================================================================
 void cache_memory_t::change_status(cache_line_t *line, protocol_status_t status) {
     ERROR_ASSERT_PRINTF(line != NULL, "Cannot change the status of a NULL line.\n")
     line->status = status;
     return;
 };
 
-/// ============================================================================
+// ============================================================================
 void cache_memory_t::update_last_access(cache_line_t *line) {
     ERROR_ASSERT_PRINTF(line != NULL, "Cannot change the last_access of a NULL line.\n")
     line->last_access = sinuca_engine.get_global_cycle();
@@ -1043,7 +1042,7 @@ void cache_memory_t::update_last_access(cache_line_t *line) {
 
 
 
-/// ============================================================================
+// ============================================================================
 void cache_memory_t::print_structures() {
     SINUCA_PRINTF("%s MSHR_BUFFER:\n%s", this->get_label(), memory_package_t::print_all(this->mshr_buffer, this->mshr_buffer_size).c_str())
 
@@ -1057,14 +1056,14 @@ void cache_memory_t::print_structures() {
 
 };
 
-/// ============================================================================
+// ============================================================================
 void cache_memory_t::panic() {
     this->print_structures();
     this->prefetcher->panic();
     this->line_usage_predictor->panic();
 };
 
-/// ============================================================================
+// ============================================================================
 void cache_memory_t::periodic_check(){
     #ifdef CACHE_DEBUG
         CACHE_DEBUG_PRINTF("\n");
@@ -1076,9 +1075,9 @@ void cache_memory_t::periodic_check(){
 };
 
 
-/// ============================================================================
+// ============================================================================
 /// STATISTICS
-/// ============================================================================
+// ============================================================================
 void cache_memory_t::reset_statistics() {
     this->set_stat_accesses(0);
     this->set_stat_invalidation(0);
@@ -1102,23 +1101,23 @@ void cache_memory_t::reset_statistics() {
 
     this->stat_min_instruction_wait_time = 0;
     this->stat_max_instruction_wait_time = 0;
-    this->stat_acumulated_instruction_wait_time = 0;
+    this->stat_accumulated_instruction_wait_time = 0;
 
     this->stat_min_read_wait_time = 0;
     this->stat_max_read_wait_time = 0;
-    this->stat_acumulated_read_wait_time = 0;
+    this->stat_accumulated_read_wait_time = 0;
 
     this->stat_min_prefetch_wait_time = 0;
     this->stat_max_prefetch_wait_time = 0;
-    this->stat_acumulated_prefetch_wait_time = 0;
+    this->stat_accumulated_prefetch_wait_time = 0;
 
     this->stat_min_write_wait_time = 0;
     this->stat_max_write_wait_time = 0;
-    this->stat_acumulated_write_wait_time = 0;
+    this->stat_accumulated_write_wait_time = 0;
 
     this->stat_min_writeback_wait_time = 0;
     this->stat_max_writeback_wait_time = 0;
-    this->stat_acumulated_writeback_wait_time = 0;
+    this->stat_accumulated_writeback_wait_time = 0;
 
     this->stat_full_mshr_buffer_request = 0;
     this->stat_full_mshr_buffer_writeback = 0;
@@ -1128,10 +1127,10 @@ void cache_memory_t::reset_statistics() {
     this->line_usage_predictor->reset_statistics();
 };
 
-/// ============================================================================
+// ============================================================================
 void cache_memory_t::print_statistics() {
     char title[100] = "";
-    sprintf(title, "Statistics of %s", this->get_label());
+    snprintf(title, sizeof(title), "Statistics of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);
     sinuca_engine.write_statistics_big_separator();
@@ -1170,10 +1169,10 @@ void cache_memory_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writeback_send", stat_writeback_send);
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_instruction_miss_percentage",stat_instruction_miss, stat_instruction_miss + stat_instruction_hit);
-    sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_read_miss_percentage",stat_read_miss, stat_read_miss + stat_read_hit);
-    sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_prefetch_miss_percentage",stat_prefetch_miss, stat_prefetch_miss + stat_prefetch_hit);
-    sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_write_miss_percentage",stat_write_miss, stat_write_miss + stat_write_hit);
+    sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_instruction_miss_percentage", stat_instruction_miss, stat_instruction_miss + stat_instruction_hit);
+    sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_read_miss_percentage", stat_read_miss, stat_read_miss + stat_read_hit);
+    sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_prefetch_miss_percentage", stat_prefetch_miss, stat_prefetch_miss + stat_prefetch_hit);
+    sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_write_miss_percentage", stat_write_miss, stat_write_miss + stat_write_hit);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_instruction_wait_time", stat_min_instruction_wait_time);
@@ -1190,11 +1189,11 @@ void cache_memory_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_writeback_wait_time", stat_max_writeback_wait_time);
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_instruction_wait_time_ratio",stat_acumulated_instruction_wait_time, stat_instruction_miss);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_read_wait_time_ratio",stat_acumulated_read_wait_time, stat_read_miss);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_prefetch_wait_time_ratio",stat_acumulated_prefetch_wait_time, stat_prefetch_miss);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_write_wait_time_ratio",stat_acumulated_write_wait_time, stat_write_miss);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_writeback_wait_time_ratio",stat_acumulated_writeback_wait_time, stat_writeback_send);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_instruction_wait_time_ratio", stat_accumulated_instruction_wait_time, stat_instruction_miss);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_read_wait_time_ratio", stat_accumulated_read_wait_time, stat_read_miss);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_prefetch_wait_time_ratio", stat_accumulated_prefetch_wait_time, stat_prefetch_miss);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_write_wait_time_ratio", stat_accumulated_write_wait_time, stat_write_miss);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_writeback_wait_time_ratio", stat_accumulated_writeback_wait_time, stat_writeback_send);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_buffer_request", stat_full_mshr_buffer_request);
@@ -1206,11 +1205,11 @@ void cache_memory_t::print_statistics() {
     this->line_usage_predictor->print_statistics();
 };
 
-/// ============================================================================
-/// ============================================================================
+// ============================================================================
+// ============================================================================
 void cache_memory_t::print_configuration() {
     char title[100] = "";
-    sprintf(title, "Configuration of %s", this->get_label());
+    snprintf(title, sizeof(title), "Configuration of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);
     sinuca_engine.write_statistics_big_separator();

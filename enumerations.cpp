@@ -1,66 +1,63 @@
-//==============================================================================
-//
-// Copyright (C) 2010, 2011
-// Marco Antonio Zanata Alves
-// Eduardo Henrique Molina da Cruz
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-//==============================================================================
-#include "./sinuca.hpp"
-/// ============================================================================
-/// Enumarations
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-/// ============================================================================
-/// Enumarates the INSTRUCTION operation type as NOP | INT_* | FLOAT_* | BRANCH | MEM_* | OTHER
+#include "./sinuca.hpp"
+// ============================================================================
+/// Enumerations
+// ============================================================================
+
+// ============================================================================
+/// Enumerates the INSTRUCTION (Opcode and Uop) operation type
 const char* get_enum_instruction_operation_char(instruction_operation_t type) {
     switch (type) {
         case INSTRUCTION_OPERATION_NOP:         return "OP_NOP   "; break;
-        /// ====================================================================
+        // ====================================================================
         /// INTEGERS
         case INSTRUCTION_OPERATION_INT_ALU:     return "OP_IN_ALU"; break;
         case INSTRUCTION_OPERATION_INT_MUL:     return "OP_IN_MUL"; break;
         case INSTRUCTION_OPERATION_INT_DIV:     return "OP_IN_DIV"; break;
-        /// ====================================================================
+        // ====================================================================
         /// FLOAT POINT
         case INSTRUCTION_OPERATION_FP_ALU:      return "OP_FP_ALU"; break;
         case INSTRUCTION_OPERATION_FP_MUL:      return "OP_FP_MUL"; break;
         case INSTRUCTION_OPERATION_FP_DIV:      return "OP_FP_DIV"; break;
-        /// ====================================================================
+        // ====================================================================
         /// BRANCHES
         case INSTRUCTION_OPERATION_BRANCH:      return "OP_BRANCH"; break;
-        /// ====================================================================
+        // ====================================================================
         /// MEMORY OPERATIONS
         case INSTRUCTION_OPERATION_MEM_LOAD:    return "OP_LOAD  "; break;
         case INSTRUCTION_OPERATION_MEM_STORE:   return "OP_STORE "; break;
-        /// ====================================================================
-        /// NOT INDENTIFIED
+        // ====================================================================
+        /// NOT IDENTIFIED
         case INSTRUCTION_OPERATION_OTHER:       return "OP_OTHER "; break;
-        /// ====================================================================
-        /// SYNCRONIZATION
+        // ====================================================================
+        /// SYNCHRONIZATION
         case INSTRUCTION_OPERATION_BARRIER:     return "OP_BARRIER"; break;
     };
     ERROR_PRINTF("Wrong INSTRUCTION_OPERATION\n");
     return "FAIL";
 };
 
-/// ============================================================================
-/// Enumarates the MEMORY operation type as READ | WRITE | INSTRUCTION | ...
+// ============================================================================
+/// Enumerates the MEMORY operation type
 const char* get_enum_memory_operation_char(memory_operation_t type) {
     switch (type) {
         case MEMORY_OPERATION_INST:         return "INST "; break;
@@ -68,14 +65,14 @@ const char* get_enum_memory_operation_char(memory_operation_t type) {
         case MEMORY_OPERATION_PREFETCH:     return "PFTCH"; break;
         case MEMORY_OPERATION_WRITE:        return "WRITE"; break;
         case MEMORY_OPERATION_WRITEBACK:     return "COPYB"; break;
-        /// ====================================================================
+        // ====================================================================
     };
     ERROR_PRINTF("Wrong MEMORY_OPERATION\n");
     return "FAIL";
 };
 
-/// ============================================================================
-/// Used to describe the package status when it arrives on the components
+// ============================================================================
+/// Enumerates the package status when it arrives on the components
 const char *get_enum_package_state_char(package_state_t type) {
     switch (type) {
         case PACKAGE_STATE_FREE:        return "FREE "; break;
@@ -88,8 +85,20 @@ const char *get_enum_package_state_char(package_state_t type) {
     return "FAIL";
 };
 
-/// ============================================================================
-/// Enumarates the protocol status as M/O/E/S/I/V.
+// ============================================================================
+/// Enumarates the data and instruction ports inside the processor
+const char *get_enum_processor_port_char(processor_port_t type) {
+    switch (type) {
+        case PROCESSOR_PORT_DATA_CACHE:   return "DATA_PORT "; break;
+        case PROCESSOR_PORT_INST_CACHE:   return "INST_PORT "; break;
+        case PROCESSOR_PORT_NUMBER:       return "TOTAL_PORTS"; break;
+    };
+    ERROR_PRINTF("Wrong PROCESSOR_PORT\n");
+    return "FAIL";
+};
+
+// ============================================================================
+/// Enumerates the coherence protocol status
 const char *get_enum_protocol_status_char(protocol_status_t type) {
     switch (type) {
         case PROTOCOL_STATUS_M: return "MODF"; break;
@@ -102,9 +111,8 @@ const char *get_enum_protocol_status_char(protocol_status_t type) {
     return "FAIL";
 };
 
-
-/// ============================================================================
-/// Open the file parser_components.h and gets the types of components
+// ============================================================================
+/// Enumerates the types of components
 const char *get_enum_component_char(component_t type) {
     switch (type) {
         case COMPONENT_PROCESSOR:                   return "PROCESSOR"; break;
@@ -120,9 +128,8 @@ const char *get_enum_component_char(component_t type) {
     return "FAIL";
 };
 
-
-/// ============================================================================
-/// Enumarates the types of hash function
+// ============================================================================
+/// Enumerates the types of hash function
 const char *get_enum_hash_function_char(hash_function_t type)  {
     switch (type) {
         case HASH_FUNCTION_XOR_SIMPLE:  return "HASH_FUNCTION_XOR_SIMPLE"; break;
@@ -138,8 +145,8 @@ const char *get_enum_hash_function_char(hash_function_t type)  {
     return "FAIL";
 };
 
-/// ============================================================================
-/// Enumarates the type of branch predictor
+// ============================================================================
+/// Enumerates the type of branch predictor
 const char *get_enum_branch_predictor_policy_char(branch_predictor_policy_t type) {
     switch (type) {
         case BRANCH_PREDICTOR_TWO_LEVEL_GAG:    return "BRANCH_PREDICTOR_TWO_LEVEL_GAG"; break;
@@ -155,8 +162,8 @@ const char *get_enum_branch_predictor_policy_char(branch_predictor_policy_t type
     return "FAIL";
 };
 
-/// ============================================================================
-/// Enumarates the processor stages, used to indicate when the branch will be solved.
+// ============================================================================
+/// Enumerates the processor stages, used to indicate when the branch will be solved
 const char *get_enum_processor_stage_char(processor_stage_t type) {
     switch (type) {
         case PROCESSOR_STAGE_FETCH:     return "FETCH    "; break;
@@ -170,22 +177,22 @@ const char *get_enum_processor_stage_char(processor_stage_t type) {
     return "FAIL";
 };
 
-/// ============================================================================
-/// Enumarates the selection policy to pick a sender or next to be treated.
+// ============================================================================
+/// Enumerates the synchronization type required by the dynamic trace.
 const char *get_enum_sync_char(sync_t type) {
     switch (type) {
-        case SYNC_BARRIER:                  return "SYNC_BARRIER"; break;
-        case SYNC_WAIT_CRITICAL_START:      return "SYNC_WAIT_CRITICAL_START"; break;
-        case SYNC_CRITICAL_START:           return "SYNC_CRITICAL_START"; break;
-        case SYNC_CRITICAL_END:             return "SYNC_CRITICAL_END"; break;
+        case SYNC_BARRIER:                  return "BARRIER"; break;
+        case SYNC_WAIT_CRITICAL_START:      return "WAIT_CRITICAL_START"; break;
+        case SYNC_CRITICAL_START:           return "CRITICAL_START"; break;
+        case SYNC_CRITICAL_END:             return "CRITICAL_END"; break;
         case SYNC_FREE:                     return "SYNC_FREE"; break;
     };
     ERROR_PRINTF("Wrong SYNC\n");
     return "FAIL";
 };
 
-/// ============================================================================
-/// Enumarates the way to treat memory dependencies.
+// ============================================================================
+/// Enumerates the way to treat memory dependencies.
 const char *get_enum_disambiguation_char(disambiguation_t type) {
     switch (type) {
         case DISAMBIGUATION_PERFECT:     return "PERFECT"; break;
@@ -195,8 +202,8 @@ const char *get_enum_disambiguation_char(disambiguation_t type) {
     return "FAIL";
 };
 
-/// ============================================================================
-/// Enumarates the selection policy to pick a sender or next to be treated.
+// ============================================================================
+/// Enumerates the selection policy to pick a sender or next to be treated.
 const char *get_enum_selection_char(selection_t type) {
     switch (type) {
         case SELECTION_RANDOM:          return "RANDOM"; break;
@@ -207,8 +214,8 @@ const char *get_enum_selection_char(selection_t type) {
     return "FAIL";
 };
 
-/// ============================================================================
-/// Enumarates the router selection policy to pick a sender.
+// ============================================================================
+/// Enumerates the routing algorithm
 const char *get_enum_routing_algorithm_char(routing_algorithm_t type) {
     switch (type) {
         case ROUTING_ALGORITHM_XY:              return "XY"; break;
@@ -219,8 +226,8 @@ const char *get_enum_routing_algorithm_char(routing_algorithm_t type) {
     return "FAIL";
 };
 
-/// ============================================================================
-/// Cache replacement policy
+// ============================================================================
+/// Enumerates the cache replacement policy
 const char *get_enum_replacement_char(replacement_t type) {
     switch (type) {
         case REPLACEMENT_LRU:               return "LRU"; break;
@@ -234,8 +241,8 @@ const char *get_enum_replacement_char(replacement_t type) {
     return "FAIL";
 };
 
-/// ============================================================================
-/// Directory coherence protocol
+// ============================================================================
+/// Enumerates the directory coherence protocol
 const char *get_enum_coherence_protocol_char(coherence_protocol_t type) {
     switch (type) {
         case COHERENCE_PROTOCOL_MOESI:  return "MOESI"; break;
@@ -244,8 +251,8 @@ const char *get_enum_coherence_protocol_char(coherence_protocol_t type) {
     return "FAIL";
 };
 
-/// ============================================================================
-/// Directory coherence protocol
+// ============================================================================
+/// Enumerates the directory inclusiveness protocol
 const char *get_enum_inclusiveness_char(inclusiveness_t type) {
     switch (type) {
         case INCLUSIVENESS_NON_INCLUSIVE:   return "NON_INCLUSIVE"; break;
@@ -256,8 +263,8 @@ const char *get_enum_inclusiveness_char(inclusiveness_t type) {
     return "FAIL";
 };
 
-/// ============================================================================
-/// Prefetcher type
+// ============================================================================
+/// Enumerates the prefetcher type
 const char *get_enum_prefetch_policy_char(prefetch_policy_t type) {
     switch (type) {
         case PREFETCHER_STRIDE:     return "STRIDE"; break;
@@ -268,38 +275,34 @@ const char *get_enum_prefetch_policy_char(prefetch_policy_t type) {
     return "FAIL";
 };
 
-/// ============================================================================
-/// Prefetcher type
+// ============================================================================
+/// Enumerates the prefetcher stride state
 const char *get_enum_prefetch_stride_state_char(prefetch_stride_state_t type) {
     switch (type) {
-        case PREFETCHER_STRIDE_STATE_INIT:          return "INIT"; break;
-        case PREFETCHER_STRIDE_STATE_TRANSIENT:     return "TRANSIENT"; break;
-        case PREFETCHER_STRIDE_STATE_STEADY:        return "STEADY"; break;
-        case PREFETCHER_STRIDE_STATE_NO_PRED:       return "NO_PRED"; break;
-
+        case PREFETCHER_STRIDE_STATE_INIT:       return "INIT"; break;
+        case PREFETCHER_STRIDE_STATE_TRANSIENT:  return "TRANSIENT"; break;
+        case PREFETCHER_STRIDE_STATE_STEADY:     return "STEADY"; break;
+        case PREFETCHER_STRIDE_STATE_NO_PRED:    return "NO_PRED"; break;
     };
     ERROR_PRINTF("Wrong PREFETCHER_STRIDE_STATE\n");
     return "FAIL";
 };
 
-
-/// ============================================================================
-/// Prefetcher type
+// ============================================================================
+/// Enumerates the prefetcher stream state
 const char *get_enum_prefetch_stream_state_char(prefetch_stream_state_t type) {
     switch (type) {
-        case PREFETCHER_STREAM_STATE_INVALID:       return "INVALID"; break;
-        case PREFETCHER_STREAM_STATE_ALLOCATED:     return "ALLOCATED"; break;
-        case PREFETCHER_STREAM_STATE_TRAINING:      return "TRAINING"; break;
-        case PREFETCHER_STREAM_STATE_MONITOR_AND_REQUEST:       return "MONITOR_AND_REQUEST"; break;
-
+        case PREFETCHER_STREAM_STATE_INVALID:              return "INVALID"; break;
+        case PREFETCHER_STREAM_STATE_ALLOCATED:            return "ALLOCATED"; break;
+        case PREFETCHER_STREAM_STATE_TRAINING:             return "TRAINING"; break;
+        case PREFETCHER_STREAM_STATE_MONITOR_AND_REQUEST:  return "MONITOR_AND_REQUEST"; break;
     };
     ERROR_PRINTF("Wrong PREFETCHER_STREAM_STATE\n");
     return "FAIL";
 };
 
-
-/// ============================================================================
-/// Prefetcher full buffer type
+// ============================================================================
+/// Enumerates the prefetcher full buffer policy
 const char *get_enum_full_buffer_char(full_buffer_t type) {
     switch (type) {
         case FULL_BUFFER_OVERRIDE:  return "FULL_BUFFER_OVERRIDE"; break;
@@ -309,8 +312,8 @@ const char *get_enum_full_buffer_char(full_buffer_t type) {
     return "FAIL";
 };
 
-/// ============================================================================
-/// Enumarates the protocol status as M/O/E/S/I/V.
+// ============================================================================
+/// Enumerates the directory line lock status
 const char *get_enum_lock_char(lock_t type) {
     switch (type) {
         case LOCK_FREE:     return "UNLOCK"; break;
@@ -320,10 +323,8 @@ const char *get_enum_lock_char(lock_t type) {
     ERROR_PRINTF("Wrong LOCK\n");
     return "FAIL";
 };
-
-
-/// ============================================================================
-/// How the memory cache will create its address mask
+// ============================================================================
+/// Enumerates the memory cache address mask
 const char *get_enum_cache_mask_char(cache_mask_t type) {
     switch (type) {
         case CACHE_MASK_TAG_INDEX_OFFSET:       return "TAG_INDEX_OFFSET"; break;
@@ -334,8 +335,8 @@ const char *get_enum_cache_mask_char(cache_mask_t type) {
     return "FAIL";
 };
 
-/// ============================================================================
-/// How the main memory will create its address mask
+// ============================================================================
+/// Enumerates the main memory address mask
 const char *get_enum_memory_controller_mask_char(memory_controller_mask_t type) {
     switch (type) {
         case MEMORY_CONTROLLER_MASK_ROW_BANK_COLUMN:              return "ROW_BANK_COLUMN"; break;
@@ -346,9 +347,9 @@ const char *get_enum_memory_controller_mask_char(memory_controller_mask_t type) 
     return "FAIL";
 };
 
-/// ============================================================================
-/// Memory controller commands to the DRAM
-const char *get_enum_memory_controller_command_char(memory_controller_command_t type){
+// ============================================================================
+/// Enumerates the memory controller commands to the DRAM
+const char *get_enum_memory_controller_command_char(memory_controller_command_t type) {
     switch (type) {
         case MEMORY_CONTROLLER_COMMAND_PRECHARGE:       return "PRECHARGE"; break;
         case MEMORY_CONTROLLER_COMMAND_ROW_ACCESS:      return "ROW_ACCESS"; break;
@@ -361,8 +362,8 @@ const char *get_enum_memory_controller_command_char(memory_controller_command_t 
     return "FAIL";
 };
 
-/// ============================================================================
-/// Policy to set the priority during the Row Buffer access
+// ============================================================================
+/// Enumerates the policies to set the priority during the Row Buffer access
 const char *get_enum_request_priority_char(request_priority_t type) {
     switch (type) {
         case REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST:    return "ROW_BUFFER_HITS_FIRST"; break;
@@ -372,19 +373,19 @@ const char *get_enum_request_priority_char(request_priority_t type) {
     return "FAIL";
 };
 
-/// ============================================================================
-/// Policy to give privilege of some operations over others
+// ============================================================================
+/// Enumerates the policies to give privilege of some operations over others
 const char *get_enum_write_priority_char(write_priority_t type) {
     switch (type) {
         case WRITE_PRIORITY_SERVICE_AT_NO_READ:     return "SERVICE_AT_NO_READ"; break;
         case WRITE_PRIORITY_DRAIN_WHEN_FULL:        return "DRAIN_WHEN_FULL"; break;
     };
-    ERROR_PRINTF("Wrong write_priority\n");
+    ERROR_PRINTF("Wrong WRITE_PRIORITY\n");
     return "FAIL";
 };
 
-/// ============================================================================
-/// Line Usage Predictor type
+// ============================================================================
+/// Enumerates the line usage predictor type
 const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_policy_t type) {
     switch (type) {
         case LINE_USAGE_PREDICTOR_POLICY_DISABLE:       return "DISABLE";       break;
@@ -393,23 +394,21 @@ const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_polic
         case LINE_USAGE_PREDICTOR_POLICY_DEWP:          return "DEWP";          break;
         case LINE_USAGE_PREDICTOR_POLICY_DEWP_ORACLE:   return "DEWP_ORACLE";   break;
         case LINE_USAGE_PREDICTOR_POLICY_SKEWED:        return "SKEWED";   break;
-
     };
     ERROR_PRINTF("Wrong LINE_USAGE_PREDICTOR_POLICY\n");
     return "FAIL";
 };
 
-/// ============================================================================
-/// Valid Sub-Block Type
+// ============================================================================
+/// Enumerates the valid sub-block type
 const char *get_enum_line_sub_block_t_char(line_sub_block_t type) {
     switch (type) {
         case LINE_SUB_BLOCK_DISABLE:        return "DISABLE";     break;
         case LINE_SUB_BLOCK_NORMAL:         return "NORMAL";      break;
         case LINE_SUB_BLOCK_LEARN:          return "LEARN";       break;
         case LINE_SUB_BLOCK_WRONG_FIRST:    return "WRONG";       break;
-        case LINE_SUB_BLOCK_WRITEBACK:       return "WRITEBACK";    break;
+        case LINE_SUB_BLOCK_WRITEBACK:      return "WRITEBACK";    break;
     };
     ERROR_PRINTF("Wrong LINE_SUB_BLOCK\n");
     return "FAIL";
 };
-

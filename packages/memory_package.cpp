@@ -1,33 +1,31 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-// Eduardo Henrique Molina da Cruz
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "./../sinuca.hpp"
 #include <string>
 
-/// ============================================================================
+// ============================================================================
 memory_package_t::memory_package_t() {
     ERROR_ASSERT_PRINTF(sinuca_engine.get_global_line_size() > 0, "Allocating 0 positions.\n")
 
+    this->sub_blocks = NULL;
     // =============================================================
     // Line Usage Predictor
     this->sub_blocks = utils_t::template_allocate_initialize_array<bool>(sinuca_engine.get_global_line_size(), false);
@@ -35,44 +33,81 @@ memory_package_t::memory_package_t() {
     this->package_clean();
 };
 
-/// ============================================================================
+// ============================================================================
 memory_package_t::~memory_package_t() {
     utils_t::template_delete_array<bool>(sub_blocks);
 };
 
-/// ============================================================================
-memory_package_t &memory_package_t::operator=(const memory_package_t &package) {
+// ============================================================================
+memory_package_t::memory_package_t(const memory_package_t &package) {
+    // ~ ERROR_ASSERT_PRINTF(sinuca_engine.get_global_line_size() > 0, "Allocating 0 positions.\n")
+    // ~ ERROR_ASSERT_PRINTF(sub_blocks != NULL, "Allocating 0 positions.\n")
+    // ~ this->package_clean();
 
-    this->id_owner = package.id_owner;
-    this->opcode_number = package.opcode_number;
-    this->opcode_address = package.opcode_address;
-    this->uop_number = package.uop_number;
-    this->memory_address = package.memory_address;
-    this->memory_size = package.memory_size;
+    this->sub_blocks = utils_t::template_allocate_initialize_array<bool>(sinuca_engine.get_global_line_size(), false);
 
-    this->state = package.state;
-    // ~ this->ready_cycle = sinuca_engine.get_global_cycle();
-    this->ready_cycle = package.ready_cycle;
-    this->born_cycle = sinuca_engine.get_global_cycle();
+    id_owner = package.id_owner;
+    opcode_number = package.opcode_number;
+    opcode_address = package.opcode_address;
+    uop_number = package.uop_number;
+    memory_address = package.memory_address;
+    memory_size = package.memory_size;
 
-    this->memory_operation = package.memory_operation;
-    this->is_answer = package.is_answer;
+    state = package.state;
+    ready_cycle = package.ready_cycle;
+    born_cycle = sinuca_engine.get_global_cycle();
+
+    memory_operation = package.memory_operation;
+    is_answer = package.is_answer;
 
     // =============================================================
     // Line Usage Predictor
     memcpy(this->sub_blocks, package.sub_blocks, sizeof(bool) * sinuca_engine.get_global_line_size());
 
     /// Routing Control
-    this->id_src = package.id_src;
-    this->id_dst = package.id_dst;
-    this->hops = package.hops;
-    this->hop_count = package.hop_count;
+    id_src = package.id_src;
+    id_dst = package.id_dst;
+    hops = package.hops;
+    hop_count = package.hop_count;
+};
 
+// ============================================================================
+memory_package_t &memory_package_t::operator=(const memory_package_t &package) {
+    ERROR_ASSERT_PRINTF(sinuca_engine.get_global_line_size() > 0, "Allocating 0 positions.\n")
+    ERROR_ASSERT_PRINTF(this->sub_blocks != NULL, "Allocating 0 positions.\n")
+
+    if (this!=&package){
+        this->id_owner = package.id_owner;
+        this->opcode_number = package.opcode_number;
+        this->opcode_address = package.opcode_address;
+        this->uop_number = package.uop_number;
+        this->memory_address = package.memory_address;
+        this->memory_size = package.memory_size;
+
+        this->state = package.state;
+        this->ready_cycle = package.ready_cycle;
+        this->born_cycle = sinuca_engine.get_global_cycle();
+
+        this->memory_operation = package.memory_operation;
+        this->is_answer = package.is_answer;
+
+        // =============================================================
+        // Line Usage Predictor
+        memcpy(this->sub_blocks, package.sub_blocks, sizeof(bool) * sinuca_engine.get_global_line_size());
+
+        /// Routing Control
+        this->id_src = package.id_src;
+        this->id_dst = package.id_dst;
+        this->hops = package.hops;
+        this->hop_count = package.hop_count;
+    }
     return *this;
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_package_t::package_clean() {
+    ERROR_ASSERT_PRINTF(sinuca_engine.get_global_line_size() > 0, "Allocating 0 positions.\n")
+    ERROR_ASSERT_PRINTF(this->sub_blocks != NULL, "Allocating 0 positions.\n")
     this->id_owner = 0;
     this->opcode_number = 0;
     this->opcode_address = 0;
@@ -98,7 +133,7 @@ void memory_package_t::package_clean() {
     this->hop_count = POSITION_FAIL;
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_package_t::package_set_src_dst(uint32_t id_src, uint32_t id_dst) {
     this->id_src = id_src;
     this->id_dst = id_dst;
@@ -106,31 +141,31 @@ void memory_package_t::package_set_src_dst(uint32_t id_src, uint32_t id_dst) {
     this->hop_count = POSITION_FAIL;
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_package_t::package_untreated(uint32_t stall_time) {
     this->ready_cycle = sinuca_engine.get_global_cycle() + stall_time;
     this->state = PACKAGE_STATE_UNTREATED;
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_package_t::package_wait(uint32_t stall_time) {
     this->ready_cycle = sinuca_engine.get_global_cycle() + stall_time;
     this->state = PACKAGE_STATE_WAIT;
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_package_t::package_ready(uint32_t stall_time) {
     this->ready_cycle = sinuca_engine.get_global_cycle() + stall_time;
     this->state = PACKAGE_STATE_READY;
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_package_t::package_transmit(uint32_t stall_time) {
     this->ready_cycle = sinuca_engine.get_global_cycle() + stall_time;
     this->state = PACKAGE_STATE_TRANSMIT;
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_package_t::packager(uint32_t id_owner, uint64_t opcode_number, uint64_t opcode_address, uint64_t uop_number,
                                 uint64_t memory_address, uint32_t memory_size,
                                 package_state_t state, uint32_t stall_time,
@@ -163,7 +198,7 @@ void memory_package_t::packager(uint32_t id_owner, uint64_t opcode_number, uint6
     this->hop_count = hop_count;
 };
 
-/// ============================================================================
+// ============================================================================
 std::string memory_package_t::content_to_string() {
     std::string content_string;
     content_string = "";
@@ -215,7 +250,7 @@ std::string memory_package_t::content_to_string() {
     return content_string;
 };
 
-/// ============================================================================
+// ============================================================================
 std::string memory_package_t::sub_blocks_to_string() {
     std::string content_string;
     content_string = "";
@@ -237,7 +272,7 @@ std::string memory_package_t::sub_blocks_to_string() {
     return content_string;
 };
 
-/// ============================================================================
+// ============================================================================
 int32_t memory_package_t::find_free(memory_package_t *input_array, uint32_t size_array) {
     for (uint32_t i = 0; i < size_array ; i++) {
         if (input_array[i].state == PACKAGE_STATE_FREE)
@@ -246,7 +281,7 @@ int32_t memory_package_t::find_free(memory_package_t *input_array, uint32_t size
     return POSITION_FAIL;
 };
 
-/// ============================================================================
+// ============================================================================
 uint32_t memory_package_t::count_free(memory_package_t *input_array, uint32_t size_array) {
     uint32_t count = 0;
     for (uint32_t i = 0; i < size_array ; i++) {
@@ -257,7 +292,7 @@ uint32_t memory_package_t::count_free(memory_package_t *input_array, uint32_t si
 };
 
 
-/// ============================================================================
+// ============================================================================
 int32_t memory_package_t::find_old_request_state_ready(memory_package_t *input_array, uint32_t size_array, package_state_t state) {
     int32_t old_pos = POSITION_FAIL;
     uint64_t old_cycle = std::numeric_limits<uint64_t>::max();
@@ -275,7 +310,7 @@ int32_t memory_package_t::find_old_request_state_ready(memory_package_t *input_a
 };
 
 
-/// ============================================================================
+// ============================================================================
 int32_t memory_package_t::find_old_answer_state_ready(memory_package_t *input_array, uint32_t size_array, package_state_t state) {
     int32_t old_pos = POSITION_FAIL;
     uint64_t old_cycle = std::numeric_limits<uint64_t>::max();
@@ -292,7 +327,25 @@ int32_t memory_package_t::find_old_answer_state_ready(memory_package_t *input_ar
     return old_pos;
 };
 
-/// ============================================================================
+// ============================================================================
+std::string memory_package_t::print_all(circular_buffer_t<memory_package_t> *input_array, uint32_t size_array) {
+    char tmp_string[CONVERSION_SIZE];
+    std::string content_string;
+    std::string final_string;
+
+    final_string = "";
+    for (uint32_t i = 0; i < size_array ; i++) {
+        content_string = "";
+        content_string = input_array[0][i].content_to_string();
+        if (content_string.size() > 1) {
+            utils_t::uint32_to_char(tmp_string, i);
+            final_string = final_string + "[" + tmp_string + "] " + content_string + "\n";
+        }
+    }
+    return final_string;
+};
+
+// ============================================================================
 std::string memory_package_t::print_all(memory_package_t *input_array, uint32_t size_array) {
     char tmp_string[CONVERSION_SIZE];
     std::string content_string;
@@ -310,7 +363,7 @@ std::string memory_package_t::print_all(memory_package_t *input_array, uint32_t 
     return final_string;
 };
 
-/// ============================================================================
+// ============================================================================
 std::string memory_package_t::print_all(memory_package_t **input_matrix, uint32_t size_x_matrix, uint32_t size_y_matrix) {
     std::string content_string;
     std::string ColumnString;
@@ -336,7 +389,30 @@ std::string memory_package_t::print_all(memory_package_t **input_matrix, uint32_
 };
 
 
-/// ============================================================================
+// ============================================================================
+bool memory_package_t::check_age(circular_buffer_t<memory_package_t> *input_array, uint32_t size_array) {
+    uint64_t min_cycle = 0;
+    if (sinuca_engine.get_global_cycle() > MAX_ALIVE_TIME) {
+        min_cycle = sinuca_engine.get_global_cycle() - MAX_ALIVE_TIME;
+    }
+
+    for (uint32_t i = 0; i < size_array ; i++) {
+        if (input_array[0][i].state != PACKAGE_STATE_FREE) {
+            if (input_array[0][i].born_cycle < min_cycle) {
+                WARNING_PRINTF("CHECK AGE FAIL: %s\n", input_array[0][i].content_to_string().c_str())
+                return FAIL;
+            }
+            /// Statistics of the oldest memory package
+            if (sinuca_engine.get_global_cycle() - input_array[0][i].born_cycle > sinuca_engine.get_stat_old_memory_package()) {
+                sinuca_engine.set_stat_old_memory_package(sinuca_engine.get_global_cycle() - input_array[0][i].born_cycle);
+            }
+        }
+    }
+    return OK;
+};
+
+
+// ============================================================================
 bool memory_package_t::check_age(memory_package_t *input_array, uint32_t size_array) {
     uint64_t min_cycle = 0;
     if (sinuca_engine.get_global_cycle() > MAX_ALIVE_TIME) {
@@ -358,7 +434,7 @@ bool memory_package_t::check_age(memory_package_t *input_array, uint32_t size_ar
     return OK;
 };
 
-/// ============================================================================
+// ============================================================================
 bool memory_package_t::check_age(memory_package_t **input_matrix, uint32_t size_x_matrix, uint32_t size_y_matrix) {
     uint64_t min_cycle = 0;
     if (sinuca_engine.get_global_cycle() > MAX_ALIVE_TIME) {

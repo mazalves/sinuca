@@ -1,26 +1,23 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 class memory_channel_t : public interconnection_interface_t {
     public:
         /// Comes from memory controller
@@ -76,26 +73,26 @@ class memory_channel_t : public interconnection_interface_t {
 
         uint32_t last_bank_selected;
 
-        /// ====================================================================
+        // ====================================================================
         /// Statistics related
-        /// ====================================================================
+        // ====================================================================
         uint64_t stat_row_buffer_hit;
         uint64_t stat_row_buffer_miss;
 
         uint64_t stat_read_forward;
         uint64_t stat_write_forward;
-        /// ====================================================================
+        // ====================================================================
         /// Methods
-        /// ====================================================================
+        // ====================================================================
         memory_channel_t();
         ~memory_channel_t();
         inline const char* get_type_component_label() {
             return "MEMORY_CHANNEL";
         };
 
-        /// ====================================================================
+        // ====================================================================
         /// Inheritance from interconnection_interface_t
-        /// ====================================================================
+        // ====================================================================
         /// Basic Methods
         void allocate();
         void clock(uint32_t sub_cycle);
@@ -112,7 +109,7 @@ class memory_channel_t : public interconnection_interface_t {
         void reset_statistics();
         void print_statistics();
         void print_configuration();
-        /// ====================================================================
+        // ====================================================================
         inline uint64_t get_column(uint64_t addr) {
             return (addr & this->column_bits_mask) >> this->column_bits_shift;
         }

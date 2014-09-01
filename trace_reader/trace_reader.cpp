@@ -1,27 +1,25 @@
-// =============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-// =============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "../sinuca.hpp"
+#include <string>
 
 #ifdef TRACE_READER_DEBUG
     #define TRACE_READER_DEBUG_PRINTF(...) DEBUG_PRINTF(__VA_ARGS__);
@@ -31,6 +29,7 @@
 
 // =============================================================================
 trace_reader_t::trace_reader_t() {
+    this->StaticTraceFile = NULL;
     this->DynamicTraceFile = NULL;
     this->MemoryTraceFile = NULL;
 
@@ -87,9 +86,9 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t number_co
     this->line_memory = utils_t::template_allocate_matrix<char>(number_cores, TRACE_LINE_SIZE);
 
     for (i = 0; i < number_cores; i++) {
-        strcpy(this->line_dynamic[i], "");
-        strcpy(this->line_static[i], "");
-        strcpy(this->line_memory[i], "");
+        this->line_dynamic[i][0] = '\0';
+        this->line_static[i][0] = '\0';
+        this->line_memory[i][0] = '\0';
     }
 
     // =======================================================================
@@ -101,12 +100,12 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t number_co
     TRACE_READER_DEBUG_PRINTF("Inserted Output File Name = %s\n", in_file);
 
     if (this->is_compressed_trace_file) {
-        sprintf(stat_file_name , "%s.tid0.stat.out.gz", in_file);
+        snprintf(stat_file_name, sizeof(stat_file_name), "%s.tid0.stat.out.gz", in_file);
         gzStaticTraceFile = gzopen(stat_file_name, "ro");   /// Open the .gz file
         ERROR_ASSERT_PRINTF(gzStaticTraceFile != NULL, "Could not open the file.\n%s\n", stat_file_name);
     }
     else {
-        sprintf(stat_file_name , "%s.tid0.stat.out", in_file);
+        snprintf(stat_file_name, sizeof(stat_file_name), "%s.tid0.stat.out", in_file);
         this->StaticTraceFile = fopen(stat_file_name, "rw");
         ERROR_ASSERT_PRINTF(StaticTraceFile != NULL, "Could not open the file.\n%s\n", stat_file_name);
     }
@@ -124,14 +123,14 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t number_co
         gzDynamicTraceFile = utils_t::template_allocate_array<gzFile>(number_cores);
         for (i = 0; i < number_cores; i++) {
             dyn_file_name[0] = '\0';
-            sprintf(dyn_file_name , "%s.tid%d.dyn.out.gz", in_file, i);
+            snprintf(dyn_file_name, sizeof(dyn_file_name), "%s.tid%d.dyn.out.gz", in_file, i);
 
             /// Create missing files in order to run single threaded app into a multi-core
             struct stat st;
             /// file do not exist
-            if(stat(dyn_file_name, &st) != 0) {
+            if (stat(dyn_file_name, &st) != 0) {
                 WARNING_PRINTF("FILE NOT FOUND %s. ", dyn_file_name);
-                sprintf(dyn_file_name , "/tmp/NULL_tid%d.dyn.out.gz", i);
+                snprintf(dyn_file_name, sizeof(dyn_file_name), "/tmp/NULL_tid%d.dyn.out.gz", i);
                 WARNING_PRINTF("=> CREATED %s.\n", dyn_file_name);
                 gzDynamicTraceFile[i] = gzopen(dyn_file_name, "wo");    /// Open the .gz file
                 gzwrite(gzDynamicTraceFile[i], "#Empty Trace\n", strlen("#Empty Trace\n"));
@@ -147,14 +146,14 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t number_co
         this->DynamicTraceFile = utils_t::template_allocate_array<FILE*>(number_cores);
         for (i = 0; i < number_cores; i++) {
             dyn_file_name[0] = '\0';
-            sprintf(dyn_file_name ,  "%s.tid%d.dyn.out", in_file, i);
+            snprintf(dyn_file_name, sizeof(dyn_file_name), "%s.tid%d.dyn.out", in_file, i);
 
             /// Create missing files in order to run single threaded app into a multi-core
             struct stat st;
             /// file do not exist
-            if(stat(dyn_file_name, &st) != 0) {
+            if (stat(dyn_file_name, &st) != 0) {
                 WARNING_PRINTF("FILE NOT FOUND %s. ", dyn_file_name);
-                sprintf(dyn_file_name , "/tmp/NULL_tid%d.dyn.out", i);
+                snprintf(dyn_file_name, sizeof(dyn_file_name), "/tmp/NULL_tid%d.dyn.out", i);
                 WARNING_PRINTF("=> CREATED %s.\n", dyn_file_name);
                 DynamicTraceFile[i] = fopen(dyn_file_name, "w");    /// Open the .out file
                 ERROR_ASSERT_PRINTF(DynamicTraceFile[i] != NULL, "Could not create the fake file.\n%s\n", dyn_file_name);
@@ -162,7 +161,7 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t number_co
                 fclose(DynamicTraceFile[i]);
             }
 
-            this->DynamicTraceFile[i] = fopen (dyn_file_name, "rw");
+            this->DynamicTraceFile[i] = fopen(dyn_file_name, "rw");
             ERROR_ASSERT_PRINTF(DynamicTraceFile[i] != NULL, "Could not open the file.\n%s\n", dyn_file_name);
             TRACE_READER_DEBUG_PRINTF("Dynamic File = %s => READY !\n", dyn_file_name);
         }
@@ -172,19 +171,19 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t number_co
     // Memory Trace Files
     // =======================================================================
     char mem_file_name[500];
+    mem_file_name[0] = '\0';
 
     if (this->is_compressed_trace_file) {
         gzMemoryTraceFile = utils_t::template_allocate_array<gzFile>(number_cores);
         for (i = 0; i < number_cores; i++) {
-            mem_file_name[0] = '\0';
-            sprintf(mem_file_name , "%s.tid%d.mem.out.gz", in_file, i);
+            snprintf(mem_file_name, sizeof(mem_file_name), "%s.tid%d.mem.out.gz", in_file, i);
 
             /// Create missing files in order to run single threaded app into a multi-core
             struct stat st;
             /// file do not exist
-            if(stat(mem_file_name, &st) != 0) {
+            if (stat(mem_file_name, &st) != 0) {
                 WARNING_PRINTF("FILE NOT FOUND %s. ", mem_file_name);
-                sprintf(mem_file_name , "/tmp/NULL_tid%d.mem.out.gz", i);
+                snprintf(mem_file_name, sizeof(mem_file_name), "/tmp/NULL_tid%d.mem.out.gz", i);
                 WARNING_PRINTF("=> CREATED %s.\n", mem_file_name);
                 gzMemoryTraceFile[i] = gzopen(mem_file_name, "wo");    /// Open the .gz file
                 gzwrite(gzMemoryTraceFile[i], "#Empty Trace\n", strlen("#Empty Trace\n"));
@@ -199,15 +198,14 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t number_co
     else {
         this->MemoryTraceFile = utils_t::template_allocate_array<FILE*>(number_cores);
         for (i = 0; i < number_cores; i++) {
-            mem_file_name[0] = '\0';
-            sprintf(mem_file_name , "%s.tid%d.mem.out", in_file, i);
+            snprintf(mem_file_name, sizeof(mem_file_name), "%s.tid%d.mem.out", in_file, i);
 
             /// Create missing files in order to run single threaded app into a multi-core
             struct stat st;
             /// file do not exist
-            if(stat(mem_file_name, &st) != 0) {
+            if (stat(mem_file_name, &st) != 0) {
                 WARNING_PRINTF("FILE NOT FOUND %s. ", mem_file_name);
-                sprintf(mem_file_name , "/tmp/NULL_tid%d.mem.out", i);
+                snprintf(mem_file_name, sizeof(mem_file_name), "/tmp/NULL_tid%d.mem.out", i);
                 WARNING_PRINTF("=> CREATED %s.\n", mem_file_name);
                 MemoryTraceFile[i] = fopen(mem_file_name, "w");    /// Open the .out file
                 ERROR_ASSERT_PRINTF(MemoryTraceFile[i] != NULL, "Could not create the fake file.\n%s\n", mem_file_name);
@@ -288,7 +286,7 @@ void trace_reader_t::gzgetline(const gzFile& file, std::string& new_line) {
 uint32_t trace_reader_t::trace_next_dynamic(uint32_t cpuid, sync_t *new_sync) {
     uint32_t BBL = 0;
 
-    /// Auxiliar strings
+    /// Auxiliary strings
     this->line_dynamic[cpuid][0] = '\0';
 
     bool valid_dynamic = false;
@@ -336,17 +334,14 @@ uint32_t trace_reader_t::trace_next_dynamic(uint32_t cpuid, sync_t *new_sync) {
 
 // =============================================================================
 void trace_reader_t::trace_next_memory(uint32_t cpuid) {
-
-    this->line_memory[cpuid][0] = '\0';
-
     bool valid_memory = false;
     bool eof = false;
 
+    this->line_memory[cpuid][0] = '\0';
     while (!valid_memory) {
         if (is_compressed_trace_file) {
             ERROR_ASSERT_PRINTF(!gzeof(this->gzDynamicTraceFile[cpuid]), "MemoryTraceFile EOF - cpu id %d\n", cpuid);
             gzgets(this->gzMemoryTraceFile[cpuid], this->line_memory[cpuid], TRACE_LINE_SIZE);
-
         }
         else {
             eof = fgets(this->line_memory[cpuid], TRACE_LINE_SIZE, this->MemoryTraceFile[cpuid]) == NULL;
@@ -361,13 +356,12 @@ void trace_reader_t::trace_next_memory(uint32_t cpuid) {
 
 // =============================================================================
 bool trace_reader_t::trace_fetch(uint32_t cpuid, opcode_package_t *m) {
-
     opcode_package_t NewOpcode;
     sync_t sync_found = SYNC_FREE;
 
-    //==========================================================================
+    // =========================================================================
     /// Fetch new BBL inside the dynamic file.
-    //==========================================================================
+    // =========================================================================
     if (!this->insideBBL[cpuid]) {
         uint32_t new_BBL = this->trace_next_dynamic(cpuid, &sync_found);
         if (new_BBL == FAIL) {
@@ -398,10 +392,9 @@ bool trace_reader_t::trace_fetch(uint32_t cpuid, opcode_package_t *m) {
         }
     }
 
-
-    //==========================================================================
+    // =========================================================================
     /// Fetch new INSTRUCTION inside the static file.
-    //==========================================================================
+    // =========================================================================
     NewOpcode = this->static_dictionary[this->actual_bbl[cpuid]][this->actual_bbl_opcode[cpuid]];
     uint32_t deque_size = static_dictionary[this->actual_bbl[cpuid]].size();
     this->actual_bbl_opcode[cpuid]++;
@@ -410,10 +403,9 @@ bool trace_reader_t::trace_fetch(uint32_t cpuid, opcode_package_t *m) {
         this->actual_bbl_opcode[cpuid] = 0;
     }
 
-
-    //==========================================================================
+    // =========================================================================
     /// Add SiNUCA information
-    //==========================================================================
+    // =========================================================================
     *m = NewOpcode;
     /// SINUCA control variables.
     m->state = PACKAGE_STATE_UNTREATED;
@@ -430,9 +422,9 @@ bool trace_reader_t::trace_fetch(uint32_t cpuid, opcode_package_t *m) {
     }
     this->trace_opcode_total++;
 
-    //==========================================================================
+    // =========================================================================
     /// If it is LOAD/STORE -> Fetch new MEMORY inside the memory file
-    //==========================================================================
+    // =========================================================================
     if (m->is_read) {
         this->trace_next_memory(cpuid);
         m->trace_string_to_read(this->line_memory[cpuid], this->actual_bbl[cpuid]);
@@ -448,7 +440,7 @@ bool trace_reader_t::trace_fetch(uint32_t cpuid, opcode_package_t *m) {
         m->trace_string_to_write(this->line_memory[cpuid], this->actual_bbl[cpuid]);
     }
 
-    TRACE_READER_DEBUG_PRINTF("CPU[%d] Found Operation [%s]. Found Memory [%s].\n", cpuid, m->content_to_string(), this->line_memory[cpuid]);
+    TRACE_READER_DEBUG_PRINTF("CPU[%d] Found Operation [%s]. Found Memory [%s].\n", cpuid, m->content_to_string().c_str(), this->line_memory[cpuid]);
     return OK;
 };
 
@@ -493,9 +485,9 @@ void trace_reader_t::generate_static_dictionary() {
         }
         else if (this->line_static[0][0] == '@') {                       /// If New BBL
             ERROR_ASSERT_PRINTF(BBL == (uint32_t)this->static_dictionary.size(), "Static dictionary has more BBLs than static file.\n");
-            TRACE_READER_DEBUG_PRINTF("BBL %u with %u instructions.\n",BBL, (uint32_t)NewBBL.size());
+            TRACE_READER_DEBUG_PRINTF("BBL %u with %u instructions.\n", BBL, (uint32_t)NewBBL.size());
             for (uint32_t i = 0; i < NewBBL.size(); i++){
-                TRACE_READER_DEBUG_PRINTF("\t%s", NewBBL[i].opcode_to_trace_string());
+                TRACE_READER_DEBUG_PRINTF("\t%s", NewBBL[i].content_to_string().c_str());
             }
 
             ERROR_ASSERT_PRINTF(BBL < (uint32_t)this->static_dictionary.max_size(), "Static file has less BBLs than dynamic file.\n");
@@ -509,7 +501,7 @@ void trace_reader_t::generate_static_dictionary() {
             NewBBL.push_back(NewOpcode);                        /// Insert the Opcode into the Deque
         }
     }
-    TRACE_READER_DEBUG_PRINTF("BBL %u with %u instructions.\n",BBL, (uint32_t)NewBBL.size());
+    TRACE_READER_DEBUG_PRINTF("BBL %u with %u instructions.\n", BBL, (uint32_t)NewBBL.size());
     this->static_dictionary.push_back(NewBBL);                  /// Save the Last Deque into the Vector
     this->check_static_dictionary();
 };

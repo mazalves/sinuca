@@ -1,26 +1,23 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "../sinuca.hpp"
 
 #ifdef PREFETCHER_DEBUG
@@ -30,7 +27,7 @@
 #endif
 
 
-/// ============================================================================
+// ============================================================================
 prefetch_stride_t::prefetch_stride_t() {
     this->set_prefetcher_type(PREFETCHER_STRIDE);
 
@@ -39,13 +36,13 @@ prefetch_stride_t::prefetch_stride_t() {
     this->stride_table = NULL;
 };
 
-/// ============================================================================
+// ============================================================================
 prefetch_stride_t::~prefetch_stride_t() {
     /// De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<stride_table_line_t>(stride_table);
 };
 
-/// ============================================================================
+// ============================================================================
 void prefetch_stride_t::allocate() {
     prefetch_t::allocate();
 
@@ -54,7 +51,7 @@ void prefetch_stride_t::allocate() {
 };
 
 
-/// ============================================================================
+// ============================================================================
 void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
     ERROR_ASSERT_PRINTF(package->is_answer == false, "Should never receive an answer.\n")
     uint32_t slot;
@@ -182,7 +179,7 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
                                                                         sinuca_engine.get_global_line_size(),       /// Block Size
 
                                                                         PACKAGE_STATE_UNTREATED,                    /// Pack. State
-                                                                        0,                                      /// Ready Cycle
+                                                                        0,                                          /// Ready Cycle
 
                                                                         MEMORY_OPERATION_PREFETCH,                  /// Mem. Operation
                                                                         false,                                      /// Is Answer
@@ -190,8 +187,8 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
                                                                         0,                                          /// Src ID
                                                                         0,                                          /// Dst ID
                                                                         NULL,                                       /// *Hops
-                                                                        0                                           /// Hop Counter
-                                                                        );
+                                                                        0);                                         /// Hop Counter
+
                                     PREFETCHER_DEBUG_PRINTF("\t INSERTED on PREFETCHER_BUFFER[%d]\n", position);
                                     PREFETCHER_DEBUG_PRINTF("\t %s", this->request_buffer[position].content_to_string().c_str());
                                 }
@@ -205,9 +202,6 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
                                 /// Statistics
                                 this->add_stat_dropped_prefetches();
                                 PREFETCHER_DEBUG_PRINTF("\t DROPPED PREFETCH\n");
-                                ////////////////////////////////////////////////
-                                // ~ printf("\t DROPPED PREFETCH\n");
-                                ////////////////////////////////////////////////
                             }
                             this->stride_table[slot].prefetch_ahead++;
                         }
@@ -270,21 +264,21 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
     this->add_stat_init_state();
 };
 
-/// ============================================================================
+// ============================================================================
 void prefetch_stride_t::print_structures() {
     prefetch_t::print_structures();
 
     SINUCA_PRINTF("%s TABLE:\n%s", this->get_label(), stride_table_line_t::print_all(this->stride_table, this->stride_table_size).c_str())
 };
 
-/// ============================================================================
+// ============================================================================
 void prefetch_stride_t::panic() {
     prefetch_t::panic();
 
     this->print_structures();
 };
 
-/// ============================================================================
+// ============================================================================
 void prefetch_stride_t::periodic_check(){
     prefetch_t::periodic_check();
 
@@ -293,9 +287,9 @@ void prefetch_stride_t::periodic_check(){
     #endif
 };
 
-/// ============================================================================
+// ============================================================================
 /// STATISTICS
-/// ============================================================================
+// ============================================================================
 void prefetch_stride_t::reset_statistics() {
     prefetch_t::reset_statistics();
 
@@ -309,7 +303,7 @@ void prefetch_stride_t::reset_statistics() {
     this->stat_allocate_stride_fail = 0;
 };
 
-/// ============================================================================
+// ============================================================================
 void prefetch_stride_t::print_statistics() {
     prefetch_t::print_statistics();
 
@@ -324,7 +318,7 @@ void prefetch_stride_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_allocate_stride_fail", stat_allocate_stride_fail);
 };
 
-/// ============================================================================
+// ============================================================================
 void prefetch_stride_t::print_configuration() {
     prefetch_t::print_configuration();
 

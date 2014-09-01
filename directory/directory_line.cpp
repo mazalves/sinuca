@@ -1,26 +1,23 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "../sinuca.hpp"
 #include <string>
 
@@ -30,7 +27,7 @@
     #define DIRECTORY_CTRL_DEBUG_PRINTF(...)
 #endif
 
-/// ============================================================================
+// ============================================================================
 directory_line_t::directory_line_t() {
     this->id_owner = 0;
     this->opcode_number = 0;
@@ -48,13 +45,13 @@ directory_line_t::directory_line_t() {
     this->born_cycle = sinuca_engine.get_global_cycle();
 };
 
-/// ============================================================================
+// ============================================================================
 directory_line_t::~directory_line_t() {
     /// De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<uint32_t>(cache_request_order);
 };
 
-/// ============================================================================
+// ============================================================================
 void directory_line_t::packager(uint32_t id_owner, uint64_t opcode_number, uint64_t opcode_address, uint64_t uop_number,
                                             lock_t lock_type,
                                             memory_operation_t initial_memory_operation, uint64_t initial_memory_address, uint32_t initial_memory_size) {
@@ -72,7 +69,7 @@ void directory_line_t::packager(uint32_t id_owner, uint64_t opcode_number, uint6
     this->born_cycle = sinuca_engine.get_global_cycle();
 };
 
-/// ============================================================================
+// ============================================================================
 std::string directory_line_t::directory_line_to_string() {
     std::string PackageString;
     PackageString = "";
@@ -101,7 +98,7 @@ std::string directory_line_t::directory_line_to_string() {
     return PackageString;
 };
 
-/// ============================================================================
+// ============================================================================
 bool directory_line_t::check_age(container_ptr_directory_line_t *input_array, uint32_t size_array) {
     uint64_t min_cycle = 0;
     if (sinuca_engine.get_global_cycle() > MAX_ALIVE_TIME) {

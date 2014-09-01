@@ -1,28 +1,23 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011
-// Marco Antonio Zanata Alves
-//
-//
-// Modified by Francis Birck Moreira
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "../sinuca.hpp"
 
 #ifdef PREFETCHER_DEBUG
@@ -32,7 +27,7 @@
 #endif
 
 
-/// ============================================================================
+// ============================================================================
 prefetch_stream_t::prefetch_stream_t() {
     this->set_prefetcher_type(PREFETCHER_STREAM);
 
@@ -48,13 +43,13 @@ prefetch_stream_t::prefetch_stream_t() {
 
 };
 
-/// ============================================================================
+// ============================================================================
 prefetch_stream_t::~prefetch_stream_t() {
     /// De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<stream_table_line_t>(stream_table);
 };
 
-/// ============================================================================
+// ============================================================================
 void prefetch_stream_t::allocate() {
     prefetch_t::allocate();
 
@@ -66,18 +61,18 @@ void prefetch_stream_t::allocate() {
 
 };
 
-/// ============================================================================
+// ============================================================================
 void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
     ERROR_ASSERT_PRINTF(package->is_answer == false, "Should never receive an answer.\n")
     uint32_t slot;
 
     int32_t available_slot = POSITION_FAIL;
 
-    ///1.gets any L2 requests --
-    ///2. Checks if the request belongs to a tracking entry. --
-    ///3. If it does: --
+    /// 1.gets any L2 requests --
+    /// 2. Checks if the request belongs to a tracking entry. --
+    /// 3. If it does: --
         //Check entry state. if Monitor & Request:
-            ///prefetch ending_address+1...ending_address+P
+            /// prefetch ending_address+1...ending_address+P
             /// ending_address += P --
             /// starting_address = ending_address - prefetch_distance (aka prefetch distance) --
         // else if allocated:
@@ -86,19 +81,19 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
             ///else if address < starting_address && address > (starting_address - 16)
                 // ending_address = address, direction = 0; state = training;
 
-        //else if training:
-                ///if address > ending_address && address < (ending_address + 16)
-                    //if direction == 1
-                        ///ending_address = address + prefetch_degree (OR initial startup distance... maybe "wait between requests" ?)
-                        ///state = monitor and request
-                    //else
-                        ///state = allocated;
-                ///else if address < ending_address && > (ending_address - 16)
-                    //if direction == 0
-                        ///ending_address = address - prefetch_degree
-                        ///state = monitor and request
-                    //else
-                        ///state = allocated;
+        // else if training:
+                /// if address > ending_address && address < (ending_address + 16)
+                    // if direction == 1
+                        /// ending_address = address + prefetch_degree (OR initial startup distance... maybe "wait between requests" ?)
+                        /// state = monitor and request
+                    // else
+                        /// state = allocated;
+                /// else if address < ending_address && > (ending_address - 16)
+                    // if direction == 0
+                        /// ending_address = address - prefetch_degree
+                        /// state = monitor and request
+                    // else
+                        /// state = allocated;
 
     for (slot = 0; slot < this->stream_table_size; slot++) {
         switch (this->stream_table[slot].state) {
@@ -214,8 +209,8 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
                                                                     0,                                          /// Src ID
                                                                     0,                                          /// Dst ID
                                                                     NULL,                                       /// *Hops
-                                                                    0                                           /// Hop Counter
-                                                                    );
+                                                                    0);                                         /// Hop Counter
+
 
                                 PREFETCHER_DEBUG_PRINTF("\t %s", this->request_buffer[position].content_to_string().c_str());
                                 PREFETCHER_DEBUG_PRINTF("\t INSERTED on PREFETCHER_BUFFER[%d]\n", position);
@@ -302,10 +297,10 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
     }
 
 
-    /// ========================================================================
+    // ========================================================================
     /// Did not detect the pattern for ANY other stream,
     /// create a new stream if there is an available slot
-    /// ========================================================================
+    // ========================================================================
     if (available_slot != POSITION_FAIL) {
         this->stream_table[available_slot].clean();
         this->stream_table[available_slot].state = PREFETCHER_STREAM_STATE_ALLOCATED;
@@ -327,21 +322,21 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
     }
 };
 
-/// ============================================================================
+// ============================================================================
 void prefetch_stream_t::print_structures() {
     prefetch_t::print_structures();
 
     SINUCA_PRINTF("%s TABLE:\n%s", this->get_label(), stream_table_line_t::print_all(this->stream_table, this->stream_table_size).c_str());
 };
 
-/// ============================================================================
+// ============================================================================
 void prefetch_stream_t::panic() {
     prefetch_t::panic();
 
     this->print_structures();
 };
 
-/// ============================================================================
+// ============================================================================
 void prefetch_stream_t::periodic_check(){
     prefetch_t::periodic_check();
 
@@ -350,19 +345,19 @@ void prefetch_stream_t::periodic_check(){
     #endif
 };
 
-/// ============================================================================
+// ============================================================================
 /// STATISTICS
-/// ============================================================================
+// ============================================================================
 void prefetch_stream_t::reset_statistics() {
     prefetch_t::reset_statistics();
 };
 
-/// ============================================================================
+// ============================================================================
 void prefetch_stream_t::print_statistics() {
     prefetch_t::print_statistics();
 };
 
-/// ============================================================================
+// ============================================================================
 void prefetch_stream_t::print_configuration() {
     prefetch_t::print_configuration();
 

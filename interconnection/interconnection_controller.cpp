@@ -1,27 +1,23 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-// Eduardo Henrique Molina da Cruz
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "../sinuca.hpp"
 
 #ifdef INTERCONNECTION_CTRL_DEBUG
@@ -30,22 +26,22 @@
     #define INTERCONNECTION_CTRL_DEBUG_PRINTF(...)
 #endif
 
-/// ============================================================================
+// ============================================================================
 /// routing_table_element_t
-/// ============================================================================
+// ============================================================================
 routing_table_element_t::routing_table_element_t(){
     this->hops = NULL;
     this->hop_count = 0;
 };
 
-/// ============================================================================
+// ============================================================================
 routing_table_element_t::~routing_table_element_t(){
     utils_t::template_delete_array<uint32_t>(this->hops);
 };
 
-/// ============================================================================
+// ============================================================================
 /// interconnection_controller_t
-/// ============================================================================
+// ============================================================================
 interconnection_controller_t::interconnection_controller_t() {
     this->routing_algorithm = ROUTING_ALGORITHM_FLOYD_WARSHALL;
 
@@ -54,7 +50,7 @@ interconnection_controller_t::interconnection_controller_t() {
     this->route_matrix = NULL;
 };
 
-/// ============================================================================
+// ============================================================================
 interconnection_controller_t::~interconnection_controller_t() {
     // De-Allocate memory to prevent memory leak
     utils_t::template_delete_matrix<routing_table_element_t>(route_matrix, sinuca_engine.get_interconnection_interface_array_size());
@@ -62,7 +58,7 @@ interconnection_controller_t::~interconnection_controller_t() {
     utils_t::template_delete_matrix<interconnection_interface_t*>(predecessor, sinuca_engine.get_interconnection_interface_array_size());
 };
 
-/// ============================================================================
+// ============================================================================
 void interconnection_controller_t::allocate() {
     INTERCONNECTION_CTRL_DEBUG_PRINTF("allocate()\n");
     /// Allocate the router_matrix which will supply the route between elements.
@@ -107,7 +103,7 @@ void interconnection_controller_t::allocate() {
     this->create_communication_cost();
 };
 
-/// ============================================================================
+// ============================================================================
 void interconnection_controller_t::clock(uint32_t subcycle) {
     if (subcycle != 0) return;
     INTERCONNECTION_CTRL_DEBUG_PRINTF("==================== ");
@@ -116,36 +112,36 @@ void interconnection_controller_t::clock(uint32_t subcycle) {
 };
 
 
-/// ============================================================================
+// ============================================================================
 int32_t interconnection_controller_t::send_package(memory_package_t *package) {
     ERROR_PRINTF("Send package %s.\n", package->content_to_string().c_str());
     return POSITION_FAIL;
 };
 
-/// ============================================================================
+// ============================================================================
 bool interconnection_controller_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
     ERROR_PRINTF("Received package %s into the input_port %u, latency %u.\n", package->content_to_string().c_str(), input_port, transmission_latency);
     return FAIL;
 };
 
-/// ============================================================================
+// ============================================================================
 /// Token Controller Methods
-/// ============================================================================
+// ============================================================================
 bool interconnection_controller_t::check_token_list(memory_package_t *package) {
     ERROR_PRINTF("check_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
     return FAIL;
 };
 
-/// ============================================================================
+// ============================================================================
 void interconnection_controller_t::remove_token_list(memory_package_t *package) {
     ERROR_PRINTF("remove_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
 };
 
 
 
-/// ============================================================================
+// ============================================================================
 /// Create a graph using the interconnection components as Cache, Cache Ports, Router
-/// ============================================================================
+// ============================================================================
 void interconnection_controller_t::create_communication_graph() {
     INTERCONNECTION_CTRL_DEBUG_PRINTF("create_communication_graph()\n");
     uint32_t i, j, jid;
@@ -204,9 +200,9 @@ void interconnection_controller_t::create_communication_graph() {
     }
 };
 
-/// ============================================================================
+// ============================================================================
 /// Routing Strategies
-/// ============================================================================
+// ============================================================================
 void interconnection_controller_t::routing_algorithm_floyd_warshall() {
     INTERCONNECTION_CTRL_DEBUG_PRINTF("routing_algorithm_floyd_warshall()\n");
     uint32_t i, j, k;
@@ -259,19 +255,19 @@ void interconnection_controller_t::routing_algorithm_floyd_warshall() {
 #endif
 };
 
-/// ============================================================================
+// ============================================================================
 /// Routing Policy: routingXY
 void interconnection_controller_t::routing_algorithm_xy() {
     ERROR_PRINTF("Routing policy not implemented.\n");
 };
 
-/// ============================================================================
+// ============================================================================
 /// Routing Policy: ROUTING_ODD_EVEN:
 void interconnection_controller_t::routing_algorithm_odd_even() {
     ERROR_PRINTF("Routing policy not implemented.\n");
 };
 
-/// ============================================================================
+// ============================================================================
 void interconnection_controller_t::create_route(interconnection_interface_t *src, interconnection_interface_t *dst) {
     INTERCONNECTION_CTRL_DEBUG_PRINTF("create_route()\n");
     uint32_t found = 0, count = 0;
@@ -313,7 +309,7 @@ void interconnection_controller_t::create_route(interconnection_interface_t *src
     } while (!found);
 };
 
-/// ============================================================================
+// ============================================================================
 void interconnection_controller_t::create_communication_cost() {
     uint32_t max_latency = 0;
     uint32_t min_width = 0;
@@ -342,7 +338,7 @@ void interconnection_controller_t::create_communication_cost() {
     }
 }
 
-/// ============================================================================
+// ============================================================================
 void interconnection_controller_t::find_package_route(memory_package_t *package) {
     uint32_t src = package->id_src;
     uint32_t dst = package->id_dst;
@@ -363,7 +359,7 @@ void interconnection_controller_t::find_package_route(memory_package_t *package)
     #endif
 };
 
-/// ============================================================================
+// ============================================================================
 uint32_t interconnection_controller_t::find_package_route_latency(memory_package_t *package, interconnection_interface_t *src, interconnection_interface_t *dst){
     /// The transmission latency is defined as 1 for requests, and line_size for answers
     int32_t max_latency = this->high_latency_matrix[src->get_id()][dst->get_id()];
@@ -402,77 +398,80 @@ uint32_t interconnection_controller_t::find_package_route_latency(memory_package
     return 1;
 };
 
-/// ============================================================================
+// ============================================================================
 void interconnection_controller_t::print_structures() {
 
 };
 
-/// ============================================================================
+// ============================================================================
 void interconnection_controller_t::panic() {
     this->print_structures();
 };
 
-/// ============================================================================
+// ============================================================================
 void interconnection_controller_t::periodic_check(){
     #ifdef INTERCONNECTION_CTRL_DEBUG
         this->print_structures();
     #endif
 };
 
-/// ============================================================================
+// ============================================================================
 void interconnection_controller_t::reset_statistics() {
 };
 
-/// ============================================================================
+// ============================================================================
 void interconnection_controller_t::print_statistics() {
     char title[100] = "";
-    sprintf(title, "Statistics of %s", this->get_label());
+    snprintf(title, sizeof(title), "Statistics of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);
     sinuca_engine.write_statistics_big_separator();
 };
 
-/// ============================================================================
+// ============================================================================
 void interconnection_controller_t::print_configuration() {
     char title[100] = "";
-    sprintf(title, "Configuration of %s", this->get_label());
+    snprintf(title, sizeof(title), "Configuration of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);
     sinuca_engine.write_statistics_big_separator();
 };
 
-/// ============================================================================
+// ============================================================================
 void interconnection_controller_t::print_graph() {
-    char title[100] = "";
-    sprintf(title, "## Plot the graph of connection ready to Graphviz");
-    sinuca_engine.write_graph(title);
-    sprintf(title, "## GV = {dot, neato, smyrna, lefty, dotty}\n");
-    sinuca_engine.write_graph(title);
-    sprintf(title, "## $ dot -Tpdf -o graph.pdf graph.txt\n\n");
-    sinuca_engine.write_graph(title);
+    char graph_line[100] = "";
+    snprintf(graph_line, sizeof(graph_line), "## Plot the graph of connection ready to Graphviz");
+    sinuca_engine.write_graph(graph_line);
+    snprintf(graph_line, sizeof(graph_line), "## GV = {dot, neato, smyrna, lefty, dotty}\n");
+    sinuca_engine.write_graph(graph_line);
+    snprintf(graph_line, sizeof(graph_line), "## $ dot -Tpdf -o graph.pdf graph.txt\n\n");
+    sinuca_engine.write_graph(graph_line);
 
 
-    sprintf(title, "digraph G\n");
-    sinuca_engine.write_graph(title);
-    sprintf(title, "\t {\n");
-    sinuca_engine.write_graph(title);
-    sprintf(title, "\t node [shape=box,style=filled];\n");
-    sinuca_engine.write_graph(title);
-    sprintf(title, "\t overlap=scale;\n");
-    sinuca_engine.write_graph(title);
-    sprintf(title, "\t splines=true;\n");
-    sinuca_engine.write_graph(title);
+    snprintf(graph_line, sizeof(graph_line), "digraph G\n");
+    sinuca_engine.write_graph(graph_line);
+    snprintf(graph_line, sizeof(graph_line), "  {\n");
+    sinuca_engine.write_graph(graph_line);
+    snprintf(graph_line, sizeof(graph_line), "  node [shape=box,style=filled];\n");
+    sinuca_engine.write_graph(graph_line);
+    snprintf(graph_line, sizeof(graph_line), "  overlap=scale;\n");
+    sinuca_engine.write_graph(graph_line);
+    snprintf(graph_line, sizeof(graph_line), "  splines=true;\n");
+    sinuca_engine.write_graph(graph_line);
 
     for (uint32_t i = 0; i < sinuca_engine.get_interconnection_interface_array_size(); i++) {
         for (uint32_t j = 0; j < sinuca_engine.get_interconnection_interface_array_size(); j++) {
             if (i != j && route_matrix[i][j].hop_count == 0) {
-                sprintf(title, "\t%s -> %s;\n", sinuca_engine.interconnection_interface_array[i]->get_label(), sinuca_engine.interconnection_interface_array[j]->get_label());
-                sinuca_engine.write_graph(title);
+                snprintf(graph_line, sizeof(graph_line), "  %s -> %s;", sinuca_engine.interconnection_interface_array[i]->get_label(),
+                                                    sinuca_engine.interconnection_interface_array[j]->get_label());
+                sinuca_engine.write_graph(graph_line);
             }
         }
+        snprintf(graph_line, sizeof(graph_line), "\n");
+        sinuca_engine.write_graph(graph_line);
     }
 
-    sprintf(title, "}\n");
-    sinuca_engine.write_graph(title);
+    snprintf(graph_line, sizeof(graph_line), "}\n");
+    sinuca_engine.write_graph(graph_line);
 };
 

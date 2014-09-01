@@ -1,38 +1,35 @@
-//==============================================================================
-//
-// Copyright (C) 2010, 2011
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-//==============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 /// Main header file: sinuca.h
 /// This is the main header file, it contains all the prototypes and
 /// describes the relations between classes.
 #ifndef _SINUCA_ENUMERATOR_HPP_
 #define _SINUCA_ENUMERATOR_HPP_
 
-///==============================================================================
-/// Enumarations
-///==============================================================================
+// ==============================================================================
+/// Enumerations
+// ==============================================================================
 
-/// ============================================================================
-/// Enumarates the INSTRUCTION operation type as NOP | INT_* | FLOAT_* | BRANCH | MEM_* | OTHER
+// ============================================================================
+/// Enumerates the INSTRUCTION (Opcode and Uop) operation type
 enum instruction_operation_t {
     /// NOP
     INSTRUCTION_OPERATION_NOP,
@@ -49,16 +46,15 @@ enum instruction_operation_t {
     /// MEMORY OPERATIONS
     INSTRUCTION_OPERATION_MEM_LOAD,
     INSTRUCTION_OPERATION_MEM_STORE,
-    /// NOT INDENTIFIED
+    /// NOT IDENTIFIED
     INSTRUCTION_OPERATION_OTHER,
-    /// SYNCRONIZATION
+    /// SYNCHRONIZATION
     INSTRUCTION_OPERATION_BARRIER
 };
 const char* get_enum_instruction_operation_char(instruction_operation_t type);
 
-
-/// ============================================================================
-/// Enumarates the MEMORY operation type as READ | WRITE | INSTRUCTION | ...
+// ============================================================================
+/// Enumerates the MEMORY operation type
 enum memory_operation_t {
     MEMORY_OPERATION_INST,
     MEMORY_OPERATION_READ,
@@ -68,8 +64,8 @@ enum memory_operation_t {
 };
 const char *get_enum_memory_operation_char(memory_operation_t type);
 
-/// ============================================================================
-/// Used to describe the package status when it arrives on the components
+// ============================================================================
+/// Enumerates the package status when it arrives on the components
 enum package_state_t {
     PACKAGE_STATE_FREE,
     PACKAGE_STATE_UNTREATED,
@@ -79,8 +75,16 @@ enum package_state_t {
 };
 const char *get_enum_package_state_char(package_state_t type);
 
-/// ============================================================================
-/// Enumarates the protocol status as M/O/E/S/I/V.
+// ============================================================================
+/// Enumarates the data and instruction ports inside the processor
+enum processor_port_t {
+    PROCESSOR_PORT_DATA_CACHE,
+    PROCESSOR_PORT_INST_CACHE,
+    PROCESSOR_PORT_NUMBER
+};
+
+// ============================================================================
+/// Enumerates the coherence protocol status
 enum protocol_status_t {
     PROTOCOL_STATUS_M,
     PROTOCOL_STATUS_O,
@@ -90,8 +94,8 @@ enum protocol_status_t {
 };
 const char *get_enum_protocol_status_char(protocol_status_t type);
 
-/// ============================================================================
-/// Open the file parser_components.h and gets the types of components
+// ============================================================================
+/// Enumerates the types of components
 enum component_t {
     COMPONENT_PROCESSOR,
     COMPONENT_CACHE_MEMORY,
@@ -103,8 +107,8 @@ enum component_t {
 };
 const char *get_enum_component_char(component_t type);
 
-/// ============================================================================
-/// Enumarates the types of hash function
+// ============================================================================
+/// Enumerates the types of hash function
 enum hash_function_t {
     HASH_FUNCTION_XOR_SIMPLE,
     HASH_FUNCTION_INPUT1_ONLY,
@@ -117,8 +121,8 @@ enum hash_function_t {
 };
 const char *get_enum_hash_function_char(hash_function_t type);
 
-/// ============================================================================
-/// Enumarates the type of branch predictor
+// ============================================================================
+/// Enumerates the type of branch predictor
 enum branch_predictor_policy_t {
     BRANCH_PREDICTOR_TWO_LEVEL_GAG,
     BRANCH_PREDICTOR_TWO_LEVEL_GAS,
@@ -131,8 +135,8 @@ enum branch_predictor_policy_t {
 };
 const char *get_enum_branch_predictor_policy_char(branch_predictor_policy_t type);
 
-/// ============================================================================
-/// Enumarates the processor stages, used to indicate when the branch will be solved.
+// ============================================================================
+/// Enumerates the processor stages, used to indicate when the branch will be solved
 enum processor_stage_t {
     PROCESSOR_STAGE_FETCH,
     PROCESSOR_STAGE_DECODE,
@@ -143,16 +147,8 @@ enum processor_stage_t {
 };
 const char *get_enum_processor_stage_char(processor_stage_t type);
 
-/// ============================================================================
-/// Enumarates the synchronization type required by the dynamic trace.
-enum processor_port_t {
-    PROCESSOR_PORT_DATA_CACHE,
-    PROCESSOR_PORT_INST_CACHE,
-    PROCESSOR_PORT_NUMBER
-};
-
-/// ============================================================================
-/// Enumarates the synchronization type required by the dynamic trace.
+// ============================================================================
+/// Enumerates the synchronization type required by the dynamic trace.
 enum sync_t {
     SYNC_BARRIER,
     SYNC_WAIT_CRITICAL_START,
@@ -162,17 +158,16 @@ enum sync_t {
 };
 const char *get_enum_sync_char(sync_t type);
 
-/// ============================================================================
-/// Enumarates the way to treat memory dependencies.
+// ============================================================================
+/// Enumerates the way to treat memory dependencies.
 enum disambiguation_t {
     DISAMBIGUATION_PERFECT,
     DISAMBIGUATION_DISABLE
 };
 const char *get_enum_disambiguation_char(disambiguation_t type);
 
-
-/// ============================================================================
-/// Enumarates the selection policy to pick a sender or next to be treated.
+// ============================================================================
+/// Enumerates the selection policy to pick a sender or next to be treated.
 enum selection_t {
     SELECTION_RANDOM,
     SELECTION_ROUND_ROBIN,
@@ -180,8 +175,8 @@ enum selection_t {
 };
 const char *get_enum_selection_char(selection_t type);
 
-/// ============================================================================
-/// Enumarates the router selection policy to pick a sender.
+// ============================================================================
+/// Enumerates the routing algorithm
 enum routing_algorithm_t {
     ROUTING_ALGORITHM_XY,
     ROUTING_ALGORITHM_ODD_EVEN,
@@ -189,8 +184,8 @@ enum routing_algorithm_t {
 };
 const char *get_enum_routing_algorithm_char(routing_algorithm_t type);
 
-/// ============================================================================
-/// Cache replacement policy
+// ============================================================================
+/// Enumerates the cache replacement policy
 enum replacement_t {
     REPLACEMENT_LRU,                /// way list order: MRU -> LRU
     REPLACEMENT_DEAD_OR_LRU,        /// way list order: MRU -> LRU with DSBP line_usage_predictor
@@ -201,15 +196,15 @@ enum replacement_t {
 };
 const char *get_enum_replacement_char(replacement_t type);
 
-/// ============================================================================
+// ============================================================================
 /// Directory coherence protocol
 enum coherence_protocol_t {
     COHERENCE_PROTOCOL_MOESI
 };
 const char *get_enum_coherence_protocol_char(coherence_protocol_t type);
 
-/// ============================================================================
-/// Directory coherence protocol
+// ============================================================================
+/// Enumerates the directory inclusiveness protocol
 enum inclusiveness_t {
     INCLUSIVENESS_NON_INCLUSIVE,
     INCLUSIVENESS_INCLUSIVE_LLC,
@@ -217,8 +212,8 @@ enum inclusiveness_t {
 };
 const char *get_enum_inclusiveness_char(inclusiveness_t type);
 
-/// ============================================================================
-/// Prefetcher type
+// ============================================================================
+/// Enumerates the prefetcher type
 enum prefetch_policy_t {
     PREFETCHER_STRIDE,
     PREFETCHER_STREAM,
@@ -226,8 +221,8 @@ enum prefetch_policy_t {
 };
 const char *get_enum_prefetch_policy_char(prefetch_policy_t type);
 
-/// ============================================================================
-/// Prefetcher type
+// ============================================================================
+/// Enumerates the prefetcher stride state
 enum prefetch_stride_state_t {
     PREFETCHER_STRIDE_STATE_INIT,
     PREFETCHER_STRIDE_STATE_TRANSIENT,
@@ -236,8 +231,8 @@ enum prefetch_stride_state_t {
 };
 const char *get_enum_prefetch_stride_state_char(prefetch_stride_state_t type);
 
-/// ============================================================================
-/// Prefetcher type
+// ============================================================================
+/// Enumerates the prefetcher stream state
 enum prefetch_stream_state_t {
     PREFETCHER_STREAM_STATE_INVALID,
     PREFETCHER_STREAM_STATE_ALLOCATED,
@@ -246,17 +241,16 @@ enum prefetch_stream_state_t {
 };
 const char *get_enum_prefetch_stream_state_char(prefetch_stream_state_t type);
 
-/// ============================================================================
-/// Prefetcher type
+// ============================================================================
+/// Enumerates the prefetcher full buffer policy
 enum full_buffer_t {
     FULL_BUFFER_OVERRIDE,
     FULL_BUFFER_STOP
 };
 const char *get_enum_full_buffer_char(full_buffer_t type);
 
-
-/// ============================================================================
-/// Directory Lock type
+// ============================================================================
+/// Enumerates the directory line lock status
 enum lock_t {
     LOCK_FREE,
     LOCK_READ,
@@ -264,8 +258,8 @@ enum lock_t {
 };
 const char *get_enum_lock_char(lock_t type);
 
-/// ============================================================================
-/// How the memory cache will create its address mask
+// ============================================================================
+/// Enumerates the memory cache address mask
 enum cache_mask_t {
     CACHE_MASK_TAG_INDEX_OFFSET,
     CACHE_MASK_TAG_INDEX_BANK_OFFSET,
@@ -273,8 +267,8 @@ enum cache_mask_t {
 };
 const char *get_enum_cache_mask_char(cache_mask_t type);
 
-/// ============================================================================
-/// How the main memory will create its address mask
+// ============================================================================
+/// Enumerates the main memory address mask
 enum memory_controller_mask_t {
     MEMORY_CONTROLLER_MASK_ROW_BANK_COLUMN,
     MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLUMN,
@@ -282,37 +276,35 @@ enum memory_controller_mask_t {
 };
 const char *get_enum_memory_controller_mask_char(memory_controller_mask_t type);
 
-/// ============================================================================
-/// Memory controller commands to the DRAM
+// ============================================================================
+/// Enumerates the memory controller commands to the DRAM
 enum memory_controller_command_t {
     MEMORY_CONTROLLER_COMMAND_PRECHARGE,
     MEMORY_CONTROLLER_COMMAND_ROW_ACCESS,
     MEMORY_CONTROLLER_COMMAND_COLUMN_READ,
     MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE,
-
     MEMORY_CONTROLLER_COMMAND_NUMBER
 };
 const char *get_enum_memory_controller_command_char(memory_controller_command_t type);
 
-
-/// ============================================================================
-/// Policy to set the priority during the Row Buffer access
+// ============================================================================
+/// Enumerates the policies to set the priority during the Row Buffer access
 enum request_priority_t {
     REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST,
     REQUEST_PRIORITY_FIRST_COME_FIRST_SERVE
 };
 const char *get_enum_request_priority_char(request_priority_t type);
 
-/// ============================================================================
-/// Policy to give privilege of some operations over others
+// ============================================================================
+/// Enumerates the policies to give privilege of some operations over others
 enum write_priority_t {
     WRITE_PRIORITY_SERVICE_AT_NO_READ,
     WRITE_PRIORITY_DRAIN_WHEN_FULL
 };
 const char *get_enum_write_priority_char(write_priority_t type);
 
-/// ============================================================================
-/// Line Usage Predictor type
+// ============================================================================
+/// Enumerates the line usage predictor type
 enum line_usage_predictor_policy_t {
     LINE_USAGE_PREDICTOR_POLICY_DISABLE,
     LINE_USAGE_PREDICTOR_POLICY_DSBP,
@@ -323,8 +315,8 @@ enum line_usage_predictor_policy_t {
 };
 const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_policy_t type);
 
-/// ============================================================================
-/// Valid Sub-Block Type
+// ============================================================================
+/// Enumerates the valid sub-block type
 enum line_sub_block_t {
     LINE_SUB_BLOCK_DISABLE,
     LINE_SUB_BLOCK_NORMAL,
@@ -333,6 +325,8 @@ enum line_sub_block_t {
     LINE_SUB_BLOCK_WRITEBACK
 };
 const char *get_enum_line_sub_block_t_char(line_sub_block_t type);
+
+
 
 
 #endif  // _SINUCA_ENUMERATOR_HPP_

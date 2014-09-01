@@ -1,26 +1,23 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 
 /// Cache Memory.
 class cache_memory_t : public interconnection_interface_t {
@@ -29,9 +26,9 @@ class cache_memory_t : public interconnection_interface_t {
         line_usage_predictor_t *line_usage_predictor;    /// Line_Usage_Predictor
 
     private:
-        /// ====================================================================
+        // ====================================================================
         /// Set by sinuca_configurator
-        /// ====================================================================
+        // ====================================================================
         uint32_t cache_id;      /// Id corresponds to the cache_memory_array[Id]
         uint32_t bank_number;
         uint32_t total_banks;
@@ -53,9 +50,9 @@ class cache_memory_t : public interconnection_interface_t {
         uint32_t mshr_request_different_lines_size;
         uint32_t mshr_request_token_window_size;
 
-        /// ====================================================================
+        // ====================================================================
         /// Set by this->allocate()
-        /// ====================================================================
+        // ====================================================================
         uint64_t bank_bits_mask;        /// NUCA bank mask
         uint64_t bank_bits_shift;
 
@@ -91,9 +88,9 @@ class cache_memory_t : public interconnection_interface_t {
         container_ptr_cache_memory_t *higher_level_cache;    /// Higher Level Caches
         container_ptr_cache_memory_t *lower_level_cache;     /// Lower Level Caches
 
-        /// ====================================================================
+        // ====================================================================
         /// Statistics related
-        /// ====================================================================
+        // ====================================================================
         uint64_t stat_accesses;
         uint64_t stat_invalidation;
         uint64_t stat_eviction;
@@ -116,38 +113,38 @@ class cache_memory_t : public interconnection_interface_t {
 
         uint64_t stat_min_instruction_wait_time;
         uint64_t stat_max_instruction_wait_time;
-        uint64_t stat_acumulated_instruction_wait_time;
+        uint64_t stat_accumulated_instruction_wait_time;
 
         uint64_t stat_min_read_wait_time;
         uint64_t stat_max_read_wait_time;
-        uint64_t stat_acumulated_read_wait_time;
+        uint64_t stat_accumulated_read_wait_time;
 
         uint64_t stat_min_prefetch_wait_time;
         uint64_t stat_max_prefetch_wait_time;
-        uint64_t stat_acumulated_prefetch_wait_time;
+        uint64_t stat_accumulated_prefetch_wait_time;
 
         uint64_t stat_min_write_wait_time;
         uint64_t stat_max_write_wait_time;
-        uint64_t stat_acumulated_write_wait_time;
+        uint64_t stat_accumulated_write_wait_time;
 
         uint64_t stat_min_writeback_wait_time;
         uint64_t stat_max_writeback_wait_time;
-        uint64_t stat_acumulated_writeback_wait_time;
+        uint64_t stat_accumulated_writeback_wait_time;
 
         uint64_t stat_full_mshr_buffer_request;
         uint64_t stat_full_mshr_buffer_writeback;
         uint64_t stat_full_mshr_buffer_prefetch;
 
     public:
-        /// ====================================================================
+        // ====================================================================
         /// Methods
-        /// ====================================================================
+        // ====================================================================
         cache_memory_t();
         ~cache_memory_t();
 
-        /// ====================================================================
+        // ====================================================================
         /// Inheritance from interconnection_interface_t
-        /// ====================================================================
+        // ====================================================================
         /// Basic Methods
         void allocate();
         void clock(uint32_t sub_cycle);
@@ -164,7 +161,7 @@ class cache_memory_t : public interconnection_interface_t {
         void reset_statistics();
         void print_statistics();
         void print_configuration();
-        /// ====================================================================
+        // ====================================================================
 
         /// MASKS
         void set_masks();
@@ -245,9 +242,9 @@ class cache_memory_t : public interconnection_interface_t {
 
         INSTANTIATE_GET_SET(uint32_t, mshr_buffer_request_per_different_line_size)
 
-        /// ====================================================================
+        // ====================================================================
         /// Statistics related
-        /// ====================================================================
+        // ====================================================================
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_accesses)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_invalidation)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_eviction)
@@ -275,35 +272,35 @@ class cache_memory_t : public interconnection_interface_t {
 
         inline void add_stat_instruction_wait(uint64_t born_cycle) {
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
-            this->stat_acumulated_instruction_wait_time += new_time;
+            this->stat_accumulated_instruction_wait_time += new_time;
             if (this->stat_min_instruction_wait_time > new_time) this->stat_min_instruction_wait_time = new_time;
             if (this->stat_max_instruction_wait_time < new_time) this->stat_max_instruction_wait_time = new_time;
         };
 
         inline void add_stat_read_wait(uint64_t born_cycle) {
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
-            this->stat_acumulated_read_wait_time += new_time;
+            this->stat_accumulated_read_wait_time += new_time;
             if (this->stat_min_read_wait_time > new_time) this->stat_min_read_wait_time = new_time;
             if (this->stat_max_read_wait_time < new_time) this->stat_max_read_wait_time = new_time;
         };
 
         inline void add_stat_prefetch_wait(uint64_t born_cycle) {
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
-            this->stat_acumulated_prefetch_wait_time += new_time;
+            this->stat_accumulated_prefetch_wait_time += new_time;
             if (this->stat_min_prefetch_wait_time > new_time) this->stat_min_prefetch_wait_time = new_time;
             if (this->stat_max_prefetch_wait_time < new_time) this->stat_max_prefetch_wait_time = new_time;
         };
 
         inline void add_stat_write_wait(uint64_t born_cycle) {
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
-            this->stat_acumulated_write_wait_time += new_time;
+            this->stat_accumulated_write_wait_time += new_time;
             if (this->stat_min_write_wait_time > new_time) this->stat_min_write_wait_time = new_time;
             if (this->stat_max_write_wait_time < new_time) this->stat_max_write_wait_time = new_time;
         };
 
         inline void add_stat_writeback_wait(uint64_t born_cycle) {
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
-            this->stat_acumulated_writeback_wait_time += new_time;
+            this->stat_accumulated_writeback_wait_time += new_time;
             if (this->stat_min_writeback_wait_time > new_time) this->stat_min_writeback_wait_time = new_time;
             if (this->stat_max_writeback_wait_time < new_time) this->stat_max_writeback_wait_time = new_time;
         };

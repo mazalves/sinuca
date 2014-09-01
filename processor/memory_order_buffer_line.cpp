@@ -1,42 +1,39 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "./../sinuca.hpp"
 #include <string>
 
-/// ============================================================================
+// ============================================================================
 memory_order_buffer_line_t::memory_order_buffer_line_t() {
     this->package_clean();
     this->mem_deps_ptr_array = NULL;
 };
 
-/// ============================================================================
+// ============================================================================
 memory_order_buffer_line_t::~memory_order_buffer_line_t() {
     utils_t::template_delete_array<memory_order_buffer_line_t*>(mem_deps_ptr_array);
 };
 
 
-/// ============================================================================
+// ============================================================================
 void memory_order_buffer_line_t::package_clean() {
     this->memory_request.package_clean();
     this->rob_ptr = NULL;
@@ -44,7 +41,7 @@ void memory_order_buffer_line_t::package_clean() {
     this->wait_mem_deps_number = 0;
 };
 
-/// ============================================================================
+// ============================================================================
 std::string memory_order_buffer_line_t::content_to_string() {
     std::string content_string;
     content_string = "";
@@ -62,9 +59,9 @@ std::string memory_order_buffer_line_t::content_to_string() {
     return content_string;
 };
 
-/// ============================================================================
+// ============================================================================
 /// STATIC METHODS
-/// ============================================================================
+// ============================================================================
 int32_t memory_order_buffer_line_t::find_free(memory_order_buffer_line_t *input_array, uint32_t size_array) {
     for (uint32_t i = 0; i < size_array ; i++) {
         if (input_array[i].memory_request.state == PACKAGE_STATE_FREE) {
@@ -74,7 +71,7 @@ int32_t memory_order_buffer_line_t::find_free(memory_order_buffer_line_t *input_
     return POSITION_FAIL;
 };
 
-/// ============================================================================
+// ============================================================================
 int32_t memory_order_buffer_line_t::find_old_request_state_ready(memory_order_buffer_line_t *input_array, uint32_t size_array, package_state_t state) {
     int32_t old_pos = POSITION_FAIL;
     uint64_t old_uop_number = std::numeric_limits<uint64_t>::max();
@@ -94,7 +91,7 @@ int32_t memory_order_buffer_line_t::find_old_request_state_ready(memory_order_bu
     return old_pos;
 };
 
-/// ============================================================================
+// ============================================================================
 int32_t memory_order_buffer_line_t::find_uop_number(memory_order_buffer_line_t *input_array, uint32_t size_array, uint64_t uop_number) {
 
     for (uint32_t i = 0; i < size_array ; i++) {
@@ -108,7 +105,7 @@ int32_t memory_order_buffer_line_t::find_uop_number(memory_order_buffer_line_t *
     return POSITION_FAIL;
 };
 
-/// ============================================================================
+// ============================================================================
 std::string memory_order_buffer_line_t::print_all(memory_order_buffer_line_t *input_array, uint32_t size_array) {
     std::string content_string;
     std::string final_string;
@@ -124,7 +121,7 @@ std::string memory_order_buffer_line_t::print_all(memory_order_buffer_line_t *in
     return final_string;
 };
 
-/// ============================================================================
+// ============================================================================
 bool memory_order_buffer_line_t::check_age(memory_order_buffer_line_t *input_array, uint32_t size_array) {
     uint64_t min_cycle = 0;
     if (sinuca_engine.get_global_cycle() > MAX_ALIVE_TIME) {

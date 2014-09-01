@@ -1,40 +1,37 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 
 class prefetch_t : public interconnection_interface_t {
     protected:
-        /// ====================================================================
+        // ====================================================================
         /// Set by sinuca_configurator
-        /// ====================================================================
+        // ====================================================================
         prefetch_policy_t prefetcher_type;  /// Prefetch policy choosen by the user
         full_buffer_t full_buffer_type;
         uint32_t request_buffer_size;
 
 
-        /// ====================================================================
+        // ====================================================================
         /// Set by this->allocate()
-        /// ====================================================================
+        // ====================================================================
         memory_package_t *request_buffer;  /// Prefetch transactions waiting for room on the MSHR (High Level Input)
         uint32_t request_buffer_position_start;
         uint32_t request_buffer_position_end;
@@ -43,9 +40,9 @@ class prefetch_t : public interconnection_interface_t {
         uint64_t offset_bits_mask;
         uint64_t not_offset_bits_mask;
 
-        /// ====================================================================
+        // ====================================================================
         /// Statistics related
-        /// ====================================================================
+        // ====================================================================
         uint64_t stat_created_prefetches;
         uint64_t stat_dropped_prefetches;
         uint64_t stat_full_buffer;
@@ -56,18 +53,18 @@ class prefetch_t : public interconnection_interface_t {
         uint64_t stat_request_matches;
 
     public:
-        /// ====================================================================
+        // ====================================================================
         /// Methods
-        /// ====================================================================
+        // ====================================================================
         prefetch_t();
         ~prefetch_t();
         inline const char* get_type_component_label() {
             return "PREFETCH";
         };
 
-        /// ====================================================================
+        // ====================================================================
         /// Inheritance from interconnection_interface_t
-        /// ====================================================================
+        // ====================================================================
         /// Basic Methods
         void allocate();
         void clock(uint32_t sub_cycle);
@@ -84,7 +81,7 @@ class prefetch_t : public interconnection_interface_t {
         void reset_statistics();
         void print_statistics();
         void print_configuration();
-        /// ====================================================================
+        // ====================================================================
 
         /// REQUEST_BUFFER =====================================================
         int32_t request_buffer_insert();
@@ -109,9 +106,9 @@ class prefetch_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, request_buffer_position_end)
         INSTANTIATE_GET_SET(uint32_t, request_buffer_position_used)
 
-        /// ====================================================================
+        // ====================================================================
         /// Statistics related
-        /// ====================================================================
+        // ====================================================================
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_created_prefetches);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_dropped_prefetches);
 

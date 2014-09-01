@@ -1,55 +1,52 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 class line_usage_predictor_t : public interconnection_interface_t {
     protected:
-        /// ====================================================================
+        // ====================================================================
         /// Set by sinuca_configurator
-        /// ====================================================================
+        // ====================================================================
         line_usage_predictor_policy_t line_usage_predictor_type;
 
-        /// ====================================================================
+        // ====================================================================
         /// Set by this->allocate()
-        /// ====================================================================
+        // ====================================================================
 
 
-        /// ====================================================================
+        // ====================================================================
         /// Statistics related
-        /// ====================================================================
+        // ====================================================================
 
     public:
-        /// ====================================================================
+        // ====================================================================
         /// Methods
-        /// ====================================================================
+        // ====================================================================
         line_usage_predictor_t();
         ~line_usage_predictor_t();
         inline const char* get_type_component_label() {
             return "LINE_USAGE_PREDICTOR";
         };
 
-        /// ====================================================================
+        // ====================================================================
         /// Inheritance from interconnection_interface_t
-        /// ====================================================================
+        // ====================================================================
         /// Basic Methods
         void allocate();
         void clock(uint32_t sub_cycle);
@@ -66,7 +63,7 @@ class line_usage_predictor_t : public interconnection_interface_t {
         void reset_statistics();
         void print_statistics();
         void print_configuration();
-        /// ====================================================================
+        // ====================================================================
 
         /// Inspections
         /// Check the offset and package size and enable correct bits
@@ -90,7 +87,7 @@ class line_usage_predictor_t : public interconnection_interface_t {
 
         INSTANTIATE_GET_SET(line_usage_predictor_policy_t, line_usage_predictor_type);
 
-        /// ====================================================================
+        // ====================================================================
         /// Statistics related
-        /// ====================================================================
+        // ====================================================================
 };

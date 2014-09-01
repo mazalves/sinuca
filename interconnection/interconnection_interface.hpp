@@ -1,39 +1,35 @@
-//==============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-// Eduardo Henrique Molina da Cruz
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-//==============================================================================
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+// ============================================================================
 /// Interconnection Interface
-/// ============================================================================
+// ============================================================================
  /*! Generic class which creates the II (Interconnection Interface).
   * Network Routers to Processors, Cache Memories, and Main Memory.
   * The II will exist on almost every component in order to interface the components
   */
 class interconnection_interface_t {
     protected:
-        /// ====================================================================
+        // ====================================================================
         /// Set by sinuca_configurator
-        /// ====================================================================
+        // ====================================================================
         uint32_t id;                    /// ID unique which defines the object.
         component_t type_component;     /// ID unique which defines the object.
         char label[500];                /// Comprehensive object's name.
@@ -43,16 +39,16 @@ class interconnection_interface_t {
         uint32_t interconnection_latency;
         container_token_t token_list;
 
-        /// ====================================================================
+        // ====================================================================
         /// Set by this->set_higher_lower_level_component()
-        /// ====================================================================
+        // ====================================================================
         interconnection_interface_t* *interface_output_components;
         uint32_t *ports_output_components;
 
     public:
-        /// ====================================================================
+        // ====================================================================
         /// Methods
-        /// ====================================================================
+        // ====================================================================
         interconnection_interface_t();
         virtual ~interconnection_interface_t();
 
@@ -88,9 +84,9 @@ class interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, interconnection_width)
         INSTANTIATE_GET_SET(uint32_t, interconnection_latency)
 
-        /// ====================================================================
+        // ====================================================================
         /// Inheritance
-        /// ====================================================================
+        // ====================================================================
         /// Basic Methods
         virtual void allocate() = 0;  /// Called after all the parameters are set
         virtual void clock(uint32_t sub_cycle) = 0;   /// Called every cycle

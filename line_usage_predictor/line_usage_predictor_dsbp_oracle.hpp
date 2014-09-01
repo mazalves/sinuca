@@ -1,31 +1,28 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 class line_usage_predictor_dsbp_oracle_t : public line_usage_predictor_t {
     private:
-        /// ====================================================================
+        // ====================================================================
         /// Set by sinuca_configurator
-        /// ====================================================================
+        // ====================================================================
         uint32_t bytes_per_subblock;
         bool bring_whole_line;
 
@@ -33,17 +30,17 @@ class line_usage_predictor_dsbp_oracle_t : public line_usage_predictor_t {
         uint32_t metadata_line_number;          /// Cache Metadata
         uint32_t metadata_associativity;        /// Cache Metadata
 
-        /// ====================================================================
+        // ====================================================================
         /// Set by this->allocate()
-        /// ====================================================================
+        // ====================================================================
         uint32_t sub_block_total;
 
         dsbp_metadata_set_t *metadata_sets;
         uint32_t metadata_total_sets;
 
-         /// ====================================================================
+         // ====================================================================
         /// Statistics related
-        /// ====================================================================
+        // ====================================================================
         uint64_t stat_line_hit;
         uint64_t stat_line_miss;
         uint64_t stat_sub_block_miss;
@@ -68,18 +65,18 @@ class line_usage_predictor_dsbp_oracle_t : public line_usage_predictor_t {
         uint64_t stat_cycles_turned_off_whole_line_since_begin;
 
     public:
-        /// ====================================================================
+        // ====================================================================
         /// Methods
-        /// ====================================================================
+        // ====================================================================
         line_usage_predictor_dsbp_oracle_t();
         ~line_usage_predictor_dsbp_oracle_t();
         inline const char* get_type_component_label() {
             return "LINE_USAGE_PREDICTOR";
         };
 
-        /// ====================================================================
+        // ====================================================================
         /// Inheritance from interconnection_interface_t
-        /// ====================================================================
+        // ====================================================================
         /// Basic Methods
         void allocate();
         void clock(uint32_t sub_cycle);
@@ -97,12 +94,12 @@ class line_usage_predictor_dsbp_oracle_t : public line_usage_predictor_t {
         void reset_statistics();
         void print_statistics();
         void print_configuration();
-        /// ====================================================================
+        // ====================================================================
 
 
-        /// ====================================================================
+        // ====================================================================
         /// Inheritance from line_usage_predictor_t
-        /// ====================================================================
+        // ====================================================================
         /// Inspections
         void fill_package_sub_blocks(memory_package_t *package);
         void line_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way);
@@ -120,7 +117,7 @@ class line_usage_predictor_dsbp_oracle_t : public line_usage_predictor_t {
         void line_recv_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way);
         void line_eviction(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
         void line_invalidation(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
-        /// ====================================================================
+        // ====================================================================
 
         void get_start_end_sub_blocks(uint64_t base_address, uint32_t size, uint32_t& sub_block_ini, uint32_t& sub_block_end);
 
@@ -133,9 +130,9 @@ class line_usage_predictor_dsbp_oracle_t : public line_usage_predictor_t {
         INSTANTIATE_GET_SET(uint32_t, metadata_associativity);
         INSTANTIATE_GET_SET(uint32_t, metadata_total_sets);
 
-        /// ====================================================================
+        // ====================================================================
         /// Statistics related
-        /// ====================================================================
+        // ====================================================================
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_hit);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_line_miss);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_sub_block_miss);

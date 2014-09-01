@@ -1,26 +1,23 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "../sinuca.hpp"
 
 #ifdef BRANCH_PREDICTOR_DEBUG
@@ -29,7 +26,7 @@
     #define BRANCH_PREDICTOR_DEBUG_PRINTF(...)
 #endif
 
-/// ============================================================================
+// ============================================================================
 branch_predictor_two_level_pas_t::branch_predictor_two_level_pas_t() {
     this->btb = NULL;
     this->btb_line_number = 0;
@@ -66,7 +63,7 @@ branch_predictor_two_level_pas_t::branch_predictor_two_level_pas_t() {
     this->fsm_taken_threshold = 0;
 };
 
-/// ============================================================================
+// ============================================================================
 branch_predictor_two_level_pas_t::~branch_predictor_two_level_pas_t() {
     /// De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<branch_target_buffer_set_t>(btb);
@@ -74,7 +71,7 @@ branch_predictor_two_level_pas_t::~branch_predictor_two_level_pas_t() {
     utils_t::template_delete_matrix<uint32_t>(spht, this->get_spht_line_number());
 };
 
-/// ============================================================================
+// ============================================================================
 void branch_predictor_two_level_pas_t::allocate() {
     branch_predictor_t::allocate();
 
@@ -102,14 +99,14 @@ void branch_predictor_two_level_pas_t::allocate() {
     }
     ERROR_ASSERT_PRINTF(btb_get_index((uint64_t)INT64_MAX+1) < this->get_btb_total_sets(), "Index can be bigger than btb_total_sets \n")
 
-    /// ========================================================================
+    // ========================================================================
     /// GPHT FSM MASK
     for (i = 0; i < this->get_fsm_bits(); i++) {
         this->fsm_max_counter |= 1 << i;
     }
     this->fsm_taken_threshold = (this->get_fsm_max_counter() + 1) / 2;
 
-    /// ========================================================================
+    // ========================================================================
     /// PBHT INDEX MASK
     this->pbht = utils_t::template_allocate_initialize_array<uint64_t>(this->get_pbht_line_number(), 0);
 
@@ -123,7 +120,7 @@ void branch_predictor_two_level_pas_t::allocate() {
         this->pbht_signature_bits_mask |= 1 << i;
     }
 
-    /// ========================================================================
+    // ========================================================================
     /// SPHT INDEX MASK
     this->spht_index_bits = utils_t::get_power_of_two(this->get_spht_line_number());
     for (i = 0; i < this->spht_index_bits; i++) {
@@ -136,11 +133,11 @@ void branch_predictor_two_level_pas_t::allocate() {
     }
 
     /// Allocate and initialize the SPHT[index][set] with WEAKLY TAKEN
-    this->spht = utils_t::template_allocate_initialize_matrix<uint32_t>(this->get_spht_line_number(), this->get_spht_set_number() ,this->get_fsm_taken_threshold());
+    this->spht = utils_t::template_allocate_initialize_matrix<uint32_t>(this->get_spht_line_number(), this->get_spht_set_number() , this->get_fsm_taken_threshold());
 };
 
 
-/// ============================================================================
+// ============================================================================
 uint32_t branch_predictor_two_level_pas_t::btb_evict_address(uint64_t opcode_address) {
     uint64_t index = btb_get_index(opcode_address >> 2);
     uint32_t way = 0;
@@ -188,7 +185,7 @@ uint32_t branch_predictor_two_level_pas_t::btb_evict_address(uint64_t opcode_add
 };
 
 
-/// ============================================================================
+// ============================================================================
 bool branch_predictor_two_level_pas_t::btb_find_update_address(uint64_t opcode_address) {
     uint64_t index = btb_get_index(opcode_address >> 2);
     uint64_t tag = btb_get_tag(opcode_address >> 2);
@@ -215,7 +212,7 @@ bool branch_predictor_two_level_pas_t::btb_find_update_address(uint64_t opcode_a
     return FAIL;
 };
 
-/// ============================================================================
+// ============================================================================
 uint64_t branch_predictor_two_level_pas_t::pbht_find_update_address(uint64_t opcode_address, bool is_taken) {
     uint64_t index = this->pbht_get_index(opcode_address >> 2);
     uint64_t branch_history = this->pbht_get_signature(this->pbht[index]);
@@ -228,7 +225,7 @@ uint64_t branch_predictor_two_level_pas_t::pbht_find_update_address(uint64_t opc
 };
 
 
-/// ============================================================================
+// ============================================================================
 bool branch_predictor_two_level_pas_t::spht_find_update_prediction(const opcode_package_t& actual_opcode, const opcode_package_t& next_opcode) {
     uint64_t next_sequential_address = actual_opcode.opcode_address + actual_opcode.opcode_size;
     bool is_taken = (next_sequential_address != next_opcode.opcode_address);
@@ -269,10 +266,10 @@ bool branch_predictor_two_level_pas_t::spht_find_update_prediction(const opcode_
     return spht_taken;
 };
 
-/// ============================================================================
+// ============================================================================
 /// 1st. Predict if it is a branch or normal instruction
 /// 2nd. Predict the target address
-///=================================
+// =================================
 /// CASE 1: Branch (Not Predicted as Branch)    - Static on Decode (Not Predict the target)     - STALL UNTIL EXECUTE
 /// CASE 2: Branch (Not Predicted as Branch)    - Static on Decode (Predict the target)         - STALL UNTIL DECODE
 
@@ -342,19 +339,19 @@ processor_stage_t branch_predictor_two_level_pas_t::predict_branch(const opcode_
     return solve_stage;
 };
 
-/// ============================================================================
+// ============================================================================
 void branch_predictor_two_level_pas_t::print_structures() {
     branch_predictor_t::print_structures();
 };
 
-/// ============================================================================
+// ============================================================================
 void branch_predictor_two_level_pas_t::panic() {
     branch_predictor_t::panic();
 
     this->print_structures();
 };
 
-/// ============================================================================
+// ============================================================================
 void branch_predictor_two_level_pas_t::periodic_check(){
     branch_predictor_t::periodic_check();
 
@@ -363,9 +360,9 @@ void branch_predictor_two_level_pas_t::periodic_check(){
     #endif
 };
 
-/// ============================================================================
+// ============================================================================
 /// STATISTICS
-/// ============================================================================
+// ============================================================================
 void branch_predictor_two_level_pas_t::reset_statistics() {
     branch_predictor_t::reset_statistics();
 
@@ -374,7 +371,7 @@ void branch_predictor_two_level_pas_t::reset_statistics() {
     this->set_stat_btb_miss(0);
 };
 
-/// ============================================================================
+// ============================================================================
 void branch_predictor_two_level_pas_t::print_statistics() {
     branch_predictor_t::print_statistics();
 
@@ -385,8 +382,8 @@ void branch_predictor_two_level_pas_t::print_statistics() {
     sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_btb_miss_ratio", stat_btb_miss, stat_btb_accesses);
 };
 
-/// ============================================================================
-/// ============================================================================
+// ============================================================================
+// ============================================================================
 void branch_predictor_two_level_pas_t::print_configuration() {
     branch_predictor_t::print_configuration();
 

@@ -1,57 +1,50 @@
-//==============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-// Eduardo Henrique Molina da Cruz
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-//==============================================================================
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+// ============================================================================
 /// Network-on-Chip Router.
-/// ============================================================================
+// ============================================================================
  /*! Class used to interconnect interconnection_interface_t components
   */
 class interconnection_router_t : public interconnection_interface_t {
     private:
-        /// ====================================================================
+        // ====================================================================
         /// Set by sinuca_configurator
-        /// ====================================================================
+        // ====================================================================
         uint32_t input_buffer_size;  /// Input buffer depth.
         selection_t selection_policy;
 
-        /// ====================================================================
+        // ====================================================================
         /// Set by this->allocate()
-        /// ====================================================================
-        memory_package_t **input_buffer;  /// Circular Input buffer [ports][input_buffer_size].
-        uint32_t *input_buffer_position_start;
-        uint32_t *input_buffer_position_end;
-        uint32_t *input_buffer_position_used;
-        uint32_t input_buffer_position_used_total;
+        // ====================================================================
+        circular_buffer_t<memory_package_t> *input_buffer; /// Circular Input buffer [ports][input_buffer_size].
+        uint32_t packages_inside_router;
 
         uint64_t send_ready_cycle;  /// Time left for the router's next send operation.
         uint64_t *recv_ready_cycle;  /// Time left for the router's next receive operation (per port).
 
         uint32_t last_selected;  /// The last port that has something been sent. Used by RoundRobin and BufferLevel selection.
 
-        /// ====================================================================
+        // ====================================================================
         /// Statistics related
-        /// ====================================================================
+        // ====================================================================
         uint64_t stat_transmissions;
 
         uint64_t stat_total_send_size;
@@ -62,15 +55,15 @@ class interconnection_router_t : public interconnection_interface_t {
 
         uint64_t *stat_transmitted_package_size;
     public:
-        /// ====================================================================
+        // ====================================================================
         /// Methods
-        /// ====================================================================
+        // ====================================================================
         interconnection_router_t();
         ~interconnection_router_t();
 
-        /// ====================================================================
+        // ====================================================================
         /// Inheritance from interconnection_interface_t
-        /// ====================================================================
+        // ====================================================================
         /// Basic Methods
         void allocate();
         void clock(uint32_t sub_cycle);
@@ -87,13 +80,7 @@ class interconnection_router_t : public interconnection_interface_t {
         void reset_statistics();
         void print_statistics();
         void print_configuration();
-        /// ====================================================================
-
-        /// Circular Buffer find next free space
-        int32_t input_buffer_insert(uint32_t port);
-        /// Circular Buffer delete oldest package
-        void input_buffer_remove(uint32_t port);
-        void input_buffer_reinsert(uint32_t port);
+        // ====================================================================
 
         /// Selection strategies
         uint32_t selection_random();
@@ -105,9 +92,9 @@ class interconnection_router_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, send_ready_cycle)
         INSTANTIATE_GET_SET(uint32_t, input_buffer_size)
 
-        /// ====================================================================
+        // ====================================================================
         /// Statistics related
-        /// ====================================================================
+        // ====================================================================
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_transmissions)
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_total_send_size)

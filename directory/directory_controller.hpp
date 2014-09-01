@@ -1,47 +1,44 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 class directory_controller_t : public interconnection_interface_t {
     private:
-        /// ====================================================================
+        // ====================================================================
         /// Set by sinuca_configurator
-        /// ====================================================================
+        // ====================================================================
         coherence_protocol_t coherence_protocol_type;
         inclusiveness_t inclusiveness_type;
         bool generate_llc_writeback;
         bool generate_non_llc_writeback;
         bool final_writeback_all;
 
-        /// ====================================================================
+        // ====================================================================
         /// Set by this->allocate()
-        /// ====================================================================
+        // ====================================================================
         uint64_t not_offset_bits_mask;
         container_ptr_cache_memory_t llc_caches;
         container_ptr_directory_line_t directory_lines;
         uint32_t max_cache_level;
-        /// ====================================================================
+        // ====================================================================
         /// Statistics related
-        /// ====================================================================
+        // ====================================================================
         uint64_t stat_instruction_hit;
         uint64_t stat_read_hit;
         uint64_t stat_prefetch_hit;
@@ -57,9 +54,9 @@ class directory_controller_t : public interconnection_interface_t {
         uint64_t stat_final_writeback_all_cycles;
 
     public:
-        /// ====================================================================
+        // ====================================================================
         /// Methods
-        /// ====================================================================
+        // ====================================================================
         directory_controller_t();
         ~directory_controller_t();
 
@@ -70,9 +67,9 @@ class directory_controller_t : public interconnection_interface_t {
             return "DIRECTORY_CTRL";
         };
 
-        /// ====================================================================
+        // ====================================================================
         /// Inheritance from interconnection_interface_t
-        /// ====================================================================
+        // ====================================================================
         /// Basic Methods
         void allocate();
         void clock(uint32_t sub_cycle);
@@ -89,7 +86,7 @@ class directory_controller_t : public interconnection_interface_t {
         void reset_statistics();
         void print_statistics();
         void print_configuration();
-        /// ====================================================================
+        // ====================================================================
 
         int32_t find_directory_line(memory_package_t *package);
 
@@ -134,9 +131,9 @@ class directory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(bool, final_writeback_all)
 
 
-        /// ====================================================================
+        // ====================================================================
         /// Statistics related
-        /// ====================================================================
+        // ====================================================================
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_instruction_hit)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_read_hit)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_prefetch_hit)

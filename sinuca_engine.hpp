@@ -1,29 +1,26 @@
-//==============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-//==============================================================================
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+// ============================================================================
 /// Configuration File Control
-/// ============================================================================
+// ============================================================================
 class sinuca_engine_t {
     public:
         /// Program input
@@ -51,10 +48,10 @@ class sinuca_engine_t {
         uint32_t memory_controller_array_size;
         uint32_t interconnection_router_array_size;
 
-		uint32_t round_robin_processor;
-		uint32_t round_robin_cache_memory;
-		uint32_t round_robin_memory_controller;
-		uint32_t round_robin_interconnection_router;
+        uint32_t round_robin_processor;
+        uint32_t round_robin_cache_memory;
+        uint32_t round_robin_memory_controller;
+        uint32_t round_robin_interconnection_router;
 
         /// Control the Global Cycle
         uint64_t global_cycle;
@@ -66,6 +63,7 @@ class sinuca_engine_t {
         bool is_simulation_allocated;
         /// Control for Run Time Debug
         bool is_runtime_debug;
+        bool is_global_panic;
 
         /// Control the Trace Reading
         bool *is_processor_trace_eof;
@@ -76,9 +74,9 @@ class sinuca_engine_t {
         directory_controller_t *directory_controller;
         interconnection_controller_t *interconnection_controller;
 
-        /// ====================================================================
+        // ====================================================================
         /// Statistics related
-        /// ====================================================================
+        // ====================================================================
         /// Time statistics
         struct timeval stat_timer_start, stat_timer_end;
         /// Memory Usage statistics
@@ -99,9 +97,9 @@ class sinuca_engine_t {
         uint64_t stat_old_opcode_package;
         uint64_t stat_old_uop_package;
 
-        /// ====================================================================
+        // ====================================================================
         /// Methods
-        /// ====================================================================
+        // ====================================================================
         sinuca_engine_t();
         ~sinuca_engine_t();
         inline const char* get_label() {
@@ -143,10 +141,10 @@ class sinuca_engine_t {
         INSTANTIATE_GET_SET(uint32_t, memory_controller_array_size);
         INSTANTIATE_GET_SET(uint32_t, interconnection_router_array_size);
 
-		INSTANTIATE_GET_SET(uint32_t, round_robin_processor);
-		INSTANTIATE_GET_SET(uint32_t, round_robin_cache_memory);
-		INSTANTIATE_GET_SET(uint32_t, round_robin_memory_controller);
-		INSTANTIATE_GET_SET(uint32_t, round_robin_interconnection_router);
+        INSTANTIATE_GET_SET(uint32_t, round_robin_processor);
+        INSTANTIATE_GET_SET(uint32_t, round_robin_cache_memory);
+        INSTANTIATE_GET_SET(uint32_t, round_robin_memory_controller);
+        INSTANTIATE_GET_SET(uint32_t, round_robin_interconnection_router);
 
         INSTANTIATE_GET_SET(bool, is_simulation_allocated);
         INSTANTIATE_GET_SET(bool, is_runtime_debug);
@@ -166,9 +164,9 @@ class sinuca_engine_t {
         }
 
 
-        /// ====================================================================
+        // ====================================================================
         /// Statistics related
-        /// ====================================================================
+        // ====================================================================
         void write_graph(const char *buffer);
 
         void write_statistics(const char *buffer);

@@ -1,26 +1,25 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include "../circular_buffer.hpp"
+
 #ifndef _PROCESSOR_PROCESSOR_HPP_
 #define _PROCESSOR_PROCESSOR_HPP_
 
@@ -32,9 +31,9 @@ class processor_t : public interconnection_interface_t {
         processor_stage_t branch_solve_stage;   /// Stage which will solve the branch
 
     private:
-        /// ====================================================================
+        // ====================================================================
         /// Set by sinuca_configurator
-        /// ====================================================================
+        // ====================================================================
         uint32_t core_id;
 
         /// Buffers' Size
@@ -58,7 +57,7 @@ class processor_t : public interconnection_interface_t {
         uint32_t stage_execution_width;
         uint32_t stage_commit_width;
 
-        /// ====================================================================
+        // ====================================================================
         /// Integer Functional Units
         uint32_t number_fu_int_alu;
         uint32_t latency_fu_int_alu;
@@ -72,7 +71,7 @@ class processor_t : public interconnection_interface_t {
         uint32_t latency_fu_int_div;
         uint32_t wait_between_fu_int_div;
 
-        /// ====================================================================
+        // ====================================================================
         /// Floating Point Functional Units
         uint32_t number_fu_fp_alu;
         uint32_t latency_fu_fp_alu;
@@ -86,7 +85,7 @@ class processor_t : public interconnection_interface_t {
         uint32_t latency_fu_fp_div;
         uint32_t wait_between_fu_fp_div;
 
-        /// ====================================================================
+        // ====================================================================
         /// Memory Functional Units
         uint32_t number_fu_mem_load;
         uint32_t latency_fu_mem_load;
@@ -116,9 +115,9 @@ class processor_t : public interconnection_interface_t {
 
         uint32_t unified_reservation_station_window_size;
 
-        /// ====================================================================
+        // ====================================================================
         /// Set by this->allocate()
-        /// ====================================================================
+        // ====================================================================
         uint64_t offset_bits_mask;      /// Offset mask
         uint64_t not_offset_bits_mask;  /// Offset mask
 
@@ -154,10 +153,7 @@ class processor_t : public interconnection_interface_t {
         uint32_t fetch_buffer_position_used;
 
         /// Decode buffer
-        uop_package_t *decode_buffer;
-        uint32_t decode_buffer_position_start;
-        uint32_t decode_buffer_position_end;
-        uint32_t decode_buffer_position_used;
+        circular_buffer_t<uop_package_t> decode_buffer;
 
         /// Reorder buffer
         reorder_buffer_line_t *reorder_buffer;
@@ -177,19 +173,19 @@ class processor_t : public interconnection_interface_t {
         container_ptr_reorder_buffer_line_t unified_reservation_station;    /// dispatch->execute
         container_ptr_reorder_buffer_line_t unified_functional_units;       /// execute->commit
 
-        /// ====================================================================
+        // ====================================================================
         /// Integer Functional Units
         uint64_t *ready_cycle_fu_int_alu;
         uint64_t *ready_cycle_fu_int_mul;
         uint64_t *ready_cycle_fu_int_div;
 
-        /// ====================================================================
+        // ====================================================================
         /// Floating Point Functional Units
         uint64_t *ready_cycle_fu_fp_alu;
         uint64_t *ready_cycle_fu_fp_mul;
         uint64_t *ready_cycle_fu_fp_div;
 
-        /// ====================================================================
+        // ====================================================================
         /// Memory Functional Units
         uint64_t *ready_cycle_fu_mem_load;
         uint64_t *ready_cycle_fu_mem_store;
@@ -203,9 +199,9 @@ class processor_t : public interconnection_interface_t {
         cache_memory_t *data_cache;
         cache_memory_t *inst_cache;
 
-        /// ====================================================================
+        // ====================================================================
         /// Statistics related
-        /// ====================================================================
+        // ====================================================================
         uint64_t stat_active_cycles;
         uint64_t stat_idle_cycles;
 
@@ -255,29 +251,29 @@ class processor_t : public interconnection_interface_t {
         /// Memory Cycles Stall
         uint64_t stat_min_instruction_read_wait_time;
         uint64_t stat_max_instruction_read_wait_time;
-        uint64_t stat_acumulated_instruction_read_wait_time;
+        uint64_t stat_accumulated_instruction_read_wait_time;
 
         uint64_t stat_min_memory_read_wait_time;
         uint64_t stat_max_memory_read_wait_time;
-        uint64_t stat_acumulated_memory_read_wait_time;
+        uint64_t stat_accumulated_memory_read_wait_time;
 
         uint64_t stat_min_memory_write_wait_time;
         uint64_t stat_max_memory_write_wait_time;
-        uint64_t stat_acumulated_memory_write_wait_time;
+        uint64_t stat_accumulated_memory_write_wait_time;
 
 
     public:
-        /// ====================================================================
+        // ====================================================================
         /// Methods
-        /// ====================================================================
+        // ====================================================================
         processor_t();
         ~processor_t();
         int32_t send_instruction_package(opcode_package_t *is);
         int32_t send_data_package(memory_package_t *ms);
 
-        /// ====================================================================
+        // ====================================================================
         /// Inheritance from interconnection_interface_t
-        /// ====================================================================
+        // ====================================================================
         /// Basic Methods
         void allocate();
         void clock(uint32_t sub_cycle);
@@ -294,7 +290,7 @@ class processor_t : public interconnection_interface_t {
         void reset_statistics();
         void print_statistics();
         void print_configuration();
-        /// ====================================================================
+        // ====================================================================
 
         void synchronize(sync_t new_sync);
         void solve_branch(uint64_t opcode_number, processor_stage_t processor_stage, instruction_operation_t operation);
@@ -309,19 +305,11 @@ class processor_t : public interconnection_interface_t {
             return (memory_addressA & this->not_fetch_offset_bits_mask) == (memory_addressB & this->not_fetch_offset_bits_mask);
         }
 
-
         inline bool cmp_index_tag(uint64_t memory_addressA, uint64_t memory_addressB) {
             return (memory_addressA & this->not_offset_bits_mask) == (memory_addressB & this->not_offset_bits_mask);
         }
 
-        inline bool is_busy() {
-            return (trace_over == false ||
-                    fetch_buffer_position_used != 0 ||
-                    decode_buffer_position_used != 0 ||
-                    memory_order_buffer_read_executed != 0 ||
-                    memory_order_buffer_write_executed != 0 ||
-                    reorder_buffer_position_used != 0);
-        }
+        bool is_busy();
 
         bool check_if_memory_overlaps(uint64_t memory_address1, uint32_t size1, uint64_t memory_address2, uint32_t size2);
         void make_memory_dependencies(memory_order_buffer_line_t *new_mob_line, memory_order_buffer_line_t *input_array, uint32_t size_array);
@@ -332,17 +320,12 @@ class processor_t : public interconnection_interface_t {
         int32_t fetch_buffer_insert();
         void fetch_buffer_remove();
         int32_t fetch_buffer_find_opcode_number(uint64_t opcode_number);
-        /// ====================================================================
-
-        /// Decode Buffer ======================================================
-        int32_t decode_buffer_insert();
-        void decode_buffer_remove();
-        /// ====================================================================
+        // ====================================================================
 
         /// Reorder Buffer =====================================================
         int32_t rob_insert();
         void rob_remove();
-        /// ====================================================================
+        // ====================================================================
 
 
         INSTANTIATE_GET_SET(uint32_t, core_id)
@@ -440,9 +423,9 @@ class processor_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(sync_t, sync_status);
         INSTANTIATE_GET_SET(uint64_t, sync_status_time);
 
-        /// ====================================================================
+        // ====================================================================
         /// Statistics related
-        /// ====================================================================
+        // ====================================================================
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_active_cycles)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_idle_cycles)
 
@@ -490,7 +473,7 @@ class processor_t : public interconnection_interface_t {
         inline void add_stat_instruction_read_completed(uint64_t born_cycle) {
             this->stat_instruction_read_completed++;
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
-            stat_acumulated_instruction_read_wait_time += new_time;
+            stat_accumulated_instruction_read_wait_time += new_time;
             if (stat_min_instruction_read_wait_time > new_time) stat_min_instruction_read_wait_time = new_time;
             if (stat_max_instruction_read_wait_time < new_time) stat_max_instruction_read_wait_time = new_time;
         };
@@ -498,7 +481,7 @@ class processor_t : public interconnection_interface_t {
         inline void add_stat_memory_read_completed(uint64_t born_cycle) {
             this->stat_memory_read_completed++;
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
-            this->stat_acumulated_memory_read_wait_time += new_time;
+            this->stat_accumulated_memory_read_wait_time += new_time;
             if (stat_min_memory_read_wait_time > new_time) stat_min_memory_read_wait_time = new_time;
             if (stat_max_memory_read_wait_time < new_time) stat_max_memory_read_wait_time = new_time;
         };
@@ -506,7 +489,7 @@ class processor_t : public interconnection_interface_t {
         inline void add_stat_memory_write_completed(uint64_t born_cycle) {
             this->stat_memory_write_completed++;
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
-            this->stat_acumulated_memory_write_wait_time += new_time;
+            this->stat_accumulated_memory_write_wait_time += new_time;
             if (stat_min_memory_write_wait_time > new_time) stat_min_memory_write_wait_time = new_time;
             if (stat_max_memory_write_wait_time < new_time) stat_max_memory_write_wait_time = new_time;
         };

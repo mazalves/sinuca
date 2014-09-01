@@ -1,26 +1,23 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "../sinuca.hpp"
 
 #ifdef LINE_USAGE_PREDICTOR_DEBUG
@@ -29,7 +26,7 @@
     #define LINE_USAGE_PREDICTOR_DEBUG_PRINTF(...)
 #endif
 
-/// ============================================================================
+// ============================================================================
 dsbp_metadata_line_t::dsbp_metadata_line_t() {
     this->line_status = LINE_SUB_BLOCK_DISABLE;
 
@@ -52,7 +49,7 @@ dsbp_metadata_line_t::dsbp_metadata_line_t() {
     this->clock_last_access_subblock = NULL;
 };
 
-/// ============================================================================
+// ============================================================================
 dsbp_metadata_line_t::~dsbp_metadata_line_t() {
     utils_t::template_delete_array<bool>(this->sub_blocks);
 
@@ -63,7 +60,7 @@ dsbp_metadata_line_t::~dsbp_metadata_line_t() {
     utils_t::template_delete_array<uint64_t>(this->clock_last_access_subblock);
 };
 
-/// ============================================================================
+// ============================================================================
 void dsbp_metadata_line_t::clean() {
     ERROR_ASSERT_PRINTF(this->sub_blocks != NULL, "Cleanning a not allocated line.\n")
 
@@ -96,7 +93,7 @@ void dsbp_metadata_line_t::clean() {
     this->cycle_access_list.clear();
 };
 
-/// ============================================================================
+// ============================================================================
 std::string dsbp_metadata_line_t::content_to_string() {
     std::string content_string;
     content_string = "";

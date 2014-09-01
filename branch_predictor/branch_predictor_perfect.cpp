@@ -1,26 +1,23 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "../sinuca.hpp"
 
 #ifdef BRANCH_PREDICTOR_DEBUG
@@ -29,7 +26,7 @@
     #define BRANCH_PREDICTOR_DEBUG_PRINTF(...)
 #endif
 
-/// ============================================================================
+// ============================================================================
 branch_predictor_perfect_t::branch_predictor_perfect_t() {
     this->branch_predictor_type = BRANCH_PREDICTOR_PERFECT;
 
@@ -45,13 +42,13 @@ branch_predictor_perfect_t::branch_predictor_perfect_t() {
     this->btb_tag_bits_mask = 0;
 };
 
-/// ============================================================================
+// ============================================================================
 branch_predictor_perfect_t::~branch_predictor_perfect_t() {
     /// De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<branch_target_buffer_set_t>(btb);
 };
 
-/// ============================================================================
+// ============================================================================
 void branch_predictor_perfect_t::allocate() {
     branch_predictor_t::allocate();
 
@@ -78,7 +75,7 @@ void branch_predictor_perfect_t::allocate() {
     }
 };
 
-/// ============================================================================
+// ============================================================================
 uint32_t branch_predictor_perfect_t::btb_evict_address(uint64_t opcode_address) {
     uint64_t index = btb_get_index(opcode_address >> 2);
     uint32_t way = 0;
@@ -126,7 +123,7 @@ uint32_t branch_predictor_perfect_t::btb_evict_address(uint64_t opcode_address) 
 };
 
 
-/// ============================================================================
+// ============================================================================
 bool branch_predictor_perfect_t::btb_find_update_address(uint64_t opcode_address) {
     uint64_t index = btb_get_index(opcode_address >> 2);
     uint64_t tag = btb_get_tag(opcode_address >> 2);
@@ -154,10 +151,10 @@ bool branch_predictor_perfect_t::btb_find_update_address(uint64_t opcode_address
     return FAIL;
 };
 
-/// ============================================================================
+// ============================================================================
 /// 1st. Predict if it is a branch or normal instruction
 /// 2nd. Predict the target address
-///=================================
+// =================================
 /// CASE 1: Branch (Not Predicted as Branch)    - Static on Decode (Not Predict the target)     - STALL UNTIL EXECUTE
 /// CASE 2: Branch (Not Predicted as Branch)    - Static on Decode (Predict the target)         - STALL UNTIL DECODE
 
@@ -197,19 +194,19 @@ processor_stage_t branch_predictor_perfect_t::predict_branch(const opcode_packag
     return solve_stage;
 };
 
-/// ============================================================================
+// ============================================================================
 void branch_predictor_perfect_t::print_structures() {
     branch_predictor_t::print_structures();
 };
 
-/// ============================================================================
+// ============================================================================
 void branch_predictor_perfect_t::panic() {
     branch_predictor_t::panic();
 
     this->print_structures();
 };
 
-/// ============================================================================
+// ============================================================================
 void branch_predictor_perfect_t::periodic_check(){
     branch_predictor_t::periodic_check();
 
@@ -218,9 +215,9 @@ void branch_predictor_perfect_t::periodic_check(){
     #endif
 };
 
-/// ============================================================================
+// ============================================================================
 /// STATISTICS
-/// ============================================================================
+// ============================================================================
 void branch_predictor_perfect_t::reset_statistics() {
     branch_predictor_t::reset_statistics();
 
@@ -229,7 +226,7 @@ void branch_predictor_perfect_t::reset_statistics() {
     this->set_stat_btb_miss(0);
 };
 
-/// ============================================================================
+// ============================================================================
 void branch_predictor_perfect_t::print_statistics() {
     branch_predictor_t::print_statistics();
 
@@ -239,8 +236,8 @@ void branch_predictor_perfect_t::print_statistics() {
     sinuca_engine.write_statistics_value_percentage(get_type_component_label(), get_label(), "stat_btb_miss_ratio", stat_btb_miss, stat_btb_hit + stat_btb_miss);
 };
 
-/// ============================================================================
-/// ============================================================================
+// ============================================================================
+// ============================================================================
 void branch_predictor_perfect_t::print_configuration() {
     branch_predictor_t::print_configuration();
 

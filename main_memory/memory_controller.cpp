@@ -1,26 +1,23 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "../sinuca.hpp"
 
 #ifdef MEMORY_CONTROLLER_DEBUG
@@ -29,7 +26,7 @@
     #define MEMORY_CONTROLLER_DEBUG_PRINTF(...)
 #endif
 
-/// ============================================================================
+// ============================================================================
 memory_controller_t::memory_controller_t() {
     this->set_type_component(COMPONENT_MEMORY_CONTROLLER);
 
@@ -74,7 +71,7 @@ memory_controller_t::memory_controller_t() {
     this->timing_wtr = 0;
 };
 
-/// ============================================================================
+// ============================================================================
 memory_controller_t::~memory_controller_t() {
     // De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<memory_channel_t>(channels);
@@ -88,7 +85,7 @@ memory_controller_t::~memory_controller_t() {
 
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_controller_t::allocate() {
 
     ERROR_ASSERT_PRINTF(mshr_buffer_request_reserved_size > 0, "mshr_buffer_request_reserved_size should be bigger than zero.\n");
@@ -122,47 +119,20 @@ void memory_controller_t::allocate() {
         this->channels[i].write_priority_policy = this->write_priority_policy;
 
         /// Consider the latency in terms of processor cycles
-        this->channels[i].timing_burst = this->timing_burst * this->core_to_bus_clock_ratio;
-        this->channels[i].timing_burst += this->timing_burst * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_burst ? 1 : 0;
-
-        this->channels[i].timing_al = this->timing_al * this->core_to_bus_clock_ratio;
-        this->channels[i].timing_al += this->timing_al * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_al ? 1 : 0;
-
-        this->channels[i].timing_cas = this->timing_cas * this->core_to_bus_clock_ratio;
-        this->channels[i].timing_cas += this->timing_cas * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_cas ? 1 : 0;
-
-        this->channels[i].timing_ccd = this->timing_ccd * this->core_to_bus_clock_ratio;
-        this->channels[i].timing_ccd += this->timing_ccd * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_ccd ? 1 : 0;
-
-        this->channels[i].timing_cwd = this->timing_cwd * this->core_to_bus_clock_ratio;
-        this->channels[i].timing_cwd += this->timing_cwd * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_cwd ? 1 : 0;
-
-        this->channels[i].timing_faw = this->timing_faw * this->core_to_bus_clock_ratio;
-        this->channels[i].timing_faw += this->timing_faw * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_faw ? 1 : 0;
-
-        this->channels[i].timing_ras = this->timing_ras * this->core_to_bus_clock_ratio;
-        this->channels[i].timing_ras += this->timing_ras * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_ras ? 1 : 0;
-
-        this->channels[i].timing_rc = this->timing_rc * this->core_to_bus_clock_ratio;
-        this->channels[i].timing_rc += this->timing_rc * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_rc ? 1 : 0;
-
-        this->channels[i].timing_rcd = this->timing_rcd * this->core_to_bus_clock_ratio;
-        this->channels[i].timing_rcd += this->timing_rcd * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_rcd ? 1 : 0;
-
-        this->channels[i].timing_rp = this->timing_rp * this->core_to_bus_clock_ratio;
-        this->channels[i].timing_rp += this->timing_rp * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_rp ? 1 : 0;
-
-        this->channels[i].timing_rrd = this->timing_rrd * this->core_to_bus_clock_ratio;
-        this->channels[i].timing_rrd += this->timing_rrd * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_rrd ? 1 : 0;
-
-        this->channels[i].timing_rtp = this->timing_rtp * this->core_to_bus_clock_ratio;
-        this->channels[i].timing_rtp += this->timing_rtp * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_rtp ? 1 : 0;
-
-        this->channels[i].timing_wr = this->timing_wr * this->core_to_bus_clock_ratio;
-        this->channels[i].timing_wr += this->timing_wr * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_wr ? 1 : 0;
-
-        this->channels[i].timing_wtr = this->timing_wtr * this->core_to_bus_clock_ratio;
-        this->channels[i].timing_wtr += this->timing_wtr * this->core_to_bus_clock_ratio > (float)this->channels[i].timing_wtr ? 1 : 0;
+        this->channels[i].timing_burst = ceil(this->timing_burst * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_al = ceil(this->timing_al * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_cas = ceil(this->timing_cas * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_ccd = ceil(this->timing_ccd * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_cwd = ceil(this->timing_cwd * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_faw = ceil(this->timing_faw * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_ras = ceil(this->timing_ras * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_rc = ceil(this->timing_rc * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_rcd = ceil(this->timing_rcd * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_rp = ceil(this->timing_rp * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_rrd = ceil(this->timing_rrd * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_rtp = ceil(this->timing_rtp * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_wr = ceil(this->timing_wr * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_wtr = ceil(this->timing_wtr * this->core_to_bus_clock_ratio);
 
         /// Copy the masks
         this->channels[i].column_bits_mask = this->column_bits_mask;
@@ -180,24 +150,15 @@ void memory_controller_t::allocate() {
     }
 
 
-    //##########################################################################
+    // =========================================================================
     #ifdef BURST_TRACE
         this->burst_rqst_name = utils_t::template_allocate_array<char>(TRACE_LINE_SIZE);
         this->burst_wback_name = utils_t::template_allocate_array<char>(TRACE_LINE_SIZE);
         this->burst_pftch_name = utils_t::template_allocate_array<char>(TRACE_LINE_SIZE);
 
-        this->burst_rqst_name[0] = '\0';
-        this->burst_wback_name[0] = '\0';
-        this->burst_pftch_name[0] = '\0';
-
-        strcat(burst_rqst_name, sinuca_engine.arg_result_file_name);
-        strcat(burst_rqst_name, "_rqst.burst");
-
-        strcat(burst_wback_name, sinuca_engine.arg_result_file_name);
-        strcat(burst_wback_name, "_wback.burst");
-
-        strcat(burst_pftch_name, sinuca_engine.arg_result_file_name);
-        strcat(burst_pftch_name, "_pftch.burst");
+        snprintf(burst_rqst_name, sizeof(burst_rqst_name), "%s_rqst.burst", sinuca_engine.arg_result_file_name);
+        snprintf(burst_wback_name, sizeof(burst_wback_name), "%s_wback.burst", sinuca_engine.arg_result_file_name);
+        snprintf(burst_pftch_name, sizeof(burst_pftch_name), "%s_pftch.burst", sinuca_engine.arg_result_file_name);
 
         /// Open the statistics file
         if (this->burst_rqst_file.is_open() == false) {
@@ -224,7 +185,7 @@ void memory_controller_t::allocate() {
     #endif
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_controller_t::set_masks() {
     uint64_t i;
 
@@ -348,16 +309,16 @@ void memory_controller_t::set_masks() {
 };
 
 
-/// ============================================================================
+// ============================================================================
 void memory_controller_t::clock(uint32_t subcycle) {
     if (subcycle != 0) return;
-    MEMORY_CONTROLLER_DEBUG_PRINTF("==================== ID(%u) ",this->get_id());
+    MEMORY_CONTROLLER_DEBUG_PRINTF("==================== ID(%u) ", this->get_id());
     MEMORY_CONTROLLER_DEBUG_PRINTF("====================\n");
     MEMORY_CONTROLLER_DEBUG_PRINTF("cycle() \n");
 
-    /// =================================================================
+    // =================================================================
     /// MSHR_BUFFER - REMOVE THE READY PACKAGES
-    /// =================================================================
+    // =================================================================
     for (uint32_t i = 0; i < this->mshr_born_ordered.size(); i++){
         if (mshr_born_ordered[i]->state == PACKAGE_STATE_READY &&
         this->mshr_born_ordered[i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
@@ -389,9 +350,9 @@ void memory_controller_t::clock(uint32_t subcycle) {
         }
     }
 
-    /// =================================================================
+    // =================================================================
     /// MSHR_BUFFER - TRANSMISSION
-    /// =================================================================
+    // =================================================================
     for (uint32_t i = 0; i < this->mshr_born_ordered.size(); i++){
         if (mshr_born_ordered[i]->state == PACKAGE_STATE_TRANSMIT &&
         this->mshr_born_ordered[i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
@@ -407,9 +368,9 @@ void memory_controller_t::clock(uint32_t subcycle) {
     }
 
 
-    /// =================================================================
+    // =================================================================
     /// MSHR_BUFFER - UNTREATED
-    /// =================================================================
+    // =================================================================
     for (uint32_t i = 0; i < this->mshr_born_ordered.size(); i++){
         if (mshr_born_ordered[i]->state == PACKAGE_STATE_UNTREATED &&
         this->mshr_born_ordered[i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
@@ -437,7 +398,7 @@ void memory_controller_t::clock(uint32_t subcycle) {
 
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_controller_t::insert_mshr_born_ordered(memory_package_t* package){
     /// this->mshr_born_ordered            = [OLDER --------> NEWER]
     /// this->mshr_born_ordered.born_cycle = [SMALLER -----> BIGGER]
@@ -467,7 +428,7 @@ void memory_controller_t::insert_mshr_born_ordered(memory_package_t* package){
     #endif
 };
 
-/// ============================================================================
+// ============================================================================
 int32_t memory_controller_t::allocate_request(memory_package_t* package){
 
     int32_t slot = memory_package_t::find_free(this->mshr_buffer, this->mshr_buffer_request_reserved_size);
@@ -477,10 +438,10 @@ int32_t memory_controller_t::allocate_request(memory_package_t* package){
         this->mshr_buffer[slot] = *package;
         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
 
-    //##########################################################################
+    // =========================================================================
     #ifdef BURST_TRACE
         static char buffer[64] = "\0";
-        sprintf(buffer, "%"PRIu64"\n", sinuca_engine.get_global_cycle());
+        snprintf(buffer, sizeof(buffer), "%"PRIu64"\n", sinuca_engine.get_global_cycle());
         this->burst_rqst_file.write(buffer, strlen(buffer));
     #endif
 
@@ -488,7 +449,7 @@ int32_t memory_controller_t::allocate_request(memory_package_t* package){
     return slot;
 };
 
-/// ============================================================================
+// ============================================================================
 int32_t memory_controller_t::allocate_writeback(memory_package_t* package){
 
     int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size, this->mshr_buffer_writeback_reserved_size);
@@ -499,10 +460,10 @@ int32_t memory_controller_t::allocate_writeback(memory_package_t* package){
         this->mshr_buffer[slot] = *package;
         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
 
-    //##########################################################################
+    // =========================================================================
     #ifdef BURST_TRACE
         static char buffer[64] = "\0";
-        sprintf(buffer, "%"PRIu64"\n", sinuca_engine.get_global_cycle());
+        snprintf(buffer, sizeof(buffer), "%"PRIu64"\n", sinuca_engine.get_global_cycle());
         this->burst_wback_file.write(buffer, strlen(buffer));
     #endif
 
@@ -510,7 +471,7 @@ int32_t memory_controller_t::allocate_writeback(memory_package_t* package){
     return slot;
 };
 
-/// ============================================================================
+// ============================================================================
 int32_t memory_controller_t::allocate_prefetch(memory_package_t* package){
     int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_writeback_reserved_size,
                                                 this->mshr_buffer_prefetch_reserved_size);
@@ -522,10 +483,10 @@ int32_t memory_controller_t::allocate_prefetch(memory_package_t* package){
         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
 
 
-    //##########################################################################
+    // =========================================================================
     #ifdef BURST_TRACE
         static char buffer[64] = "\0";
-        sprintf(buffer, "%"PRIu64"\n", sinuca_engine.get_global_cycle());
+        snprintf(buffer, sizeof(buffer), "%"PRIu64"\n", sinuca_engine.get_global_cycle());
         this->burst_pftch_file.write(buffer, strlen(buffer));
     #endif
 
@@ -535,7 +496,7 @@ int32_t memory_controller_t::allocate_prefetch(memory_package_t* package){
 
 
 
-/// ============================================================================
+// ============================================================================
 int32_t memory_controller_t::send_package(memory_package_t *package) {
     MEMORY_CONTROLLER_DEBUG_PRINTF("send_package() package:%s\n", package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
@@ -565,7 +526,7 @@ int32_t memory_controller_t::send_package(memory_package_t *package) {
     return POSITION_FAIL;
 };
 
-/// ============================================================================
+// ============================================================================
 bool memory_controller_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
     MEMORY_CONTROLLER_DEBUG_PRINTF("receive_package() port:%u, package:%s\n", input_port, package->content_to_string().c_str());
 
@@ -631,9 +592,9 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
 };
 
 
-/// ============================================================================
+// ============================================================================
 /// Token Controller Methods
-/// ============================================================================
+// ============================================================================
 bool memory_controller_t::check_token_list(memory_package_t *package) {
     ERROR_ASSERT_PRINTF(package->is_answer == false, "check_token_list received a Answer.\n")
     uint32_t token_pos = 0;
@@ -739,7 +700,7 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
     return FAIL;
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_controller_t::remove_token_list(memory_package_t *package) {
     for (uint32_t token = 0; token < this->token_list.size(); token++) {
         /// Requested Address Found
@@ -757,7 +718,7 @@ void memory_controller_t::remove_token_list(memory_package_t *package) {
 };
 
 
-/// ============================================================================
+// ============================================================================
 void memory_controller_t::print_structures() {
     SINUCA_PRINTF("%s MSHR_BUFFER:\n%s", this->get_label(), memory_package_t::print_all(this->mshr_buffer, this->mshr_buffer_size).c_str())
 
@@ -776,7 +737,7 @@ void memory_controller_t::panic() {
     this->print_structures();
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_controller_t::periodic_check(){
     #ifdef MEMORY_CONTROLLER_DEBUG
         this->print_structures();
@@ -796,9 +757,9 @@ void memory_controller_t::periodic_check(){
     }
 };
 
-/// ============================================================================
+// ============================================================================
 /// STATISTICS
-/// ============================================================================
+// ============================================================================
 void memory_controller_t::reset_statistics() {
     this->stat_accesses = 0;
 
@@ -810,23 +771,23 @@ void memory_controller_t::reset_statistics() {
 
     this->stat_min_instruction_wait_time = MAX_ALIVE_TIME;
     this->stat_max_instruction_wait_time = 0;
-    this->stat_acumulated_instruction_wait_time = 0;
+    this->stat_accumulated_instruction_wait_time = 0;
 
     this->stat_min_read_wait_time = MAX_ALIVE_TIME;
     this->stat_max_read_wait_time = 0;
-    this->stat_acumulated_read_wait_time = 0;
+    this->stat_accumulated_read_wait_time = 0;
 
     this->stat_min_prefetch_wait_time = MAX_ALIVE_TIME;
     this->stat_max_prefetch_wait_time = 0;
-    this->stat_acumulated_prefetch_wait_time = 0;
+    this->stat_accumulated_prefetch_wait_time = 0;
 
     this->stat_min_write_wait_time = MAX_ALIVE_TIME;
     this->stat_max_write_wait_time = 0;
-    this->stat_acumulated_write_wait_time = 0;
+    this->stat_accumulated_write_wait_time = 0;
 
     this->stat_min_writeback_wait_time = MAX_ALIVE_TIME;
     this->stat_max_writeback_wait_time = 0;
-    this->stat_acumulated_writeback_wait_time = 0;
+    this->stat_accumulated_writeback_wait_time = 0;
 
     this->stat_full_mshr_buffer_request = 0;
     this->stat_full_mshr_buffer_writeback = 0;
@@ -837,10 +798,10 @@ void memory_controller_t::reset_statistics() {
     }
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_controller_t::print_statistics() {
     char title[100] = "";
-    sprintf(title, "Configuration of %s", this->get_label());
+    snprintf(title, sizeof(title), "Configuration of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);
     sinuca_engine.write_statistics_big_separator();
@@ -873,11 +834,11 @@ void memory_controller_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_writeback_wait_time", stat_max_writeback_wait_time);
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_instruction_wait_time",stat_acumulated_instruction_wait_time, stat_instruction_completed);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_read_wait_time",stat_acumulated_read_wait_time, stat_read_completed);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_prefetch_wait_time",stat_acumulated_prefetch_wait_time, stat_prefetch_completed);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_write_wait_time",stat_acumulated_write_wait_time, stat_write_completed);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_acumulated_writeback_wait_time",stat_acumulated_writeback_wait_time, stat_writeback_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_instruction_wait_time", stat_accumulated_instruction_wait_time, stat_instruction_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_read_wait_time", stat_accumulated_read_wait_time, stat_read_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_prefetch_wait_time", stat_accumulated_prefetch_wait_time, stat_prefetch_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_write_wait_time", stat_accumulated_write_wait_time, stat_write_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_writeback_wait_time", stat_accumulated_writeback_wait_time, stat_writeback_completed);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_buffer_request", stat_full_mshr_buffer_request);
@@ -889,10 +850,10 @@ void memory_controller_t::print_statistics() {
     }
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_controller_t::print_configuration() {
     char title[100] = "";
-    sprintf(title, "Configuration of %s", this->get_label());
+    snprintf(title, sizeof(title), "Configuration of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);
     sinuca_engine.write_statistics_big_separator();

@@ -1,36 +1,32 @@
-//==============================================================================
-//
-// Copyright (C) 2010, 2011
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-//==============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-/// ============================================================================
+// ============================================================================
 /// Utils
-/// ============================================================================
+// ============================================================================
  /*! Provides useful generic methods used in multiple components like
   * constructors and destructors, number conversors, pretty print outs.
   */
 class utils_t {
     public:
-        /// ====================================================================
+        // ====================================================================
         template <class TYPE>
         static void template_delete_variable(TYPE *variable) {
             /// Deallocate
@@ -38,7 +34,7 @@ class utils_t {
                 delete variable;
             }
         };
-        /// ====================================================================
+        // ====================================================================
         template <class TYPE>
         static void template_delete_array(TYPE *array) {
             /// Deallocate
@@ -46,7 +42,7 @@ class utils_t {
                 delete[] array;
             }
         };
-        /// ====================================================================
+        // ====================================================================
         template <class TYPE>
         static void template_delete_matrix(TYPE **matrix, uint32_t count) {
             /// Deallocate
@@ -57,7 +53,7 @@ class utils_t {
         };
 
 
-        /// ====================================================================
+        // ====================================================================
         template <class TYPE>
         static TYPE* template_allocate_array(uint32_t count) {
             ERROR_ASSERT_PRINTF(count > 0, "Allocating array of %u positions\n", count);
@@ -66,7 +62,7 @@ class utils_t {
             return var;
         };
 
-        /// ====================================================================
+        // ====================================================================
         template <class TYPE>
         static TYPE* template_allocate_initialize_array(uint32_t count, TYPE init) {
             ERROR_ASSERT_PRINTF(count > 0, "Allocating array of %u positions\n", count);
@@ -80,7 +76,7 @@ class utils_t {
             return var;
         };
 
-        /// ====================================================================
+        // ====================================================================
         template <class TYPE>
         static TYPE** template_allocate_matrix(uint32_t count_x, uint32_t count_y) {
             ERROR_ASSERT_PRINTF(count_x > 0, "Allocating matrix of %u(x) positions\n", count_x);
@@ -98,7 +94,7 @@ class utils_t {
             return var;
         };
 
-        /// ====================================================================
+        // ====================================================================
         template <class TYPE>
         static TYPE** template_allocate_initialize_matrix(uint32_t count_x, uint32_t count_y, TYPE init) {
             ERROR_ASSERT_PRINTF(count_x > 0, "Allocating matrix of %u(x) positions\n", count_x);
@@ -147,5 +143,5 @@ class utils_t {
         static std::string uint64_to_string(uint64_t input_int);
         static std::string int64_to_string(int64_t input_int);
 
-        static void process_mem_usage(double& stat_vm_usage, double& resident_set);
+        static void process_mem_usage(double *stat_vm_usage, double *resident_set);
 };

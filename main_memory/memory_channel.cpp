@@ -1,26 +1,23 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "../sinuca.hpp"
 
 #ifdef MEMORY_CONTROLLER_DEBUG
@@ -29,7 +26,7 @@
     #define MEMORY_CONTROLLER_DEBUG_PRINTF(...)
 #endif
 
-/// ============================================================================
+// ============================================================================
 memory_channel_t::memory_channel_t() {
     this->bank_per_channel = 0;
     this->bank_buffer_size = 0;
@@ -62,7 +59,7 @@ memory_channel_t::memory_channel_t() {
     this->last_bank_selected = 0;
 };
 
-/// ============================================================================
+// ============================================================================
 memory_channel_t::~memory_channel_t() {
     utils_t::template_delete_array<container_ptr_memory_package_t>(bank_buffer);
     utils_t::template_delete_array<int32_t>(bank_buffer_actual_position);
@@ -77,7 +74,7 @@ memory_channel_t::~memory_channel_t() {
     utils_t::template_delete_array<uint64_t>(channel_last_command_cycle);
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_channel_t::allocate() {
 
     this->bank_buffer = utils_t::template_allocate_array<container_ptr_memory_package_t>(this->get_bank_per_channel());
@@ -93,7 +90,7 @@ void memory_channel_t::allocate() {
 };
 
 
-/// ============================================================================
+// ============================================================================
 int32_t memory_channel_t::find_next_read_operation(uint32_t bank) {
     ERROR_ASSERT_PRINTF(this->bank_buffer[bank].size() > 0, "Calling find_next_operation with empty buffer\n")
 
@@ -141,7 +138,7 @@ int32_t memory_channel_t::find_next_read_operation(uint32_t bank) {
     return slot;
 };
 
-/// ============================================================================
+// ============================================================================
 int32_t memory_channel_t::find_next_write_operation(uint32_t bank) {
     ERROR_ASSERT_PRINTF(this->bank_buffer[bank].size() > 0, "Calling find_next_operation with empty buffer\n")
 
@@ -187,7 +184,7 @@ int32_t memory_channel_t::find_next_write_operation(uint32_t bank) {
 };
 
 
-/// ============================================================================
+// ============================================================================
 int32_t memory_channel_t::find_next_package(uint32_t bank) {
 
     if (this->bank_buffer[bank].size() == 0) {
@@ -238,13 +235,13 @@ int32_t memory_channel_t::find_next_package(uint32_t bank) {
 };
 
 
-/// ============================================================================
+// ============================================================================
 bool memory_channel_t::check_if_minimum_latency(uint32_t bank, memory_controller_command_t next_command) {
     uint64_t actual_cycle = sinuca_engine.get_global_cycle();
 
     switch (next_command){
         case MEMORY_CONTROLLER_COMMAND_PRECHARGE:
-            /// ================================================================
+            // ================================================================
             /// Same Bank
             if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_ras)
             > actual_cycle)
@@ -255,22 +252,22 @@ bool memory_channel_t::check_if_minimum_latency(uint32_t bank, memory_controller
             else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_al + this->timing_cwd + this->timing_burst + this->timing_wr)
             > actual_cycle)
                 return false;
-            /// ================================================================
+            // ================================================================
             return true;
         break;
 
         case MEMORY_CONTROLLER_COMMAND_ROW_ACCESS:
-            /// ================================================================
+            // ================================================================
             /// Same Bank
             if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_rc)
             > actual_cycle)
                 return false;
-            /// ================================================================
+            // ================================================================
             /// Same Channel
             else if ((this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_rrd)
             > actual_cycle)
                 return false;
-            /// ================================================================
+            // ================================================================
             else {
                 uint32_t row_activated_inside_window = 0;
                 for (uint32_t i = 0; i < this->get_bank_per_channel(); i++) {
@@ -285,7 +282,7 @@ bool memory_channel_t::check_if_minimum_latency(uint32_t bank, memory_controller
         break;
 
         case MEMORY_CONTROLLER_COMMAND_COLUMN_READ:
-            /// ================================================================
+            // ================================================================
             /// Same Bank
             if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_rcd - this->timing_al)
             > actual_cycle)
@@ -299,7 +296,7 @@ bool memory_channel_t::check_if_minimum_latency(uint32_t bank, memory_controller
             else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_cwd + this->timing_burst + this->timing_wtr)
             > actual_cycle)
                 return false;
-            /// ================================================================
+            // ================================================================
             /// Same channel
             else if ((this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_burst)
             > actual_cycle)
@@ -310,12 +307,12 @@ bool memory_channel_t::check_if_minimum_latency(uint32_t bank, memory_controller
             else if ((this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_cwd + this->timing_burst + this->timing_wtr)
             > actual_cycle)
                 return false;
-            /// ================================================================
+            // ================================================================
             return true;
         break;
 
         case MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE:
-            /// ================================================================
+            // ================================================================
             /// Same Bank
             if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_rcd - this->timing_al)
             > actual_cycle)
@@ -330,7 +327,7 @@ bool memory_channel_t::check_if_minimum_latency(uint32_t bank, memory_controller
             else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_ccd)
             > actual_cycle)
                 return false;
-            /// ================================================================
+            // ================================================================
             /// Same channel
             else if ((this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_cas + this->timing_burst)
             > actual_cycle)
@@ -341,7 +338,7 @@ bool memory_channel_t::check_if_minimum_latency(uint32_t bank, memory_controller
             else if ((this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_ccd)
             > actual_cycle)
                 return false;
-            /// ================================================================
+            // ================================================================
             return true;
         break;
 
@@ -354,7 +351,7 @@ bool memory_channel_t::check_if_minimum_latency(uint32_t bank, memory_controller
     return false;
 };
 
-/// ============================================================================
+// ============================================================================
 package_state_t memory_channel_t::treat_memory_request(memory_package_t *package) {
     uint32_t bank = get_bank(package->memory_address);
     uint32_t i;
@@ -405,10 +402,10 @@ package_state_t memory_channel_t::treat_memory_request(memory_package_t *package
 };
 
 
-/// ============================================================================
+// ============================================================================
 void memory_channel_t::clock(uint32_t subcycle) {
     if (subcycle != 0) return;
-    MEMORY_CONTROLLER_DEBUG_PRINTF("==================== ID(%u) ",this->get_id());
+    MEMORY_CONTROLLER_DEBUG_PRINTF("==================== ID(%u) ", this->get_id());
     MEMORY_CONTROLLER_DEBUG_PRINTF("====================\n");
     MEMORY_CONTROLLER_DEBUG_PRINTF("cycle() \n");
 
@@ -439,7 +436,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
 
     /// Considering the last command, do the next
     switch(this->bank_last_command[bank]) {
-        //======================================================================
+        // =====================================================================
         case MEMORY_CONTROLLER_COMMAND_PRECHARGE:
             /// Respect Min. Latency
             if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_ROW_ACCESS)) {
@@ -453,7 +450,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
             this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] = sinuca_engine.get_global_cycle();
         break;
 
-        //======================================================================
+        // =====================================================================
         case MEMORY_CONTROLLER_COMMAND_ROW_ACCESS:
             ERROR_ASSERT_PRINTF(cmp_row_bank_channel(this->bank_open_row_address[bank], package->memory_address), "Sending READ/WRITE to wrong row.")
             switch (package->memory_operation) {
@@ -496,7 +493,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
             this->bank_buffer_actual_position[bank] = -1;
         break;
 
-        //======================================================================
+        // =====================================================================
         case MEMORY_CONTROLLER_COMMAND_COLUMN_READ:
             if (cmp_row_bank_channel(this->bank_open_row_address[bank], package->memory_address)) {
                 switch (package->memory_operation) {
@@ -549,7 +546,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
             }
         break;
 
-        //======================================================================
+        // =====================================================================
         case MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE:
             if (cmp_row_bank_channel(this->bank_open_row_address[bank], package->memory_address)) {
                 switch (package->memory_operation) {
@@ -601,7 +598,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
             }
         break;
 
-        //======================================================================
+        // =====================================================================
         case MEMORY_CONTROLLER_COMMAND_NUMBER:
             ERROR_PRINTF("Should not receive COMMAND_NUMBER\n")
         break;
@@ -611,9 +608,9 @@ void memory_channel_t::clock(uint32_t subcycle) {
 
 
 
-/// ============================================================================
+// ============================================================================
 /// Bank Selection Strategies
-/// ============================================================================
+// ============================================================================
 /// Selection strategy: Random
 uint32_t memory_channel_t::selection_bank_random() {
     unsigned int seed = sinuca_engine.get_global_cycle() % 1000;
@@ -621,7 +618,7 @@ uint32_t memory_channel_t::selection_bank_random() {
     return selected;
 };
 
-/// ============================================================================
+// ============================================================================
 /// Selection strategy: Round Robin
 uint32_t memory_channel_t::selection_bank_round_robin() {
     this->last_bank_selected++;
@@ -632,51 +629,51 @@ uint32_t memory_channel_t::selection_bank_round_robin() {
 };
 
 
-/// ============================================================================
+// ============================================================================
 int32_t memory_channel_t::send_package(memory_package_t *package) {
     ERROR_PRINTF("Send package %s.\n", package->content_to_string().c_str());
     return POSITION_FAIL;
 };
 
-/// ============================================================================
+// ============================================================================
 bool memory_channel_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
     ERROR_PRINTF("Received package %s into the input_port %u, latency %u.\n", package->content_to_string().c_str(), input_port, transmission_latency);
     return FAIL;
 };
 
-/// ============================================================================
+// ============================================================================
 /// Token Controller Methods
-/// ============================================================================
+// ============================================================================
 bool memory_channel_t::check_token_list(memory_package_t *package) {
     ERROR_PRINTF("check_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
     return FAIL;
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_channel_t::remove_token_list(memory_package_t *package) {
     ERROR_PRINTF("remove_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_channel_t::print_structures() {
 
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_channel_t::panic() {
     this->print_structures();
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_channel_t::periodic_check(){
     #ifdef MEMORY_CONTROLLER_DEBUG
         this->print_structures();
     #endif
 };
 
-/// ============================================================================
+// ============================================================================
 /// STATISTICS
-/// ============================================================================
+// ============================================================================
 void memory_channel_t::reset_statistics() {
     this->stat_row_buffer_hit = 0;
     this->stat_row_buffer_miss = 0;
@@ -685,10 +682,10 @@ void memory_channel_t::reset_statistics() {
     this->stat_write_forward = 0;
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_channel_t::print_statistics() {
      char title[100] = "";
-    sprintf(title, "Statistics of %s", this->get_label());
+    snprintf(title, sizeof(title), "Statistics of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);
     sinuca_engine.write_statistics_big_separator();
@@ -702,10 +699,10 @@ void memory_channel_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_row_buffer_miss", stat_row_buffer_miss);
 };
 
-/// ============================================================================
+// ============================================================================
 void memory_channel_t::print_configuration() {
     char title[100] = "";
-    sprintf(title, "Configuration of %s", this->get_label());
+    snprintf(title, sizeof(title), "Configuration of %s", this->get_label());
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);
     sinuca_engine.write_statistics_big_separator();

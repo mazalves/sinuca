@@ -1,26 +1,23 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "../sinuca.hpp"
 
 #ifdef LINE_USAGE_PREDICTOR_DEBUG
@@ -29,7 +26,7 @@
     #define LINE_USAGE_PREDICTOR_DEBUG_PRINTF(...)
 #endif
 
-/// ============================================================================
+// ============================================================================
 line_usage_predictor_skewed_t::line_usage_predictor_skewed_t() {
     this->line_usage_predictor_type = LINE_USAGE_PREDICTOR_POLICY_SKEWED;
 
@@ -49,7 +46,7 @@ line_usage_predictor_skewed_t::line_usage_predictor_skewed_t() {
     this->metadata_total_sets = 0;
 };
 
-/// ============================================================================
+// ============================================================================
 line_usage_predictor_skewed_t::~line_usage_predictor_skewed_t() {
     /// De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<skewed_metadata_set_t>(metadata_sets);
@@ -59,7 +56,7 @@ line_usage_predictor_skewed_t::~line_usage_predictor_skewed_t() {
     utils_t::template_delete_array<uint32_t>(skewed_table_3);
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_skewed_t::allocate() {
     line_usage_predictor_t::allocate();
 
@@ -99,7 +96,7 @@ void line_usage_predictor_skewed_t::allocate() {
 
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_skewed_t::clock(uint32_t subcycle) {
     line_usage_predictor_t::clock(subcycle);
 
@@ -110,7 +107,7 @@ void line_usage_predictor_skewed_t::clock(uint32_t subcycle) {
 };
 
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_skewed_t::fill_package_sub_blocks(memory_package_t *package) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("fill_package_sub_blocks() package:%s\n", package->content_to_string().c_str())
 
@@ -119,7 +116,7 @@ void line_usage_predictor_skewed_t::fill_package_sub_blocks(memory_package_t *pa
     package->memory_size = sinuca_engine.get_global_line_size();
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_skewed_t::line_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_sub_blocks_to_package() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -134,7 +131,7 @@ void line_usage_predictor_skewed_t::line_sub_blocks_to_package(cache_memory_t *c
     package->memory_size = sinuca_engine.get_global_line_size();
 };
 
-/// ============================================================================
+// ============================================================================
 bool line_usage_predictor_skewed_t::check_sub_block_is_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint64_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_sub_block_is_hit() package:%s\n", package->content_to_string().c_str())
 
@@ -152,7 +149,7 @@ bool line_usage_predictor_skewed_t::check_sub_block_is_hit(cache_memory_t *cache
     }
 };
 
-/// ============================================================================
+// ============================================================================
 bool line_usage_predictor_skewed_t::check_line_is_disabled(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way){
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_disabled()\n")
 
@@ -169,7 +166,7 @@ bool line_usage_predictor_skewed_t::check_line_is_disabled(cache_memory_t *cache
     }
 };
 
-/// ============================================================================
+// ============================================================================
 bool line_usage_predictor_skewed_t::check_line_is_last_access(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way){
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_access()\n")
 
@@ -181,7 +178,7 @@ bool line_usage_predictor_skewed_t::check_line_is_last_access(cache_memory_t *ca
             this->early_eviction);
 };
 
-/// ============================================================================
+// ============================================================================
 bool line_usage_predictor_skewed_t::check_line_is_last_write(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way){
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_write()\n")
 
@@ -194,9 +191,9 @@ bool line_usage_predictor_skewed_t::check_line_is_last_write(cache_memory_t *cac
             this->early_writeback);
 };
 
-/// ============================================================================
+// ============================================================================
 /// Mechanism Operations
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_skewed_t::line_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_hit() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -285,7 +282,7 @@ void line_usage_predictor_skewed_t::line_hit(cache_memory_t *cache, cache_line_t
 };
 
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_skewed_t::line_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -311,7 +308,7 @@ void line_usage_predictor_skewed_t::line_miss(cache_memory_t *cache, cache_line_
 };
 
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_skewed_t::sub_block_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("sub_block_miss() package:%s\n", package->content_to_string().c_str())
 
@@ -343,7 +340,7 @@ void line_usage_predictor_skewed_t::sub_block_miss(cache_memory_t *cache, cache_
     this->metadata_sets[index].ways[way].clock_last_access = sinuca_engine.get_global_cycle();
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_skewed_t::line_send_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_send_writeback() package:%s\n", package->content_to_string().c_str());
 
@@ -359,9 +356,9 @@ void line_usage_predictor_skewed_t::line_send_writeback(cache_memory_t *cache, c
     /// Statistics
     this->stat_cycles_turned_on_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
 
-    /// ================================================================
+    // ================================================================
     /// METADATA Not Learn Mode
-    /// ================================================================
+    // ================================================================
     this->metadata_sets[index].ways[way].is_dirty = false;
     this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_WRITEBACK;
 
@@ -374,7 +371,7 @@ void line_usage_predictor_skewed_t::line_send_writeback(cache_memory_t *cache, c
     this->metadata_sets[index].ways[way].clock_last_access = sinuca_engine.get_global_cycle();
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_skewed_t::line_recv_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_recv_writeback() index:%d, way:%d package:%s\n", index, way, package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -416,7 +413,7 @@ void line_usage_predictor_skewed_t::line_recv_writeback(cache_memory_t *cache, c
 
 
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_skewed_t::line_eviction(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_eviction() index:%d, way:%d\n", index, way);
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -484,7 +481,7 @@ void line_usage_predictor_skewed_t::line_eviction(cache_memory_t *cache, cache_l
 
 
 
-    //==================================================================
+    // =================================================================
     // Prediction Accuracy Statistics
     if (this->metadata_sets[index].ways[way].is_dirty == true) {
         switch (this->metadata_sets[index].ways[way].line_status) {
@@ -573,7 +570,7 @@ void line_usage_predictor_skewed_t::line_eviction(cache_memory_t *cache, cache_l
 };
 
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_skewed_t::line_invalidation(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_invalidation() index:%d, way:%d\n", index, way);
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -602,20 +599,20 @@ void line_usage_predictor_skewed_t::line_invalidation(cache_memory_t *cache, cac
 };
 
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_skewed_t::print_structures() {
     line_usage_predictor_t::print_structures();
 
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_skewed_t::panic() {
     line_usage_predictor_t::panic();
 
     this->print_structures();
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_skewed_t::periodic_check(){
     line_usage_predictor_t::periodic_check();
 
@@ -624,9 +621,9 @@ void line_usage_predictor_skewed_t::periodic_check(){
     #endif
 };
 
-/// ============================================================================
+// ============================================================================
 /// STATISTICS
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_skewed_t::reset_statistics() {
     line_usage_predictor_t::reset_statistics();
 
@@ -674,7 +671,7 @@ void line_usage_predictor_skewed_t::reset_statistics() {
     this->stat_cycles_turned_off_whole_line_since_begin = 0;
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_skewed_t::print_statistics() {
     line_usage_predictor_t::print_statistics();
 
@@ -748,7 +745,7 @@ void line_usage_predictor_skewed_t::print_statistics() {
     }
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_skewed_t::print_configuration() {
     line_usage_predictor_t::print_configuration();
 

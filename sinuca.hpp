@@ -1,26 +1,23 @@
-/// ============================================================================
-///
-/// Copyright (C) 2010, 2011, 2012
-/// Marco Antonio Zanata Alves
-///
-/// GPPD - Parallel and Distributed Processing Group
-/// Universidade Federal do Rio Grande do Sul
-///
-/// This program is free software; you can redistribute it and/or modify it
-/// under the terms of the GNU General Public License as published by the
-/// Free Software Foundation; either version 2 of the License, or (at your
-/// option) any later version.
-///
-/// This program is distributed in the hope that it will be useful, but
-/// WITHOUT ANY WARRANTY; without even the implied warranty of
-/// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-/// General Public License for more details.
-///
-/// You should have received a copy of the GNU General Public License along
-/// with this program; if not, write to the Free Software Foundation, Inc.,
-/// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-///
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 /// Main header file: sinuca.h
 /// This is the main header file, it contains all the prototypes and
 /// describes the relations between classes.
@@ -55,9 +52,9 @@
 #include "./extra_libs/include/zlib.h"
 #include "./extra_libs/include/libconfig.h++"
 
-/// ============================================================================
+// ============================================================================
 /// Classes
-/// ============================================================================
+// ============================================================================
 class trace_reader_t;
 class sinuca_engine_t;
 /// Packages
@@ -127,15 +124,16 @@ class memory_channel_t;
 class memory_controller_t;
 /// Useful static methods
 class utils_t;
+template<class CB_TYPE> class circular_buffer_t;
 
-/// ============================================================================
+// ============================================================================
 /// Global SINUCA_ENGINE instantiation
-/// ============================================================================
+// ============================================================================
 extern sinuca_engine_t sinuca_engine;
 
-/// ============================================================================
+// ============================================================================
 /// Definitions for Log, Debug, Warning, Error and Statistics
-/// ============================================================================
+// ============================================================================
 #define HEART_BEAT      10000000  /// Period to inform the Progress
 #define MAX_ALIVE_TIME   1000000  /// Max Time for a request to be solved
 #define PERIODIC_CHECK  10000000  /// Period between the Periodic Check
@@ -173,13 +171,13 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define PROCESSOR_DEBUG
     // ~ #define SYNC_DEBUG
     // ~ #define BRANCH_PREDICTOR_DEBUG
-    #define CACHE_DEBUG
+    // ~ #define CACHE_DEBUG
     // ~ #define PREFETCHER_DEBUG
     // ~ #define LINE_USAGE_PREDICTOR_DEBUG
-    #define MEMORY_CONTROLLER_DEBUG
-    // ~ #define ROUTER_DEBUG
+    // ~ #define MEMORY_CONTROLLER_DEBUG
+    #define ROUTER_DEBUG
     // ~ #define INTERCONNECTION_CTRL_DEBUG
-    #define DIRECTORY_CTRL_DEBUG
+    // ~ #define DIRECTORY_CTRL_DEBUG
     // ~ #define SHOW_FREE_PACKAGE
     #define DEBUG_PRINTF(...)   {\
                                     if (sinuca_engine.get_is_runtime_debug()) {\
@@ -234,9 +232,9 @@ extern sinuca_engine_t sinuca_engine;
     #define ERROR_PRINTF(...)
 #endif
 
-/// ============================================================================
+// ============================================================================
 /// MACROS to create get_ and set_ methods for variables.
-/// ============================================================================
+// ============================================================================
 /// Creates the Get, Set methods automatically.
 #define INSTANTIATE_GET_SET(TYPE, NAME) \
     inline void set_ ## NAME(TYPE input_NAME) {\
@@ -258,9 +256,9 @@ extern sinuca_engine_t sinuca_engine;
         return this->NAME;\
     };
 
-/// ============================================================================
+// ============================================================================
 /// TYPES
-/// ============================================================================
+// ============================================================================
 typedef std::vector <uint64_t>                      container_uint64_t;
 typedef std::vector <token_t>                       container_token_t;
 typedef std::vector <opcode_package_t>              container_opcode_package_t;
@@ -284,9 +282,9 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 
 #include "./sinuca_engine.hpp"
 
-/// ============================================================================
+// ============================================================================
 /// Interconnection Components
-/// ============================================================================
+// ============================================================================
 #include "./interconnection/token.hpp"
 #include "./interconnection/interconnection_interface.hpp"
 
@@ -295,9 +293,9 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 #include "./interconnection/interconnection_controller.hpp"
 #include "./interconnection/interconnection_router.hpp"
 
-/// ============================================================================
+// ============================================================================
 /// Processor Cores Components
-/// ============================================================================
+// ============================================================================
 #include "./branch_predictor/branch_target_buffer_line.hpp"
 #include "./branch_predictor/branch_target_buffer_set.hpp"
 
@@ -315,9 +313,9 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 #include "./processor/reorder_buffer_line.hpp"
 #include "./processor/processor.hpp"
 
-/// ============================================================================
+// ============================================================================
 /// Line Usage Predictor
-/// ============================================================================
+// ============================================================================
 #include "./line_usage_predictor/line_usage_predictor.hpp"
 #include "./line_usage_predictor/line_usage_predictor_disable.hpp"
 
@@ -339,9 +337,9 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 #include "./line_usage_predictor/skewed_metadata_set.hpp"
 #include "./line_usage_predictor/line_usage_predictor_skewed.hpp"
 
-/// ============================================================================
+// ============================================================================
 /// Memory Devices
-/// ============================================================================
+// ============================================================================
 #include "./directory/directory_line.hpp"
 #include "./directory/directory_controller.hpp"
 
@@ -361,9 +359,10 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 #include "./main_memory/memory_channel.hpp"
 #include "./main_memory/memory_controller.hpp"
 
-/// ============================================================================
-/// Utils Methods
-/// ============================================================================
+// ============================================================================
+/// Useful Methods
+// ============================================================================
 #include "./utils.hpp"
+#include "./circular_buffer.hpp"
 
 #endif  // _SINUCA_SINUCA_HPP_

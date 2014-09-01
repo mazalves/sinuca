@@ -1,26 +1,23 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 class memory_controller_t : public interconnection_interface_t {
     private:
 
@@ -34,9 +31,9 @@ class memory_controller_t : public interconnection_interface_t {
         std::ofstream burst_pftch_file;
     #endif
 
-        /// ====================================================================
+        // ====================================================================
         /// Set by sinuca_configurator
-        /// ====================================================================
+        // ====================================================================
         memory_controller_mask_t address_mask_type;
         uint32_t line_size;
 
@@ -77,9 +74,9 @@ class memory_controller_t : public interconnection_interface_t {
         uint32_t timing_wr;     // write recovery time
         uint32_t timing_wtr;    // write to read delay time
 
-        /// ====================================================================
+        // ====================================================================
         /// Set by this->allocate()
-        /// ====================================================================
+        // ====================================================================
         uint64_t column_bits_mask;
         uint64_t not_column_bits_mask;
         uint64_t column_bits_shift;
@@ -106,9 +103,9 @@ class memory_controller_t : public interconnection_interface_t {
         uint32_t timing_burst;
         memory_channel_t *channels;
 
-        /// ====================================================================
+        // ====================================================================
         /// Statistics related
-        /// ====================================================================
+        // ====================================================================
         uint64_t stat_accesses;
 
         uint64_t stat_instruction_completed;
@@ -119,38 +116,38 @@ class memory_controller_t : public interconnection_interface_t {
 
         uint64_t stat_min_instruction_wait_time;
         uint64_t stat_max_instruction_wait_time;
-        uint64_t stat_acumulated_instruction_wait_time;
+        uint64_t stat_accumulated_instruction_wait_time;
 
         uint64_t stat_min_read_wait_time;
         uint64_t stat_max_read_wait_time;
-        uint64_t stat_acumulated_read_wait_time;
+        uint64_t stat_accumulated_read_wait_time;
 
         uint64_t stat_min_prefetch_wait_time;
         uint64_t stat_max_prefetch_wait_time;
-        uint64_t stat_acumulated_prefetch_wait_time;
+        uint64_t stat_accumulated_prefetch_wait_time;
 
         uint64_t stat_min_write_wait_time;
         uint64_t stat_max_write_wait_time;
-        uint64_t stat_acumulated_write_wait_time;
+        uint64_t stat_accumulated_write_wait_time;
 
         uint64_t stat_min_writeback_wait_time;
         uint64_t stat_max_writeback_wait_time;
-        uint64_t stat_acumulated_writeback_wait_time;
+        uint64_t stat_accumulated_writeback_wait_time;
 
         uint64_t stat_full_mshr_buffer_request;
         uint64_t stat_full_mshr_buffer_writeback;
         uint64_t stat_full_mshr_buffer_prefetch;
 
     public:
-        /// ====================================================================
+        // ====================================================================
         /// Methods
-        /// ====================================================================
+        // ====================================================================
         memory_controller_t();
         ~memory_controller_t();
 
-        /// ====================================================================
+        // ====================================================================
         /// Inheritance from interconnection_interface_t
-        /// ====================================================================
+        // ====================================================================
         /// Basic Methods
         void allocate();
         void clock(uint32_t sub_cycle);
@@ -167,7 +164,7 @@ class memory_controller_t : public interconnection_interface_t {
         void reset_statistics();
         void print_statistics();
         void print_configuration();
-        /// ====================================================================
+        // ====================================================================
 
         /// MASKS
         void set_masks();
@@ -229,9 +226,9 @@ class memory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, timing_wr)
         INSTANTIATE_GET_SET(uint32_t, timing_wtr)
 
-        /// ====================================================================
+        // ====================================================================
         /// Statistics related
-        /// ====================================================================
+        // ====================================================================
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_accesses)
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_buffer_request);
@@ -247,7 +244,7 @@ class memory_controller_t : public interconnection_interface_t {
         inline void add_stat_instruction_completed(uint64_t born_cycle) {
             this->stat_instruction_completed++;
             uint64_t new_time = sinuca_engine.get_global_cycle() - born_cycle;
-            this->stat_acumulated_instruction_wait_time += new_time;
+            this->stat_accumulated_instruction_wait_time += new_time;
             if (this->stat_min_instruction_wait_time > new_time) this->stat_min_instruction_wait_time = new_time;
             if (this->stat_max_instruction_wait_time < new_time) this->stat_max_instruction_wait_time = new_time;
         };
@@ -255,7 +252,7 @@ class memory_controller_t : public interconnection_interface_t {
         inline void add_stat_read_completed(uint64_t born_cycle) {
             this->stat_read_completed++;
             uint64_t new_time = sinuca_engine.get_global_cycle() - born_cycle;
-            this->stat_acumulated_read_wait_time += new_time;
+            this->stat_accumulated_read_wait_time += new_time;
             if (this->stat_min_read_wait_time > new_time) this->stat_min_read_wait_time = new_time;
             if (this->stat_max_read_wait_time < new_time) this->stat_max_read_wait_time = new_time;
         };
@@ -263,7 +260,7 @@ class memory_controller_t : public interconnection_interface_t {
         inline void add_stat_prefetch_completed(uint64_t born_cycle) {
             this->stat_prefetch_completed++;
             uint64_t new_time = sinuca_engine.get_global_cycle() - born_cycle;
-            this->stat_acumulated_prefetch_wait_time += new_time;
+            this->stat_accumulated_prefetch_wait_time += new_time;
             if (this->stat_min_prefetch_wait_time > new_time) this->stat_min_prefetch_wait_time = new_time;
             if (this->stat_max_prefetch_wait_time < new_time) this->stat_max_prefetch_wait_time = new_time;
         };
@@ -272,7 +269,7 @@ class memory_controller_t : public interconnection_interface_t {
         inline void add_stat_write_completed(uint64_t born_cycle) {
             this->stat_write_completed++;
             uint64_t new_time = sinuca_engine.get_global_cycle() - born_cycle;
-            this->stat_acumulated_write_wait_time += new_time;
+            this->stat_accumulated_write_wait_time += new_time;
             if (this->stat_min_write_wait_time > new_time) this->stat_min_write_wait_time = new_time;
             if (this->stat_max_write_wait_time < new_time) this->stat_max_write_wait_time = new_time;
         };
@@ -280,7 +277,7 @@ class memory_controller_t : public interconnection_interface_t {
         inline void add_stat_writeback_completed(uint64_t born_cycle) {
             this->stat_writeback_completed++;
             uint64_t new_time = sinuca_engine.get_global_cycle() - born_cycle;
-            this->stat_acumulated_writeback_wait_time += new_time;
+            this->stat_accumulated_writeback_wait_time += new_time;
             if (this->stat_min_writeback_wait_time > new_time) this->stat_min_writeback_wait_time = new_time;
             if (this->stat_max_writeback_wait_time < new_time) this->stat_max_writeback_wait_time = new_time;
         };

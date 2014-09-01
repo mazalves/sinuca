@@ -1,26 +1,23 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "../sinuca.hpp"
 
 #ifdef BRANCH_PREDICTOR_DEBUG
@@ -29,22 +26,22 @@
     #define BRANCH_PREDICTOR_DEBUG_PRINTF(...)
 #endif
 
-/// ============================================================================
+// ============================================================================
 branch_predictor_disable_t::branch_predictor_disable_t() {
     this->branch_predictor_type = BRANCH_PREDICTOR_DISABLE;
 };
 
-/// ============================================================================
+// ============================================================================
 branch_predictor_disable_t::~branch_predictor_disable_t() {
     /// De-Allocate memory to prevent memory leak
 };
 
-/// ============================================================================
+// ============================================================================
 void branch_predictor_disable_t::allocate() {
     branch_predictor_t::allocate();
 };
 
-/// ============================================================================
+// ============================================================================
 /// Always consider as it is NOT_TAKEN
 processor_stage_t branch_predictor_disable_t::predict_branch(const opcode_package_t& actual_opcode, const opcode_package_t& next_opcode) {
     processor_stage_t solve_stage = PROCESSOR_STAGE_FETCH;
@@ -74,18 +71,18 @@ processor_stage_t branch_predictor_disable_t::predict_branch(const opcode_packag
     return solve_stage;
 };
 
-/// ============================================================================
+// ============================================================================
 void branch_predictor_disable_t::print_structures() {
     branch_predictor_t::print_structures();
 };
 
-/// ============================================================================
+// ============================================================================
 void branch_predictor_disable_t::panic() {
     branch_predictor_t::panic();
     this->print_structures();
 };
 
-/// ============================================================================
+// ============================================================================
 void branch_predictor_disable_t::periodic_check(){
     branch_predictor_t::periodic_check();
     #ifdef BRANCH_PREDICTOR_DEBUG
@@ -93,20 +90,20 @@ void branch_predictor_disable_t::periodic_check(){
     #endif
 };
 
-/// ============================================================================
+// ============================================================================
 /// STATISTICS
-/// ============================================================================
+// ============================================================================
 void branch_predictor_disable_t::reset_statistics() {
     branch_predictor_t::reset_statistics();
 };
 
-/// ============================================================================
+// ============================================================================
 void branch_predictor_disable_t::print_statistics() {
     branch_predictor_t::print_statistics();
 };
 
-/// ============================================================================
-/// ============================================================================
+// ============================================================================
+// ============================================================================
 void branch_predictor_disable_t::print_configuration() {
     branch_predictor_t::print_configuration();
 };

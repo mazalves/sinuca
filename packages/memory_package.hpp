@@ -1,31 +1,28 @@
-//==============================================================================
-//
-// Copyright (C) 2010, 2011, 2012
-// Marco Antonio Zanata Alves
-// Eduardo Henrique Molina da Cruz
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-//==============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <stdint.h>
 
-/// ============================================================================
+// ============================================================================
 /// Memory Package
-/// ============================================================================
+// ============================================================================
  /*! Memory Package class to transport information about memory requests
   */
 class memory_package_t {
@@ -53,10 +50,11 @@ class memory_package_t {
         uint32_t *hops;                         /// route information
         int32_t hop_count;                     /// route information
 
-        /// ====================================================================
+        // ====================================================================
         /// Methods
-        /// ====================================================================
+        // ====================================================================
         memory_package_t();
+        memory_package_t(const memory_package_t &package);
         ~memory_package_t();
 
         std::string content_to_string();
@@ -83,9 +81,11 @@ class memory_package_t {
         static int32_t find_old_answer_state_ready(memory_package_t *input_array, uint32_t size_array, package_state_t state);
         //static int32_t find_state_mem_address(memory_package_t *input_array, uint32_t size_array, package_state_t state, uint64_t address, uint32_t size);
 
+        static std::string print_all(circular_buffer_t<memory_package_t> *input_array, uint32_t size_array);
         static std::string print_all(memory_package_t *input_array, uint32_t size_array);
         static std::string print_all(memory_package_t **input_matrix, uint32_t size_x_matrix, uint32_t size_y_matrix);
 
+        static bool check_age(circular_buffer_t<memory_package_t> *input_array, uint32_t size_array);
         static bool check_age(memory_package_t *input_array, uint32_t size_array);
         static bool check_age(memory_package_t **input_matrix, uint32_t size_x_matrix, uint32_t size_y_matrix);
 

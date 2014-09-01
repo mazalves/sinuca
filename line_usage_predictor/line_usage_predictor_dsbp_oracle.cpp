@@ -1,26 +1,23 @@
-/// ============================================================================
-//
-// Copyright (C) 2010, 2011
-// Marco Antonio Zanata Alves
-//
-// GPPD - Parallel and Distributed Processing Group
-// Universidade Federal do Rio Grande do Sul
-//
-// This program is free software; you can redistribute it and/or modify it
-// under the terms of the GNU General Public License as published by the
-// Free Software Foundation; either version 2 of the License, or (at your
-// option) any later version.
-//
-// This program is distributed in the hope that it will be useful, but
-// WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-// General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-//
-/// ============================================================================
+/*
+ * Copyright (C) 2010~2014  Marco Antonio Zanata Alves
+ *                          (mazalves at inf.ufrgs.br)
+ *                          GPPD - Parallel and Distributed Processing Group
+ *                          Universidade Federal do Rio Grande do Sul
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "../sinuca.hpp"
 
 #ifdef LINE_USAGE_PREDICTOR_DEBUG
@@ -29,7 +26,7 @@
     #define LINE_USAGE_PREDICTOR_DEBUG_PRINTF(...)
 #endif
 
-/// ============================================================================
+// ============================================================================
 line_usage_predictor_dsbp_oracle_t::line_usage_predictor_dsbp_oracle_t() {
     this->line_usage_predictor_type = LINE_USAGE_PREDICTOR_POLICY_DSBP_ORACLE;
 
@@ -42,7 +39,7 @@ line_usage_predictor_dsbp_oracle_t::line_usage_predictor_dsbp_oracle_t() {
     this->metadata_total_sets = 0;
 };
 
-/// ============================================================================
+// ============================================================================
 line_usage_predictor_dsbp_oracle_t::~line_usage_predictor_dsbp_oracle_t() {
     /// De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<dsbp_metadata_set_t>(metadata_sets);
@@ -52,11 +49,11 @@ line_usage_predictor_dsbp_oracle_t::~line_usage_predictor_dsbp_oracle_t() {
     utils_t::template_delete_array<uint64_t>(stat_turned_on_sub_blocks_per_access);
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dsbp_oracle_t::allocate() {
     line_usage_predictor_t::allocate();
 
-    ///=========================================================================
+    // =========================================================================
     /// metadata
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->get_metadata_line_number() / this->get_metadata_associativity()), "Wrong line_number(%u) or associativity(%u).\n", this->get_metadata_line_number(), this->get_metadata_associativity());
     this->set_metadata_total_sets(this->get_metadata_line_number() / this->get_metadata_associativity());
@@ -84,7 +81,7 @@ void line_usage_predictor_dsbp_oracle_t::allocate() {
     this->stat_turned_on_sub_blocks_per_access = utils_t::template_allocate_initialize_array<uint64_t>(sinuca_engine.get_global_line_size() + 1, 0);
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dsbp_oracle_t::clock(uint32_t subcycle) {
     line_usage_predictor_t::clock(subcycle);
 
@@ -95,7 +92,7 @@ void line_usage_predictor_dsbp_oracle_t::clock(uint32_t subcycle) {
 
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dsbp_oracle_t::fill_package_sub_blocks(memory_package_t *package) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("fill_package_sub_blocks() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(package->memory_size > 0, "Received a request with invalid size.\n")
@@ -123,7 +120,7 @@ void line_usage_predictor_dsbp_oracle_t::fill_package_sub_blocks(memory_package_
 
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dsbp_oracle_t::line_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_sub_blocks_to_package() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -153,7 +150,7 @@ void line_usage_predictor_dsbp_oracle_t::line_sub_blocks_to_package(cache_memory
     }
 };
 
-/// ============================================================================
+// ============================================================================
 bool line_usage_predictor_dsbp_oracle_t::check_sub_block_is_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint64_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_sub_block_is_hit() package:%s\n", package->content_to_string().c_str())
 
@@ -178,7 +175,7 @@ bool line_usage_predictor_dsbp_oracle_t::check_sub_block_is_hit(cache_memory_t *
 
 };
 
-/// ============================================================================
+// ============================================================================
 bool line_usage_predictor_dsbp_oracle_t::check_line_is_disabled(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way){
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_disabled()\n")
 
@@ -190,7 +187,7 @@ bool line_usage_predictor_dsbp_oracle_t::check_line_is_disabled(cache_memory_t *
     return false;
 };
 
-/// ============================================================================
+// ============================================================================
 bool line_usage_predictor_dsbp_oracle_t::check_line_is_last_access(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way){
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_access()\n")
 
@@ -202,7 +199,7 @@ bool line_usage_predictor_dsbp_oracle_t::check_line_is_last_access(cache_memory_
     return false;
 };
 
-/// ============================================================================
+// ============================================================================
 bool line_usage_predictor_dsbp_oracle_t::check_line_is_last_write(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way){
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_last_write()\n")
 
@@ -215,9 +212,9 @@ bool line_usage_predictor_dsbp_oracle_t::check_line_is_last_write(cache_memory_t
 };
 
 
-/// ============================================================================
+// ============================================================================
 /// Cache Memory Operations
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dsbp_oracle_t::line_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_hit() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -256,7 +253,7 @@ void line_usage_predictor_dsbp_oracle_t::line_hit(cache_memory_t *cache, cache_l
 };
 
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dsbp_oracle_t::line_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -291,7 +288,7 @@ void line_usage_predictor_dsbp_oracle_t::line_miss(cache_memory_t *cache, cache_
 };
 
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dsbp_oracle_t::sub_block_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("sub_block_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -326,7 +323,7 @@ void line_usage_predictor_dsbp_oracle_t::sub_block_miss(cache_memory_t *cache, c
     this->metadata_sets[index].ways[way].clock_last_access = sinuca_engine.get_global_cycle();
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dsbp_oracle_t::line_send_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -359,7 +356,7 @@ void line_usage_predictor_dsbp_oracle_t::line_send_writeback(cache_memory_t *cac
 };
 
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dsbp_oracle_t::line_recv_writeback(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_miss() package:%s\n", package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -395,7 +392,7 @@ void line_usage_predictor_dsbp_oracle_t::line_recv_writeback(cache_memory_t *cac
 
 
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dsbp_oracle_t::line_eviction(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_eviction()\n")
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -478,7 +475,7 @@ void line_usage_predictor_dsbp_oracle_t::line_eviction(cache_memory_t *cache, ca
     this->metadata_sets[index].ways[way].clock_last_access = sinuca_engine.get_global_cycle();
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dsbp_oracle_t::line_invalidation(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_invalidation()\n")
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
@@ -527,20 +524,20 @@ void line_usage_predictor_dsbp_oracle_t::line_invalidation(cache_memory_t *cache
     this->metadata_sets[index].ways[way].clock_last_access = sinuca_engine.get_global_cycle();
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dsbp_oracle_t::print_structures() {
     line_usage_predictor_t::print_structures();
 
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dsbp_oracle_t::panic() {
     line_usage_predictor_t::panic();
 
     this->print_structures();
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dsbp_oracle_t::periodic_check(){
     line_usage_predictor_t::periodic_check();
 
@@ -549,9 +546,9 @@ void line_usage_predictor_dsbp_oracle_t::periodic_check(){
     #endif
 };
 
-/// ============================================================================
+// ============================================================================
 /// STATISTICS
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dsbp_oracle_t::reset_statistics() {
     line_usage_predictor_t::reset_statistics();
 
@@ -580,7 +577,7 @@ void line_usage_predictor_dsbp_oracle_t::reset_statistics() {
     this->stat_cycles_turned_off_whole_line_since_begin = 0;
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dsbp_oracle_t::print_statistics() {
     line_usage_predictor_t::print_statistics();
 
@@ -650,7 +647,7 @@ void line_usage_predictor_dsbp_oracle_t::print_statistics() {
     }
 };
 
-/// ============================================================================
+// ============================================================================
 void line_usage_predictor_dsbp_oracle_t::print_configuration() {
     line_usage_predictor_t::print_configuration();
 
