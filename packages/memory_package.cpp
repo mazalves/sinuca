@@ -210,7 +210,7 @@ std::string memory_package_t::content_to_string() {
     #endif
     content_string = content_string + " MEM: Owner:" + utils_t::uint32_to_string(this->id_owner);
     content_string = content_string + " OpCode#" + utils_t::uint64_to_string(this->opcode_number);
-    content_string = content_string + " 0x" + utils_t::big_uint64_to_string(this->opcode_address);
+    content_string = content_string + " $" + utils_t::big_uint64_to_string(this->opcode_address);
     content_string = content_string + " UOP#" + utils_t::uint64_to_string(this->uop_number);
 
     content_string = content_string + " | " + get_enum_memory_operation_char(this->memory_operation);
@@ -221,7 +221,7 @@ std::string memory_package_t::content_to_string() {
         content_string = content_string + " RQST";
     }
 
-    content_string = content_string + " 0x" + utils_t::big_uint64_to_string(this->memory_address);
+    content_string = content_string + " $" + utils_t::big_uint64_to_string(this->memory_address);
     content_string = content_string + " Size:" + utils_t::uint32_to_string(this->memory_size);
 
     content_string = content_string + " | " + get_enum_package_state_char(this->state);

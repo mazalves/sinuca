@@ -65,58 +65,17 @@ opcode_package_t::opcode_package_t(const opcode_package_t &package) {
     opcode_number = package.opcode_number;
     state = package.state;
     ready_cycle = package.ready_cycle;
-    // ~ ready_cycle = sinuca_engine.get_global_cycle();
     born_cycle = sinuca_engine.get_global_cycle();
     sync_type = package.sync_type;
 };
 
 // =============================================================================
-opcode_package_t &opcode_package_t::operator=(const opcode_package_t &package) {
+opcode_package_t& opcode_package_t::operator=(const opcode_package_t &package) {
     if (this != &package){
         memcpy(this, &package, sizeof(opcode_package_t));
         this->born_cycle = sinuca_engine.get_global_cycle();
     }
     return *this;
-
-// ~
-    // ~ /// TRACE Variables
-    // ~ if (this!=&package){
-        // ~ strncpy(this->opcode_assembly, package.opcode_assembly, sizeof(char) * MAX_ASSEMBLY_SIZE);
-        // ~ this->opcode_operation = package.opcode_operation;
-        // ~ this->opcode_address = package.opcode_address;
-        // ~ this->opcode_size = package.opcode_size;
-// ~
-        // ~ memcpy(this->read_regs, package.read_regs, sizeof(int32_t) * MAX_REGISTERS);
-        // ~ memcpy(this->write_regs, package.write_regs, sizeof(int32_t) * MAX_REGISTERS);
-// ~
-        // ~ this->base_reg = package.base_reg;
-        // ~ this->index_reg = package.index_reg;
-// ~
-        // ~ /// Flags
-        // ~ this->is_read = package.is_read;
-        // ~ this->read_address = package.read_address;
-        // ~ this->read_size = package.read_size;
-// ~
-        // ~ this->is_read2 = package.is_read2;
-        // ~ this->read2_address = package.read2_address;
-        // ~ this->read2_size = package.read2_size;
-// ~
-        // ~ this->is_write = package.is_write;
-        // ~ this->write_address = package.write_address;
-        // ~ this->write_size = package.write_size;
-// ~
-        // ~ this->is_conditional = package.is_conditional;
-        // ~ this->is_predicated = package.is_predicated;
-        // ~ this->is_prefetch = package.is_prefetch;
-// ~
-        // ~ /// SINUCA Control Variables
-        // ~ this->opcode_number = package.opcode_number;
-        // ~ this->state = package.state;
-        // ~ this->ready_cycle = package.ready_cycle;
-        // ~ this->born_cycle = sinuca_engine.get_global_cycle();
-        // ~ this->sync_type = package.sync_type;
-    // ~ }
-    // ~ return *this;
 };
 
 // =============================================================================
@@ -191,8 +150,8 @@ void opcode_package_t::package_clean() {
 
     /// SINUCA Control Variables
     this->opcode_number = 0;
-    this->ready_cycle = sinuca_engine.get_global_cycle();
     this->state = PACKAGE_STATE_FREE;
+    this->ready_cycle = sinuca_engine.get_global_cycle();
     this->born_cycle = sinuca_engine.get_global_cycle();
     this->sync_type = SYNC_FREE;
 };
@@ -231,16 +190,16 @@ std::string opcode_package_t::content_to_string() {
     #endif
     PackageString = PackageString + " OpCode#" + utils_t::uint64_to_string(this->opcode_number);
     PackageString = PackageString + " " + get_enum_instruction_operation_char(this->opcode_operation);
-    PackageString = PackageString + " 0x" + utils_t::big_uint64_to_string(this->opcode_address);
+    PackageString = PackageString + " $" + utils_t::big_uint64_to_string(this->opcode_address);
     PackageString = PackageString + " Size:" + utils_t::uint32_to_string(this->opcode_size);
 
-    PackageString = PackageString + " | R1 0x" + utils_t::big_uint64_to_string(this->read_address);
+    PackageString = PackageString + " | R1 $" + utils_t::big_uint64_to_string(this->read_address);
     PackageString = PackageString + " Size:" + utils_t::uint32_to_string(this->read_size);
 
-    PackageString = PackageString + " | R2 0x" + utils_t::big_uint64_to_string(this->read2_address);
+    PackageString = PackageString + " | R2 $" + utils_t::big_uint64_to_string(this->read2_address);
     PackageString = PackageString + " Size:" + utils_t::uint32_to_string(this->read2_size);
 
-    PackageString = PackageString + " | W 0x" + utils_t::big_uint64_to_string(this->write_address);
+    PackageString = PackageString + " | W $" + utils_t::big_uint64_to_string(this->write_address);
     PackageString = PackageString + " Size:" + utils_t::uint32_to_string(this->write_size);
 
     PackageString = PackageString + " | " + get_enum_package_state_char(this->state);
@@ -282,7 +241,7 @@ void opcode_package_t::opcode_to_trace_string(char *trace_string) {
     trace_string[0] = '\0';
     sprintf(trace_string, "%s", this->opcode_assembly);
     sprintf(trace_string, "%s %"PRId32"", trace_string, this->opcode_operation);
-    sprintf(trace_string, "%s 0x%"PRId64"", trace_string, this->opcode_address);
+    sprintf(trace_string, "%s %"PRId64"", trace_string, this->opcode_address);
     sprintf(trace_string, "%s %"PRId32"", trace_string, this->opcode_size);
 
     register_string[0] = '\0';
@@ -351,10 +310,16 @@ void opcode_package_t::opcode_to_trace_string(char *trace_string) {
 
 // ============================================================================= NEW
 /// Convert Dynamic Memory Trace line into Instruction Memory Operands
-/// Field N.:   01 |  02  |      03
-///     Ex:     W 8 0x140735291283448
-///             W 8 0x140735291283440
-///             W 8 0x140735291283432
+/// Field N.:   1|2|      3        |4
+///     Ex:     W 8 140735291283448 1238
+///             W 8 140735291283440 1238
+///             W 8 140735291283432 1238
+///
+/// 1 = Read or Write operation
+/// 2 = Memory operation size
+/// 3 = Memory address
+/// 4 = Basic block number
+///
 void opcode_package_t::trace_string_to_read(char *input_string, uint32_t actual_bbl) {
     char *sub_string = NULL;
     char *tmp_ptr = NULL;
@@ -450,14 +415,14 @@ void opcode_package_t::trace_string_to_write(char *input_string, uint32_t actual
 /// # Compressed Trace Generated By Pin to SiNUCA
 /// #
 /// @1
-/// 1 0x140647360289520 3 1 15 1 12 0 0
-/// 9 0x140647360289523 5 2 35 15 2 35 15 0 0
+/// 1 140647360289520 3 1 15 1 12 0 0
+/// 9 140647360289523 5 2 35 15 2 35 15 0 0
 /// @2
-/// 9 0x140647360305456 1 2 14 15 1 15 0 0
-/// 1 0x140647360305457 3 1 15 1 14 0 0
-/// 9 0x140647360305460 2 2 27 15 1 15 0 0
-/// 9 0x140647360305462 2 2 26 15 1 15 0 0
-/// 9 0x140647360305464 2 2 25 15 1 15 0 0
+/// 9 140647360305456 1 2 14 15 1 15 0 0
+/// 1 140647360305457 3 1 15 1 14 0 0
+/// 9 140647360305460 2 2 27 15 1 15 0 0
+/// 9 140647360305462 2 2 26 15 1 15 0 0
+/// 9 140647360305464 2 2 25 15 1 15 0 0
 ///
 void opcode_package_t::trace_string_to_opcode(char *input_string) {
     char *sub_string = NULL;
@@ -477,8 +442,7 @@ void opcode_package_t::trace_string_to_opcode(char *input_string) {
     this->opcode_operation = instruction_operation_t(utils_t::string_to_uint64(sub_string));
 
     sub_string = strtok_r(NULL, " ", &tmp_ptr);
-    ERROR_ASSERT_PRINTF(memcmp(sub_string, "0x", 2) == 0, "Error converting Text to Instruction (Wrong number of fields), input_string = %s\n", sub_string)
-    this->opcode_address = utils_t::string_to_uint64(sub_string + 2);
+    this->opcode_address = utils_t::string_to_uint64(sub_string);
 
     sub_string = strtok_r(NULL, " ", &tmp_ptr);
     this->opcode_size = utils_t::string_to_uint64(sub_string);

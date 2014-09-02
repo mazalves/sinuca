@@ -149,7 +149,7 @@ extern sinuca_engine_t sinuca_engine;
 #define CONVERSION_SIZE 65
 #define MAX_UOP_DECODED 5       /// processor_t (Max number of uops from one opcode)
 #define MAX_REGISTERS 6         /// opcode_package_t uop_package_t  (Max number of register (read or write) for one opcode/uop)
-#define MAX_ASSEMBLY_SIZE 20
+#define MAX_ASSEMBLY_SIZE 32    /// In general 20 is enough
 
 #define POSITION_FAIL -1        /// FAIL when return is int32_t
 #define FAIL 0                  /// FAIL when return is uint32_t
@@ -175,7 +175,7 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define PREFETCHER_DEBUG
     // ~ #define LINE_USAGE_PREDICTOR_DEBUG
     // ~ #define MEMORY_CONTROLLER_DEBUG
-    #define ROUTER_DEBUG
+    // ~ #define ROUTER_DEBUG
     // ~ #define INTERCONNECTION_CTRL_DEBUG
     // ~ #define DIRECTORY_CTRL_DEBUG
     // ~ #define SHOW_FREE_PACKAGE

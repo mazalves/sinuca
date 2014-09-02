@@ -77,7 +77,7 @@ class opcode_package_t {
         void trace_string_to_read2(char *input_string, uint32_t actual_bbl);
         void trace_string_to_write(char *input_string, uint32_t actual_bbl);
 
-        opcode_package_t & operator=(const opcode_package_t &package);
+        opcode_package_t& operator=(const opcode_package_t &package);
         bool operator==(const opcode_package_t &package);
 
         void package_clean();

@@ -41,7 +41,7 @@ class circular_buffer_t {
         circular_buffer_t();
         ~circular_buffer_t();
 
-        CB_TYPE& operator[](uint32_t index);
+        void allocate(uint32_t elements);
 
         /// Copy Assignment Operator
         circular_buffer_t& operator=(const circular_buffer_t& other)
@@ -50,16 +50,17 @@ class circular_buffer_t {
             return *this;
         }
 
-        void allocate(uint32_t elements);
+        inline CB_TYPE& operator[](uint32_t index);
 
-        uint32_t get_size();
-        uint32_t get_capacity();
-        bool is_full();
-        bool is_empty();
+        inline uint32_t get_size();
+        inline uint32_t get_capacity();
+        inline bool is_full();
+        inline bool is_empty();
+
+        inline CB_TYPE* front();
+        inline CB_TYPE* back();
 
         int32_t push_back(const CB_TYPE& new_element);
-        CB_TYPE* front();
-        CB_TYPE* back();
         void pop_front();
         void pop_push();
 };
@@ -95,7 +96,7 @@ void circular_buffer_t<CB_TYPE>::allocate(uint32_t elements) {
 
 // ============================================================================
 template <class CB_TYPE>
-CB_TYPE& circular_buffer_t<CB_TYPE>::operator[](uint32_t index) {
+inline CB_TYPE& circular_buffer_t<CB_TYPE>::operator[](uint32_t index) {
     ERROR_ASSERT_PRINTF(index < this->capacity, "Trying to access beyond the circular buffer size.\n")
     ERROR_ASSERT_PRINTF(this->data != NULL, "Trying to access beyond the circular buffer size.\n")
 
@@ -109,25 +110,25 @@ CB_TYPE& circular_buffer_t<CB_TYPE>::operator[](uint32_t index) {
 
 // ============================================================================
 template <class CB_TYPE>
-uint32_t circular_buffer_t<CB_TYPE>::get_size() {
+inline uint32_t circular_buffer_t<CB_TYPE>::get_size() {
     return this->size;
 };
 
 // ============================================================================
 template <class CB_TYPE>
-uint32_t circular_buffer_t<CB_TYPE>::get_capacity() {
+inline uint32_t circular_buffer_t<CB_TYPE>::get_capacity() {
     return this->capacity;
 };
 
 // ============================================================================
 template <class CB_TYPE>
-bool circular_buffer_t<CB_TYPE>::is_full() {
+inline bool circular_buffer_t<CB_TYPE>::is_full() {
     return (this->size == this->capacity);
 };
 
 // ============================================================================
 template <class CB_TYPE>
-bool circular_buffer_t<CB_TYPE>::is_empty() {
+inline bool circular_buffer_t<CB_TYPE>::is_empty() {
     return (this->size == 0);
 };
 
@@ -157,7 +158,7 @@ int32_t circular_buffer_t<CB_TYPE>::push_back(const CB_TYPE& new_element) {
 /// Obtain the oldest package inside the circular buffer
 /// Same as cb[0], but this is faster
 template <class CB_TYPE>
-CB_TYPE* circular_buffer_t<CB_TYPE>::front() {
+inline CB_TYPE* circular_buffer_t<CB_TYPE>::front() {
     if (this->size == 0) {
         return NULL;
     }
@@ -167,10 +168,10 @@ CB_TYPE* circular_buffer_t<CB_TYPE>::front() {
 };
 
 // ============================================================================
-template <class CB_TYPE>
 /// Obtain the newest package inside the circular buffer
 /// Same as cb[size], but this is faster
-CB_TYPE* circular_buffer_t<CB_TYPE>::back() {
+template <class CB_TYPE>
+inline CB_TYPE* circular_buffer_t<CB_TYPE>::back() {
     if (this->size == 0) {
         return NULL;
     }

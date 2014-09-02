@@ -49,43 +49,16 @@ uop_package_t::uop_package_t(const uop_package_t& package) {
     uop_number = package.uop_number;
     state = package.state;
     this->ready_cycle = package.ready_cycle;
-    // ~ ready_cycle = sinuca_engine.get_global_cycle();
     born_cycle = sinuca_engine.get_global_cycle();
 };
 
-
-
 // =============================================================================
 uop_package_t& uop_package_t::operator=(const uop_package_t& package) {
-
     if (this != &package){
         memcpy(this, &package, sizeof(uop_package_t));
         this->born_cycle = sinuca_engine.get_global_cycle();
     }
     return *this;
-
-    // ~ /// TRACE Variables
-    // ~ if (this != &package){
-        // ~ strncpy(this->opcode_assembly, package.opcode_assembly, sizeof(char) * MAX_ASSEMBLY_SIZE);
-        // ~ this->opcode_operation = package.opcode_operation;
-        // ~ this->opcode_address = package.opcode_address;
-        // ~ this->opcode_size = package.opcode_size;
-// ~
-        // ~ memcpy(this->read_regs, package.read_regs, sizeof(this->read_regs));
-        // ~ memcpy(this->write_regs, package.write_regs, sizeof(this->write_regs));
-// ~
-        // ~ this->uop_operation = package.uop_operation;
-        // ~ this->memory_address = package.memory_address;
-        // ~ this->memory_size = package.memory_size;
-// ~
-        // ~ /// SINUCA Control Variables
-        // ~ this->opcode_number = package.opcode_number;
-        // ~ this->uop_number = package.uop_number;
-        // ~ this->state = package.state;
-        // ~ this->ready_cycle = package.ready_cycle;
-        // ~ this->born_cycle = sinuca_engine.get_global_cycle();
-    // ~ }
-    // ~ return *this;
 };
 
 // =============================================================================
@@ -200,11 +173,11 @@ std::string uop_package_t::content_to_string() {
     PackageString = PackageString + " UOP: OpCode#" + utils_t::uint64_to_string(this->opcode_number);
     PackageString = PackageString + " UOP#" + utils_t::uint64_to_string(this->uop_number);
     PackageString = PackageString + " " + get_enum_instruction_operation_char(this->opcode_operation);
-    PackageString = PackageString + " 0x" + utils_t::big_uint64_to_string(this->opcode_address);
+    PackageString = PackageString + " $" + utils_t::big_uint64_to_string(this->opcode_address);
     PackageString = PackageString + " Size:" + utils_t::utils_t::uint32_to_string(this->opcode_size);
 
     PackageString = PackageString + " | " + get_enum_instruction_operation_char(this->uop_operation);
-    PackageString = PackageString + " MEM:0x" + utils_t::big_uint64_to_string(this->memory_address);
+    PackageString = PackageString + " MEM:$" + utils_t::big_uint64_to_string(this->memory_address);
     PackageString = PackageString + " Size:" + utils_t::uint32_to_string(this->memory_size);
 
     PackageString = PackageString + " | " + get_enum_package_state_char(this->state);

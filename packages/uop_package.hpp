@@ -24,6 +24,7 @@
 // ============================================================================
 class uop_package_t {
     public:
+
         /// TRACE Variables
         char opcode_assembly[MAX_ASSEMBLY_SIZE];
         instruction_operation_t opcode_operation;
@@ -57,6 +58,7 @@ class uop_package_t {
         bool operator==(const uop_package_t &package);
 
         void opcode_to_uop(uint64_t uop_number, instruction_operation_t uop_operation, uint64_t memory_address, uint32_t memory_size, opcode_package_t opcode);
+
         void package_clean();
         void package_untreated(uint32_t wait_time);
         void package_wait(uint32_t wait_time);
@@ -72,4 +74,6 @@ class uop_package_t {
         static std::string print_all(circular_buffer_t<uop_package_t> *input_array, uint32_t size_array);
         static std::string print_all(uop_package_t *input_array, uint32_t size_array);
         static std::string print_all(uop_package_t **input_matrix, uint32_t size_x_matrix, uint32_t size_y_matrix);
+
+
 };
