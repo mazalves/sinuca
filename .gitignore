@@ -1,6 +1,9 @@
 *~
-interconnection/*.o
-memory_devices/*.o
-processor/*.o
-trace_reader/*.o
 *.o
+sinuca
+/trace_generator/
+/extra_libs/lib/
+/extra_libs/share/
+/examples/
+/extra_libs/src/libconfig-1.4.9/
+/extra_libs/src/zlib-1.2.8/
