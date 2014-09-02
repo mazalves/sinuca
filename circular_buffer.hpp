@@ -99,7 +99,10 @@ CB_TYPE& circular_buffer_t<CB_TYPE>::operator[](uint32_t index) {
     ERROR_ASSERT_PRINTF(index < this->capacity, "Trying to access beyond the circular buffer size.\n")
     ERROR_ASSERT_PRINTF(this->data != NULL, "Trying to access beyond the circular buffer size.\n")
 
-    uint32_t position = (this->beg_index + index) % this->capacity;
+    uint32_t position = this->beg_index + index;
+    if (position >= this->capacity)
+        position -= this->capacity;
+    // ~ uint32_t position = (this->beg_index + index) % this->capacity;
 
     return this->data[position];
 };
@@ -129,6 +132,7 @@ bool circular_buffer_t<CB_TYPE>::is_empty() {
 };
 
 // ============================================================================
+/// Insert into the newest position
 template <class CB_TYPE>
 int32_t circular_buffer_t<CB_TYPE>::push_back(const CB_TYPE& new_element) {
     ERROR_ASSERT_PRINTF(this->data != NULL, "Trying to access beyond the circular buffer size.\n")
@@ -139,13 +143,19 @@ int32_t circular_buffer_t<CB_TYPE>::push_back(const CB_TYPE& new_element) {
         virtual_position = this->size;
         this->size++;
         this->data[end_index] = new_element;
-        this->end_index = (this->end_index + 1) % this->capacity;
+
+        this->end_index++;
+        if (this->end_index >= this->capacity)
+            this->end_index = 0;
+        // ~ this->end_index = (this->end_index + 1) % this->capacity;
     }
 
     return virtual_position;
 };
 
 // ============================================================================
+/// Obtain the oldest package inside the circular buffer
+/// Same as cb[0], but this is faster
 template <class CB_TYPE>
 CB_TYPE* circular_buffer_t<CB_TYPE>::front() {
     if (this->size == 0) {
@@ -158,35 +168,55 @@ CB_TYPE* circular_buffer_t<CB_TYPE>::front() {
 
 // ============================================================================
 template <class CB_TYPE>
+/// Obtain the newest package inside the circular buffer
+/// Same as cb[size], but this is faster
 CB_TYPE* circular_buffer_t<CB_TYPE>::back() {
     if (this->size == 0) {
         return NULL;
     }
     else {
-        uint32_t position = (this->beg_index + size - 1) % this->capacity;
+        uint32_t position = this->beg_index + this->size - 1;
+        if (position >= this->capacity)
+            position -= this->capacity;
+
+        // ~ uint32_t position = (this->beg_index + this->size - 1) % this->capacity;
         return &this->data[position];
     }
 };
 
 // ============================================================================
+/// Remove the oldest element
 template <class CB_TYPE>
 void circular_buffer_t<CB_TYPE>::pop_front() {
     if (this->size > 0) {
         this->size--;
         this->data[beg_index].package_clean();
-        this->beg_index = (this->beg_index + 1) % this->capacity;
+
+        this->beg_index++;
+        if (this->beg_index >= this->capacity)
+            this->beg_index = 0;
+        // ~ this->beg_index = (this->beg_index + 1) % this->capacity;
     }
 };
 
 // ============================================================================
+/// Remove the oldest element and insert it into the newest position
 template <class CB_TYPE>
 void circular_buffer_t<CB_TYPE>::pop_push() {
     CB_TYPE older = this->data[beg_index];
     this->data[beg_index].package_clean();
-    this->beg_index = (this->beg_index + 1) % this->capacity;
+
+    this->beg_index++;
+    if (this->beg_index >= this->capacity)
+        this->beg_index = 0;
+    // ~ this->beg_index = (this->beg_index + 1) % this->capacity;
 
     this->data[end_index] = older;
-    this->end_index = (this->end_index + 1) % this->capacity;
+
+    this->end_index++;
+    if (this->end_index >= this->capacity)
+        this->end_index = 0;
+    // ~ this->end_index = (this->end_index + 1) % this->capacity;
 };
 
 #endif  // _CIRCULAR_BUFFER_HPP_

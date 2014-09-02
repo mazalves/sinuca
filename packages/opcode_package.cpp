@@ -550,6 +550,28 @@ int32_t opcode_package_t::find_opcode_number(opcode_package_t *input_array, uint
 };
 
 // =============================================================================
+bool opcode_package_t::check_age(circular_buffer_t<opcode_package_t> *input_array, uint32_t size_array) {
+    uint64_t min_cycle = 0;
+    if (sinuca_engine.get_global_cycle() > MAX_ALIVE_TIME) {
+        min_cycle = sinuca_engine.get_global_cycle() - MAX_ALIVE_TIME;
+    }
+
+    for (uint32_t i = 0; i < size_array ; i++) {
+        if (input_array[0][i].state != PACKAGE_STATE_FREE) {
+            if (input_array[0][i].born_cycle < min_cycle) {
+                WARNING_PRINTF("CHECK AGE FAIL: %s\n", input_array[0][i].content_to_string().c_str())
+                return FAIL;
+            }
+            /// Statistics of the oldest memory package
+            if (sinuca_engine.get_global_cycle() - input_array[0][i].born_cycle > sinuca_engine.get_stat_old_opcode_package()) {
+                sinuca_engine.set_stat_old_opcode_package(sinuca_engine.get_global_cycle() - input_array[0][i].born_cycle);
+            }
+        }
+    }
+    return OK;
+};
+
+// =============================================================================
 bool opcode_package_t::check_age(opcode_package_t *input_array, uint32_t size_array) {
     uint64_t min_cycle = 0;
     if (sinuca_engine.get_global_cycle() > MAX_ALIVE_TIME) {
@@ -593,6 +615,22 @@ bool opcode_package_t::check_age(opcode_package_t **input_matrix, uint32_t size_
         }
     }
     return OK;
+};
+
+// =============================================================================
+std::string opcode_package_t::print_all(circular_buffer_t<opcode_package_t> *input_array, uint32_t size_array) {
+    std::string PackageString;
+    std::string FinalString;
+    PackageString = "";
+    FinalString = "";
+
+    for (uint32_t i = 0; i < size_array ; i++) {
+        PackageString = input_array[0][i].content_to_string();
+        if (PackageString.size() > 1) {
+            FinalString = FinalString + "[" + utils_t::uint32_to_string(i) + "] " + PackageString + "\n";
+        }
+    }
+    return FinalString;
 };
 
 // =============================================================================

@@ -147,11 +147,7 @@ class processor_t : public interconnection_interface_t {
         uint64_t commit_uop_counter;
 
         /// Fetch buffer
-        opcode_package_t *fetch_buffer;
-        uint32_t fetch_buffer_position_start;
-        uint32_t fetch_buffer_position_end;
-        uint32_t fetch_buffer_position_used;
-
+        circular_buffer_t<opcode_package_t> fetch_buffer;
         /// Decode buffer
         circular_buffer_t<uop_package_t> decode_buffer;
 
@@ -315,12 +311,6 @@ class processor_t : public interconnection_interface_t {
         void make_memory_dependencies(memory_order_buffer_line_t *new_mob_line, memory_order_buffer_line_t *input_array, uint32_t size_array);
         void solve_register_dependency(reorder_buffer_line_t *rob_line);
         void solve_memory_dependency(memory_order_buffer_line_t *mob_line);
-
-        /// Fetch Buffer =======================================================
-        int32_t fetch_buffer_insert();
-        void fetch_buffer_remove();
-        int32_t fetch_buffer_find_opcode_number(uint64_t opcode_number);
-        // ====================================================================
 
         /// Reorder Buffer =====================================================
         int32_t rob_insert();

@@ -195,6 +195,7 @@ bool branch_predictor_two_level_gas_t::spht_find_update_prediction(const opcode_
     /// Hash function with signature and PC
     uint32_t spht_index = utils_t::hash_function(this->spht_index_hash, actual_opcode.opcode_address >> 2, this->gbhr, this->spht_index_bits);
     uint32_t spht_set = (this->spht_set_bits_mask & (actual_opcode.opcode_address >> 2));
+
     ERROR_ASSERT_PRINTF(spht_index <= this->spht_line_number, "Wrong SPHT index %d - Max %d",spht_index, this->spht_line_number);
     ERROR_ASSERT_PRINTF(spht_set <= this->spht_set_number, "Wrong SPHT set %d - Max %d",spht_set, this->spht_set_number);
 

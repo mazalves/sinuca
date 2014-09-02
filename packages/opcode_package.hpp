@@ -89,8 +89,11 @@ class opcode_package_t {
         static int32_t find_free(opcode_package_t *input_array, uint32_t size_array);
         static int32_t find_opcode_number(opcode_package_t *input_array, uint32_t size_array, uint64_t opcode_number);
 
+        static bool check_age(circular_buffer_t<opcode_package_t> *input_array, uint32_t size_array);
         static bool check_age(opcode_package_t *input_array, uint32_t size_array);
         static bool check_age(opcode_package_t **input_matrix, uint32_t size_x_matrix, uint32_t size_y_matrix);
+
+        static std::string print_all(circular_buffer_t<opcode_package_t> *input_array, uint32_t size_array);
         static std::string print_all(opcode_package_t *input_array, uint32_t size_array);
         static std::string print_all(opcode_package_t **input_matrix, uint32_t size_x_matrix, uint32_t size_y_matrix);
 };

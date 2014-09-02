@@ -63,7 +63,6 @@ processor_t::processor_t() {
     this->rename_uop_counter = 1;           /// Last uop decoded
     this->commit_uop_counter = 1;           /// Last uop commited
 
-    this->fetch_buffer = NULL;
     this->reorder_buffer = NULL;
 
     /// Buffers' size
@@ -175,9 +174,7 @@ processor_t::~processor_t() {
     // De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<uint64_t>(recv_ready_cycle);
 
-    utils_t::template_delete_array<opcode_package_t>(fetch_buffer);
     utils_t::template_delete_array<reorder_buffer_line_t>(reorder_buffer);
-
     utils_t::template_delete_array<reorder_buffer_line_t*>(register_alias_table);
 
     utils_t::template_delete_array<memory_order_buffer_line_t>(memory_order_buffer_read);
@@ -241,15 +238,12 @@ void processor_t::allocate() {
     this->ready_cycle_fu_mem_load = utils_t::template_allocate_initialize_array<uint64_t>(this->number_fu_mem_load, 0);
     this->ready_cycle_fu_mem_store = utils_t::template_allocate_initialize_array<uint64_t>(this->number_fu_mem_store, 0);
 
-
     /// Fetch Buffer
-    this->fetch_buffer = utils_t::template_allocate_array<opcode_package_t>(this->fetch_buffer_size);
-    this->fetch_buffer_position_start = 0;
-    this->fetch_buffer_position_end = 0;
-    this->fetch_buffer_position_used = 0;
+    this->fetch_buffer.allocate(this->fetch_buffer_size);
 
     /// Decode Buffer
-    ERROR_ASSERT_PRINTF(this->decode_buffer_size >= MAX_UOP_DECODED, "Decode buffer size should be bigger than %d (Max uops per opcode decoded).\n", MAX_UOP_DECODED);
+    ERROR_ASSERT_PRINTF(this->decode_buffer_size >= MAX_UOP_DECODED,
+                        "Decode buffer size should be bigger than %d (Max uops per opcode decoded).\n", MAX_UOP_DECODED);
     this->decode_buffer.allocate(this->decode_buffer_size);
 
     /// ReOrder Buffer
@@ -503,8 +497,7 @@ void processor_t::solve_branch(uint64_t opcode_number, processor_stage_t process
 // ============================================================================
 void processor_t::stage_fetch() {
     PROCESSOR_DEBUG_PRINTF("stage_fetch()\n");
-    int32_t position_buffer = -1;
-    uint32_t i;
+    uint32_t i, pos_buffer;
 
     /// 1st. Trace => Fetch_Buffer
     bool valid_opcode = false;
@@ -551,15 +544,13 @@ void processor_t::stage_fetch() {
             }
         }
 
-        position_buffer = this->fetch_buffer_insert();
-        if (position_buffer == POSITION_FAIL) {
+        if (POSITION_FAIL == this->fetch_buffer.push_back(this->trace_next_opcode)) {
             this->add_stat_full_fetch_buffer();
             break;
         }
 
-        PROCESSOR_DEBUG_PRINTF("\t Inserting on fetch_buffer[%d] package:%s\n", position_buffer, trace_next_opcode.content_to_string().c_str());
-        this->fetch_buffer[position_buffer] = this->trace_next_opcode;
-        this->fetch_buffer[position_buffer].package_untreated(this->stage_fetch_cycles);
+        PROCESSOR_DEBUG_PRINTF("\t Inserting on fetch_buffer the package:%s\n", trace_next_opcode.content_to_string().c_str());
+        this->fetch_buffer.back()->package_untreated(this->stage_fetch_cycles);
         trace_next_opcode.package_clean();
         valid_opcode = sinuca_engine.trace_reader->trace_fetch(this->core_id, &this->trace_next_opcode);
         if (!valid_opcode) {
@@ -569,35 +560,38 @@ void processor_t::stage_fetch() {
 
         /// If return different from PROCESSOR_STAGE_FETCH the fetch will stall,
         /// until the branch be solved (DECODE or EXECUTION stages)
-        this->branch_solve_stage = this->branch_predictor->predict_branch(this->fetch_buffer[position_buffer], this->trace_next_opcode);
-        this->branch_opcode_number = this->fetch_buffer[position_buffer].opcode_number;
+        this->branch_solve_stage = this->branch_predictor->predict_branch(*this->fetch_buffer.back(), this->trace_next_opcode);
+        this->branch_opcode_number = this->fetch_buffer.back()->opcode_number;
         if (this->branch_solve_stage != PROCESSOR_STAGE_FETCH) {
-            PROCESSOR_DEBUG_PRINTF("\t Stalling fetch due to a miss prediction on package:%s\n", this->fetch_buffer[position_buffer].content_to_string().c_str());
+            PROCESSOR_DEBUG_PRINTF("\t Stalling fetch due to a miss prediction on package:%s\n", this->fetch_buffer.back()->content_to_string().c_str());
         }
     }
 
     /// 2nd. Fetch_Buffer => Inst.Cache
     for (i = 0; i < this->stage_fetch_width ; i++) {
-        position_buffer = this->fetch_buffer_find_opcode_number(this->fetch_opcode_counter);
-        if (position_buffer == POSITION_FAIL ||
-            this->fetch_buffer[position_buffer].state != PACKAGE_STATE_UNTREATED ||
-            this->fetch_buffer[position_buffer].ready_cycle > sinuca_engine.get_global_cycle()) {
+
+        /// Locate the next opcode to be treated
+        for (pos_buffer = 0; pos_buffer < this->fetch_buffer.get_size(); pos_buffer++) {
+            if (this->fetch_buffer[pos_buffer].opcode_number == this->fetch_opcode_counter) {
+                break;
+            }
+        }
+
+        /// If next opcode not ready, wait
+        if (pos_buffer == this->fetch_buffer.get_size() ||
+            this->fetch_buffer[pos_buffer].state != PACKAGE_STATE_UNTREATED ||
+            this->fetch_buffer[pos_buffer].ready_cycle > sinuca_engine.get_global_cycle()) {
                 break;
         }
-        PROCESSOR_DEBUG_PRINTF("\t Sending INST package:%s\n", this->fetch_buffer[position_buffer].content_to_string().c_str());
+        PROCESSOR_DEBUG_PRINTF("\t Sending INST package:%s\n", this->fetch_buffer[pos_buffer].content_to_string().c_str());
 
+
+        /// Check if the we are already waiting the same address.
         bool waiting = false;
-        /// Check if the package still WAITING
-        for (uint32_t k = 0; k < this->fetch_buffer_position_used; k++) {
-            /// Update the FETCH BUFFER position
-            uint32_t j = this->fetch_buffer_position_start + k;
-            if (j >= this->fetch_buffer_size) {
-                j -= this->fetch_buffer_size;
-            }
-
-            if (this->fetch_buffer[j].state == PACKAGE_STATE_WAIT &&
+        for (uint32_t k = 0; k < pos_buffer; k++) {
+            if (this->fetch_buffer[k].state == PACKAGE_STATE_WAIT &&
             /// Make sure the instruction starts and ends inside the block
-            this->cmp_fetch_block(this->fetch_buffer[j].opcode_address, this->fetch_buffer[position_buffer].opcode_address)) {
+            this->cmp_fetch_block(this->fetch_buffer[k].opcode_address, this->fetch_buffer[pos_buffer].opcode_address)) {
                 waiting = true;
                 break;
             }
@@ -606,17 +600,17 @@ void processor_t::stage_fetch() {
         /// Requested Line
         if (waiting == true) {
             PROCESSOR_DEBUG_PRINTF("\t JUST REQUESTED THE SAME BLOCK (WAIT)\n");
-            fetch_buffer[position_buffer].package_wait(1);
+            fetch_buffer[pos_buffer].package_wait(1);
         }
         /// Line Buffer
-        else if (this->cmp_fetch_block(this->fetch_buffer[position_buffer].opcode_address, this->fetch_opcode_address_line_buffer)) {
+        else if (this->cmp_fetch_block(this->fetch_buffer[pos_buffer].opcode_address, this->fetch_opcode_address_line_buffer)) {
             PROCESSOR_DEBUG_PRINTF("\t FOUND INTO FETCH BUFFER (READY)\n");
-            fetch_buffer[position_buffer].package_ready(1);
+            fetch_buffer[pos_buffer].package_ready(1);
         }
         else {
-            int32_t transmission_latency = this->send_instruction_package(this->fetch_buffer + position_buffer);
+            int32_t transmission_latency = this->send_instruction_package(&this->fetch_buffer[pos_buffer]);
             if (transmission_latency != POSITION_FAIL) {  /// Try to send to the IC.
-                fetch_buffer[position_buffer].package_wait(transmission_latency);
+                fetch_buffer[pos_buffer].package_wait(transmission_latency);
             }
             else {  /// Inst. Cache cannot receive, stall the fetch for one cycle.
                 break;
@@ -687,7 +681,7 @@ int32_t processor_t::send_instruction_package(opcode_package_t *inst_package) {
 // ============================================================================
 void processor_t::stage_decode() {
     PROCESSOR_DEBUG_PRINTF("stage_decode()\n");
-    int32_t position_buffer = POSITION_FAIL;
+    int32_t pos_buffer = POSITION_FAIL;
     uop_package_t new_uop;
 
     /// Fetch_Buffer => (Decode) => Decode_Buffer
@@ -704,9 +698,9 @@ void processor_t::stage_decode() {
         /// Check if there is OpCode inside the fetch buffer
         /// Check if there is enough space for one OpCode be Decoded
         /// Check if the oldest fetch buffer position is ready
-        if (this->fetch_buffer_position_used == 0 ||
-        this->fetch_buffer[fetch_buffer_position_start].state != PACKAGE_STATE_READY ||
-        this->fetch_buffer[fetch_buffer_position_start].ready_cycle > sinuca_engine.get_global_cycle()) {
+        if (this->fetch_buffer.is_empty() ||
+        this->fetch_buffer.front()->state != PACKAGE_STATE_READY ||
+        this->fetch_buffer.front()->ready_cycle > sinuca_engine.get_global_cycle()) {
             break;
         }
 
@@ -717,30 +711,30 @@ void processor_t::stage_decode() {
         }
 
 
-        ERROR_ASSERT_PRINTF(this->decode_opcode_counter == this->fetch_buffer[fetch_buffer_position_start].opcode_number, "Renaming out-of-order.\n")
+        ERROR_ASSERT_PRINTF(this->decode_opcode_counter == this->fetch_buffer.front()->opcode_number, "Renaming out-of-order.\n")
         this->decode_opcode_counter++;
 
         /// DECODE READ ====================================================
-        if (this->fetch_buffer[fetch_buffer_position_start].is_read) {
+        if (this->fetch_buffer.front()->is_read) {
             new_uop.package_clean();
             new_uop.opcode_to_uop(this->decode_uop_counter++,
                                     INSTRUCTION_OPERATION_MEM_LOAD,
-                                    this->fetch_buffer[fetch_buffer_position_start].read_address,
-                                    this->fetch_buffer[fetch_buffer_position_start].read_size,
-                                    this->fetch_buffer[fetch_buffer_position_start]);
+                                    this->fetch_buffer.front()->read_address,
+                                    this->fetch_buffer.front()->read_size,
+                                    *this->fetch_buffer.front());
 
             /// Fix the dependencies between uops
             /// READ    ReadRegs    = BaseRegs + IndexRegs
             ///         WriteRegs   = 258 (Aux Register)
-            if (this->fetch_buffer[fetch_buffer_position_start].opcode_operation != INSTRUCTION_OPERATION_MEM_LOAD){
+            if (this->fetch_buffer.front()->opcode_operation != INSTRUCTION_OPERATION_MEM_LOAD){
                 // ===== Read Regs =============================================
                 /// Clear RRegs
                 for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
                     new_uop.read_regs[i] = POSITION_FAIL;
                 }
                 /// Insert BASE and INDEX into RReg
-                new_uop.read_regs[0] = this->fetch_buffer[fetch_buffer_position_start].base_reg;
-                new_uop.read_regs[1] = this->fetch_buffer[fetch_buffer_position_start].index_reg;
+                new_uop.read_regs[0] = this->fetch_buffer.front()->base_reg;
+                new_uop.read_regs[1] = this->fetch_buffer.front()->index_reg;
 
                 // ===== Write Regs =============================================
                 /// Clear WRegs
@@ -752,33 +746,33 @@ void processor_t::stage_decode() {
             }
 
             new_uop.package_ready(this->stage_decode_cycles);
-            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, new_uop.content_to_string().c_str());
+            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", pos_buffer, new_uop.content_to_string().c_str());
 
-            position_buffer = this->decode_buffer.push_back(new_uop);
-            ERROR_ASSERT_PRINTF(position_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
+            pos_buffer = this->decode_buffer.push_back(new_uop);
+            ERROR_ASSERT_PRINTF(pos_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
         }
 
         /// DECODE READ 2 ==================================================
-        if (this->fetch_buffer[fetch_buffer_position_start].is_read2) {
+        if (this->fetch_buffer.front()->is_read2) {
             new_uop.package_clean();
             new_uop.opcode_to_uop(this->decode_uop_counter++,
                                     INSTRUCTION_OPERATION_MEM_LOAD,
-                                    this->fetch_buffer[fetch_buffer_position_start].read2_address,
-                                    this->fetch_buffer[fetch_buffer_position_start].read2_size,
-                                    this->fetch_buffer[fetch_buffer_position_start]);
+                                    this->fetch_buffer.front()->read2_address,
+                                    this->fetch_buffer.front()->read2_size,
+                                    *this->fetch_buffer.front());
 
             /// Fix the dependencies between uops
             /// READ    ReadRegs    = BaseRegs + IndexRegs
             ///         WriteRegs   = 258 (Aux Register)
-            if (this->fetch_buffer[fetch_buffer_position_start].opcode_operation != INSTRUCTION_OPERATION_MEM_LOAD){
+            if (this->fetch_buffer.front()->opcode_operation != INSTRUCTION_OPERATION_MEM_LOAD){
                 // ===== Read Regs =============================================
                 /// Clear RRegs
                 for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
                     new_uop.read_regs[i] = POSITION_FAIL;
                 }
                 /// Insert BASE and INDEX into RReg
-                new_uop.read_regs[0] = this->fetch_buffer[fetch_buffer_position_start].base_reg;
-                new_uop.read_regs[1] = this->fetch_buffer[fetch_buffer_position_start].index_reg;
+                new_uop.read_regs[0] = this->fetch_buffer.front()->base_reg;
+                new_uop.read_regs[1] = this->fetch_buffer.front()->index_reg;
 
                 // ===== Write Regs =============================================
                 /// Clear WRegs
@@ -790,27 +784,27 @@ void processor_t::stage_decode() {
             }
 
             new_uop.package_ready(this->stage_decode_cycles);
-            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, new_uop.content_to_string().c_str());
+            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", pos_buffer, new_uop.content_to_string().c_str());
 
-            position_buffer = this->decode_buffer.push_back(new_uop);
-            ERROR_ASSERT_PRINTF(position_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
+            pos_buffer = this->decode_buffer.push_back(new_uop);
+            ERROR_ASSERT_PRINTF(pos_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
         }
 
         /// DECODE ALU =====================================================
-        if (this->fetch_buffer[fetch_buffer_position_start].opcode_operation != INSTRUCTION_OPERATION_MEM_LOAD &&
-        this->fetch_buffer[fetch_buffer_position_start].opcode_operation != INSTRUCTION_OPERATION_MEM_STORE &&
-        this->fetch_buffer[fetch_buffer_position_start].opcode_operation != INSTRUCTION_OPERATION_BRANCH) {
+        if (this->fetch_buffer.front()->opcode_operation != INSTRUCTION_OPERATION_MEM_LOAD &&
+        this->fetch_buffer.front()->opcode_operation != INSTRUCTION_OPERATION_MEM_STORE &&
+        this->fetch_buffer.front()->opcode_operation != INSTRUCTION_OPERATION_BRANCH) {
             new_uop.package_clean();
             new_uop.opcode_to_uop(this->decode_uop_counter++,
-                                    this->fetch_buffer[fetch_buffer_position_start].opcode_operation,
+                                    this->fetch_buffer.front()->opcode_operation,
                                     0,
                                     0,
-                                    this->fetch_buffer[fetch_buffer_position_start]);
+                                    *this->fetch_buffer.front());
 
             /// Fix the dependencies between uops
             /// ALU     ReadRegs    = * + 258 (Aux Register) (if is_read)
             ///         WriteRegs   = * + 258 (Aux Register) (if is_write)
-            if (this->fetch_buffer[fetch_buffer_position_start].is_read || this->fetch_buffer[fetch_buffer_position_start].is_read2){
+            if (this->fetch_buffer.front()->is_read || this->fetch_buffer.front()->is_read2){
                 // ===== Read Regs =============================================
                 /// Insert Reg258 into RReg
                 bool inserted_258 = false;
@@ -823,7 +817,7 @@ void processor_t::stage_decode() {
                 }
                 ERROR_ASSERT_PRINTF(inserted_258, "Could not insert register_258, all MAX_REGISTERS(%d) used.", MAX_REGISTERS)
             }
-            if (this->fetch_buffer[fetch_buffer_position_start].is_write){
+            if (this->fetch_buffer.front()->is_write){
                 // ===== Write Regs =============================================
                 /// Insert Reg258 into WReg
                 bool inserted_258 = false;
@@ -838,20 +832,20 @@ void processor_t::stage_decode() {
             }
 
             new_uop.package_ready(this->stage_decode_cycles);
-            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, new_uop.content_to_string().c_str());
+            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", pos_buffer, new_uop.content_to_string().c_str());
 
-            position_buffer = this->decode_buffer.push_back(new_uop);
-            ERROR_ASSERT_PRINTF(position_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
+            pos_buffer = this->decode_buffer.push_back(new_uop);
+            ERROR_ASSERT_PRINTF(pos_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
         }
 
         /// DECODE BRANCH ==================================================
-        if (this->fetch_buffer[fetch_buffer_position_start].opcode_operation == INSTRUCTION_OPERATION_BRANCH) {
+        if (this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_BRANCH) {
             new_uop.package_clean();
             new_uop.opcode_to_uop(this->decode_uop_counter++,
                                     INSTRUCTION_OPERATION_BRANCH,
                                     0,
                                     0,
-                                    this->fetch_buffer[fetch_buffer_position_start]);
+                                    *this->fetch_buffer.front());
 
             /// If the instruction is a branch
             this->inflight_branches++;
@@ -859,7 +853,7 @@ void processor_t::stage_decode() {
             /// Fix the dependencies between uops
             /// ALU     ReadRegs    = * + 258 (Aux Register) (if is_read)
             ///         WriteRegs   = * + 258 (Aux Register) (if is_write)
-            if (this->fetch_buffer[fetch_buffer_position_start].is_read || this->fetch_buffer[fetch_buffer_position_start].is_read2){
+            if (this->fetch_buffer.front()->is_read || this->fetch_buffer.front()->is_read2){
                 // ===== Read Regs =============================================
                 /// Insert Reg258 into RReg
                 bool inserted_258 = false;
@@ -872,7 +866,7 @@ void processor_t::stage_decode() {
                 }
                 ERROR_ASSERT_PRINTF(inserted_258, "Could not insert register_258, all MAX_REGISTERS(%d) used.", MAX_REGISTERS)
             }
-            if (this->fetch_buffer[fetch_buffer_position_start].is_write){
+            if (this->fetch_buffer.front()->is_write){
                 // ===== Write Regs =============================================
                 /// Insert Reg258 into WReg
                 bool inserted_258 = false;
@@ -887,29 +881,29 @@ void processor_t::stage_decode() {
             }
 
             new_uop.package_ready(this->stage_decode_cycles);
-            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, new_uop.content_to_string().c_str());
+            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", pos_buffer, new_uop.content_to_string().c_str());
 
             /// Solve the Branch Prediction
-            this->solve_branch(this->fetch_buffer[fetch_buffer_position_start].opcode_number, PROCESSOR_STAGE_DECODE, this->fetch_buffer[fetch_buffer_position_start].opcode_operation);
+            this->solve_branch(this->fetch_buffer.front()->opcode_number, PROCESSOR_STAGE_DECODE, this->fetch_buffer.front()->opcode_operation);
 
-            position_buffer = this->decode_buffer.push_back(new_uop);
-            ERROR_ASSERT_PRINTF(position_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
+            pos_buffer = this->decode_buffer.push_back(new_uop);
+            ERROR_ASSERT_PRINTF(pos_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
         }
 
 
         /// DECODE WRITE ===================================================
-        if (this->fetch_buffer[fetch_buffer_position_start].is_write) {
+        if (this->fetch_buffer.front()->is_write) {
             new_uop.package_clean();
             new_uop.opcode_to_uop(this->decode_uop_counter++,
                                     INSTRUCTION_OPERATION_MEM_STORE,
-                                    this->fetch_buffer[fetch_buffer_position_start].write_address,
-                                    this->fetch_buffer[fetch_buffer_position_start].write_size,
-                                    this->fetch_buffer[fetch_buffer_position_start]);
+                                    this->fetch_buffer.front()->write_address,
+                                    this->fetch_buffer.front()->write_size,
+                                    *this->fetch_buffer.front());
 
             /// Fix the dependencies between uops
             /// WRITE   ReadRegs    = * + 258 (Aux Register)
             ///         WriteRegs   = NULL
-            if (this->fetch_buffer[fetch_buffer_position_start].opcode_operation != INSTRUCTION_OPERATION_MEM_STORE){
+            if (this->fetch_buffer.front()->opcode_operation != INSTRUCTION_OPERATION_MEM_STORE){
                 // ===== Read Regs =============================================
                 /// Insert Reg258 into RReg
                 bool inserted_258 = false;
@@ -931,21 +925,21 @@ void processor_t::stage_decode() {
             }
 
             new_uop.package_ready(this->stage_decode_cycles);
-            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", position_buffer, new_uop.content_to_string().c_str());
+            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", pos_buffer, new_uop.content_to_string().c_str());
 
-            position_buffer = this->decode_buffer.push_back(new_uop);
-            ERROR_ASSERT_PRINTF(position_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
+            pos_buffer = this->decode_buffer.push_back(new_uop);
+            ERROR_ASSERT_PRINTF(pos_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
         }
 
         /// Remove the oldest OPCODE (just decoded) from the fetch buffer
-        this->fetch_buffer_remove();
+        this->fetch_buffer.pop_front();
     }
 };
 
 // ============================================================================
 bool processor_t::is_busy() {
     return (trace_over == false ||
-            fetch_buffer_position_used != 0 ||
+            !this->fetch_buffer.is_empty() ||
             !this->decode_buffer.is_empty() ||
             memory_order_buffer_read_executed != 0 ||
             memory_order_buffer_write_executed != 0 ||
@@ -1048,11 +1042,6 @@ void processor_t::stage_rename() {
         memory_order_buffer_line_t *mob_line = NULL;
         /// Check if there is any Uop decoded
         /// Check if the oldest fetch buffer position is ready
-        // ~ if (decode_buffer.is_empty() ||
-            // ~ this->decode_buffer[0].state != PACKAGE_STATE_READY ||
-            // ~ this->decode_buffer[0].ready_cycle > sinuca_engine.get_global_cycle()) {
-                // ~ break;
-        // ~ }
         if (decode_buffer.is_empty() ||
             this->decode_buffer.front()->state != PACKAGE_STATE_READY ||
             this->decode_buffer.front()->ready_cycle > sinuca_engine.get_global_cycle()) {
@@ -1091,7 +1080,6 @@ void processor_t::stage_rename() {
         /// Insert into ROB
         // =====================================================================
         PROCESSOR_DEBUG_PRINTF("\t Inserting ROB[%d] %s\n", position_rob, this->decode_buffer.front()->content_to_string().c_str());
-        // ~ this->reorder_buffer[position_rob].uop = *this->decode_buffer.front();
         this->reorder_buffer[position_rob].uop = *this->decode_buffer.front();
         this->decode_buffer.front()->package_clean();
         this->decode_buffer.pop_front();
@@ -1698,21 +1686,21 @@ void processor_t::solve_memory_dependency(memory_order_buffer_line_t *mob_line) 
 // ============================================================================
 void processor_t::stage_commit() {
     PROCESSOR_DEBUG_PRINTF("stage_commit()\n");
-    int32_t position_buffer;
+    int32_t pos_buffer;
 
     /// Commit the packages
     for (uint32_t i = 0 ; i < this->stage_commit_width ; i++) {
-        position_buffer = this->reorder_buffer_position_start;
+        pos_buffer = this->reorder_buffer_position_start;
         if (this->reorder_buffer_position_used != 0 &&
-        this->reorder_buffer[position_buffer].stage == PROCESSOR_STAGE_COMMIT &&
-        this->reorder_buffer[position_buffer].uop.state == PACKAGE_STATE_READY &&
-        this->reorder_buffer[position_buffer].uop.ready_cycle <= sinuca_engine.get_global_cycle()) {
+        this->reorder_buffer[pos_buffer].stage == PROCESSOR_STAGE_COMMIT &&
+        this->reorder_buffer[pos_buffer].uop.state == PACKAGE_STATE_READY &&
+        this->reorder_buffer[pos_buffer].uop.ready_cycle <= sinuca_engine.get_global_cycle()) {
 
             this->commit_uop_counter++;
-            PROCESSOR_DEBUG_PRINTF("\t Commiting package:%s\n",  this->reorder_buffer[position_buffer].content_to_string().c_str());
-            // ~ this->add_stat_instruction_read_completed(this->reorder_buffer[position_buffer].uop.born_cycle);
+            PROCESSOR_DEBUG_PRINTF("\t Commiting package:%s\n",  this->reorder_buffer[pos_buffer].content_to_string().c_str());
+            // ~ this->add_stat_instruction_read_completed(this->reorder_buffer[pos_buffer].uop.born_cycle);
 
-            switch (this->reorder_buffer[position_buffer].uop.uop_operation) {
+            switch (this->reorder_buffer[pos_buffer].uop.uop_operation) {
                 // INTEGERS ALU
                 case INSTRUCTION_OPERATION_INT_ALU:
                     this->add_stat_int_alu_completed();
@@ -1745,11 +1733,11 @@ void processor_t::stage_commit() {
 
                 // MEMORY OPERATIONS - READ
                 case INSTRUCTION_OPERATION_MEM_LOAD:
-                    this->add_stat_memory_read_completed(this->reorder_buffer[position_buffer].uop.born_cycle);
+                    this->add_stat_memory_read_completed(this->reorder_buffer[pos_buffer].uop.born_cycle);
                 break;
                 // MEMORY OPERATIONS - WRITE
                 case INSTRUCTION_OPERATION_MEM_STORE:
-                    this->add_stat_memory_write_completed(this->reorder_buffer[position_buffer].uop.born_cycle);
+                    this->add_stat_memory_write_completed(this->reorder_buffer[pos_buffer].uop.born_cycle);
                 break;
 
                 // BRANCHES
@@ -1772,7 +1760,7 @@ void processor_t::stage_commit() {
                 break;
             }
 
-            ERROR_ASSERT_PRINTF(uint32_t(position_buffer) == this->reorder_buffer_position_start, "Commiting different from the position start\n");
+            ERROR_ASSERT_PRINTF(uint32_t(pos_buffer) == this->reorder_buffer_position_start, "Commiting different from the position start\n");
             this->rob_remove();
         }
         /// Could not commit the older, then stop looking for ready uops
@@ -1825,7 +1813,7 @@ void processor_t::clock(uint32_t subcycle) {
     }
 
     /// Something to be done this cycle. -- Improve the performance
-    if (fetch_buffer_position_used != 0) {
+    if (!this->fetch_buffer.is_empty()) {
         /// Read from the Fetch Buffer
         /// Split Load_Load into 2xLoads
         /// Split Load_Store into 1xLoad + 1xStore
@@ -1834,8 +1822,7 @@ void processor_t::clock(uint32_t subcycle) {
     }
 
     /// Something to be done this cycle. -- Improve the performance
-    if (!this->trace_over ||
-    fetch_buffer_position_used != 0) {
+    if (!this->trace_over || !this->fetch_buffer.is_empty()) {
         /// Read from the trace
         /// Send request to ICache
         /// Store on Fetch Buffer, Waiting for ICache
@@ -1902,21 +1889,14 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
                 this->fetch_opcode_address_line_buffer = package->memory_address;
 
                 /// Find packages WAITING
-                for (uint32_t k = 0; k < this->fetch_buffer_position_used; k++) {
-                    /// Update the FETCH BUFFER position
-                    uint32_t j = this->fetch_buffer_position_start + k;
-                    if (j >= this->fetch_buffer_size) {
-                        j -= this->fetch_buffer_size;
-                    }
-
+                for (uint32_t k = 0; k < this->fetch_buffer.get_size(); k++) {
                     /// Wake up ALL instructions waiting
-                    if (this->fetch_buffer[j].state == PACKAGE_STATE_WAIT &&
-                    this->cmp_fetch_block(package->memory_address, this->fetch_buffer[j].opcode_address)) {
-                        this->add_stat_instruction_read_completed(this->fetch_buffer[j].born_cycle);
+                    if (this->fetch_buffer[k].state == PACKAGE_STATE_WAIT &&
+                    this->cmp_fetch_block(package->memory_address, this->fetch_buffer[k].opcode_address)) {
+                        this->add_stat_instruction_read_completed(this->fetch_buffer[k].born_cycle);
                         PROCESSOR_DEBUG_PRINTF("\t WANTED INSTRUCTION\n");
-                        this->fetch_buffer[j].package_ready(transmission_latency);
-                        // ~ this->fetch_buffer[j].package_ready(0);
-                        slot = j;
+                        this->fetch_buffer[k].package_ready(transmission_latency);
+                        slot = k;
                     }
                 }
                 ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read Instruction done, but it is not on the fetch-buffer anymore.\n")
@@ -1937,7 +1917,6 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
                 if (slot != POSITION_FAIL) {
                     PROCESSOR_DEBUG_PRINTF("\t WANTED READ.\n");
                     this->memory_order_buffer_read[slot].memory_request.package_ready(transmission_latency);
-                    // ~ this->memory_order_buffer_read[slot].memory_request.package_ready(0);
                     this->memory_order_buffer_read[slot].memory_request.is_answer = true;
                 }
                 ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Processor Read Request done, but it is not on the memory_order_buffer anymore.\n")
@@ -1977,8 +1956,8 @@ void processor_t::print_structures() {
     SINUCA_PRINTF("%s BRANCH_SOLVE_STAGE:%s  BRANCH_OPCODE_NUMBER:%"PRIu64"\n", this->get_label(), get_enum_processor_stage_char(this->branch_solve_stage), this->branch_opcode_number);
     SINUCA_PRINTF("%s SYNC_STATUS:%s\n", this->get_label(), get_enum_sync_char(this->sync_status));
 
-    SINUCA_PRINTF("%s FETCH_BUFFER START:%d  END:%d  SIZE:%d\n", this->get_label(), this->fetch_buffer_position_start, this->fetch_buffer_position_end, this->fetch_buffer_position_used);
-    SINUCA_PRINTF("%s FETCH_BUFFER:\n%s", this->get_label(), opcode_package_t::print_all(this->fetch_buffer, this->fetch_buffer_size).c_str());
+    SINUCA_PRINTF("%s FETCH_BUFFER SIZE:%d\n", this->get_label(), this->fetch_buffer.get_size());
+    SINUCA_PRINTF("%s FETCH_BUFFER:\n%s", this->get_label(), opcode_package_t::print_all(&this->fetch_buffer, this->fetch_buffer.get_capacity()).c_str());
 
     SINUCA_PRINTF("%s DECODE_BUFFER SIZE:%d\n", this->get_label(), this->decode_buffer.get_size());
     SINUCA_PRINTF("%s DECODE_BUFFER:\n%s", this->get_label(), uop_package_t::print_all(&this->decode_buffer, this->decode_buffer.get_capacity()).c_str());
@@ -2002,7 +1981,7 @@ void processor_t::periodic_check(){
         PROCESSOR_DEBUG_PRINTF("\n");
         this->print_structures();
     #endif
-    ERROR_ASSERT_PRINTF(opcode_package_t::check_age(this->fetch_buffer, this->fetch_buffer_size) == OK, "Check_age failed.\n");
+    ERROR_ASSERT_PRINTF(opcode_package_t::check_age(&this->fetch_buffer, this->fetch_buffer.get_capacity()) == OK, "Check_age failed.\n");
     ERROR_ASSERT_PRINTF(uop_package_t::check_age(&this->decode_buffer, this->decode_buffer.get_capacity()) == OK, "Check_age failed.\n");
     ERROR_ASSERT_PRINTF(reorder_buffer_line_t::check_age(this->reorder_buffer, this->reorder_buffer_size) == OK, "Check_age failed.\n");
     ERROR_ASSERT_PRINTF(memory_order_buffer_line_t::check_age(this->memory_order_buffer_read, this->memory_order_buffer_read_size) == OK, "Check_age failed.\n");
@@ -2311,59 +2290,6 @@ void processor_t::print_configuration() {
 
     this->branch_predictor->print_configuration();
 };
-
-// ============================================================================
-/// Fetch Buffer Methods
-// ============================================================================
-/*! Should make all the verifications before call this method, because it will
- * update the position_end and position_used for the fetch_buffer
- */
-int32_t processor_t::fetch_buffer_insert() {
-    int32_t valid_position = POSITION_FAIL;
-    /// There is free space.
-    if (this->fetch_buffer_position_used < this->fetch_buffer_size) {
-        valid_position = this->fetch_buffer_position_end;
-        this->fetch_buffer_position_used++;
-        this->fetch_buffer_position_end++;
-        if (this->fetch_buffer_position_end >= this->fetch_buffer_size) {
-            this->fetch_buffer_position_end = 0;
-        }
-    }
-    return valid_position;
-};
-
-// ============================================================================
-/*! Make sure that you want to remove the first element before call this method
- * because it will remove the buffer[position_start] and update the controls
- */
-void processor_t::fetch_buffer_remove() {
-    ERROR_ASSERT_PRINTF(this->fetch_buffer_position_used > 0, "Trying to remove from fetch_buffer with no used position.\n");
-
-    this->fetch_buffer[this->fetch_buffer_position_start].package_clean();
-
-    this->fetch_buffer_position_used--;
-    this->fetch_buffer_position_start++;
-    if (this->fetch_buffer_position_start >= this->fetch_buffer_size) {
-        this->fetch_buffer_position_start = 0;
-    }
-};
-
-// ============================================================================
-int32_t processor_t::fetch_buffer_find_opcode_number(uint64_t opcode_number) {
-    uint32_t start_position;
-    for (uint32_t i = 0; i < this->fetch_buffer_position_used; i++) {
-        start_position = this->fetch_buffer_position_start + i;
-        if (start_position >= this->fetch_buffer_size) {
-            start_position -= this->fetch_buffer_size;
-        }
-
-        if (this->fetch_buffer[start_position].opcode_number == opcode_number) {
-            return start_position;
-        }
-    }
-    return POSITION_FAIL;
-};
-
 
 // ============================================================================
 /// Reorder Buffer Methods
