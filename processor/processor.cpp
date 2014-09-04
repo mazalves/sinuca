@@ -1240,13 +1240,13 @@ void processor_t::stage_dispatch() {
 
             switch (reorder_buffer_line->uop.uop_operation) {
             // =============================================================
-                /// BRANCHES
+                // BRANCHES
                 case INSTRUCTION_OPERATION_BRANCH:
-                /// INTEGERS ALU ===============================================
+                // INTEGERS ALU ===============================================
                 case INSTRUCTION_OPERATION_INT_ALU:
-                /// NOP
+                // NOP
                 case INSTRUCTION_OPERATION_NOP:
-                /// NOT IDENTIFIED
+                // NOT IDENTIFIED
                 case INSTRUCTION_OPERATION_OTHER:
                     if (fu_int_alu < this->number_fu_int_alu) {
                         for (uint32_t i = 0; i < this->number_fu_int_alu; i++) {
@@ -1256,7 +1256,6 @@ void processor_t::stage_dispatch() {
                                 if (reorder_buffer_line->uop.uop_operation == INSTRUCTION_OPERATION_BRANCH) {
                                     this->solve_branch(reorder_buffer_line->uop.opcode_number, PROCESSOR_STAGE_DISPATCH, reorder_buffer_line->uop.uop_operation);
                                 }
-
 
                                 this->ready_cycle_fu_int_alu[i] = sinuca_engine.get_global_cycle() + this->wait_between_fu_int_alu;
 
@@ -1270,7 +1269,7 @@ void processor_t::stage_dispatch() {
                         }
                     }
                 break;
-                /// INTEGERS MUL ===============================================
+                // INTEGERS MUL ===============================================
                 case INSTRUCTION_OPERATION_INT_MUL:
                     if (fu_int_mul < this->number_fu_int_mul) {
                         for (uint32_t i = 0; i < this->number_fu_int_mul; i++) {
@@ -1287,7 +1286,7 @@ void processor_t::stage_dispatch() {
                         }
                     }
                 break;
-                /// INTEGERS DIV ===============================================
+                // INTEGERS DIV ===============================================
                 case INSTRUCTION_OPERATION_INT_DIV:
                     if (fu_int_div < this->number_fu_int_div) {
                         for (uint32_t i = 0; i < this->number_fu_int_div; i++) {
@@ -1306,7 +1305,7 @@ void processor_t::stage_dispatch() {
                 break;
 
                 // =============================================================
-                /// FLOAT POINT ALU ============================================
+                // FLOAT POINT ALU ============================================
                 case INSTRUCTION_OPERATION_FP_ALU:
                     if (fu_fp_alu < this->number_fu_fp_alu) {
                         for (uint32_t i = 0; i < this->number_fu_fp_alu; i++) {
@@ -1323,7 +1322,7 @@ void processor_t::stage_dispatch() {
                         }
                     }
                 break;
-                /// FLOAT POINT MUL ============================================
+                // FLOAT POINT MUL ============================================
                 case INSTRUCTION_OPERATION_FP_MUL:
                     if (fu_fp_mul < this->number_fu_fp_mul) {
                         for (uint32_t i = 0; i < this->number_fu_fp_mul; i++) {
@@ -1340,7 +1339,7 @@ void processor_t::stage_dispatch() {
                         }
                     }
                 break;
-                /// FLOAT POINT DIV ============================================
+                // FLOAT POINT DIV ============================================
                 case INSTRUCTION_OPERATION_FP_DIV:
                     if (fu_fp_div < this->number_fu_fp_div) {
                         for (uint32_t i = 0; i < this->number_fu_fp_div; i++) {
@@ -1359,7 +1358,7 @@ void processor_t::stage_dispatch() {
                 break;
 
                 // =============================================================
-                /// MEMORY OPERATIONS ==========================================
+                // MEMORY OPERATIONS ==========================================
                 case INSTRUCTION_OPERATION_MEM_LOAD:
                     if (fu_mem_load < this->number_fu_mem_load) {
                         for (uint32_t i = 0; i < this->number_fu_mem_load; i++) {
@@ -1462,22 +1461,22 @@ void processor_t::stage_execution() {
 
             switch (reorder_buffer_line->uop.uop_operation) {
             // =============================================================
-                /// BRANCHES
+                // BRANCHES
                 case INSTRUCTION_OPERATION_BRANCH:
                     /// Solve the Branch Prediction
                     this->solve_branch(reorder_buffer_line->uop.opcode_number, PROCESSOR_STAGE_EXECUTION, reorder_buffer_line->uop.uop_operation);
-                /// INTEGERS ===============================================
+                // INTEGERS ===============================================
                 case INSTRUCTION_OPERATION_INT_ALU:
                 case INSTRUCTION_OPERATION_NOP:
                 case INSTRUCTION_OPERATION_OTHER:
 
                 case INSTRUCTION_OPERATION_INT_MUL:
                 case INSTRUCTION_OPERATION_INT_DIV:
-                /// FLOAT POINT ===============================================
+                // FLOAT POINT ===============================================
                 case INSTRUCTION_OPERATION_FP_ALU:
                 case INSTRUCTION_OPERATION_FP_MUL:
                 case INSTRUCTION_OPERATION_FP_DIV:
-                /// INTEGERS ===============================================
+                // INTEGERS ==================================================
                     PROCESSOR_DEBUG_PRINTF("\t Executing package:%s\n", reorder_buffer_line->uop.content_to_string().c_str());
                     reorder_buffer_line->stage = PROCESSOR_STAGE_COMMIT;
                     reorder_buffer_line->uop.package_ready(this->stage_execution_cycles + this->stage_commit_cycles);
@@ -1488,7 +1487,7 @@ void processor_t::stage_execution() {
                     k--;
                 break;
 
-
+                // MEMORY LOAD/STORE ==========================================
                 /// FUNC_UNIT_MEM_LOAD => READ_BUFFER
                 case INSTRUCTION_OPERATION_MEM_LOAD: {
                     ERROR_ASSERT_PRINTF(reorder_buffer_line->mob_ptr != NULL, "Read with a NULL pointer to MOB")
