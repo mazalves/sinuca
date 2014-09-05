@@ -261,13 +261,8 @@ void sinuca_engine_t::global_open_output_files(){
     struct tm  tstruct;
     char       buffer[100];
     tstruct = *localtime(&now);
-    // Visit http://en.cppreference.com/w/cpp/chrono/c/strftime
-    // for more information about date/time format
-    strftime(buffer, sizeof(buffer), "# SiNUCA # Y:%Y M:%m D:%d - Time:%X", &tstruct);
 
-
-
-    // ~ char buffer[100] = "# SiNUCA FILE #\n";
+    strftime(buffer, sizeof(buffer), "# SiNUCA # Y:%Y M:%m D:%d - Time:%X\n", &tstruct);
 
     /// Open the result file
     if (this->result_file.is_open() == false && this->arg_result_file_name != NULL) {
@@ -298,12 +293,8 @@ void sinuca_engine_t::global_print_graph() {
     if (this->graph_file.is_open() == false && this->arg_graph_file_name != NULL) {
         this->graph_file.open(this->arg_graph_file_name, std::ofstream::app);
         ERROR_ASSERT_PRINTF(this->graph_file.is_open() == true, "Could not open the graph file.\n")
-    }
 
-    this->interconnection_controller->print_graph();
-
-    /// Close the statistics file
-    if (this->graph_file.is_open() == true && this->arg_graph_file_name != NULL) {
+        this->interconnection_controller->print_graph();
         this->graph_file.close();
     }
 };

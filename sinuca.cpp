@@ -38,7 +38,7 @@ static void display_use() {
     SINUCA_PRINTF("\t -result     \t FILE          \t Output result file name. Default is \"stdout\".\n");
     SINUCA_PRINTF("\t -warmup     \t INSTRUCTIONS  \t Warm-up instructions (opcodes) before start statistics. Default is 0.\n");
     SINUCA_PRINTF("\t -compressed \t BOOL          \t Set between the compressed (true) and uncompressed (false) trace file. Default is true.\n");
-    SINUCA_PRINTF("\t -graph      \t FILE          \t Output graph file name to be used with GraphViz. Default is \"stdout\".\n");
+    SINUCA_PRINTF("\t -graph      \t FILE          \t Output graph file name to be used with GraphViz. (Only generated if given a file)\n");
 
     exit(EXIT_FAILURE);
 };
@@ -74,7 +74,7 @@ static void process_argv(int argc, char **argv) {
             argv++;
             sinuca_engine.arg_result_file_name = *argv;
             if (stat(sinuca_engine.arg_result_file_name, &buf) == false) {
-                SINUCA_PRINTF("Result file already exist.\n\t%s\n", sinuca_engine.arg_result_file_name)
+                SINUCA_PRINTF("Result file already exist: %s\n\n", sinuca_engine.arg_result_file_name)
                 display_use();
             }
         }
@@ -105,7 +105,7 @@ static void process_argv(int argc, char **argv) {
             argv++;
             sinuca_engine.arg_graph_file_name = *argv;
             if (stat(sinuca_engine.arg_graph_file_name, &buf) == false) {
-                SINUCA_PRINTF("Result file already exist.\n\t%s\n", sinuca_engine.arg_graph_file_name)
+                SINUCA_PRINTF("Result file already exist: %s\n\n", sinuca_engine.arg_graph_file_name)
                 display_use();
             }
         }
