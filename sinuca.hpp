@@ -215,14 +215,14 @@ extern sinuca_engine_t sinuca_engine;
     #define ERROR_ASSERT_PRINTF(v, ...) if (!(v)) {\
                                             ERROR_INFORMATION();\
                                             SINUCA_PRINTF("ERROR_ASSERT: %s\n", #v);\
-                                            SINUCA_PRINTF("ERROR: ");\
+                                            SINUCA_PRINTF("\nERROR: ");\
                                             SINUCA_PRINTF(__VA_ARGS__);\
                                             exit(EXIT_FAILURE);\
                                         }
 
     #define ERROR_PRINTF(...)           {\
                                             ERROR_INFORMATION();\
-                                            SINUCA_PRINTF("ERROR: ");\
+                                            SINUCA_PRINTF("\nERROR: ");\
                                             SINUCA_PRINTF(__VA_ARGS__);\
                                             exit(EXIT_FAILURE);\
                                         }

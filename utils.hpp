@@ -46,8 +46,10 @@ class utils_t {
         template <class TYPE>
         static void template_delete_matrix(TYPE **matrix, uint32_t count) {
             /// Deallocate
-            if (count != 0 && matrix[0] != NULL) {
-                delete[] matrix[0];
+            if (count != 0 && matrix != NULL ) {
+                if (matrix[0] != NULL) {
+                    delete[] matrix[0];
+                }
                 delete[] matrix;
             }
         };
