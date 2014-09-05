@@ -149,9 +149,10 @@ void interconnection_controller_t::create_communication_graph() {
     int32_t port;
 
     for (i = 0; i < sinuca_engine.get_interconnection_interface_array_size(); i++) {
-        INTERCONNECTION_CTRL_DEBUG_PRINTF("Interconnection Interface [%u] = Id:%u Label:%s Ports:%u\n", i, sinuca_engine.interconnection_interface_array[i]->get_id(),
-                                                                                                        sinuca_engine.interconnection_interface_array[i]->get_label(),
-                                                                                                        sinuca_engine.interconnection_interface_array[i]->get_max_ports())
+        INTERCONNECTION_CTRL_DEBUG_PRINTF("Interconnection Interface [%u] = Id:%u Label:%s Ports:%u\n",
+                                        i, sinuca_engine.interconnection_interface_array[i]->get_id(),
+                                            sinuca_engine.interconnection_interface_array[i]->get_label(),
+                                            sinuca_engine.interconnection_interface_array[i]->get_max_ports())
         /// Start the Diagonal, where src == dst
         adjacency_matrix[i][i].weight = 0;
         adjacency_matrix[i][i].src = sinuca_engine.interconnection_interface_array[i];

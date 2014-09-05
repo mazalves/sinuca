@@ -54,21 +54,13 @@ static void process_argv(int argc, char **argv) {
     sinuca_engine.arg_is_compressed = true;
     sinuca_engine.arg_graph_file_name = NULL;
 
-    FILE *try_file = NULL;
+    struct stat buf;
 
     while (argc > 0) {
         if (strcmp(*argv, "-config") == 0) {
             argc--;
             argv++;
             sinuca_engine.arg_configuration_file_name = *argv;
-            try_file = fopen(sinuca_engine.arg_configuration_file_name, "r");
-            if (try_file == NULL) {
-                SINUCA_PRINTF(">> Configuration file does not exist.\n\n");
-                display_use();
-            }
-            else {
-                fclose(try_file);
-            }
             req_args_processed++;
         }
         else if (strcmp(*argv, "-trace") == 0) {
@@ -81,10 +73,8 @@ static void process_argv(int argc, char **argv) {
             argc--;
             argv++;
             sinuca_engine.arg_result_file_name = *argv;
-            try_file = fopen(sinuca_engine.arg_result_file_name, "r");
-            if (try_file != NULL) {
-                SINUCA_PRINTF(">> Result file already exist.\n\n")
-                fclose(try_file);
+            if (stat(sinuca_engine.arg_result_file_name, &buf) == false) {
+                SINUCA_PRINTF("Result file already exist.\n\t%s\n", sinuca_engine.arg_result_file_name)
                 display_use();
             }
         }
@@ -114,10 +104,8 @@ static void process_argv(int argc, char **argv) {
             argc--;
             argv++;
             sinuca_engine.arg_graph_file_name = *argv;
-            try_file = fopen(sinuca_engine.arg_graph_file_name, "r");
-            if (try_file != NULL) {
-                SINUCA_PRINTF(">> Graph file already exist.\n\n")
-                fclose(try_file);
+            if (stat(sinuca_engine.arg_graph_file_name, &buf) == false) {
+                SINUCA_PRINTF("Result file already exist.\n\t%s\n", sinuca_engine.arg_graph_file_name)
                 display_use();
             }
         }
@@ -132,6 +120,7 @@ static void process_argv(int argc, char **argv) {
         argv++;
     }
 
+
     if (req_args_processed < 2) {
         display_use();
     }
@@ -140,6 +129,8 @@ static void process_argv(int argc, char **argv) {
     configuration_file_size = strlen(sinuca_engine.arg_configuration_file_name) + 1;
     sinuca_engine.arg_configuration_path = utils_t::template_allocate_array<char>(configuration_file_size);
     utils_t::get_path(sinuca_engine.arg_configuration_path, sinuca_engine.arg_configuration_file_name);
+
+    sinuca_engine.global_open_output_files();
 
     SINUCA_PRINTF("=======================  SiNUCA  =======================\n");
     SINUCA_PRINTF("CONFIGURATION FILE: %s\n", sinuca_engine.arg_configuration_file_name != NULL ? sinuca_engine.arg_configuration_file_name : "MISSING");

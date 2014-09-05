@@ -19,6 +19,7 @@
  */
 
 #include "./sinuca.hpp"
+
 // =============================================================================
 sinuca_engine_t::sinuca_engine_t() {
     this->arg_configuration_file_name = NULL;
@@ -254,8 +255,46 @@ void sinuca_engine_t::global_clock() {
 };
 
 // =============================================================================
+void sinuca_engine_t::global_open_output_files(){
+
+    time_t     now = time(0);
+    struct tm  tstruct;
+    char       buffer[100];
+    tstruct = *localtime(&now);
+    // Visit http://en.cppreference.com/w/cpp/chrono/c/strftime
+    // for more information about date/time format
+    strftime(buffer, sizeof(buffer), "# SiNUCA # Y:%Y M:%m D:%d - Time:%X", &tstruct);
+
+
+
+    // ~ char buffer[100] = "# SiNUCA FILE #\n";
+
+    /// Open the result file
+    if (this->result_file.is_open() == false && this->arg_result_file_name != NULL) {
+        /// Open a new file
+        this->result_file.open(this->arg_result_file_name, std::ofstream::app);
+        /// Check if the file was created
+        ERROR_ASSERT_PRINTF(this->result_file.is_open() == true, "Could not open the result file.\n")
+    }
+    this->result_file.write(buffer, strlen(buffer));
+    this->result_file.close();
+
+
+    /// Open the graph file
+    if (this->graph_file.is_open() == false && this->arg_graph_file_name != NULL) {
+        /// Open a new file
+        this->graph_file.open(this->arg_graph_file_name, std::ofstream::app);
+        /// Check if the file was created
+        ERROR_ASSERT_PRINTF(this->graph_file.is_open() == true, "Could not open the graph file.\n")
+    }
+    this->graph_file.write(buffer, strlen(buffer));
+    this->graph_file.close();
+
+};
+
+// =============================================================================
 void sinuca_engine_t::global_print_graph() {
-    /// Open the statistics file
+    /// Open the graph file
     if (this->graph_file.is_open() == false && this->arg_graph_file_name != NULL) {
         this->graph_file.open(this->arg_graph_file_name, std::ofstream::app);
         ERROR_ASSERT_PRINTF(this->graph_file.is_open() == true, "Could not open the graph file.\n")

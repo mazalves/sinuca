@@ -167,6 +167,8 @@ class sinuca_engine_t {
         // ====================================================================
         /// Statistics related
         // ====================================================================
+        void global_open_output_files();
+
         void write_graph(const char *buffer);
 
         void write_statistics(const char *buffer);
