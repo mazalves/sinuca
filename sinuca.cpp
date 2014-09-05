@@ -66,7 +66,9 @@ static void process_argv(int argc, char **argv) {
                 SINUCA_PRINTF(">> Configuration file does not exist.\n\n");
                 display_use();
             }
-            fclose(try_file);
+            else {
+                fclose(try_file);
+            }
             req_args_processed++;
         }
         else if (strcmp(*argv, "-trace") == 0) {
@@ -82,9 +84,9 @@ static void process_argv(int argc, char **argv) {
             try_file = fopen(sinuca_engine.arg_result_file_name, "r");
             if (try_file != NULL) {
                 SINUCA_PRINTF(">> Result file already exist.\n\n")
+                fclose(try_file);
                 display_use();
             }
-            fclose(try_file);
         }
         else if (strcmp(*argv, "-warmup") == 0) {
             argc--;
@@ -115,9 +117,9 @@ static void process_argv(int argc, char **argv) {
             try_file = fopen(sinuca_engine.arg_graph_file_name, "r");
             if (try_file != NULL) {
                 SINUCA_PRINTF(">> Graph file already exist.\n\n")
+                fclose(try_file);
                 display_use();
             }
-            fclose(try_file);
         }
         else if (strncmp(*argv, "-", 1) == 0) {
             SINUCA_PRINTF(">> Unknown option %s\n\n", *argv);
