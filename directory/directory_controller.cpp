@@ -409,8 +409,8 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                             cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
                         }
 
-                        /// LATENCY = CACHE-TO-CACHE = No extra penalty
-                        package->ready_cycle = sinuca_engine.get_global_cycle();
+                        /// LATENCY = CACHE-TO-CACHE = This-Latency + No extra penalty
+                        package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read();
 
                         /// Send Request to fill the cache line
                         if (package->memory_operation == MEMORY_OPERATION_WRITE) {

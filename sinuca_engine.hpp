@@ -31,6 +31,7 @@ class sinuca_engine_t {
         uint32_t arg_warmup_instructions;
         bool arg_is_compressed;
         char *arg_graph_file_name;
+        uint32_t thread_map[MAX_CORES];
 
         std::ofstream result_file;
         std::ofstream graph_file;

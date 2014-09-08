@@ -30,6 +30,10 @@ sinuca_engine_t::sinuca_engine_t() {
     this->arg_is_compressed = true;
     this->arg_graph_file_name = NULL;
 
+    for (uint32_t i = 0; i < MAX_CORES; i++) {
+        this->thread_map[i] = i;
+    }
+
     this->interconnection_interface_array = NULL;
     this->processor_array = NULL;
     this->cache_memory_array = NULL;

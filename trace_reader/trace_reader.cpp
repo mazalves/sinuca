@@ -78,7 +78,7 @@ trace_reader_t::~trace_reader_t() {
 
 // =============================================================================
 void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t number_cores) {
-    uint32_t i;
+    uint32_t i, k;
     this->is_compressed_trace_file = is_compact;
 
     this->line_dynamic = utils_t::template_allocate_matrix<char>(number_cores, TRACE_LINE_SIZE);
@@ -122,15 +122,18 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t number_co
     if (this->is_compressed_trace_file) {
         gzDynamicTraceFile = utils_t::template_allocate_array<gzFile>(number_cores);
         for (i = 0; i < number_cores; i++) {
+            /// Make the thread affinity (mapping)
+            k = sinuca_engine.thread_map[i];
+
             dyn_file_name[0] = '\0';
-            snprintf(dyn_file_name, sizeof(dyn_file_name), "%s.tid%d.dyn.out.gz", in_file, i);
+            snprintf(dyn_file_name, sizeof(dyn_file_name), "%s.tid%d.dyn.out.gz", in_file, k);
 
             /// Create missing files in order to run single threaded app into a multi-core
             struct stat st;
             /// file do not exist
             if (stat(dyn_file_name, &st) != 0) {
                 WARNING_PRINTF("FILE NOT FOUND %s. ", dyn_file_name);
-                snprintf(dyn_file_name, sizeof(dyn_file_name), "/tmp/NULL_tid%d.dyn.out.gz", i);
+                snprintf(dyn_file_name, sizeof(dyn_file_name), "/tmp/NULL_tid%d.dyn.out.gz", k);
                 WARNING_PRINTF("=> CREATED %s.\n", dyn_file_name);
                 gzDynamicTraceFile[i] = gzopen(dyn_file_name, "wo");    /// Open the .gz file
                 gzwrite(gzDynamicTraceFile[i], "#Empty Trace\n", strlen("#Empty Trace\n"));
@@ -145,15 +148,18 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t number_co
     else {
         this->DynamicTraceFile = utils_t::template_allocate_array<FILE*>(number_cores);
         for (i = 0; i < number_cores; i++) {
+            /// Make the thread affinity (mapping)
+            k = sinuca_engine.thread_map[i];
+
             dyn_file_name[0] = '\0';
-            snprintf(dyn_file_name, sizeof(dyn_file_name), "%s.tid%d.dyn.out", in_file, i);
+            snprintf(dyn_file_name, sizeof(dyn_file_name), "%s.tid%d.dyn.out", in_file, k);
 
             /// Create missing files in order to run single threaded app into a multi-core
             struct stat st;
             /// file do not exist
             if (stat(dyn_file_name, &st) != 0) {
                 WARNING_PRINTF("FILE NOT FOUND %s. ", dyn_file_name);
-                snprintf(dyn_file_name, sizeof(dyn_file_name), "/tmp/NULL_tid%d.dyn.out", i);
+                snprintf(dyn_file_name, sizeof(dyn_file_name), "/tmp/NULL_tid%d.dyn.out", k);
                 WARNING_PRINTF("=> CREATED %s.\n", dyn_file_name);
                 DynamicTraceFile[i] = fopen(dyn_file_name, "w");    /// Open the .out file
                 ERROR_ASSERT_PRINTF(DynamicTraceFile[i] != NULL, "Could not create the fake file.\n%s\n", dyn_file_name);
@@ -176,14 +182,17 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t number_co
     if (this->is_compressed_trace_file) {
         gzMemoryTraceFile = utils_t::template_allocate_array<gzFile>(number_cores);
         for (i = 0; i < number_cores; i++) {
-            snprintf(mem_file_name, sizeof(mem_file_name), "%s.tid%d.mem.out.gz", in_file, i);
+            /// Make the thread affinity (mapping)
+            k = sinuca_engine.thread_map[i];
+
+            snprintf(mem_file_name, sizeof(mem_file_name), "%s.tid%d.mem.out.gz", in_file, k);
 
             /// Create missing files in order to run single threaded app into a multi-core
             struct stat st;
             /// file do not exist
             if (stat(mem_file_name, &st) != 0) {
                 WARNING_PRINTF("FILE NOT FOUND %s. ", mem_file_name);
-                snprintf(mem_file_name, sizeof(mem_file_name), "/tmp/NULL_tid%d.mem.out.gz", i);
+                snprintf(mem_file_name, sizeof(mem_file_name), "/tmp/NULL_tid%d.mem.out.gz", k);
                 WARNING_PRINTF("=> CREATED %s.\n", mem_file_name);
                 gzMemoryTraceFile[i] = gzopen(mem_file_name, "wo");    /// Open the .gz file
                 gzwrite(gzMemoryTraceFile[i], "#Empty Trace\n", strlen("#Empty Trace\n"));
@@ -198,14 +207,17 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t number_co
     else {
         this->MemoryTraceFile = utils_t::template_allocate_array<FILE*>(number_cores);
         for (i = 0; i < number_cores; i++) {
-            snprintf(mem_file_name, sizeof(mem_file_name), "%s.tid%d.mem.out", in_file, i);
+            /// Make the thread affinity (mapping)
+            k = sinuca_engine.thread_map[i];
+
+            snprintf(mem_file_name, sizeof(mem_file_name), "%s.tid%d.mem.out", in_file, k);
 
             /// Create missing files in order to run single threaded app into a multi-core
             struct stat st;
             /// file do not exist
             if (stat(mem_file_name, &st) != 0) {
                 WARNING_PRINTF("FILE NOT FOUND %s. ", mem_file_name);
-                snprintf(mem_file_name, sizeof(mem_file_name), "/tmp/NULL_tid%d.mem.out", i);
+                snprintf(mem_file_name, sizeof(mem_file_name), "/tmp/NULL_tid%d.mem.out", k);
                 WARNING_PRINTF("=> CREATED %s.\n", mem_file_name);
                 MemoryTraceFile[i] = fopen(mem_file_name, "w");    /// Open the .out file
                 ERROR_ASSERT_PRINTF(MemoryTraceFile[i] != NULL, "Could not create the fake file.\n%s\n", mem_file_name);

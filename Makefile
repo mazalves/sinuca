@@ -98,7 +98,7 @@ SRC_CACHE_MEMORY =	cache_memory/mshr_diff_line.cpp \
 SRC_MAIN_MEMORY =   main_memory/memory_channel.cpp \
 					main_memory/memory_controller.cpp
 
-SRC_CORE = sinuca.cpp sinuca_engine.cpp sinuca_configurator.cpp \
+SRC_CORE =  sinuca.cpp sinuca_engine.cpp sinuca_configurator.cpp \
 			$(SRC_BASIC) $(SRC_PACKAGE) $(SRC_TRACE_READER) \
 			 $(SRC_INTERCONNECTION) \
 			 $(SRC_BRANCH_PREDICTOR) $(SRC_PROCESSOR) \
@@ -115,14 +115,9 @@ OBJS = $(OBJS_CORE)
 ########################################################
 
 all: sinuca
-	$(LD) $(LDFLAGS) -o $(BIN_NAME) $(OBJS) $(LIBRARY)
-	@echo SiNUCA linked!
-	@echo
-	@echo Enjoy!
 
 sinuca: extra_libs/lib/libconfig++.a  extra_libs/lib/libz.a $(OBJS_CORE)
-	@echo SiNUCA compiled!
-	@echo
+	$(LD) $(LDFLAGS) -o $(BIN_NAME) $(OBJS) $(LIBRARY)
 
 extra_libs/lib/libconfig++.a:
 	@mkdir -p extra_libs/lib

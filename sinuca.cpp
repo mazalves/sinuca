@@ -33,12 +33,13 @@ static void display_use() {
     SINUCA_PRINTF("\t Example: ./sinuca -config CONFIGURATION -trace TRACE\n\n");
 
     SINUCA_PRINTF(" DESCRIPTION\n");
-    SINUCA_PRINTF("\t -config     \t FILE          \t Configuration file which describes the architecture.\n");
-    SINUCA_PRINTF("\t -trace      \t FILE          \t Trace file base name.\n");
+    SINUCA_PRINTF("\t -config     \t FILE          \t Configuration file which describes the architecture. **Required\n");
+    SINUCA_PRINTF("\t -trace      \t FILE          \t Trace file base name. **Required\n");
     SINUCA_PRINTF("\t -result     \t FILE          \t Output result file name. Default is \"stdout\".\n");
     SINUCA_PRINTF("\t -warmup     \t INSTRUCTIONS  \t Warm-up instructions (opcodes) before start statistics. Default is 0.\n");
     SINUCA_PRINTF("\t -compressed \t BOOL          \t Set between the compressed (true) and uncompressed (false) trace file. Default is true.\n");
-    SINUCA_PRINTF("\t -graph      \t FILE          \t Output graph file name to be used with GraphViz. (Only generated if given a file)\n");
+    SINUCA_PRINTF("\t -graph      \t FILE          \t Output graph file name to be used with GraphViz.\n");
+    SINUCA_PRINTF("\t -map        \t THREADS       \t Inform a different mapping between the trace files and the cores.\n");
 
     exit(EXIT_FAILURE);
 };
@@ -46,6 +47,7 @@ static void display_use() {
 // =============================================================================
 static void process_argv(int argc, char **argv) {
     uint32_t req_args_processed = 0;
+    uint32_t core_map = 0;
 
     sinuca_engine.arg_configuration_file_name = NULL;
     sinuca_engine.arg_trace_file_name = NULL;
@@ -53,6 +55,8 @@ static void process_argv(int argc, char **argv) {
     sinuca_engine.arg_warmup_instructions = 0;
     sinuca_engine.arg_is_compressed = true;
     sinuca_engine.arg_graph_file_name = NULL;
+
+    // Should start using Getopt
 
     struct stat buf;
 
@@ -109,6 +113,17 @@ static void process_argv(int argc, char **argv) {
                 display_use();
             }
         }
+        else if (strcmp(*argv, "-map") == 0) {
+            argc--;
+            argv++;
+            char * pch;
+            pch = strtok(*argv, ",");
+            core_map = 0;
+            while (pch != NULL) {
+                sinuca_engine.thread_map[core_map++] = atoi(pch);
+                pch = strtok(NULL, ",");
+            }
+        }
         else if (strncmp(*argv, "-", 1) == 0) {
             SINUCA_PRINTF(">> Unknown option %s\n\n", *argv);
             display_use();
@@ -140,6 +155,11 @@ static void process_argv(int argc, char **argv) {
     SINUCA_PRINTF("WARM-UP OPCODES:    %u\n", sinuca_engine.arg_warmup_instructions);
     SINUCA_PRINTF("COMPRESSED TRACE:   %s\n", sinuca_engine.arg_is_compressed                   ? "TRUE" : "FALSE");
     SINUCA_PRINTF("GRAPH FILE:         %s\n", sinuca_engine.arg_graph_file_name         != NULL ? sinuca_engine.arg_graph_file_name        : "MISSING");
+    SINUCA_PRINTF("MAP:                %s\n", core_map == 0 ? "DEFAULT" : "USER DEFINED");
+    for (uint32_t i=0; i<core_map; i++) {
+        SINUCA_PRINTF("\t Trace[%"PRIu32"] -> Core[%"PRIu32"]\n", i, sinuca_engine.thread_map[i]);
+    }
+
 };
 
 // =============================================================================
