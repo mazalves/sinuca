@@ -410,7 +410,13 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                         }
 
                         /// LATENCY = CACHE-TO-CACHE = This-Latency + No extra penalty
-                        package->ready_cycle = sinuca_engine.get_global_cycle() + cache->get_penalty_read();
+                        if (this->llc_caches.size() > 1) {
+                            package->ready_cycle = sinuca_engine.get_global_cycle() + (2 * cache->get_penalty_read());
+                        }
+                        else {
+                            package->ready_cycle = sinuca_engine.get_global_cycle() + (uint32_t)(1.5 * cache->get_penalty_read());
+                        }
+
 
                         /// Send Request to fill the cache line
                         if (package->memory_operation == MEMORY_OPERATION_WRITE) {
