@@ -360,14 +360,15 @@ void interconnection_controller_t::find_package_route(memory_package_t *package)
     #endif
 };
 
+
 // ============================================================================
 uint32_t interconnection_controller_t::find_package_route_latency(memory_package_t *package, interconnection_interface_t *src, interconnection_interface_t *dst){
     /// The transmission latency is defined as 1 for requests, and line_size for answers
     int32_t max_latency = this->high_latency_matrix[src->get_id()][dst->get_id()];
     int32_t low_latency = this->low_latency_matrix[src->get_id()][dst->get_id()];
 
-    ERROR_ASSERT_PRINTF(max_latency != -1, "Transmiting between not adjacent components,  High_latency = -1\n");
-    ERROR_ASSERT_PRINTF(low_latency != -1, "Transmiting between not adjacent components,  Low_latency = -1\n");
+    ERROR_ASSERT_PRINTF(max_latency != -1, "Transmiting between not adjacent components,  max_latency = -1\n");
+    ERROR_ASSERT_PRINTF(low_latency != -1, "Transmiting between not adjacent components,  low_latency = -1\n");
 
     switch (package->memory_operation) {
         case MEMORY_OPERATION_INST:

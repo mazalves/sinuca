@@ -298,7 +298,7 @@ void cache_memory_t::clock(uint32_t subcycle) {
 
     /// Nothing to be done this cycle. -- Improve the performance
     if (this->mshr_born_ordered.empty() &&
-    this->prefetcher->get_request_buffer_position_used() == 0) return;
+    this->prefetcher->request_buffer.is_empty()) return;
 
     // =================================================================
     /// MSHR_BUFFER - REMOVE THE READY PACKAGES
@@ -419,14 +419,13 @@ void cache_memory_t::clock(uint32_t subcycle) {
     // =================================================================
     /// GET FROM PREFETCHER
     // =================================================================
-    memory_package_t* memory_package = this->prefetcher->request_buffer_get_older();
-    if (memory_package != NULL) {
+    if (!this->prefetcher->request_buffer.is_empty()) {
         CACHE_DEBUG_PRINTF("\t Has New Prefetch.\n");
 
-        int32_t slot = this->allocate_prefetch(memory_package);
+        int32_t slot = this->allocate_prefetch(this->prefetcher->request_buffer.front());
         if (slot != POSITION_FAIL) {
             CACHE_DEBUG_PRINTF("\t\t Allocating PREFETCH into MSHR\n");
-            this->prefetcher->request_buffer_remove();
+            this->prefetcher->request_buffer.pop_front();
         }
     }
 
@@ -1189,7 +1188,7 @@ void cache_memory_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_writeback_wait_time", stat_max_writeback_wait_time);
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_instruction_wait_time_ratio", stat_accumulated_instruction_wait_time, stat_instruction_miss);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_instruction_wait_time_ratio", stat_accumulated_instruction_wait_time, stat_accesses);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_read_wait_time_ratio", stat_accumulated_read_wait_time, stat_read_miss);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_prefetch_wait_time_ratio", stat_accumulated_prefetch_wait_time, stat_prefetch_miss);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_write_wait_time_ratio", stat_accumulated_write_wait_time, stat_write_miss);

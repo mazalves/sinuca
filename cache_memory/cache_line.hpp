@@ -23,6 +23,7 @@ class cache_line_t {
         uint64_t tag;
         protocol_status_t status;
         uint64_t last_access;
+        uint64_t number_accesses;
 
         // ====================================================================
         /// Methods
@@ -31,7 +32,9 @@ class cache_line_t {
             this->tag = 0;
             this->status = PROTOCOL_STATUS_I;
             this->last_access = 0;
+            this->number_accesses = 0;
         };
+
         ~cache_line_t() {
         };
 };

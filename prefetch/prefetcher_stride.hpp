@@ -27,13 +27,18 @@ class prefetch_stride_t : public prefetch_t {
         /// Set by sinuca_configurator
         // ====================================================================
         uint32_t stride_table_size;   /// Prefetch Stream Detector Table Size
-        uint32_t address_distance;                  /// Prefetch Range to Detect Stream
-        uint32_t prefetch_degree;                   /// Maximum number of prefetchs ahead
+
+        uint32_t prefetch_degree;     /// Maximum number of prefetchs ahead
+        uint32_t search_distance;     /// Search distance (upwards and downwards)
+
+        uint32_t next_lines_prefetch;
 
         // ====================================================================
         /// Set by this->allocate()
         // ====================================================================
         stride_table_line_t *stride_table;
+        uint64_t last_request_address;      /// Used to check if the next request follows the last address, to perform next line prefetch
+        uint64_t last_prefetch_address;
 
         // ====================================================================
         /// Statistics related
@@ -45,6 +50,8 @@ class prefetch_stride_t : public prefetch_t {
 
         uint64_t stat_allocate_stride_ok;
         uint64_t stat_allocate_stride_fail;
+
+        uint64_t stat_next_line_prefetches;
 
     public:
         // ====================================================================
@@ -79,6 +86,8 @@ class prefetch_stride_t : public prefetch_t {
 
         INSTANTIATE_GET_SET(uint32_t, stride_table_size)
         INSTANTIATE_GET_SET(uint32_t, prefetch_degree)
+        INSTANTIATE_GET_SET(uint32_t, search_distance)
+        INSTANTIATE_GET_SET(uint32_t, next_lines_prefetch)
 
         // ====================================================================
         /// Statistics related
@@ -90,5 +99,7 @@ class prefetch_stride_t : public prefetch_t {
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_allocate_stride_ok)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_allocate_stride_fail)
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_next_line_prefetches)
 };
 

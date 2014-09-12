@@ -51,6 +51,7 @@ class directory_controller_t : public interconnection_interface_t {
         uint64_t stat_write_miss;
         uint64_t stat_writeback_send;
 
+        uint64_t stat_cache_to_cache;
         uint64_t stat_final_writeback_all_cycles;
 
     public:
@@ -101,11 +102,11 @@ class directory_controller_t : public interconnection_interface_t {
 
         bool coherence_is_read(memory_operation_t memory_operation);
         bool coherence_is_dirty(protocol_status_t line_status);
-        inline bool coherence_is_hit(cache_line_t *cache_line, memory_operation_t memory_operation);
+        inline bool coherence_is_hit(protocol_status_t line_status);
         inline bool coherence_need_writeback(cache_memory_t *cache_memory, cache_line_t *cache_line);
 
         protocol_status_t find_writeback_higher_levels(cache_memory_t *cache_memory, uint64_t memory_address);
-        protocol_status_t find_cache_line_higher_levels(cache_memory_t *cache_memory, uint64_t memory_address, bool check_llc);
+        protocol_status_t find_cache_line_higher_levels(uint32_t *sum_latency, cache_memory_t *cache_memory, uint64_t memory_address, bool check_llc);
 
         void coherence_invalidate_all(cache_memory_t *cache_memory, uint64_t memory_address);
         bool coherence_evict_all();
@@ -146,5 +147,6 @@ class directory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_write_miss)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_writeback_send)
 
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_cache_to_cache)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_final_writeback_all_cycles)
 };

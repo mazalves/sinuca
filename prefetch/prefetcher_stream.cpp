@@ -180,8 +180,7 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
                     (sinuca_engine.get_global_line_size() * this->prefetch_distance)) {
                         for (uint32_t index = 1; index <= this->prefetch_degree; index++) {
 
-                            int32_t position = this->request_buffer_insert();
-                            if (position != POSITION_FAIL) {
+                            if (!this->request_buffer.is_full()) {
 
                                 /// Statistics
                                 this->add_stat_created_prefetches();
@@ -191,29 +190,33 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
                                 uint64_t memory_address = (this->stream_table[slot].ending_address & this->not_offset_bits_mask) + (sinuca_engine.get_global_line_size() * index);
                                 memory_address += this->stream_table[slot].first_address & this->offset_bits_mask; /// Line usage predictor information
 
-                                this->request_buffer[position].packager(
-                                                                    0,                                          /// Request Owner
-                                                                    0,                                          /// Opcode. Number
-                                                                    opcode_address,                             /// Opcode. Address
-                                                                    0,                                          /// Uop. Number
+                                memory_package_t new_request;
+                                new_request.packager(
+                                                    0,                                      /// Request Owner
+                                                    0,                                      /// Opcode. Number
+                                                    opcode_address,                         /// Opcode. Address
+                                                    0,                                      /// Uop. Number
 
-                                                                    memory_address,                             /// Mem. Address
-                                                                    sinuca_engine.get_global_line_size(),       /// Block Size
+                                                    memory_address,                         /// Mem. Address
+                                                    sinuca_engine.get_global_line_size(),   /// Block Size
 
-                                                                    PACKAGE_STATE_UNTREATED,                    /// Pack. State
-                                                                    0,                                          /// Ready Cycle
+                                                    PACKAGE_STATE_UNTREATED,                /// Pack. State
+                                                    0,                                      /// Ready Cycle
 
-                                                                    MEMORY_OPERATION_PREFETCH,                  /// Mem. Operation
-                                                                    false,                                      /// Is Answer
+                                                    MEMORY_OPERATION_PREFETCH,              /// Mem. Operation
+                                                    false,                                  /// Is Answer
 
-                                                                    0,                                          /// Src ID
-                                                                    0,                                          /// Dst ID
-                                                                    NULL,                                       /// *Hops
-                                                                    0);                                         /// Hop Counter
+                                                    0,                                      /// Src ID
+                                                    0,                                      /// Dst ID
+                                                    NULL,                                   /// *Hops
+                                                    0);                                     /// Hop Counter
 
 
-                                PREFETCHER_DEBUG_PRINTF("\t %s", this->request_buffer[position].content_to_string().c_str());
-                                PREFETCHER_DEBUG_PRINTF("\t INSERTED on PREFETCHER_BUFFER[%d]\n", position);
+                                PREFETCHER_DEBUG_PRINTF("\t NEW_PREFETCH %s",new_request.content_to_string().c_str());
+                                this->request_buffer.push_back(new_request);
+                            }
+                            else {
+                                this->add_stat_full_buffer();
                             }
                         }
                         /// The following update is to avoid the START become greater than END
@@ -241,8 +244,7 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
                     (sinuca_engine.get_global_line_size() * this->prefetch_distance)) {
                         for (uint32_t index = 1; index <= this->prefetch_degree; index++) {
 
-                            int32_t position = this->request_buffer_insert();
-                            if (position != POSITION_FAIL) {
+                            if (!this->request_buffer.is_full()) {
 
                                 /// Statistics
                                 this->add_stat_created_prefetches();
@@ -252,29 +254,33 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
                                 uint64_t memory_address = (this->stream_table[slot].ending_address & this->not_offset_bits_mask) - (sinuca_engine.get_global_line_size() * index);
                                 memory_address += this->stream_table[slot].first_address & this->offset_bits_mask; /// Line_usage_predictor information
 
-                                this->request_buffer[position].packager(
-                                                                    0,                                          /// Request Owner
-                                                                    0,                                          /// Opcode. Number
-                                                                    opcode_address,                             /// Opcode. Address
-                                                                    0,                                          /// Uop. Number
+                                memory_package_t new_request;
+                                new_request.packager(
+                                                    0,                                      /// Request Owner
+                                                    0,                                      /// Opcode. Number
+                                                    opcode_address,                         /// Opcode. Address
+                                                    0,                                      /// Uop. Number
 
-                                                                    memory_address,                             /// Mem. Address
-                                                                    sinuca_engine.get_global_line_size(),       /// Block Size
+                                                    memory_address,                         /// Mem. Address
+                                                    sinuca_engine.get_global_line_size(),   /// Block Size
 
-                                                                    PACKAGE_STATE_UNTREATED,                    /// Pack. State
-                                                                    0,                                          /// Ready Cycle
+                                                    PACKAGE_STATE_UNTREATED,                /// Pack. State
+                                                    0,                                      /// Ready Cycle
 
-                                                                    MEMORY_OPERATION_PREFETCH,                  /// Mem. Operation
-                                                                    false,                                      /// Is Answer
+                                                    MEMORY_OPERATION_PREFETCH,              /// Mem. Operation
+                                                    false,                                  /// Is Answer
 
-                                                                    0,                                          /// Src ID
-                                                                    0,                                          /// Dst ID
-                                                                    NULL,                                       /// *Hops
-                                                                    0                                           /// Hop Counter
-                                                                    );
+                                                    0,                                      /// Src ID
+                                                    0,                                      /// Dst ID
+                                                    NULL,                                   /// *Hops
+                                                    0                                       /// Hop Counter
+                                                    );
 
-                                PREFETCHER_DEBUG_PRINTF("\t INSERTED on PREFETCHER_BUFFER[%d]\n", position);
-                                PREFETCHER_DEBUG_PRINTF("\t %s", this->request_buffer[position].content_to_string().c_str());
+                                PREFETCHER_DEBUG_PRINTF("\t NEW_PREFETCH %s",new_request.content_to_string().c_str());
+                                this->request_buffer.push_back(new_request);
+                            }
+                            else {
+                                this->add_stat_full_buffer();
                             }
                         }
                         /// The following update is to avoid the START become greater than END

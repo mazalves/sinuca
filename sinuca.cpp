@@ -157,7 +157,7 @@ static void process_argv(int argc, char **argv) {
     SINUCA_PRINTF("GRAPH FILE:         %s\n", sinuca_engine.arg_graph_file_name         != NULL ? sinuca_engine.arg_graph_file_name        : "MISSING");
     SINUCA_PRINTF("MAP:                %s\n", core_map == 0 ? "DEFAULT" : "USER DEFINED");
     for (uint32_t i=0; i<core_map; i++) {
-        SINUCA_PRINTF("\t Trace[%"PRIu32"] -> Core[%"PRIu32"]\n", i, sinuca_engine.thread_map[i]);
+        SINUCA_PRINTF("\t Trace[%"PRIu32"] -> Core[%"PRIu32"]\n", sinuca_engine.thread_map[i], i);
     }
 
 };
@@ -282,6 +282,7 @@ int main(int argc, char **argv) {
         /// Spawn Warmup - is_warm_up is set inside the trace_reader
         if (sinuca_engine.is_warm_up == true) {
             SINUCA_PRINTF("Warm-Up End - Cycle: %-12"PRIu64"\n", sinuca_engine.get_global_cycle() );
+
             sinuca_engine.global_reset_statistics();
             sinuca_engine.is_warm_up = false;
         }

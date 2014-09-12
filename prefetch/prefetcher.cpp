@@ -32,10 +32,7 @@ prefetch_t::prefetch_t() {
     this->prefetcher_type = PREFETCHER_DISABLE;
     this->full_buffer_type = FULL_BUFFER_STOP;
 
-    this->request_buffer = NULL;
-    this->request_buffer_position_start = 0;
-    this->request_buffer_position_end = 0;
-    this->request_buffer_position_used = 0;
+    this->request_buffer_size = 0;
 
     this->offset_bits_mask = 0;
     this->not_offset_bits_mask = 0;
@@ -44,13 +41,12 @@ prefetch_t::prefetch_t() {
 // ============================================================================
 prefetch_t::~prefetch_t() {
     /// De-Allocate memory to prevent memory leak
-    utils_t::template_delete_array<memory_package_t>(request_buffer);
 };
 
 // ============================================================================
 void prefetch_t::allocate() {
     /// Global Request Buffer
-    this->request_buffer = utils_t::template_allocate_array<memory_package_t>(this->get_request_buffer_size());
+    this->request_buffer.allocate(this->request_buffer_size);
 
     /// OFFSET MASK
     this->offset_bits_mask = 0;
@@ -68,77 +64,6 @@ void prefetch_t::clock(uint32_t subcycle) {
     PREFETCHER_DEBUG_PRINTF("====================\n");
     PREFETCHER_DEBUG_PRINTF("cycle() \n");
 };
-
-
-// ============================================================================
-/// Request Buffer Methods
-// ============================================================================
-/*! Should make all the verifications before call this method, because it will
- * update the position_end and position_used for the fetch_buffer
- */
-int32_t prefetch_t::request_buffer_insert() {
-    int32_t valid_position = POSITION_FAIL;
-    /// There is free space.
-    if (this->request_buffer_position_used < this->request_buffer_size) {
-        valid_position = this->request_buffer_position_end;
-        this->request_buffer_position_used++;
-        this->request_buffer_position_end++;
-        if (this->request_buffer_position_end >= this->request_buffer_size) {
-            this->request_buffer_position_end = 0;
-        }
-    }
-    else {
-        this->add_stat_full_buffer();
-        switch (this->full_buffer_type) {
-            case FULL_BUFFER_OVERRIDE:
-                valid_position = this->request_buffer_position_end;
-                this->request_buffer_position_end++;
-                if (this->request_buffer_position_end >= this->request_buffer_size) {
-                    this->request_buffer_position_end = 0;
-                }
-                this->request_buffer_position_start++;
-                if (this->request_buffer_position_start >= this->request_buffer_size) {
-                    this->request_buffer_position_start = 0;
-                }
-            break;
-
-            case FULL_BUFFER_STOP:
-                valid_position = POSITION_FAIL;
-            break;
-        }
-    }
-    return valid_position;
-};
-
-// ============================================================================
-/*! Return the position of the oldest package, to try to insert into the MSHR
- */
-memory_package_t* prefetch_t::request_buffer_get_older() {
-    if (this->request_buffer_position_used > 0) {
-        return (&this->request_buffer[this->request_buffer_position_start]);
-    }
-    else {
-        return NULL;
-    }
-};
-
-
-// ============================================================================
-/*! Make sure that you want to remove the first element before call this method
- * because it will remove the buffer[position_start] and update the controls
- */
-void prefetch_t::request_buffer_remove() {
-    ERROR_ASSERT_PRINTF(this->request_buffer_position_used > 0, "Trying to remove from request_buffer with no used position.\n");
-
-    this->request_buffer[this->request_buffer_position_start].package_clean();
-
-    this->request_buffer_position_used--;
-    this->request_buffer_position_start++;
-    if (this->request_buffer_position_start >= this->request_buffer_size) {
-        this->request_buffer_position_start = 0;
-    }
-};
-
 
 // ============================================================================
 int32_t prefetch_t::send_package(memory_package_t *package) {
@@ -167,9 +92,8 @@ void prefetch_t::remove_token_list(memory_package_t *package) {
 
 // ============================================================================
 void prefetch_t::print_structures() {
-
-    SINUCA_PRINTF("%s REQUEST_BUFFER START:%d  END:%d  SIZE:%d\n", this->get_label(), this->request_buffer_position_start, this->request_buffer_position_end, this->request_buffer_position_used);
-    SINUCA_PRINTF("%s REQUEST_BUFFER:\n%s", this->get_label(), memory_package_t::print_all(this->request_buffer, this->request_buffer_size).c_str() )
+    SINUCA_PRINTF("%s REQUEST_BUFFER SIZE:%d\n", this->get_label(), this->request_buffer.get_size());
+    SINUCA_PRINTF("%s REQUEST_BUFFER:\n%s", this->get_label(), memory_package_t::print_all(&this->request_buffer, this->request_buffer.get_capacity()).c_str());
 };
 
 // ============================================================================
@@ -182,10 +106,7 @@ void prefetch_t::periodic_check(){
     #ifdef PREFETCHER_DEBUG
         this->print_structures();
     #endif
-    if (memory_package_t::check_age(this->request_buffer, this->request_buffer_size) != OK) {
-        WARNING_PRINTF("Check_age failed.\n");
-    }
-    // ~ ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->request_buffer, this->request_buffer_size) == OK, "Check_age failed.\n");
+    ERROR_ASSERT_PRINTF(memory_package_t::check_age(&this->request_buffer, this->request_buffer.get_capacity()) == OK, "Check_age failed.\n");
 };
 
 // ============================================================================

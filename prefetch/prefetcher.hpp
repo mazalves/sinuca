@@ -20,6 +20,8 @@
 
 
 class prefetch_t : public interconnection_interface_t {
+    friend class cache_memory_t;  /// Allow the cache to obtain the next prefetch
+
     protected:
         // ====================================================================
         /// Set by sinuca_configurator
@@ -32,10 +34,7 @@ class prefetch_t : public interconnection_interface_t {
         // ====================================================================
         /// Set by this->allocate()
         // ====================================================================
-        memory_package_t *request_buffer;  /// Prefetch transactions waiting for room on the MSHR (High Level Input)
-        uint32_t request_buffer_position_start;
-        uint32_t request_buffer_position_end;
-        uint32_t request_buffer_position_used;
+        circular_buffer_t<memory_package_t> request_buffer;  /// Prefetches waiting for room on the MSHR (High Level Input)
 
         uint64_t offset_bits_mask;
         uint64_t not_offset_bits_mask;
@@ -83,11 +82,6 @@ class prefetch_t : public interconnection_interface_t {
         void print_configuration();
         // ====================================================================
 
-        /// REQUEST_BUFFER =====================================================
-        int32_t request_buffer_insert();
-        memory_package_t* request_buffer_get_older();
-        void request_buffer_remove();
-
         virtual void treat_prefetch(memory_package_t *package)=0;
 
         inline bool cmp_index_tag(uint64_t memory_addressA, uint64_t memory_addressB) {
@@ -100,11 +94,7 @@ class prefetch_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint64_t, offset_bits_mask)
         INSTANTIATE_GET_SET(uint64_t, not_offset_bits_mask)
 
-        INSTANTIATE_GET_SET(memory_package_t*, request_buffer)
         INSTANTIATE_GET_SET(uint32_t, request_buffer_size)
-        INSTANTIATE_GET_SET(uint32_t, request_buffer_position_start)
-        INSTANTIATE_GET_SET(uint32_t, request_buffer_position_end)
-        INSTANTIATE_GET_SET(uint32_t, request_buffer_position_used)
 
         // ====================================================================
         /// Statistics related
