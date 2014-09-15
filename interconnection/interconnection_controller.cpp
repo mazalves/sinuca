@@ -48,6 +48,12 @@ interconnection_controller_t::interconnection_controller_t() {
     this->predecessor = NULL;
     this->adjacency_matrix = NULL;
     this->route_matrix = NULL;
+
+    this->high_latency_matrix = NULL;
+    this->low_latency_matrix = NULL;
+
+    this->total_high_latency_matrix = NULL;
+    this->total_low_latency_matrix = NULL;
 };
 
 // ============================================================================
@@ -56,6 +62,12 @@ interconnection_controller_t::~interconnection_controller_t() {
     utils_t::template_delete_matrix<routing_table_element_t>(route_matrix, sinuca_engine.get_interconnection_interface_array_size());
     utils_t::template_delete_matrix<edge_t>(adjacency_matrix, sinuca_engine.get_interconnection_interface_array_size());
     utils_t::template_delete_matrix<interconnection_interface_t*>(predecessor, sinuca_engine.get_interconnection_interface_array_size());
+
+    utils_t::template_delete_matrix<int32_t>(high_latency_matrix, sinuca_engine.get_interconnection_interface_array_size());
+    utils_t::template_delete_matrix<int32_t>(low_latency_matrix, sinuca_engine.get_interconnection_interface_array_size());
+
+    utils_t::template_delete_matrix<int32_t>(total_high_latency_matrix, sinuca_engine.get_interconnection_interface_array_size());
+    utils_t::template_delete_matrix<int32_t>(total_low_latency_matrix, sinuca_engine.get_interconnection_interface_array_size());
 };
 
 // ============================================================================
@@ -74,8 +86,9 @@ void interconnection_controller_t::allocate() {
     this->adjacency_matrix = utils_t::template_allocate_matrix<edge_t>(sinuca_engine.get_interconnection_interface_array_size(),
                                                                         sinuca_engine.get_interconnection_interface_array_size());
 
-    this->predecessor = utils_t::template_allocate_initialize_matrix<interconnection_interface_t*>(sinuca_engine.get_interconnection_interface_array_size(),
-                                                                                                    sinuca_engine.get_interconnection_interface_array_size(), NULL);
+    this->predecessor = utils_t::template_allocate_initialize_matrix<interconnection_interface_t*>(
+                                                    sinuca_engine.get_interconnection_interface_array_size(),
+                                                    sinuca_engine.get_interconnection_interface_array_size(), NULL);
 
     this->create_communication_graph();
 
@@ -96,9 +109,14 @@ void interconnection_controller_t::allocate() {
 
     /// Latency table
     this->high_latency_matrix = utils_t::template_allocate_initialize_matrix<int32_t>(sinuca_engine.get_interconnection_interface_array_size(),
-                                                                                        sinuca_engine.get_interconnection_interface_array_size(), -1);
+                                                                                sinuca_engine.get_interconnection_interface_array_size(), -1);
     this->low_latency_matrix = utils_t::template_allocate_initialize_matrix<int32_t>(sinuca_engine.get_interconnection_interface_array_size(),
-                                                                                        sinuca_engine.get_interconnection_interface_array_size(), -1);
+                                                                                sinuca_engine.get_interconnection_interface_array_size(), -1);
+
+    this->total_high_latency_matrix = utils_t::template_allocate_initialize_matrix<int32_t>(sinuca_engine.get_interconnection_interface_array_size(),
+                                                                                sinuca_engine.get_interconnection_interface_array_size(), -1);
+    this->total_low_latency_matrix = utils_t::template_allocate_initialize_matrix<int32_t>(sinuca_engine.get_interconnection_interface_array_size(),
+                                                                                sinuca_engine.get_interconnection_interface_array_size(), -1);
 
     this->create_communication_cost();
 };
@@ -301,9 +319,9 @@ void interconnection_controller_t::create_route(interconnection_interface_t *src
         if (predecessor[src->get_id()][dst->get_id()] == src) {
             found = 1;
         }
-            old_dst = dst;
-            dst = predecessor[src->get_id()][dst->get_id()];
 
+        old_dst = dst;
+        dst = predecessor[src->get_id()][dst->get_id()];
 
         INTERCONNECTION_CTRL_DEBUG_PRINTF("\t\t%s[%u]<->%s[%u]\n", old_dst->get_label(), adjacency_matrix[old_dst->get_id()][dst->get_id()].src_port, dst->get_label(),  adjacency_matrix[old_dst->get_id()][dst->get_id()].dst_port);
         route_matrix[real_src->get_id()][real_dst->get_id()].hops[count] = adjacency_matrix[old_dst->get_id()][dst->get_id()].src_port;
@@ -312,8 +330,9 @@ void interconnection_controller_t::create_route(interconnection_interface_t *src
 
 // ============================================================================
 void interconnection_controller_t::create_communication_cost() {
-    uint32_t max_latency = 0;
+    uint32_t max_latency = 0, min_latency = 0;
     uint32_t min_width = 0;
+    /// Generate the maximum (full line) and minimum (request only) latency between two ADJACENT components
     for (uint32_t i = 0; i < sinuca_engine.get_interconnection_interface_array_size(); i++) {
         for (uint32_t j = 0; j < sinuca_engine.get_interconnection_interface_array_size(); j++) {
             if (i != j && route_matrix[i][j].hop_count == 0) {
@@ -337,7 +356,36 @@ void interconnection_controller_t::create_communication_cost() {
             }
         }
     }
-}
+
+    /// Generate a matrix with maximum latency between ANY two components
+    for (uint32_t i = 0; i < sinuca_engine.get_interconnection_interface_array_size(); i++) {
+        for (uint32_t j = 0; j < sinuca_engine.get_interconnection_interface_array_size(); j++) {
+            if (i == j || route_matrix[i][j].hop_count == 0 || route_matrix[i][j].hops == NULL) {
+                this->total_high_latency_matrix[i][j] = this->high_latency_matrix[i][j];
+                this->total_low_latency_matrix[i][j] = this->low_latency_matrix[i][j];
+            }
+            else {
+                max_latency = 0;
+                min_latency = 0;
+
+                uint32_t actual_id = 0, next_id = 0;
+                interconnection_interface_t *actual = NULL;
+                actual = sinuca_engine.interconnection_interface_array[i];
+
+                for (int32_t k = route_matrix[i][j].hop_count; k >= 0; k--) {
+                    actual_id = actual->get_id();
+                    actual = actual->get_interface_output_component(route_matrix[i][j].hops[k]);
+                    next_id = actual->get_id();
+
+                    max_latency += this->high_latency_matrix[actual_id][next_id];
+                    min_latency += this->low_latency_matrix[actual_id][next_id];
+                }
+                this->total_high_latency_matrix[i][j] = max_latency;
+                this->total_low_latency_matrix[i][j] = min_latency;
+            }
+        }
+    }
+};
 
 // ============================================================================
 void interconnection_controller_t::find_package_route(memory_package_t *package) {

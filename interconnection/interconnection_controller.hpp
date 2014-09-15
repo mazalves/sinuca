@@ -35,6 +35,9 @@ class interconnection_controller_t : public interconnection_interface_t {
 
         int32_t **high_latency_matrix;
         int32_t **low_latency_matrix;
+        int32_t **total_high_latency_matrix;
+        int32_t **total_low_latency_matrix;
+
 
     public:
         // ====================================================================
@@ -76,33 +79,21 @@ class interconnection_controller_t : public interconnection_interface_t {
         void find_package_route(memory_package_t *package);
         uint32_t find_package_route_latency(memory_package_t *package, interconnection_interface_t *src, interconnection_interface_t *dst);
 
-/*
-        inline uint32_t get_high_latency_matrix(uint32_t src, uint32_t dst) {
+        inline int32_t get_total_high_latency(uint32_t src, uint32_t dst) {
             ERROR_ASSERT_PRINTF(src < sinuca_engine.interconnection_interface_array_size &&
-                        dst < sinuca_engine.interconnection_interface_array_size, "find_package_route received wrong src:%u or dst:%u.\n", src, dst)
+                                dst < sinuca_engine.interconnection_interface_array_size,
+                                "get_total_high_latency received wrong src:%u or dst:%u.\n", src, dst)
 
-            uint32_t latency = 0;
-
-            interconnection_interface_t *actual = NULL, *next = NULL;
-            actual = sinuca_engine.interconnection_interface_array[src];
-
-            uint32_t actual_id = 0, next_id = 0;
-
-            for (uint32_t k = 0; k <= route_matrix[src][dst].hop_count; k++) {
-                next = actual->get_interface_output_component(route_matrix[src][dst].hops[k]);
-
-                actual_id = actual->get_id();
-                next_id = next->get_id();
-
-                latency += high_latency_matrix[actual_id][next_id];
-
-                actual = next;
-            }
-            if (next_id != dst)
-                printf("error!!!!!!!!!!!!\n");
-            return latency;
+            return this->total_high_latency_matrix[src][dst];
         }
-*/
+
+        inline int32_t get_total_low_latency(uint32_t src, uint32_t dst) {
+            ERROR_ASSERT_PRINTF(src < sinuca_engine.interconnection_interface_array_size &&
+                                dst < sinuca_engine.interconnection_interface_array_size,
+                                "get_total_low_latency received wrong src:%u or dst:%u.\n", src, dst)
+
+            return this->total_low_latency_matrix[src][dst];
+        }
 
         void create_communication_graph();
         void create_communication_cost();

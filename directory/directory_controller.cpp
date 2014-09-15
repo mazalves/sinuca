@@ -357,8 +357,8 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 DIRECTORY_CTRL_DEBUG_PRINTF("\t Update Directory Line:%s\n", directory_line->directory_line_to_string().c_str())
 
                 /// If line miss OR line_turned_off -> try to find on higher level
-                // ~ if (!is_tag_hit ||
-                // ~ cache->line_usage_predictor->check_line_is_disabled(NULL, NULL, index, way))
+                if (!is_tag_hit ||
+                cache->line_usage_predictor->check_line_is_disabled(NULL, NULL, index, way))
                 {
 
                     /// Check if some HIGHER LEVEL has the cache line
@@ -409,8 +409,8 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                             cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
                         }
 
-                        /// LATENCY = CACHE-TO-CACHE = This-Latency + Levels to find - This level
-                        package->ready_cycle = sinuca_engine.get_global_cycle() + sum_latency - cache->get_penalty_read();
+                        /// LATENCY = CACHE-TO-CACHE = Level until it was found
+                        package->ready_cycle = sinuca_engine.get_global_cycle() + sum_latency;
                         DIRECTORY_CTRL_DEBUG_PRINTF("REQUESTER: %s LAT: %d\n", cache->get_label(), (int)sum_latency);
                         /// Send Request to fill the cache line
                         if (package->memory_operation == MEMORY_OPERATION_WRITE) {
@@ -974,6 +974,16 @@ protocol_status_t directory_controller_t::find_cache_line_higher_levels(uint32_t
             higher_cache = higher_level_cache[0][i];
             return_status = this->find_cache_line_higher_levels(sum_latency, higher_cache, memory_address, false);
             if (coherence_is_hit(return_status)) {
+                int32_t noc_latency = 0;
+                /// Latency to send a request
+                noc_latency = sinuca_engine.interconnection_controller->get_total_low_latency(this->get_id(), higher_cache->get_id());
+                ERROR_ASSERT_PRINTF(noc_latency > 0, "Latency should be greater than zero");
+                *sum_latency += noc_latency;
+
+                /// Latency to obtain the data
+                noc_latency = sinuca_engine.interconnection_controller->get_total_high_latency(this->get_id(), higher_cache->get_id());
+                ERROR_ASSERT_PRINTF(noc_latency > 0, "Latency should be greater than zero");
+                *sum_latency += noc_latency;
                 break;
             }
         }
@@ -993,6 +1003,16 @@ protocol_status_t directory_controller_t::find_cache_line_higher_levels(uint32_t
             /// Propagate Higher
             return_status = this->find_cache_line_higher_levels(sum_latency, higher_cache, memory_address, false);
             if (coherence_is_hit(return_status)) {
+                int32_t noc_latency = 0;
+                /// Latency to send a request
+                noc_latency = sinuca_engine.interconnection_controller->get_total_low_latency(this->get_id(), higher_cache->get_id());
+                ERROR_ASSERT_PRINTF(noc_latency > 0, "Latency should be greater than zero");
+                *sum_latency += noc_latency;
+
+                /// Latency to obtain the data
+                noc_latency = sinuca_engine.interconnection_controller->get_total_high_latency(this->get_id(), higher_cache->get_id());
+                ERROR_ASSERT_PRINTF(noc_latency > 0, "Latency should be greater than zero");
+                *sum_latency += noc_latency;
                 break;
             }
         }
@@ -1020,8 +1040,8 @@ protocol_status_t directory_controller_t::find_cache_line_higher_levels(uint32_t
         }
     }
 
-    /// Allocate in this level
-    if (coherence_is_hit(return_status)) {
+    /// Increment the latency if it is propagating a valid data and it was not the first requester
+    if (coherence_is_hit(return_status)) {// && !check_llc) {
         DIRECTORY_CTRL_DEBUG_PRINTF("C2C:%s -> ", cache_memory->get_label());
         *sum_latency += cache_memory->get_penalty_read();
     }
