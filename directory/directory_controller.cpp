@@ -1040,7 +1040,7 @@ protocol_status_t directory_controller_t::find_cache_line_higher_levels(uint32_t
         }
     }
 
-    /// Increment the latency if it is propagating a valid data and it was not the first requester
+    /// Increment the latency if it is propagating a valid data
     if (coherence_is_hit(return_status)) {// && !check_llc) {
         DIRECTORY_CTRL_DEBUG_PRINTF("C2C:%s -> ", cache_memory->get_label());
         *sum_latency += cache_memory->get_penalty_read();

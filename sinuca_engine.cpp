@@ -27,7 +27,6 @@ sinuca_engine_t::sinuca_engine_t() {
     this->arg_trace_file_name = NULL;
     this->arg_result_file_name = NULL;
     this->arg_warmup_instructions = 0;
-    this->arg_is_compressed = true;
     this->arg_graph_file_name = NULL;
 
     for (uint32_t i = 0; i < MAX_CORES; i++) {
@@ -532,7 +531,6 @@ void sinuca_engine_t::global_print_configuration() {
     this->write_statistics_value(get_type_component_label(), get_label(), "arg_trace_file_name", arg_trace_file_name);
     this->write_statistics_value(get_type_component_label(), get_label(), "arg_result_file_name", arg_result_file_name);
     this->write_statistics_value(get_type_component_label(), get_label(), "arg_warmup_instructions", arg_warmup_instructions);
-    this->write_statistics_value(get_type_component_label(), get_label(), "arg_is_compressed", arg_is_compressed ? "TRUE": "FALSE");
 
     this->write_statistics_small_separator();
     snprintf(comment, sizeof(comment), "Defines:");

@@ -29,10 +29,6 @@
 
 // =============================================================================
 trace_reader_t::trace_reader_t() {
-    this->StaticTraceFile = NULL;
-    this->DynamicTraceFile = NULL;
-    this->MemoryTraceFile = NULL;
-
     this->gzStaticTraceFile = NULL;
     this->gzDynamicTraceFile = NULL;
     this->gzMemoryTraceFile = NULL;
@@ -46,18 +42,20 @@ trace_reader_t::trace_reader_t() {
     this->actual_bbl = NULL;
     this->actual_bbl_opcode = NULL;
 
-    this->is_compressed_trace_file = true;
+    this->total_bbls = 0;
+    this->bbl_size = NULL;
 
-    this->line_dynamic = NULL;
     this->line_static = NULL;
+    this->line_dynamic = NULL;
     this->line_memory = NULL;
 };
 
 // =============================================================================
 trace_reader_t::~trace_reader_t() {
     /// De-Allocate memory to prevent memory leak
-    utils_t::template_delete_array<FILE*>(DynamicTraceFile);
-    utils_t::template_delete_array<FILE*>(MemoryTraceFile);
+    utils_t::template_delete_array<char>(line_static);
+    utils_t::template_delete_matrix<char>(line_dynamic, TRACE_LINE_SIZE);
+    utils_t::template_delete_matrix<char>(line_memory, TRACE_LINE_SIZE);
 
     utils_t::template_delete_array<gzFile>(gzDynamicTraceFile);
     utils_t::template_delete_array<gzFile>(gzMemoryTraceFile);
@@ -69,25 +67,19 @@ trace_reader_t::~trace_reader_t() {
     utils_t::template_delete_array<uint32_t>(actual_bbl);
     utils_t::template_delete_array<uint32_t>(actual_bbl_opcode);
 
-    utils_t::template_delete_matrix<char>(line_dynamic, TRACE_LINE_SIZE);
-    utils_t::template_delete_matrix<char>(line_static, TRACE_LINE_SIZE);
-    utils_t::template_delete_matrix<char>(line_memory, TRACE_LINE_SIZE);
-
-    this->static_dictionary.clear();
 };
 
 // =============================================================================
-void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t number_cores) {
+void trace_reader_t::allocate(char *in_file, uint32_t number_cores) {
     uint32_t i, k;
-    this->is_compressed_trace_file = is_compact;
 
+    this->line_static = utils_t::template_allocate_array<char>(TRACE_LINE_SIZE);
     this->line_dynamic = utils_t::template_allocate_matrix<char>(number_cores, TRACE_LINE_SIZE);
-    this->line_static = utils_t::template_allocate_matrix<char>(number_cores, TRACE_LINE_SIZE);
     this->line_memory = utils_t::template_allocate_matrix<char>(number_cores, TRACE_LINE_SIZE);
 
+    this->line_static[0] = '\0';
     for (i = 0; i < number_cores; i++) {
         this->line_dynamic[i][0] = '\0';
-        this->line_static[i][0] = '\0';
         this->line_memory[i][0] = '\0';
     }
 
@@ -99,78 +91,40 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t number_co
 
     TRACE_READER_DEBUG_PRINTF("Inserted Output File Name = %s\n", in_file);
 
-    if (this->is_compressed_trace_file) {
-        snprintf(stat_file_name, sizeof(stat_file_name), "%s.tid0.stat.out.gz", in_file);
-        gzStaticTraceFile = gzopen(stat_file_name, "ro");   /// Open the .gz file
-        ERROR_ASSERT_PRINTF(gzStaticTraceFile != NULL, "Could not open the file.\n%s\n", stat_file_name);
-    }
-    else {
-        snprintf(stat_file_name, sizeof(stat_file_name), "%s.tid0.stat.out", in_file);
-        this->StaticTraceFile = fopen(stat_file_name, "rw");
-        ERROR_ASSERT_PRINTF(StaticTraceFile != NULL, "Could not open the file.\n%s\n", stat_file_name);
-    }
-    TRACE_READER_DEBUG_PRINTF("Static File = %s => READY !\n", stat_file_name);
-    this->generate_static_dictionary();
+    snprintf(stat_file_name, sizeof(stat_file_name), "%s.tid0.stat.out.gz", in_file);
+    gzStaticTraceFile = gzopen(stat_file_name, "ro");   /// Open the .gz file
+    ERROR_ASSERT_PRINTF(gzStaticTraceFile != NULL, "Could not open the file.\n%s\n", stat_file_name);
 
-    ERROR_ASSERT_PRINTF(!static_dictionary.empty(), "Generated dictionary with 0.\n");
+    TRACE_READER_DEBUG_PRINTF("Static File = %s => READY !\n", stat_file_name);
 
     // =======================================================================
     // Dynamic Trace Files
     // =======================================================================
     char dyn_file_name[500];
 
-    if (this->is_compressed_trace_file) {
-        gzDynamicTraceFile = utils_t::template_allocate_array<gzFile>(number_cores);
-        for (i = 0; i < number_cores; i++) {
-            /// Make the thread affinity (mapping)
-            k = sinuca_engine.thread_map[i];
+    gzDynamicTraceFile = utils_t::template_allocate_array<gzFile>(number_cores);
+    for (i = 0; i < number_cores; i++) {
+        /// Make the thread affinity (mapping)
+        k = sinuca_engine.thread_map[i];
 
-            dyn_file_name[0] = '\0';
-            snprintf(dyn_file_name, sizeof(dyn_file_name), "%s.tid%d.dyn.out.gz", in_file, k);
+        dyn_file_name[0] = '\0';
+        snprintf(dyn_file_name, sizeof(dyn_file_name), "%s.tid%d.dyn.out.gz", in_file, k);
 
-            /// Create missing files in order to run single threaded app into a multi-core
-            struct stat st;
-            /// file do not exist
-            if (stat(dyn_file_name, &st) != 0) {
-                WARNING_PRINTF("FILE NOT FOUND %s. ", dyn_file_name);
-                snprintf(dyn_file_name, sizeof(dyn_file_name), "/tmp/NULL_tid%d.dyn.out.gz", k);
-                WARNING_PRINTF("=> CREATED %s.\n", dyn_file_name);
-                gzDynamicTraceFile[i] = gzopen(dyn_file_name, "wo");    /// Open the .gz file
-                gzwrite(gzDynamicTraceFile[i], "#Empty Trace\n", strlen("#Empty Trace\n"));
-                gzclose(gzDynamicTraceFile[i]);
-            }
-
-            gzDynamicTraceFile[i] = gzopen(dyn_file_name, "ro");    /// Open the .gz file
-            ERROR_ASSERT_PRINTF(gzDynamicTraceFile[i] != NULL, "Could not open the file.\n%s\n", dyn_file_name);
-            TRACE_READER_DEBUG_PRINTF("Dynamic File = %s => READY !\n", dyn_file_name);
+        /// Create missing files in order to run single threaded app into a multi-core
+        struct stat st;
+        /// file do not exist
+        if (stat(dyn_file_name, &st) != 0) {
+            WARNING_PRINTF("FILE NOT FOUND %s. ", dyn_file_name);
+            snprintf(dyn_file_name, sizeof(dyn_file_name), "/tmp/NULL_tid%d.dyn.out.gz", k);
+            WARNING_PRINTF("=> CREATED %s.\n", dyn_file_name);
+            gzDynamicTraceFile[i] = gzopen(dyn_file_name, "wo");    /// Open the .gz file
+            gzwrite(gzDynamicTraceFile[i], "#Empty Trace\n", strlen("#Empty Trace\n"));
+            gzclose(gzDynamicTraceFile[i]);
         }
-    }
-    else {
-        this->DynamicTraceFile = utils_t::template_allocate_array<FILE*>(number_cores);
-        for (i = 0; i < number_cores; i++) {
-            /// Make the thread affinity (mapping)
-            k = sinuca_engine.thread_map[i];
 
-            dyn_file_name[0] = '\0';
-            snprintf(dyn_file_name, sizeof(dyn_file_name), "%s.tid%d.dyn.out", in_file, k);
-
-            /// Create missing files in order to run single threaded app into a multi-core
-            struct stat st;
-            /// file do not exist
-            if (stat(dyn_file_name, &st) != 0) {
-                WARNING_PRINTF("FILE NOT FOUND %s. ", dyn_file_name);
-                snprintf(dyn_file_name, sizeof(dyn_file_name), "/tmp/NULL_tid%d.dyn.out", k);
-                WARNING_PRINTF("=> CREATED %s.\n", dyn_file_name);
-                DynamicTraceFile[i] = fopen(dyn_file_name, "w");    /// Open the .out file
-                ERROR_ASSERT_PRINTF(DynamicTraceFile[i] != NULL, "Could not create the fake file.\n%s\n", dyn_file_name);
-                fprintf(DynamicTraceFile[i], "#Empty Trace\n");
-                fclose(DynamicTraceFile[i]);
-            }
-
-            this->DynamicTraceFile[i] = fopen(dyn_file_name, "rw");
-            ERROR_ASSERT_PRINTF(DynamicTraceFile[i] != NULL, "Could not open the file.\n%s\n", dyn_file_name);
-            TRACE_READER_DEBUG_PRINTF("Dynamic File = %s => READY !\n", dyn_file_name);
-        }
+        gzDynamicTraceFile[i] = gzopen(dyn_file_name, "ro");    /// Open the .gz file
+        ERROR_ASSERT_PRINTF(gzDynamicTraceFile[i] != NULL, "Could not open the file.\n%s\n", dyn_file_name);
+        TRACE_READER_DEBUG_PRINTF("Dynamic File = %s => READY !\n", dyn_file_name);
     }
 
     // =======================================================================
@@ -179,57 +133,42 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t number_co
     char mem_file_name[500];
     mem_file_name[0] = '\0';
 
-    if (this->is_compressed_trace_file) {
-        gzMemoryTraceFile = utils_t::template_allocate_array<gzFile>(number_cores);
-        for (i = 0; i < number_cores; i++) {
-            /// Make the thread affinity (mapping)
-            k = sinuca_engine.thread_map[i];
+    gzMemoryTraceFile = utils_t::template_allocate_array<gzFile>(number_cores);
+    for (i = 0; i < number_cores; i++) {
+        /// Make the thread affinity (mapping)
+        k = sinuca_engine.thread_map[i];
 
-            snprintf(mem_file_name, sizeof(mem_file_name), "%s.tid%d.mem.out.gz", in_file, k);
+        snprintf(mem_file_name, sizeof(mem_file_name), "%s.tid%d.mem.out.gz", in_file, k);
 
-            /// Create missing files in order to run single threaded app into a multi-core
-            struct stat st;
-            /// file do not exist
-            if (stat(mem_file_name, &st) != 0) {
-                WARNING_PRINTF("FILE NOT FOUND %s. ", mem_file_name);
-                snprintf(mem_file_name, sizeof(mem_file_name), "/tmp/NULL_tid%d.mem.out.gz", k);
-                WARNING_PRINTF("=> CREATED %s.\n", mem_file_name);
-                gzMemoryTraceFile[i] = gzopen(mem_file_name, "wo");    /// Open the .gz file
-                gzwrite(gzMemoryTraceFile[i], "#Empty Trace\n", strlen("#Empty Trace\n"));
-                gzclose(gzMemoryTraceFile[i]);
-            }
-
-            gzMemoryTraceFile[i] = gzopen(mem_file_name, "ro");     /// Open the .gz file
-            ERROR_ASSERT_PRINTF(gzMemoryTraceFile[i] != NULL, "Could not open the file.\n%s\n", mem_file_name);
-            TRACE_READER_DEBUG_PRINTF("Memory File = %s => READY !\n", mem_file_name);
+        /// Create missing files in order to run single threaded app into a multi-core
+        struct stat st;
+        /// file do not exist
+        if (stat(mem_file_name, &st) != 0) {
+            WARNING_PRINTF("FILE NOT FOUND %s. ", mem_file_name);
+            snprintf(mem_file_name, sizeof(mem_file_name), "/tmp/NULL_tid%d.mem.out.gz", k);
+            WARNING_PRINTF("=> CREATED %s.\n", mem_file_name);
+            gzMemoryTraceFile[i] = gzopen(mem_file_name, "wo");    /// Open the .gz file
+            gzwrite(gzMemoryTraceFile[i], "#Empty Trace\n", strlen("#Empty Trace\n"));
+            gzclose(gzMemoryTraceFile[i]);
         }
+
+        gzMemoryTraceFile[i] = gzopen(mem_file_name, "ro");     /// Open the .gz file
+        ERROR_ASSERT_PRINTF(gzMemoryTraceFile[i] != NULL, "Could not open the file.\n%s\n", mem_file_name);
+        TRACE_READER_DEBUG_PRINTF("Memory File = %s => READY !\n", mem_file_name);
     }
-    else {
-        this->MemoryTraceFile = utils_t::template_allocate_array<FILE*>(number_cores);
-        for (i = 0; i < number_cores; i++) {
-            /// Make the thread affinity (mapping)
-            k = sinuca_engine.thread_map[i];
 
-            snprintf(mem_file_name, sizeof(mem_file_name), "%s.tid%d.mem.out", in_file, k);
+    /// Obtain the total of BBLs
+    this->define_total_bbls();
+    this->bbl_size = utils_t::template_allocate_initialize_array<uint32_t>(this->total_bbls, 0);
+    this->define_total_bbl_size();
 
-            /// Create missing files in order to run single threaded app into a multi-core
-            struct stat st;
-            /// file do not exist
-            if (stat(mem_file_name, &st) != 0) {
-                WARNING_PRINTF("FILE NOT FOUND %s. ", mem_file_name);
-                snprintf(mem_file_name, sizeof(mem_file_name), "/tmp/NULL_tid%d.mem.out", k);
-                WARNING_PRINTF("=> CREATED %s.\n", mem_file_name);
-                MemoryTraceFile[i] = fopen(mem_file_name, "w");    /// Open the .out file
-                ERROR_ASSERT_PRINTF(MemoryTraceFile[i] != NULL, "Could not create the fake file.\n%s\n", mem_file_name);
-                fprintf(MemoryTraceFile[i], "#Empty Trace\n");
-                fclose(MemoryTraceFile[i]);
-            }
-
-            this->MemoryTraceFile[i] = fopen(mem_file_name, "r");
-            ERROR_ASSERT_PRINTF(MemoryTraceFile[i] != NULL, "Could not open the file.\n%s\n", mem_file_name);
-            TRACE_READER_DEBUG_PRINTF("Memory File = %s => READY !\n", mem_file_name);
-        }
+    /// Allocate only the required space for the static file packages
+    this->static_dict = utils_t::template_allocate_array<opcode_package_t*>(this->total_bbls);
+    for (i = 1; i < this->total_bbls; i++) {
+        this->static_dict[i] = utils_t::template_allocate_array<opcode_package_t>(this->bbl_size[i]);
     }
+
+    this->generate_static_dict();
 
     this->insideBBL = utils_t::template_allocate_initialize_array<bool>(number_cores, false);
     this->trace_opcode_counter = utils_t::template_allocate_initialize_array<uint64_t>(number_cores, 1);
@@ -242,56 +181,88 @@ void trace_reader_t::allocate(char *in_file, bool is_compact, uint32_t number_co
     this->actual_bbl_opcode = utils_t::template_allocate_initialize_array<uint32_t>(number_cores, 0);
 };
 
+
 // =============================================================================
-/// Get the total number of opcodes
-uint64_t trace_reader_t::trace_size(uint32_t cpuid) {
+void trace_reader_t::define_total_bbls() {
+    bool file_eof = false;
     uint32_t BBL = 0;
-    uint64_t trace_size = 0;
-    this->line_dynamic[cpuid][0] = '\0';
-    bool trace_status = OK;
+    this->total_bbls = 0;
 
-    while (trace_status) {
-        if (is_compressed_trace_file) {
-            if (gzeof(this->gzDynamicTraceFile[cpuid])) {
-                trace_status = FAIL;
-            }
-            else {
-                gzgets(this->gzDynamicTraceFile[cpuid], this->line_dynamic[cpuid], TRACE_LINE_SIZE);
-            }
-        }
-        else {
-            if (feof(this->DynamicTraceFile[cpuid]) ||
-            fgets(this->line_dynamic[cpuid],  TRACE_LINE_SIZE,  this->DynamicTraceFile[cpuid]) == NULL) {
-                trace_status = FAIL;
-            }
-        }
-        if (strlen(this->line_dynamic[cpuid]) != 0 && this->line_dynamic[cpuid][0] != '#' && this->line_dynamic[cpuid][0] != '$') {
-            BBL = (uint32_t)strtoul(this->line_dynamic[cpuid], NULL, 10);
-            trace_size += static_dictionary[BBL].size();
+    gzclearerr(this->gzStaticTraceFile);
+    gzseek(this->gzStaticTraceFile, 0, SEEK_SET);   /// Go to the Begin of the File
+    file_eof = gzeof(this->gzStaticTraceFile);      /// Check is file not EOF
+    ERROR_ASSERT_PRINTF(!file_eof, "Static File Unexpected EOF.\n")
+
+    while (!file_eof) {
+        this->line_static[0] = '\0';
+
+        gzgets(this->gzStaticTraceFile, this->line_static, TRACE_LINE_SIZE);
+        file_eof = gzeof(this->gzStaticTraceFile);
+
+        if (this->line_static[0] == '@') {
+            BBL = (uint32_t)strtoul(this->line_static + 1, NULL, 10);
+            this->total_bbls++;
+            ERROR_ASSERT_PRINTF(BBL == this->total_bbls, "Expected sequenced BBLs.\n")
         }
     }
 
-    /// Reset the Dynamic / Memory file positions
-    if (is_compressed_trace_file) {
-        gzclearerr(this->gzDynamicTraceFile[cpuid]);
-        gzseek(this->gzDynamicTraceFile[cpuid], 0, SEEK_SET);
-
-        gzclearerr(this->gzMemoryTraceFile[cpuid]);
-        gzseek(this->gzMemoryTraceFile[cpuid], 0, SEEK_SET);
-    }
-    else {
-        rewind(this->DynamicTraceFile[cpuid]);
-        rewind(this->MemoryTraceFile[cpuid]);
-    }
-
-    return(trace_size);
+    this->total_bbls++;
+    TRACE_READER_DEBUG_PRINTF("Total of BBLs %u", this->total_bbls);
 };
 
 // =============================================================================
-void trace_reader_t::gzgetline(const gzFile& file, std::string& new_line) {
-    char  line[TRACE_LINE_SIZE];
-    gzgets(file, line, TRACE_LINE_SIZE);
-    new_line = line;
+void trace_reader_t::define_total_bbl_size() {
+    bool file_eof = false;
+    uint32_t BBL = 0;
+
+    gzclearerr(this->gzStaticTraceFile);
+    gzseek(this->gzStaticTraceFile, 0, SEEK_SET);   /// Go to the Begin of the File
+    file_eof = gzeof(this->gzStaticTraceFile);      /// Check is file not EOF
+    ERROR_ASSERT_PRINTF(!file_eof, "Static File Unexpected EOF.\n")
+
+    while (!file_eof) {
+        gzgets(this->gzStaticTraceFile, this->line_static, TRACE_LINE_SIZE);
+        file_eof = gzeof(this->gzStaticTraceFile);
+
+        if (this->line_static[0] == '\0' || this->line_static[0] == '#') {     /// If Comment, then ignore
+            continue;
+        }
+        else if (this->line_static[0] == '@') {
+            BBL++;
+        }
+        else {
+            this->bbl_size[BBL]++;
+        }
+    }
+};
+
+
+// =============================================================================
+/// Get the total number of opcodes
+uint64_t trace_reader_t::trace_size(uint32_t cpuid) {
+    bool file_eof = false;
+    uint32_t BBL = 0;
+    uint64_t trace_size = 0;
+
+    gzclearerr(this->gzDynamicTraceFile[cpuid]);
+    gzseek(this->gzDynamicTraceFile[cpuid], 0, SEEK_SET);   /// Go to the Begin of the File
+    file_eof = gzeof(this->gzDynamicTraceFile[cpuid]);      /// Check is file not EOF
+    ERROR_ASSERT_PRINTF(!file_eof, "Dynamic File Unexpected EOF.\n")
+
+    while (!file_eof) {
+        gzgets(this->gzDynamicTraceFile[cpuid], this->line_dynamic[cpuid], TRACE_LINE_SIZE);
+        file_eof = gzeof(this->gzDynamicTraceFile[cpuid]);
+
+        if (this->line_dynamic[cpuid][0] != '\0' && this->line_dynamic[cpuid][0] != '#' && this->line_dynamic[cpuid][0] != '$') {
+            BBL = (uint32_t)strtoul(this->line_dynamic[cpuid], NULL, 10);
+            trace_size += this->bbl_size[BBL];
+        }
+    }
+
+    gzclearerr(this->gzDynamicTraceFile[cpuid]);            /// Go to the Begin of the File
+    gzseek(this->gzDynamicTraceFile[cpuid], 0, SEEK_SET);
+
+    return(trace_size);
 };
 
 // =============================================================================
@@ -305,25 +276,13 @@ uint32_t trace_reader_t::trace_next_dynamic(uint32_t cpuid, sync_t *new_sync) {
     sync_t &sync_found = *new_sync;
 
     while (!valid_dynamic) {
-        if (is_compressed_trace_file) {
-            if (gzeof(this->gzDynamicTraceFile[cpuid])) {
-                sinuca_engine.set_is_processor_trace_eof(cpuid);
-                return FAIL;
-            }
-            gzgets(this->gzDynamicTraceFile[cpuid], this->line_dynamic[cpuid], TRACE_LINE_SIZE);
+        if (gzeof(this->gzDynamicTraceFile[cpuid])) {
+            sinuca_engine.set_is_processor_trace_eof(cpuid);
+            return FAIL;
         }
-        else {
-            if (feof(this->DynamicTraceFile[cpuid]) ||
-            fgets(this->line_dynamic[cpuid], TRACE_LINE_SIZE, this->DynamicTraceFile[cpuid]) == NULL) {
-                sinuca_engine.set_is_processor_trace_eof(cpuid);
-                return FAIL;
-            }
-        }
+        gzgets(this->gzDynamicTraceFile[cpuid], this->line_dynamic[cpuid], TRACE_LINE_SIZE);
 
-        if (strlen(this->line_dynamic[cpuid]) == 0) {
-            continue;
-        }
-        else if (this->line_dynamic[cpuid][0] == '#') {
+        if (this->line_dynamic[cpuid][0] == '\0' || this->line_dynamic[cpuid][0] == '#') {
             TRACE_READER_DEBUG_PRINTF("cpu[%d] - %s\n", cpuid, this->line_dynamic[cpuid]);
             continue;
         }
@@ -347,18 +306,12 @@ uint32_t trace_reader_t::trace_next_dynamic(uint32_t cpuid, sync_t *new_sync) {
 // =============================================================================
 void trace_reader_t::trace_next_memory(uint32_t cpuid) {
     bool valid_memory = false;
-    bool eof = false;
 
     this->line_memory[cpuid][0] = '\0';
     while (!valid_memory) {
-        if (is_compressed_trace_file) {
-            ERROR_ASSERT_PRINTF(!gzeof(this->gzDynamicTraceFile[cpuid]), "MemoryTraceFile EOF - cpu id %d\n", cpuid);
-            gzgets(this->gzMemoryTraceFile[cpuid], this->line_memory[cpuid], TRACE_LINE_SIZE);
-        }
-        else {
-            eof = fgets(this->line_memory[cpuid], TRACE_LINE_SIZE, this->MemoryTraceFile[cpuid]) == NULL;
-            ERROR_ASSERT_PRINTF(!feof(this->MemoryTraceFile[cpuid]) && eof == false, "MemoryTraceFile EOF - cpu id %d\n", cpuid);
-        }
+
+        ERROR_ASSERT_PRINTF(!gzeof(this->gzDynamicTraceFile[cpuid]), "MemoryTraceFile EOF - cpu id %d\n", cpuid);
+        gzgets(this->gzMemoryTraceFile[cpuid], this->line_memory[cpuid], TRACE_LINE_SIZE);
 
         if (strlen(this->line_memory[cpuid]) != 0 && this->line_memory[cpuid][0] != '#') {
             valid_memory = true;
@@ -395,22 +348,24 @@ bool trace_reader_t::trace_fetch(uint32_t cpuid, opcode_package_t *m) {
             this->actual_bbl[cpuid] = new_BBL;
             this->actual_bbl_opcode[cpuid] = 0;
             this->insideBBL[cpuid] = true;
-            ERROR_ASSERT_PRINTF(static_dictionary[this->actual_bbl[cpuid]].size() != 0,
-                                "Actual cpuid[%d] BBL [%d] size = %d.\n", cpuid, this->actual_bbl[cpuid], uint32_t(static_dictionary[this->actual_bbl[cpuid]].size()));
+            ERROR_ASSERT_PRINTF(this->bbl_size[this->actual_bbl[cpuid]] != 0,
+                            "Actual cpuid[%d] BBL [%d] size = %d.\n", cpuid, this->actual_bbl[cpuid], this->bbl_size[this->actual_bbl[cpuid]]);
             ERROR_ASSERT_PRINTF(this->actual_bbl[cpuid] != 0 &&
-                                this->actual_bbl[cpuid] < this->static_dictionary.size() &&
-                                this->actual_bbl_opcode[cpuid] < static_dictionary[this->actual_bbl[cpuid]].size(),
-                                "Wrong Vector[%d] or Deque[%d] Position.\n", this->actual_bbl[cpuid], this->actual_bbl_opcode[cpuid]);
+                            this->actual_bbl[cpuid] < this->total_bbls &&
+                            this->bbl_size[this->actual_bbl[cpuid] > 0],
+                            "Wrong Vector[%d] or Deque[%d] Position.\n", this->actual_bbl[cpuid], this->actual_bbl_opcode[cpuid]);
         }
     }
 
     // =========================================================================
     /// Fetch new INSTRUCTION inside the static file.
     // =========================================================================
-    NewOpcode = this->static_dictionary[this->actual_bbl[cpuid]][this->actual_bbl_opcode[cpuid]];
-    uint32_t deque_size = static_dictionary[this->actual_bbl[cpuid]].size();
+    ERROR_ASSERT_PRINTF(this->actual_bbl[cpuid] != 0, "Vai dar merdar essa porra");
+    NewOpcode = this->static_dict[this->actual_bbl[cpuid]][this->actual_bbl_opcode[cpuid]];
+    // ~ printf("CPU:%u  BBL:%u  OPCODE:%u = %s\n",cpuid, this->actual_bbl[cpuid], this->actual_bbl_opcode[cpuid], NewOpcode.content_to_string().c_str());
+
     this->actual_bbl_opcode[cpuid]++;
-    if (this->actual_bbl_opcode[cpuid] >= deque_size) {
+    if (this->actual_bbl_opcode[cpuid] >= this->bbl_size[this->actual_bbl[cpuid]]) {
         this->insideBBL[cpuid] = false;
         this->actual_bbl_opcode[cpuid] = 0;
     }
@@ -457,142 +412,82 @@ bool trace_reader_t::trace_fetch(uint32_t cpuid, opcode_package_t *m) {
 };
 
 // =============================================================================
-void trace_reader_t::generate_static_dictionary() {
+void trace_reader_t::generate_static_dict() {
     bool file_eof = false;
-    static_dictionary.clear();                  /// Vector[BBL] => Deques of Opcodes
-
-    container_opcode_package_t NewBBL;          /// Deques of Opcodes
-    NewBBL.clear();
-
     uint32_t BBL = 0;                           /// Actual BBL (Index of the Vector)
+    uint32_t opcode = 0;
     opcode_package_t NewOpcode;                 /// Actual Opcode
 
-    if (this->is_compressed_trace_file) {
-        gzclearerr(this->gzStaticTraceFile);
-        gzseek(this->gzStaticTraceFile, 0, SEEK_SET);  /// Go to the Begin of the File
-        file_eof = gzeof(this->gzStaticTraceFile);      /// Check is file not EOF
-        ERROR_ASSERT_PRINTF(!file_eof, "Static File Unexpected EOF.\n")
-    }
-    else {
-        rewind(this->StaticTraceFile);
-        file_eof = feof(this->StaticTraceFile);         /// Check is file not EOF
-        ERROR_ASSERT_PRINTF(!file_eof, "Static File Unexpected EOF.\n")
-    }
+    gzclearerr(this->gzStaticTraceFile);
+    gzseek(this->gzStaticTraceFile, 0, SEEK_SET);  /// Go to the Begin of the File
+    file_eof = gzeof(this->gzStaticTraceFile);      /// Check is file not EOF
+    ERROR_ASSERT_PRINTF(!file_eof, "Static File Unexpected EOF.\n")
 
     while (!file_eof) {
-        this->line_static[0][0] = '\0';
-        this->line_dynamic[0][0] = '\0';
+        gzgets(this->gzStaticTraceFile, this->line_static, TRACE_LINE_SIZE);
+        file_eof = gzeof(this->gzStaticTraceFile);
 
-        if (this->is_compressed_trace_file) {
-            gzgets(this->gzStaticTraceFile, this->line_static[0], TRACE_LINE_SIZE);
-            file_eof = gzeof(this->gzStaticTraceFile);
-        }
-        else {
-            file_eof = fgets(this->line_static[0], TRACE_LINE_SIZE, this->StaticTraceFile) == NULL;
-            file_eof = file_eof || feof(this->StaticTraceFile);
-        }
-        TRACE_READER_DEBUG_PRINTF("Read: %s\n", this->line_static[0]);
-        if (strlen(this->line_static[0]) == 0 || this->line_static[0][0] == '#') {     /// If Comment, then ignore
+        TRACE_READER_DEBUG_PRINTF("Read: %s\n", this->line_static);
+        if (this->line_static[0] == '\0' || this->line_static[0] == '#') {     /// If Comment, then ignore
             continue;
         }
-        else if (this->line_static[0][0] == '@') {                       /// If New BBL
-            ERROR_ASSERT_PRINTF(BBL == (uint32_t)this->static_dictionary.size(), "Static dictionary has more BBLs than static file.\n");
-            TRACE_READER_DEBUG_PRINTF("BBL %u with %u instructions.\n", BBL, (uint32_t)NewBBL.size());
-            for (uint32_t i = 0; i < NewBBL.size(); i++){
-                TRACE_READER_DEBUG_PRINTF("\t%s", NewBBL[i].content_to_string().c_str());
-            }
+        else if (this->line_static[0] == '@') {                       /// If New BBL
+            TRACE_READER_DEBUG_PRINTF("BBL %u with %u instructions.\n", BBL, opcode);
 
-            ERROR_ASSERT_PRINTF(BBL < (uint32_t)this->static_dictionary.max_size(), "Static file has less BBLs than dynamic file.\n");
-            this->static_dictionary.push_back(NewBBL);  /// Save the Deque of Opcodes
-            NewBBL.clear();
-
-            BBL = (uint32_t)strtoul(this->line_static[0] + 1, NULL, 10);
+            opcode = 0;
+            BBL = (uint32_t)strtoul(this->line_static + 1, NULL, 10);
+            ERROR_ASSERT_PRINTF(BBL < this->total_bbls, "Static has more BBLs than previous analyzed static file.\n");
         }
         else {                                                  /// If Inside BBL
-            NewOpcode.trace_string_to_opcode(this->line_static[0]);
-            NewBBL.push_back(NewOpcode);                        /// Insert the Opcode into the Deque
+            NewOpcode.trace_string_to_opcode(this->line_static);
+            this->static_dict[BBL][opcode++] = NewOpcode;                 /// Save the new opcode
         }
     }
-    TRACE_READER_DEBUG_PRINTF("BBL %u with %u instructions.\n", BBL, (uint32_t)NewBBL.size());
-    this->static_dictionary.push_back(NewBBL);                  /// Save the Last Deque into the Vector
-    this->check_static_dictionary();
+
+    this->check_static_dict();
 };
+
 
 // =============================================================================
 /// Check if the map was successfully generated
-void trace_reader_t::check_static_dictionary() {
+void trace_reader_t::check_static_dict() {
     bool file_eof = false;
     opcode_package_t trace_opcode, dict_opcode;  /// Actual Opcode
 
-    if (is_compressed_trace_file) {
-        gzclearerr(this->gzStaticTraceFile);
-        gzseek(this->gzStaticTraceFile, 0, SEEK_SET);   /// Go to the Begin of the File
-        file_eof = gzeof(this->gzStaticTraceFile);      /// Check is file not EOF
-        ERROR_ASSERT_PRINTF(!file_eof, "Static File Unexpected EOF.\n")
-    }
-    else {
-        rewind(this->StaticTraceFile);
-        file_eof = feof(this->StaticTraceFile);         /// Check is file not EOF
-        ERROR_ASSERT_PRINTF(!file_eof && this->StaticTraceFile != NULL, "Static File Unexpected EOF.\n")
-    }
+    gzclearerr(this->gzStaticTraceFile);
+    gzseek(this->gzStaticTraceFile, 0, SEEK_SET);   /// Go to the Begin of the File
+    file_eof = gzeof(this->gzStaticTraceFile);      /// Check is file not EOF
+    ERROR_ASSERT_PRINTF(!file_eof, "Static File Unexpected EOF.\n")
 
-    bool valid = false;
-    uint32_t vector_size = this->static_dictionary.size();
-    uint32_t deque_size;
+    for (uint32_t bbl = 1; bbl < this->total_bbls; bbl++) {
+        ERROR_ASSERT_PRINTF(this->bbl_size[bbl], "BBL[%d] has no instruction inside.\n", bbl);
 
-    for (uint32_t i = 0; i < vector_size; i++) {
-        deque_size  = static_dictionary[i].size();
-        ERROR_ASSERT_PRINTF(i == 0 || deque_size != 0, "BBL[%d] has no instruction inside.\n", i);
-        for (uint32_t j = 0; j < deque_size; j++) {
-            dict_opcode = this->static_dictionary[i][j];
-            valid = false;
-            while (!valid) {
-                if (is_compressed_trace_file) {
-                    gzgets(this->gzStaticTraceFile, this->line_static[0], TRACE_LINE_SIZE);
-                    file_eof = gzeof(this->gzStaticTraceFile);
-                }
-                else {
-                    file_eof = fgets(this->line_static[0], TRACE_LINE_SIZE, this->StaticTraceFile) == NULL;   /// Get Line
-                    file_eof = file_eof || feof(this->StaticTraceFile);
-                }
-                ERROR_ASSERT_PRINTF(!file_eof, "Static File Smaller than Map.\n")
+        for (uint32_t j = 0; j < this->bbl_size[bbl]; j++) {
+            dict_opcode = this->static_dict[bbl][j];
 
-                if (strlen(this->line_static[0]) != 0 && this->line_static[0][0] != '#' && this->line_static[0][0] != '@') {
-                    valid = true;
+            while (true) {
+                gzgets(this->gzStaticTraceFile, this->line_static, TRACE_LINE_SIZE);
+                file_eof = gzeof(this->gzStaticTraceFile);
+                ERROR_ASSERT_PRINTF(!file_eof, "Static File Smaller than StaticDict.\n")
+
+                if (this->line_static[0] != '\0' && this->line_static[0] != '#' && this->line_static[0] != '@') {
+                    break;
                 }
             }
-            trace_opcode.trace_string_to_opcode(this->line_static[0]);
+            trace_opcode.trace_string_to_opcode(this->line_static);
             dict_opcode.opcode_to_trace_string(this->line_dynamic[0]);
             ERROR_ASSERT_PRINTF(trace_opcode == dict_opcode,
-                        "Input and Output Variable are different\n In:  [%s]\n Out: [%s]\n ", this->line_static[0], this->line_dynamic[0])
+                        "Input and Output Variable are different\n In:  [%s]\n Out: [%s]\n ", this->line_static, this->line_dynamic[0])
         }
     }
 
-    if (is_compressed_trace_file) {
+    file_eof = gzeof(this->gzStaticTraceFile);
+    while (!file_eof) {
+        gzgets(this->gzStaticTraceFile, this->line_static, TRACE_LINE_SIZE);
         file_eof = gzeof(this->gzStaticTraceFile);
-    }
-    else {
-        file_eof = feof(this->StaticTraceFile);
-    }
 
-    valid = false;
-    while (!valid) {
-        if (file_eof) {
-            if (is_compressed_trace_file) {
-                gzgets(this->gzStaticTraceFile, this->line_static[0], TRACE_LINE_SIZE);
-                file_eof = gzeof(this->gzStaticTraceFile);
-            }
-            else {
-                file_eof = fgets(this->line_static[0], TRACE_LINE_SIZE, this->StaticTraceFile) == NULL;   /// Get Line
-                file_eof = file_eof || feof(this->StaticTraceFile);
-            }
-
-            if (strlen(this->line_static[0]) != 0 && this->line_static[0][0] != '#' && this->line_static[0][0] != '@') {
-                ERROR_ASSERT_PRINTF(file_eof, "Map is smaller than file.\n %s \n", this->line_static[0]);
-            }
-        }
-        else {
-            valid = true;
+        if (this->line_static[0] != '\0' && this->line_static[0] != '#' && this->line_static[0] != '@') {
+            ERROR_ASSERT_PRINTF(file_eof, "Map is smaller than file.\n %s \n", this->line_static);
         }
     }
 };

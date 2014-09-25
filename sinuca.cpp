@@ -53,7 +53,6 @@ static void process_argv(int argc, char **argv) {
     sinuca_engine.arg_trace_file_name = NULL;
     sinuca_engine.arg_result_file_name = NULL;
     sinuca_engine.arg_warmup_instructions = 0;
-    sinuca_engine.arg_is_compressed = true;
     sinuca_engine.arg_graph_file_name = NULL;
 
     // Should start using Getopt
@@ -88,19 +87,6 @@ static void process_argv(int argc, char **argv) {
             sinuca_engine.arg_warmup_instructions = atoi(*argv);
             if (atoi(*argv) < 0) {
                 SINUCA_PRINTF(">> Warm-up instructions should be greater or equal than zero.\n\n")
-                display_use();
-            }
-        }
-        else if (strcmp(*argv, "-compressed") == 0) {
-            argc--;
-            argv++;
-            if (strcmp(*argv, "true") == 0) {
-                sinuca_engine.arg_is_compressed = true;
-            }
-            else if (strcmp(*argv, "false") == 0) {
-                sinuca_engine.arg_is_compressed = false;
-            }
-            else {
                 display_use();
             }
         }
@@ -153,7 +139,6 @@ static void process_argv(int argc, char **argv) {
     SINUCA_PRINTF("TRACE FILE:         %s\n", sinuca_engine.arg_trace_file_name         != NULL ? sinuca_engine.arg_trace_file_name         : "MISSING");
     SINUCA_PRINTF("RESULT FILE:        %s\n", sinuca_engine.arg_result_file_name        != NULL ? sinuca_engine.arg_result_file_name        : "MISSING");
     SINUCA_PRINTF("WARM-UP OPCODES:    %u\n", sinuca_engine.arg_warmup_instructions);
-    SINUCA_PRINTF("COMPRESSED TRACE:   %s\n", sinuca_engine.arg_is_compressed                   ? "TRUE" : "FALSE");
     SINUCA_PRINTF("GRAPH FILE:         %s\n", sinuca_engine.arg_graph_file_name         != NULL ? sinuca_engine.arg_graph_file_name        : "MISSING");
     SINUCA_PRINTF("MAP:                %s\n", core_map == 0 ? "DEFAULT" : "USER DEFINED");
     for (uint32_t i=0; i<core_map; i++) {
@@ -268,7 +253,7 @@ int main(int argc, char **argv) {
 
 
     sinuca_engine.is_processor_trace_eof = utils_t::template_allocate_initialize_array<bool>(sinuca_engine.get_processor_array_size(), false);
-    sinuca_engine.trace_reader->allocate(sinuca_engine.arg_trace_file_name, sinuca_engine.arg_is_compressed, sinuca_engine.get_processor_array_size());
+    sinuca_engine.trace_reader->allocate(sinuca_engine.arg_trace_file_name, sinuca_engine.get_processor_array_size());
 
     sinuca_engine.global_reset_statistics();
 

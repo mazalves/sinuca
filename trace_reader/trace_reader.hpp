@@ -27,10 +27,6 @@
   */
 class trace_reader_t {
     private:
-        FILE  *StaticTraceFile;
-        FILE **DynamicTraceFile;
-        FILE **MemoryTraceFile;
-
         gzFile gzStaticTraceFile;
         gzFile *gzDynamicTraceFile;
         gzFile *gzMemoryTraceFile;
@@ -40,14 +36,16 @@ class trace_reader_t {
         uint64_t *trace_opcode_max;
         uint64_t trace_opcode_total;
 
-        container_static_dictionary_t static_dictionary;
+        uint32_t total_bbls;
+        uint32_t *bbl_size;
+
+        opcode_package_t **static_dict;
         uint32_t *actual_bbl;
         uint32_t *actual_bbl_opcode;
-        bool is_compressed_trace_file;
 
         /// Used to handle the trace reader
+        char *line_static;
         char **line_dynamic;
-        char **line_static;
         char **line_memory;
 
     public:
@@ -56,7 +54,7 @@ class trace_reader_t {
         // ====================================================================
         trace_reader_t();
         ~trace_reader_t();
-        void allocate(char *in_file, bool is_compact, uint32_t ncpus);  /// must be called after the parameters are set properly
+        void allocate(char *in_file, uint32_t ncpus);  /// must be called after the parameters are set properly
         inline const char* get_label() {
             return "TRACE_READER";
         };
@@ -64,14 +62,16 @@ class trace_reader_t {
             return "TRACE_READER";
         };
 
+        void define_total_bbls();
+        void define_total_bbl_size();
+
         uint64_t trace_size(uint32_t cpuid);
-        void gzgetline(const gzFile& file, char* new_line);
-        void gzgetline(const gzFile& file, std::string& new_line);
         uint32_t trace_next_dynamic(uint32_t cpuid, sync_t *sync_found);
         void trace_next_memory(uint32_t cpuid);
         bool trace_fetch(uint32_t cpuid, opcode_package_t *m);
-        void generate_static_dictionary();
-        void check_static_dictionary();
+
+        void generate_static_dict();
+        void check_static_dict();
 
         /// Progress
         uint64_t get_trace_opcode_counter(uint32_t cpuid) { return this->trace_opcode_counter[cpuid]; }

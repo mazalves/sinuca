@@ -167,7 +167,7 @@ extern sinuca_engine_t sinuca_engine;
 // ~ #define SINUCA_DEBUG
 #ifdef SINUCA_DEBUG
     // ~ #define CONFIGURATOR_DEBUG
-    // ~ #define TRACE_READER_DEBUG
+    #define TRACE_READER_DEBUG
     // ~ #define TRACE_GENERATOR_DEBUG
     // ~ #define PROCESSOR_DEBUG
     // ~ #define SYNC_DEBUG
@@ -179,7 +179,7 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define ROUTER_DEBUG
     // ~ #define INTERCONNECTION_CTRL_DEBUG
     // ~ #define DIRECTORY_CTRL_DEBUG
-    // ~ #define SHOW_FREE_PACKAGE
+    #define SHOW_FREE_PACKAGE
     #define DEBUG_PRINTF(...)   {\
                                     if (sinuca_engine.get_is_runtime_debug()) {\
                                         SINUCA_PRINTF("DEBUG %s: ", get_label());\
@@ -262,8 +262,6 @@ extern sinuca_engine_t sinuca_engine;
 // ============================================================================
 typedef std::vector <uint64_t>                      container_uint64_t;
 typedef std::vector <token_t>                       container_token_t;
-typedef std::vector <opcode_package_t>              container_opcode_package_t;
-typedef std::vector <container_opcode_package_t>    container_static_dictionary_t;
 
 typedef std::vector <const char*>                   container_ptr_const_char_t;
 typedef std::vector <memory_package_t*>             container_ptr_memory_package_t;
