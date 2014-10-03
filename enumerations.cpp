@@ -339,9 +339,10 @@ const char *get_enum_cache_mask_char(cache_mask_t type) {
 /// Enumerates the main memory address mask
 const char *get_enum_memory_controller_mask_char(memory_controller_mask_t type) {
     switch (type) {
-        case MEMORY_CONTROLLER_MASK_ROW_BANK_COLUMN:              return "ROW_BANK_COLUMN"; break;
-        case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLUMN:      return "ROW_BANK_CHANNEL_COLUMN"; break;
-        case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLUMN: return "ROW_BANK_CHANNEL_CTRL_COLUMN"; break;
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_COLBYTE:              return "ROW_BANK_COLROW_COLBYTE"; break;
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLROW_COLBYTE:      return "ROW_BANK_CHANNEL_COLROW_COLBYTE"; break;
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CHANNEL_COLBYTE:      return "ROW_BANK_COLROW_CHANNEL_COLBYTE"; break;
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE: return "ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE"; break;
     };
     ERROR_PRINTF("Wrong MEMORY_CONTROLLER_MASK\n");
     return "FAIL";

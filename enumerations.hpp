@@ -270,9 +270,10 @@ const char *get_enum_cache_mask_char(cache_mask_t type);
 // ============================================================================
 /// Enumerates the main memory address mask
 enum memory_controller_mask_t {
-    MEMORY_CONTROLLER_MASK_ROW_BANK_COLUMN,
-    MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLUMN,
-    MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLUMN
+    MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_COLBYTE,
+    MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLROW_COLBYTE,
+    MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CHANNEL_COLBYTE,
+    MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE
 };
 const char *get_enum_memory_controller_mask_char(memory_controller_mask_t type);
 

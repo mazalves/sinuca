@@ -30,7 +30,7 @@
 memory_controller_t::memory_controller_t() {
     this->set_type_component(COMPONENT_MEMORY_CONTROLLER);
 
-    this->address_mask_type = MEMORY_CONTROLLER_MASK_ROW_BANK_COLUMN;
+    this->address_mask_type = MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CHANNEL_COLBYTE;
     this->line_size = 0;
 
     this->controller_number = 0;
@@ -135,12 +135,7 @@ void memory_controller_t::allocate() {
         this->channels[i].timing_wtr = ceil(this->timing_wtr * this->core_to_bus_clock_ratio);
 
         /// Copy the masks
-        this->channels[i].column_bits_mask = this->column_bits_mask;
         this->channels[i].not_column_bits_mask = this->not_column_bits_mask;
-        this->channels[i].column_bits_shift = this->column_bits_shift;
-
-        this->channels[i].row_bits_mask = this->row_bits_mask;
-        this->channels[i].row_bits_shift = this->row_bits_shift;
 
         this->channels[i].bank_bits_mask = this->bank_bits_mask;
         this->channels[i].bank_bits_shift = this->bank_bits_shift;
@@ -195,14 +190,16 @@ void memory_controller_t::set_masks() {
                         "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
     ERROR_ASSERT_PRINTF(this->get_bank_per_channel() > 0,
                         "Wrong number of memory_banks (%u).\n", this->get_bank_per_channel());
-    this->column_bits_mask = 0;
+
     this->controller_bits_mask = 0;
+    this->colrow_bits_mask = 0;
+    this->colbyte_bits_mask = 0;
     this->channel_bits_mask = 0;
     this->bank_bits_mask = 0;
     this->row_bits_mask = 0;
 
     switch (this->get_address_mask_type()) {
-        case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLUMN:
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE:
             ERROR_ASSERT_PRINTF(this->get_total_controllers() > 1 &&
                                 utils_t::check_if_power_of_two(this->get_total_controllers()),
                                 "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
@@ -210,17 +207,24 @@ void memory_controller_t::set_masks() {
                                 utils_t::check_if_power_of_two(this->get_channels_per_controller()),
                                 "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
 
-            this->column_bits_shift = 0;
+            this->colbyte_bits_shift = 0;
+            this->colrow_bits_shift = utils_t::get_power_of_two(this->get_line_size());
             this->controller_bits_shift = utils_t::get_power_of_two(this->get_bank_row_buffer_size());
             this->channel_bits_shift = this->controller_bits_shift + utils_t::get_power_of_two(this->get_total_controllers());
             this->bank_bits_shift = this->channel_bits_shift + utils_t::get_power_of_two(this->get_channels_per_controller());
             this->row_bits_shift = this->bank_bits_shift + utils_t::get_power_of_two(this->get_bank_per_channel());
 
-            /// COLUMN MASK
-            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_row_buffer_size()); i++) {
-                this->column_bits_mask |= 1 << i;
+            /// COLBYTE MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_line_size()); i++) {
+                this->colbyte_bits_mask |= 1 << (i + this->colbyte_bits_shift);
             }
-            this->not_column_bits_mask = ~column_bits_mask;
+
+            /// COLROW MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_row_buffer_size()) - this->colrow_bits_shift; i++) {
+                this->colrow_bits_mask |= 1 << (i + this->colrow_bits_shift);
+            }
+
+            this->not_column_bits_mask = ~(colbyte_bits_mask | colrow_bits_mask);
 
             /// CONTROLLER MASK
             for (i = 0; i < utils_t::get_power_of_two(this->get_total_controllers()); i++) {
@@ -243,24 +247,31 @@ void memory_controller_t::set_masks() {
             }
         break;
 
-        case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLUMN:
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLROW_COLBYTE:
             ERROR_ASSERT_PRINTF(this->get_total_controllers() == 1,
                                 "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
             ERROR_ASSERT_PRINTF(this->get_channels_per_controller() > 1 &&
                                 utils_t::check_if_power_of_two(this->get_channels_per_controller()),
                                 "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
 
-            this->column_bits_shift = 0;
             this->controller_bits_shift = 0;
+            this->colbyte_bits_shift = 0;
+            this->colrow_bits_shift = utils_t::get_power_of_two(this->get_line_size());
             this->channel_bits_shift = utils_t::get_power_of_two(this->get_bank_row_buffer_size());
             this->bank_bits_shift = this->channel_bits_shift + utils_t::get_power_of_two(this->get_channels_per_controller());
             this->row_bits_shift = this->bank_bits_shift + utils_t::get_power_of_two(this->get_bank_per_channel());
 
-            /// COLUMN MASK
-            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_row_buffer_size()); i++) {
-                this->column_bits_mask |= 1 << i;
+            /// COLBYTE MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_line_size()); i++) {
+                this->colbyte_bits_mask |= 1 << (i + this->colbyte_bits_shift);
             }
-            this->not_column_bits_mask = ~column_bits_mask;
+
+            /// COLROW MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_row_buffer_size()) - utils_t::get_power_of_two(this->get_line_size()); i++) {
+                this->colrow_bits_mask |= 1 << (i + this->colrow_bits_shift);
+            }
+
+            this->not_column_bits_mask = ~(colbyte_bits_mask | colrow_bits_mask);
 
             /// CHANNEL MASK
             for (i = 0; i < utils_t::get_power_of_two(this->get_channels_per_controller()); i++) {
@@ -278,22 +289,73 @@ void memory_controller_t::set_masks() {
             }
         break;
 
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CHANNEL_COLBYTE:
+            ERROR_ASSERT_PRINTF(this->get_total_controllers() == 1,
+                                "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
+            ERROR_ASSERT_PRINTF(this->get_channels_per_controller() > 1 &&
+                                utils_t::check_if_power_of_two(this->get_channels_per_controller()),
+                                "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
 
-        case MEMORY_CONTROLLER_MASK_ROW_BANK_COLUMN:
+            this->controller_bits_shift = 0;
+            this->colbyte_bits_shift = 0;
+            this->channel_bits_shift = utils_t::get_power_of_two(this->get_line_size());
+            this->colrow_bits_shift = this->channel_bits_shift + utils_t::get_power_of_two(this->get_channels_per_controller());
+            this->bank_bits_shift = this->colrow_bits_shift + utils_t::get_power_of_two(this->get_bank_row_buffer_size() / this->get_line_size());
+            this->row_bits_shift = this->bank_bits_shift + utils_t::get_power_of_two(this->get_bank_per_channel());
+
+            /// COLBYTE MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_line_size()); i++) {
+                this->colbyte_bits_mask |= 1 << (i + this->colbyte_bits_shift);
+            }
+
+            /// CHANNEL MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_channels_per_controller()); i++) {
+                this->channel_bits_mask |= 1 << (i + channel_bits_shift);
+            }
+
+            /// COLROW MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_row_buffer_size()) - utils_t::get_power_of_two(this->get_line_size()); i++) {
+                this->colrow_bits_mask |= 1 << (i + this->colrow_bits_shift);
+            }
+
+            this->not_column_bits_mask = ~(colbyte_bits_mask | colrow_bits_mask);
+
+
+            /// BANK MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_per_channel()); i++) {
+                this->bank_bits_mask |= 1 << (i + bank_bits_shift);
+            }
+
+            /// ROW MASK
+            for (i = row_bits_shift; i < utils_t::get_power_of_two((uint64_t)INT64_MAX+1); i++) {
+                this->row_bits_mask |= 1 << i;
+            }
+        break;
+
+
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_COLBYTE:
             ERROR_ASSERT_PRINTF(this->get_total_controllers() == 1, "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
             ERROR_ASSERT_PRINTF(this->get_channels_per_controller() == 1, "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
 
-            this->column_bits_shift = 0;
             this->controller_bits_shift = 0;
             this->channel_bits_shift = 0;
+
+            this->colbyte_bits_shift = 0;
+            this->colrow_bits_shift = utils_t::get_power_of_two(this->get_line_size());
             this->bank_bits_shift = utils_t::get_power_of_two(this->get_bank_row_buffer_size());
             this->row_bits_shift = bank_bits_shift + utils_t::get_power_of_two(this->get_bank_per_channel());
 
-            /// COLUMN MASK
-            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_row_buffer_size()); i++) {
-                this->column_bits_mask |= 1 << i;
+            /// COLBYTE MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_line_size()); i++) {
+                this->colbyte_bits_mask |= 1 << (i + this->colbyte_bits_shift);
             }
-            this->not_column_bits_mask = ~column_bits_mask;
+
+            /// COLROW MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_row_buffer_size()) - this->colrow_bits_shift; i++) {
+                this->colrow_bits_mask |= 1 << (i + this->colrow_bits_shift);
+            }
+
+            this->not_column_bits_mask = ~(colbyte_bits_mask | colrow_bits_mask);
 
             /// BANK MASK
             for (i = 0; i < utils_t::get_power_of_two(this->get_bank_per_channel()); i++) {
@@ -306,6 +368,14 @@ void memory_controller_t::set_masks() {
             }
         break;
     }
+
+    // ~ printf("not col %s\n", utils_t::address_to_binary(this->not_column_bits_mask).c_str());
+    // ~ printf("colbyte %s\n", utils_t::address_to_binary(this->colbyte_bits_mask).c_str());
+    // ~ printf("colrow  %s\n", utils_t::address_to_binary(this->colrow_bits_mask).c_str());
+    // ~ printf("bank    %s\n", utils_t::address_to_binary(this->bank_bits_mask).c_str());
+    // ~ printf("channel %s\n", utils_t::address_to_binary(this->channel_bits_mask).c_str());
+    // ~ printf("row     %s\n", utils_t::address_to_binary(this->row_bits_mask).c_str());
+    // ~ printf("ctrl    %s\n", utils_t::address_to_binary(this->controller_bits_mask).c_str());
 };
 
 
@@ -414,7 +484,7 @@ void memory_controller_t::insert_mshr_born_ordered(memory_package_t* package){
     this->mshr_born_ordered.insert(this->mshr_born_ordered.begin(), package);
 
     /// Check the MSHR BORN ORDERED
-    #ifdef CACHE_DEBUG
+    #ifdef MEMORY_CONTROLLER_DEBUG
         uint64_t test_order = 0;
         for (uint32_t i = 0; i < this->mshr_born_ordered.size(); i++){
             if (test_order > this->mshr_born_ordered[i]->born_cycle) {
@@ -910,7 +980,8 @@ void memory_controller_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "bank_bits_mask", utils_t::address_to_binary(this->bank_bits_mask).c_str());
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "channel_bits_mask", utils_t::address_to_binary(this->channel_bits_mask).c_str());
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "controller_bits_mask", utils_t::address_to_binary(this->controller_bits_mask).c_str());
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "column_bits_mask", utils_t::address_to_binary(this->column_bits_mask).c_str());
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "colrow_bits_mask", utils_t::address_to_binary(this->colrow_bits_mask).c_str());
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "colbyte_bits_mask", utils_t::address_to_binary(this->colbyte_bits_mask).c_str());
 
 
     for (uint32_t i = 0; i < this->channels_per_controller; i++) {

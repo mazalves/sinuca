@@ -29,13 +29,7 @@ class memory_channel_t : public interconnection_interface_t {
         request_priority_t request_priority_policy;
         write_priority_t write_priority_policy;
 
-
-        uint64_t column_bits_mask;
         uint64_t not_column_bits_mask;
-        uint64_t column_bits_shift;
-
-        uint64_t row_bits_mask;
-        uint64_t row_bits_shift;
 
         uint64_t bank_bits_mask;
         uint64_t bank_bits_shift;
@@ -110,14 +104,6 @@ class memory_channel_t : public interconnection_interface_t {
         void print_statistics();
         void print_configuration();
         // ====================================================================
-        inline uint64_t get_column(uint64_t addr) {
-            return (addr & this->column_bits_mask) >> this->column_bits_shift;
-        }
-
-        inline uint64_t get_row(uint64_t addr) {
-            return (addr & this->row_bits_mask) >> this->row_bits_shift;
-        }
-
         inline uint64_t get_bank(uint64_t addr) {
             return (addr & this->bank_bits_mask) >> this->bank_bits_shift;
         }

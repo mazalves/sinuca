@@ -34,13 +34,7 @@ memory_channel_t::memory_channel_t() {
     this->request_priority_policy = REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST;
     this->write_priority_policy = WRITE_PRIORITY_DRAIN_WHEN_FULL;
 
-
-    this->column_bits_mask = 0;
     this->not_column_bits_mask = 0;
-    this->column_bits_shift = 0;
-
-    this->row_bits_mask = 0;
-    this->row_bits_shift = 0;
 
     this->bank_bits_mask = 0;
     this->bank_bits_shift = 0;

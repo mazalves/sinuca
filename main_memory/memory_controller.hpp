@@ -77,9 +77,13 @@ class memory_controller_t : public interconnection_interface_t {
         // ====================================================================
         /// Set by this->allocate()
         // ====================================================================
-        uint64_t column_bits_mask;
         uint64_t not_column_bits_mask;
-        uint64_t column_bits_shift;
+
+        uint64_t colrow_bits_mask;
+        uint64_t colrow_bits_shift;
+
+        uint64_t colbyte_bits_mask;
+        uint64_t colbyte_bits_shift;
 
         uint64_t row_bits_mask;
         uint64_t row_bits_shift;

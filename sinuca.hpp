@@ -164,6 +164,7 @@ extern sinuca_engine_t sinuca_engine;
 // ~ #define BURST_TRACE
 
 /// DEBUG DESCRIPTION: Lots of details do help during the debug phase.
+
 // ~ #define SINUCA_DEBUG
 #ifdef SINUCA_DEBUG
     // ~ #define CONFIGURATOR_DEBUG
