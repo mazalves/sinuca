@@ -1301,6 +1301,9 @@ void sinuca_engine_t::initialize_memory_controller() {
             else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_COLROW_CHANNEL_COLBYTE") ==  0) {
                 this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CHANNEL_COLBYTE);
             }
+            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_COLROW_BANK_CHANNEL_COLBYTE") ==  0) {
+                this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_COLROW_BANK_CHANNEL_COLBYTE);
+            }
             else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_COLROW_COLBYTE") ==  0) {
                 this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_COLBYTE);
             }
