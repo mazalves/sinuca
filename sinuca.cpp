@@ -142,7 +142,7 @@ static void process_argv(int argc, char **argv) {
     SINUCA_PRINTF("GRAPH FILE:         %s\n", sinuca_engine.arg_graph_file_name         != NULL ? sinuca_engine.arg_graph_file_name        : "MISSING");
     SINUCA_PRINTF("MAP:                %s\n", core_map == 0 ? "DEFAULT" : "USER DEFINED");
     for (uint32_t i=0; i<core_map; i++) {
-        SINUCA_PRINTF("\t Trace[%"PRIu32"] -> Core[%"PRIu32"]\n", sinuca_engine.thread_map[i], i);
+        SINUCA_PRINTF("\t Trace[%" PRIu32 "] -> Core[%" PRIu32 "]\n", sinuca_engine.thread_map[i], i);
     }
 
 };
@@ -189,7 +189,7 @@ std::string simulation_status_to_string() {
     snprintf(tmp_char, sizeof(tmp_char), " %s", utils_t::progress_pretty(ActualLength, FullLength).c_str());
     final_report += tmp_char;
 
-    snprintf(tmp_char, sizeof(tmp_char), " Active Cores: %02"PRIu32"", active_cores);
+    snprintf(tmp_char, sizeof(tmp_char), " Active Cores: %02" PRIu32 "", active_cores);
     final_report += tmp_char;
 
     /// Compute the Global Estimate Time to Complete (GETC)
@@ -206,7 +206,7 @@ std::string simulation_status_to_string() {
         snprintf(tmp_char, sizeof(tmp_char), "  > CPU %02d", cpu);
         final_report += tmp_char;
 
-        snprintf(tmp_char, sizeof(tmp_char), " - Opcode[%10"PRIu64"/%10"PRIu64"]", ActualLength, FullLength);
+        snprintf(tmp_char, sizeof(tmp_char), " - Opcode[%10" PRIu64 "/%10" PRIu64 "]", ActualLength, FullLength);
         final_report += tmp_char;
 
         percentage_complete = 100.0 * (static_cast<double>(ActualLength) / static_cast<double>(FullLength));;
@@ -260,13 +260,13 @@ int main(int argc, char **argv) {
     SINUCA_PRINTF("\n");
     SINUCA_PRINTF("=====================  Simulating  =====================\n");
 
-    SINUCA_PRINTF("Warm-Up Start - Cycle: %-12"PRIu64"\n", sinuca_engine.get_global_cycle() );
+    SINUCA_PRINTF("Warm-Up Start - Cycle: %-12" PRIu64 "\n", sinuca_engine.get_global_cycle() );
 
     /// Start CLOCK
     while (sinuca_engine.get_is_simulation_allocated() && sinuca_engine.alive()) {
         /// Spawn Warmup - is_warm_up is set inside the trace_reader
         if (sinuca_engine.is_warm_up == true) {
-            SINUCA_PRINTF("Warm-Up End - Cycle: %-12"PRIu64"\n", sinuca_engine.get_global_cycle() );
+            SINUCA_PRINTF("Warm-Up End - Cycle: %-12" PRIu64 "\n", sinuca_engine.get_global_cycle() );
 
             sinuca_engine.global_reset_statistics();
             sinuca_engine.is_warm_up = false;
@@ -274,7 +274,7 @@ int main(int argc, char **argv) {
 
         /// Progress Information
         if ((sinuca_engine.get_global_cycle() % HEART_BEAT) == 0) {
-            SINUCA_PRINTF("Heart-Beat - Cycle: %-12"PRIu64"", sinuca_engine.get_global_cycle() );
+            SINUCA_PRINTF("Heart-Beat - Cycle: %-12" PRIu64 "", sinuca_engine.get_global_cycle() );
             SINUCA_PRINTF("%s\n", simulation_status_to_string().c_str());
         }
 
@@ -294,7 +294,7 @@ int main(int argc, char **argv) {
     while (all_evicted != true){
         /// Progress Information
         if ((sinuca_engine.get_global_cycle() % HEART_BEAT) == 0) {
-            SINUCA_PRINTF("Heart-Beat - Cycle: %-12"PRIu64"\n", sinuca_engine.get_global_cycle() );
+            SINUCA_PRINTF("Heart-Beat - Cycle: %-12" PRIu64 "\n", sinuca_engine.get_global_cycle() );
             SINUCA_PRINTF("%s\n", simulation_status_to_string().c_str());
         }
 
@@ -309,7 +309,7 @@ int main(int argc, char **argv) {
         sinuca_engine.global_clock();
     }
 
-    SINUCA_PRINTF("!Finished! - Cycle: %-12"PRIu64"", sinuca_engine.get_global_cycle() );
+    SINUCA_PRINTF("!Finished! - Cycle: %-12" PRIu64 "", sinuca_engine.get_global_cycle() );
     SINUCA_PRINTF("%s\n", simulation_status_to_string().c_str());
 
     sinuca_engine.global_print_configuration();

@@ -240,19 +240,19 @@ void opcode_package_t::opcode_to_trace_string(char *trace_string) {
 
     trace_string[0] = '\0';
     sprintf(trace_string, "%s", this->opcode_assembly);
-    sprintf(trace_string, "%s %"PRId32"", trace_string, this->opcode_operation);
-    sprintf(trace_string, "%s %"PRId64"", trace_string, this->opcode_address);
-    sprintf(trace_string, "%s %"PRId32"", trace_string, this->opcode_size);
+    sprintf(trace_string, "%s %" PRId32 "", trace_string, this->opcode_operation);
+    sprintf(trace_string, "%s %" PRId64 "", trace_string, this->opcode_address);
+    sprintf(trace_string, "%s %" PRId32 "", trace_string, this->opcode_size);
 
     register_string[0] = '\0';
     reg_count = 0;
     for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
         if (this->read_regs[i] >= 0) {
             reg_count++;
-            sprintf(register_string, "%s %"PRId32"", register_string, this->read_regs[i]);
+            sprintf(register_string, "%s %" PRId32 "", register_string, this->read_regs[i]);
         }
     }
-    sprintf(trace_string, "%s %"PRId32"", trace_string, reg_count);
+    sprintf(trace_string, "%s %" PRId32 "", trace_string, reg_count);
     sprintf(trace_string, "%s%s", trace_string, register_string);
 
 
@@ -261,15 +261,15 @@ void opcode_package_t::opcode_to_trace_string(char *trace_string) {
     for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
         if (this->write_regs[i] >= 0) {
             reg_count++;
-            sprintf(register_string, "%s %"PRId32"", register_string, this->write_regs[i]);
+            sprintf(register_string, "%s %" PRId32 "", register_string, this->write_regs[i]);
         }
     }
-    sprintf(trace_string, "%s %"PRId32"", trace_string, reg_count);
+    sprintf(trace_string, "%s %" PRId32 "", trace_string, reg_count);
     sprintf(trace_string, "%s%s", trace_string, register_string);
 
 
-    sprintf(trace_string, "%s %"PRId32"", trace_string, this->base_reg);
-    sprintf(trace_string, "%s %"PRId32"", trace_string, this->index_reg);
+    sprintf(trace_string, "%s %" PRId32 "", trace_string, this->base_reg);
+    sprintf(trace_string, "%s %" PRId32 "", trace_string, this->index_reg);
 
 
     register_string[0] = '\0';

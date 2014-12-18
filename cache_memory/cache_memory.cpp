@@ -142,45 +142,45 @@ void cache_memory_t::allocate() {
 // ============================================================================
 uint64_t cache_memory_t::get_fake_address(uint32_t index, uint32_t way){
     // ~ CACHE_DEBUG_PRINTF("index:%d way:%d\n", index, way);
-    // ~ CACHE_DEBUG_PRINTF("tag:%"PRIu64" index:%"PRIu64" bank:%"PRIu64" offset:%"PRIu64"\n", tag_bits_shift, index_bits_shift, bank_bits_shift, offset_bits_shift );
+    // ~ CACHE_DEBUG_PRINTF("tag:%" PRIu64 " index:%" PRIu64 " bank:%" PRIu64 " offset:%" PRIu64 "\n", tag_bits_shift, index_bits_shift, bank_bits_shift, offset_bits_shift );
 
 
     uint64_t final_address = 0;
     switch (this->get_address_mask_type()) {
         case CACHE_MASK_TAG_INDEX_BANK_OFFSET:
-            // ~ CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 " ->", final_address);
 
             final_address = (way << this->tag_bits_shift);
-            // ~ CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 " ->", final_address);
 
             final_address += (index << this->index_bits_shift);
-            // ~ CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 " ->", final_address);
 
             final_address += (this->get_bank_number() << this->bank_bits_shift);
-            // ~ CACHE_DEBUG_PRINTF("%"PRIu64"\n", final_address);
+            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 "\n", final_address);
         break;
 
         case CACHE_MASK_TAG_BANK_INDEX_OFFSET:
-            // ~ CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 " ->", final_address);
 
             final_address = (way << this->tag_bits_shift);
-            // ~ CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 " ->", final_address);
 
             final_address += (this->get_bank_number() << this->bank_bits_shift);
-            // ~ CACHE_DEBUG_PRINTF("%"PRIu64"\n", final_address);
+            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 "\n", final_address);
 
             final_address += (index << this->index_bits_shift);
-            // ~ CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 " ->", final_address);
         break;
 
         case CACHE_MASK_TAG_INDEX_OFFSET:
-            // ~ CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 " ->", final_address);
 
             final_address = (way << this->tag_bits_shift);
-            // ~ CACHE_DEBUG_PRINTF("%"PRIu64" ->", final_address);
+            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 " ->", final_address);
 
             final_address += (index << this->index_bits_shift);
-            // ~ CACHE_DEBUG_PRINTF("%"PRIu64"\n", final_address);
+            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 "\n", final_address);
         break;
     }
     ERROR_ASSERT_PRINTF(index == get_index(final_address), "Wrong Index into the Fake Address.\n")
@@ -313,7 +313,7 @@ void cache_memory_t::clock(uint32_t subcycle) {
                     /// Check for same_address
                     if (this->mshr_request_different_lines[same_line].valid &&
                     this->cmp_tag_index_bank(this->mshr_request_different_lines[same_line].memory_address, mshr_born_ordered[i]->memory_address)) {
-                        // ~ SINUCA_PRINTF("%d - REMOVING from DIFF - 0x%"PRIu64"  #%"PRIu64"\n", this->get_id(), mshr_born_ordered[i]->memory_address, mshr_request_different_lines[same_line].usage_counter)
+                        // ~ SINUCA_PRINTF("%d - REMOVING from DIFF - 0x%" PRIu64 "  #%" PRIu64 "\n", this->get_id(), mshr_born_ordered[i]->memory_address, mshr_request_different_lines[same_line].usage_counter)
                         ERROR_ASSERT_PRINTF(this->mshr_request_different_lines[same_line].usage_counter > 0, "Usage counter will become negative\n")
                         this->mshr_request_different_lines[same_line].usage_counter--;
                         if (this->mshr_request_different_lines[same_line].usage_counter == 0) {
@@ -454,9 +454,9 @@ void cache_memory_t::insert_mshr_born_ordered(memory_package_t* package){
         for (uint32_t i = 0; i < this->mshr_born_ordered.size(); i++){
             if (test_order > this->mshr_born_ordered[i]->born_cycle) {
                 for (uint32_t j = 0; j < this->mshr_born_ordered.size(); j++){
-                    CACHE_DEBUG_PRINTF("%"PRIu64" ", this->mshr_born_ordered[j]->born_cycle);
+                    CACHE_DEBUG_PRINTF("%" PRIu64 " ", this->mshr_born_ordered[j]->born_cycle);
                 }
-                ERROR_ASSERT_PRINTF(test_order > this->mshr_born_ordered[i]->born_cycle, "Wrong order when inserting (%"PRIu64")\n", package->born_cycle);
+                ERROR_ASSERT_PRINTF(test_order > this->mshr_born_ordered[i]->born_cycle, "Wrong order when inserting (%" PRIu64 ")\n", package->born_cycle);
             }
             test_order = this->mshr_born_ordered[i]->born_cycle;
         }

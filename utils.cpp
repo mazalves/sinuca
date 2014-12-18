@@ -50,7 +50,7 @@ uint64_t utils_t::get_power_of_two(uint64_t n) {
         return 0;
     }
 
-    ERROR_ASSERT_PRINTF(check_if_power_of_two(n), "Trying to get a log2 of a non power of two number %"PRIu64".\n", n);
+    ERROR_ASSERT_PRINTF(check_if_power_of_two(n), "Trying to get a log2 of a non power of two number %" PRIu64 ".\n", n);
     return log(n) / log(2);
 };
 
@@ -332,10 +332,10 @@ void utils_t::uint64_to_char(char *string, uint64_t input_int) {
     string[0] = '\0';
 
     if (input_int > 1000000000) {
-        sprintf(string , "%16"PRIu64"", input_int);
+        sprintf(string , "%16" PRIu64 "", input_int);
     }
     else {
-        sprintf(string , "%5"PRIu64"", input_int);
+        sprintf(string , "%5" PRIu64 "", input_int);
     }
 }
 
@@ -344,10 +344,10 @@ void utils_t::int64_to_char(char *string, int64_t input_int) {
     string[0] = '\0';
 
     if (input_int > 1000000000) {
-        sprintf(string , "%16"PRId64"", input_int);
+        sprintf(string , "%16" PRId64 "", input_int);
     }
     else {
-        sprintf(string , "%5"PRId64"", input_int);
+        sprintf(string , "%5" PRId64 "", input_int);
     }
 }
 
@@ -411,7 +411,7 @@ std::string utils_t::big_uint64_to_string(uint64_t input_int) {
     a[0] = '\0';
     std::string answer;
 
-    snprintf(a, sizeof(a), "%15"PRIu64"", input_int);
+    snprintf(a, sizeof(a), "%15" PRIu64 "", input_int);
     answer = a;
 
     return answer;
@@ -424,11 +424,11 @@ std::string utils_t::uint64_to_string(uint64_t input_int) {
     std::string answer;
 
     if (input_int > 1000000000) {
-        sprintf(a , "%14"PRIu64"", input_int);
+        sprintf(a , "%14" PRIu64 "", input_int);
         answer = a;
     }
     else {
-        sprintf(a , "%5"PRIu64"", input_int);
+        sprintf(a , "%5" PRIu64 "", input_int);
         answer = a;
     }
     return answer;
@@ -441,11 +441,11 @@ std::string utils_t::int64_to_string(int64_t input_int) {
     std::string answer = "";
 
     if (input_int > 1000000000) {
-        sprintf(a , "%14"PRId64"", input_int);
+        sprintf(a , "%14" PRId64 "", input_int);
         answer = a;
     }
     else {
-        sprintf(a , "%5"PRId64"", input_int);
+        sprintf(a , "%5" PRId64 "", input_int);
         answer = a;
     }
     return answer;

@@ -532,9 +532,9 @@ void memory_controller_t::insert_mshr_born_ordered(memory_package_t* package){
         for (uint32_t i = 0; i < this->mshr_born_ordered.size(); i++){
             if (test_order > this->mshr_born_ordered[i]->born_cycle) {
                 for (uint32_t j = 0; j < this->mshr_born_ordered.size(); j++){
-                    MEMORY_CONTROLLER_DEBUG_PRINTF("%"PRIu64" ", this->mshr_born_ordered[j]->born_cycle);
+                    MEMORY_CONTROLLER_DEBUG_PRINTF("%" PRIu64 " ", this->mshr_born_ordered[j]->born_cycle);
                 }
-                ERROR_ASSERT_PRINTF(test_order > this->mshr_born_ordered[i]->born_cycle, "Wrong order when inserting (%"PRIu64")\n", package->born_cycle);
+                ERROR_ASSERT_PRINTF(test_order > this->mshr_born_ordered[i]->born_cycle, "Wrong order when inserting (%" PRIu64 ")\n", package->born_cycle);
             }
             test_order = this->mshr_born_ordered[i]->born_cycle;
         }
@@ -554,7 +554,7 @@ int32_t memory_controller_t::allocate_request(memory_package_t* package){
     // =========================================================================
     #ifdef BURST_TRACE
         static char buffer[64] = "\0";
-        snprintf(buffer, sizeof(buffer), "%"PRIu64"\n", sinuca_engine.get_global_cycle());
+        snprintf(buffer, sizeof(buffer), "%" PRIu64 "\n", sinuca_engine.get_global_cycle());
         this->burst_rqst_file.write(buffer, strlen(buffer));
     #endif
 
@@ -576,7 +576,7 @@ int32_t memory_controller_t::allocate_writeback(memory_package_t* package){
     // =========================================================================
     #ifdef BURST_TRACE
         static char buffer[64] = "\0";
-        snprintf(buffer, sizeof(buffer), "%"PRIu64"\n", sinuca_engine.get_global_cycle());
+        snprintf(buffer, sizeof(buffer), "%" PRIu64 "\n", sinuca_engine.get_global_cycle());
         this->burst_wback_file.write(buffer, strlen(buffer));
     #endif
 
@@ -599,7 +599,7 @@ int32_t memory_controller_t::allocate_prefetch(memory_package_t* package){
     // =========================================================================
     #ifdef BURST_TRACE
         static char buffer[64] = "\0";
-        snprintf(buffer, sizeof(buffer), "%"PRIu64"\n", sinuca_engine.get_global_cycle());
+        snprintf(buffer, sizeof(buffer), "%" PRIu64 "\n", sinuca_engine.get_global_cycle());
         this->burst_pftch_file.write(buffer, strlen(buffer));
     #endif
 

@@ -1661,11 +1661,11 @@ void processor_t::solve_memory_dependency(memory_order_buffer_line_t *mob_line) 
                 mob_line->mem_deps_ptr_array[j]->memory_request.memory_size == mob_line->memory_request.memory_size) {
                     /// Solve the LOAD->LOAD and STORE->LOAD
 
-                    PROCESSOR_DEBUG_PRINTF("THIS: %s %"PRIu64" \t",
+                    PROCESSOR_DEBUG_PRINTF("THIS: %s %" PRIu64 " \t",
                                             mob_line->memory_request.memory_operation == MEMORY_OPERATION_READ ? "READ" : "WRITE",
                                             mob_line->memory_request.memory_address);
 
-                    PROCESSOR_DEBUG_PRINTF("SOLVES: %s %"PRIu64"\n",
+                    PROCESSOR_DEBUG_PRINTF("SOLVES: %s %" PRIu64 "\n",
                                             mob_line->mem_deps_ptr_array[j]->memory_request.memory_operation == MEMORY_OPERATION_READ ? "READ" : "WRITE",
                                             mob_line->mem_deps_ptr_array[j]->memory_request.memory_address);
 
@@ -1952,7 +1952,7 @@ void processor_t::remove_token_list(memory_package_t *package) {
 
 // ============================================================================
 void processor_t::print_structures() {
-    SINUCA_PRINTF("%s BRANCH_SOLVE_STAGE:%s  BRANCH_OPCODE_NUMBER:%"PRIu64"\n", this->get_label(), get_enum_processor_stage_char(this->branch_solve_stage), this->branch_opcode_number);
+    SINUCA_PRINTF("%s BRANCH_SOLVE_STAGE:%s  BRANCH_OPCODE_NUMBER:%" PRIu64 "\n", this->get_label(), get_enum_processor_stage_char(this->branch_solve_stage), this->branch_opcode_number);
     SINUCA_PRINTF("%s SYNC_STATUS:%s\n", this->get_label(), get_enum_sync_char(this->sync_status));
 
     SINUCA_PRINTF("%s FETCH_BUFFER SIZE:%d\n", this->get_label(), this->fetch_buffer.get_size());

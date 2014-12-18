@@ -249,7 +249,7 @@ void sinuca_engine_t::global_clock() {
 
     DEBUG_PRINTF("\n\n\n")
     DEBUG_PRINTF("========================================================================================================\n")
-    DEBUG_PRINTF("======================================== Sinuca_Cycle %"PRIu64"/%u ========================================\n\n\n", this->get_global_cycle(), sub_cycle)
+    DEBUG_PRINTF("======================================== Sinuca_Cycle %" PRIu64 "/%u ========================================\n\n\n", this->get_global_cycle(), sub_cycle)
 
     for (uint32_t i = 0 ; i < this->get_interconnection_interface_array_size() ; i++) {
         this->interconnection_interface_array[i]->clock(sub_cycle);
@@ -385,7 +385,7 @@ void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *o
 
 void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *obj_label, const char *variable_name, uint64_t value) {
     char buffer[TRACE_LINE_SIZE * 4] = "\0";
-    snprintf(buffer, sizeof(buffer), "%s.%s.%s:%"PRIu64"\n", obj_type, obj_label, variable_name, value);
+    snprintf(buffer, sizeof(buffer), "%s.%s.%s:%" PRIu64 "\n", obj_type, obj_label, variable_name, value);
     this->write_statistics(buffer);
 };
 

@@ -211,7 +211,7 @@ extern sinuca_engine_t sinuca_engine;
                                             SINUCA_PRINTF("ERROR INFORMATION\n");\
                                             SINUCA_PRINTF("ERROR: File: %s at Line: %u\n", __FILE__, __LINE__);\
                                             SINUCA_PRINTF("ERROR: Function: %s\n", __PRETTY_FUNCTION__);\
-                                            SINUCA_PRINTF("ERROR: Cycle: %"PRIu64"\n", sinuca_engine.get_global_cycle());\
+                                            SINUCA_PRINTF("ERROR: Cycle: %" PRIu64 "\n", sinuca_engine.get_global_cycle());\
                                         }
 
     #define ERROR_ASSERT_PRINTF(v, ...) if (!(v)) {\

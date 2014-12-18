@@ -1129,7 +1129,7 @@ bool directory_controller_t::coherence_evict_all() {
     this->add_stat_final_writeback_all_cycles();
 
     for (uint32_t level = 1; level <= this->max_cache_level; level++) {
-        DIRECTORY_CTRL_DEBUG_PRINTF("Level %"PRIu32" - ", level);
+        DIRECTORY_CTRL_DEBUG_PRINTF("Level %" PRIu32 " - ", level);
         /// Get pointers to all cache lines.
         for (uint32_t i = 0; i < sinuca_engine.get_cache_memory_array_size(); i++) {
             cache_memory_t *cache = sinuca_engine.cache_memory_array[i];
@@ -1144,7 +1144,7 @@ bool directory_controller_t::coherence_evict_all() {
                         all_clean = false;
                         memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
                         if (writeback_package != NULL) {
-                            DIRECTORY_CTRL_DEBUG_PRINTF("%s Evicted... %"PRIu32" x %"PRIu32" = %"PRIu64" \n", cache->get_label(), index, way , writeback_package->memory_address);
+                            DIRECTORY_CTRL_DEBUG_PRINTF("%s Evicted... %" PRIu32 " x %" PRIu32 " = %" PRIu64 " \n", cache->get_label(), index, way , writeback_package->memory_address);
                             /// Add statistics to the cache
                             cache->add_stat_final_writeback();
                             cache_line->status = PROTOCOL_STATUS_I;
