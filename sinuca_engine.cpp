@@ -531,6 +531,13 @@ void sinuca_engine_t::global_print_configuration() {
     this->write_statistics_value(get_type_component_label(), get_label(), "arg_trace_file_name", arg_trace_file_name);
     this->write_statistics_value(get_type_component_label(), get_label(), "arg_result_file_name", arg_result_file_name);
     this->write_statistics_value(get_type_component_label(), get_label(), "arg_warmup_instructions", arg_warmup_instructions);
+    this->write_statistics_value(get_type_component_label(), get_label(), "arg_default_core_mapping", arg_default_mapping);
+
+    char name[100];
+    for (uint32_t i = 0; i < sinuca_engine.get_processor_array_size(); i++) {
+        sprintf(name, "core_%u_runs_thread", i);
+        sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), name, sinuca_engine.thread_map[i]);
+    }
 
     this->write_statistics_small_separator();
     snprintf(comment, sizeof(comment), "Defines:");

@@ -362,9 +362,10 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 {
 
                     /// Check if some HIGHER LEVEL has the cache line
+                    ///*--------------------------*/ printf("\n %s \n FINDING %s:", directory_line->directory_line_to_string().c_str(), cache->get_label());
                     uint32_t sum_latency = 0;
                     cache->change_status(cache_line, this->find_cache_line_higher_levels(&sum_latency, cache, package->memory_address, true));
-
+                    ///*--------------------------*/ printf("final lat[%u]",sum_latency);
                     /// Higher Level Hit
                     if (this->coherence_is_hit(cache_line->status)) {
                         this->add_stat_cache_to_cache();
@@ -821,6 +822,7 @@ bool directory_controller_t::inclusiveness_new_eviction(cache_memory_t *cache, c
                 if (lower_level_cache->empty()) {
                     /// Check if some HIGHER LEVEL has the cache line Modified
                     uint32_t sum_latency = 0;
+                    ///*--------------------------*/ printf("\n EVICTING:");
                     cache->change_status(cache_line, this->find_cache_line_higher_levels(&sum_latency, cache, cache_line->tag, false));
 
                     /// Higher Level Hit
@@ -839,6 +841,7 @@ bool directory_controller_t::inclusiveness_new_eviction(cache_memory_t *cache, c
             case INCLUSIVENESS_INCLUSIVE_ALL: {
                 /// Check if some HIGHER LEVEL has the cache line Modified
                 uint32_t sum_latency = 0;
+                ///*--------------------------*/ printf("\n EVICTING:");
                 cache->change_status(cache_line, this->find_cache_line_higher_levels(&sum_latency, cache, cache_line->tag, false));
 
                 /// Higher Level Hit
@@ -976,12 +979,12 @@ protocol_status_t directory_controller_t::find_cache_line_higher_levels(uint32_t
             if (coherence_is_hit(return_status)) {
                 int32_t noc_latency = 0;
                 /// Latency to send a request
-                noc_latency = sinuca_engine.interconnection_controller->get_total_low_latency(this->get_id(), higher_cache->get_id());
+                noc_latency = sinuca_engine.interconnection_controller->get_total_low_latency(cache_memory->get_id(), higher_cache->get_id());
                 ERROR_ASSERT_PRINTF(noc_latency > 0, "Latency should be greater than zero");
                 *sum_latency += noc_latency;
 
                 /// Latency to obtain the data
-                noc_latency = sinuca_engine.interconnection_controller->get_total_high_latency(this->get_id(), higher_cache->get_id());
+                noc_latency = sinuca_engine.interconnection_controller->get_total_high_latency(cache_memory->get_id(), higher_cache->get_id());
                 ERROR_ASSERT_PRINTF(noc_latency > 0, "Latency should be greater than zero");
                 *sum_latency += noc_latency;
                 break;
@@ -1005,12 +1008,12 @@ protocol_status_t directory_controller_t::find_cache_line_higher_levels(uint32_t
             if (coherence_is_hit(return_status)) {
                 int32_t noc_latency = 0;
                 /// Latency to send a request
-                noc_latency = sinuca_engine.interconnection_controller->get_total_low_latency(this->get_id(), higher_cache->get_id());
+                noc_latency = sinuca_engine.interconnection_controller->get_total_low_latency(cache_memory->get_id(), higher_cache->get_id());
                 ERROR_ASSERT_PRINTF(noc_latency > 0, "Latency should be greater than zero");
                 *sum_latency += noc_latency;
 
                 /// Latency to obtain the data
-                noc_latency = sinuca_engine.interconnection_controller->get_total_high_latency(this->get_id(), higher_cache->get_id());
+                noc_latency = sinuca_engine.interconnection_controller->get_total_high_latency(cache_memory->get_id(), higher_cache->get_id());
                 ERROR_ASSERT_PRINTF(noc_latency > 0, "Latency should be greater than zero");
                 *sum_latency += noc_latency;
                 break;
@@ -1018,15 +1021,13 @@ protocol_status_t directory_controller_t::find_cache_line_higher_levels(uint32_t
         }
     }
 
-    /// Allocate in this level
+    /// Allocate also at this level
     if (cache_line != NULL && coherence_is_hit(return_status)) {
         switch (this->get_coherence_protocol_type()) {
             case COHERENCE_PROTOCOL_MOESI:
                 switch (cache_line->status) {
                     case PROTOCOL_STATUS_M:
                     case PROTOCOL_STATUS_O:
-                        /// This Level stays with a normal copy
-                        cache_memory->change_status(cache_line, PROTOCOL_STATUS_S);
                         /// Lower level becomes the owner
                         return_status = PROTOCOL_STATUS_O;
                     break;
@@ -1035,6 +1036,10 @@ protocol_status_t directory_controller_t::find_cache_line_higher_levels(uint32_t
                     case PROTOCOL_STATUS_S:
                     case PROTOCOL_STATUS_I:
                     break;
+
+                /// This Level stays with a normal copy
+                cache_memory->change_status(cache_line, PROTOCOL_STATUS_S);
+
                 }
             break;
         }
@@ -1043,6 +1048,7 @@ protocol_status_t directory_controller_t::find_cache_line_higher_levels(uint32_t
     /// Increment the latency if it is propagating a valid data
     if (coherence_is_hit(return_status)) {// && !check_llc) {
         DIRECTORY_CTRL_DEBUG_PRINTF("C2C:%s -> ", cache_memory->get_label());
+        ///*--------------------------------*/ printf("C2C:%s(%u) total=(%u) -> ", cache_memory->get_label(), cache_memory->get_penalty_read(), *sum_latency);
         *sum_latency += cache_memory->get_penalty_read();
     }
 

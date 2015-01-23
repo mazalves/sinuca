@@ -54,6 +54,7 @@ static void process_argv(int argc, char **argv) {
     sinuca_engine.arg_result_file_name = NULL;
     sinuca_engine.arg_warmup_instructions = 0;
     sinuca_engine.arg_graph_file_name = NULL;
+    sinuca_engine.arg_default_mapping = true;
 
     // Should start using Getopt
 
@@ -100,6 +101,7 @@ static void process_argv(int argc, char **argv) {
             }
         }
         else if (strcmp(*argv, "-map") == 0) {
+            sinuca_engine.arg_default_mapping = false;
             argc--;
             argv++;
             char * pch;
@@ -140,7 +142,7 @@ static void process_argv(int argc, char **argv) {
     SINUCA_PRINTF("RESULT FILE:        %s\n", sinuca_engine.arg_result_file_name        != NULL ? sinuca_engine.arg_result_file_name        : "MISSING");
     SINUCA_PRINTF("WARM-UP OPCODES:    %u\n", sinuca_engine.arg_warmup_instructions);
     SINUCA_PRINTF("GRAPH FILE:         %s\n", sinuca_engine.arg_graph_file_name         != NULL ? sinuca_engine.arg_graph_file_name        : "MISSING");
-    SINUCA_PRINTF("MAP:                %s\n", core_map == 0 ? "DEFAULT" : "USER DEFINED");
+    SINUCA_PRINTF("MAP:                %s\n", sinuca_engine.arg_default_mapping ? "DEFAULT" : "USER DEFINED");
     for (uint32_t i=0; i<core_map; i++) {
         SINUCA_PRINTF("\t Trace[%" PRIu32 "] -> Core[%" PRIu32 "]\n", sinuca_engine.thread_map[i], i);
     }
