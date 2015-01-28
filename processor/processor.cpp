@@ -610,9 +610,11 @@ void processor_t::stage_fetch() {
         else {
             int32_t transmission_latency = this->send_instruction_package(&this->fetch_buffer[pos_buffer]);
             if (transmission_latency != POSITION_FAIL) {  /// Try to send to the IC.
+                PROCESSOR_DEBUG_PRINTF("\t REQUESTING THE INSTRUCTION (WAIT)\n");
                 fetch_buffer[pos_buffer].package_wait(transmission_latency);
             }
             else {  /// Inst. Cache cannot receive, stall the fetch for one cycle.
+                PROCESSOR_DEBUG_PRINTF("\t COULD NOT REQUEST THE INSTRUCTION (-)\n");
                 break;
             }
         }

@@ -440,6 +440,7 @@ void trace_reader_t::generate_static_dict() {
         }
         else {                                                  /// If Inside BBL
             NewOpcode.trace_string_to_opcode(this->line_static);
+            ERROR_ASSERT_PRINTF(NewOpcode.opcode_address != 0, "Static trace file generating opcode address equal to zero.\n")
             this->static_dict[BBL][opcode++] = NewOpcode;                 /// Save the new opcode
         }
     }

@@ -258,7 +258,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 // =============================================================
                 // Line Usage Prediction
                 if (coherence_is_dirty(cache_line->status) && cache->line_usage_predictor->check_line_is_last_write(cache, cache_line, index, way)) {
+
                     memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
+
                     if (writeback_package != NULL) {
                         DIRECTORY_CTRL_DEBUG_PRINTF("\t Early Writeback cache_id:%u, package:%s\n", cache->get_id(), writeback_package->content_to_string().c_str())
                         /// Add statistics to the cache
@@ -1036,19 +1038,18 @@ protocol_status_t directory_controller_t::find_cache_line_higher_levels(uint32_t
                     case PROTOCOL_STATUS_S:
                     case PROTOCOL_STATUS_I:
                     break;
+                }
 
                 /// This Level stays with a normal copy
                 cache_memory->change_status(cache_line, PROTOCOL_STATUS_S);
 
-                }
             break;
         }
     }
 
     /// Increment the latency if it is propagating a valid data
-    if (coherence_is_hit(return_status)) {// && !check_llc) {
+    if (coherence_is_hit(return_status)) {
         DIRECTORY_CTRL_DEBUG_PRINTF("C2C:%s -> ", cache_memory->get_label());
-        ///*--------------------------------*/ printf("C2C:%s(%u) total=(%u) -> ", cache_memory->get_label(), cache_memory->get_penalty_read(), *sum_latency);
         *sum_latency += cache_memory->get_penalty_read();
     }
 

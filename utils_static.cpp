@@ -49,8 +49,8 @@ uint64_t utils_t::get_power_of_two(uint64_t n) {
 };
 
 // =============================================================================
-uint8_t utils_t::check_if_power_of_two(uint64_t n) {
-    uint8_t i, count = 0;
+uint32_t utils_t::check_if_power_of_two(uint64_t n) {
+    uint32_t i, count = 0;
     uint64_t pow;
 
     for (i = 0; i < 64 && n != 0 ; i++) {
