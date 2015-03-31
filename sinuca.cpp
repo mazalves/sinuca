@@ -143,7 +143,7 @@ static void process_argv(int argc, char **argv) {
     SINUCA_PRINTF("WARM-UP OPCODES:    %u\n", sinuca_engine.arg_warmup_instructions);
     SINUCA_PRINTF("GRAPH FILE:         %s\n", sinuca_engine.arg_graph_file_name         != NULL ? sinuca_engine.arg_graph_file_name        : "MISSING");
     SINUCA_PRINTF("MAP:                %s\n", sinuca_engine.arg_default_mapping ? "DEFAULT" : "USER DEFINED");
-    for (uint32_t i=0; i<core_map; i++) {
+    for (uint32_t i = 0; i < core_map; i++) {
         SINUCA_PRINTF("\t Trace[%" PRIu32 "] -> Core[%" PRIu32 "]\n", sinuca_engine.thread_map[i], i);
     }
 
@@ -253,7 +253,7 @@ int main(int argc, char **argv) {
 
     sinuca_engine.initialize();
 
-
+    ERROR_ASSERT_PRINTF(sinuca_engine.get_processor_array_size() <= MAX_CORES, "Configuration has more processors than supported (MAX_CORES).\n")
     sinuca_engine.is_processor_trace_eof = utils_t::template_allocate_initialize_array<bool>(sinuca_engine.get_processor_array_size(), false);
     sinuca_engine.trace_reader->allocate(sinuca_engine.arg_trace_file_name, sinuca_engine.get_processor_array_size());
 

@@ -311,7 +311,8 @@ void trace_reader_t::trace_next_memory(uint32_t cpuid) {
     while (!valid_memory) {
 
         ERROR_ASSERT_PRINTF(!gzeof(this->gzDynamicTraceFile[cpuid]), "MemoryTraceFile EOF - cpu id %d\n", cpuid);
-        gzgets(this->gzMemoryTraceFile[cpuid], this->line_memory[cpuid], TRACE_LINE_SIZE);
+        char *buffer = gzgets(this->gzMemoryTraceFile[cpuid], this->line_memory[cpuid], TRACE_LINE_SIZE);
+        ERROR_ASSERT_PRINTF(buffer != NULL, "MemoryTraceFile EOF - cpu id %d\n", cpuid);
 
         if (strlen(this->line_memory[cpuid]) != 0 && this->line_memory[cpuid][0] != '#') {
             valid_memory = true;

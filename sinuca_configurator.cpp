@@ -1292,20 +1292,26 @@ void sinuca_engine_t::initialize_memory_controller() {
             this->memory_controller_array[i]->set_interconnection_width(cfg_memory_controller[ memory_controller_parameters.back() ]);
 
             memory_controller_parameters.push_back("ADDRESS_MASK");
-            if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE") ==  0) {
-                this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE);
+            if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ],      "ROW_BANK_COLROW_COLBYTE") ==  0) {
+                this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_COLBYTE);
             }
             else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_CHANNEL_COLROW_COLBYTE") ==  0) {
                 this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLROW_COLBYTE);
             }
+            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE") ==  0) {
+                this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE);
+            }
             else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_COLROW_CHANNEL_COLBYTE") ==  0) {
                 this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CHANNEL_COLBYTE);
             }
+            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_COLROW_CTRL_CHANNEL_COLBYTE") ==  0) {
+                this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CTRL_CHANNEL_COLBYTE);
+            }
+            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_CTRL_BANK_COLROW_COLBYTE") ==  0) {
+                this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_CTRL_BANK_COLROW_COLBYTE);
+            }
             else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_COLROW_BANK_CHANNEL_COLBYTE") ==  0) {
                 this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_COLROW_BANK_CHANNEL_COLBYTE);
-            }
-            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_COLROW_COLBYTE") ==  0) {
-                this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_COLBYTE);
             }
             else {
                 ERROR_PRINTF("MAIN MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_memory_controller[ memory_controller_parameters.back() ].c_str(), memory_controller_parameters.back());
@@ -1431,6 +1437,19 @@ void sinuca_engine_t::initialize_memory_controller() {
 
             memory_controller_parameters.push_back("TIMING_WTR");
             this->memory_controller_array[i]->set_timing_wtr(cfg_memory_controller[ memory_controller_parameters.back() ]);
+
+            // MVX
+            memory_controller_parameters.push_back("MVX_LATENCY_SIMPLE_OP");
+            this->memory_controller_array[i]->set_mvx_latency_simple_op(cfg_memory_controller[ memory_controller_parameters.back() ]);
+
+            memory_controller_parameters.push_back("MVX_LATENCY_COMPLEX_OP");
+            this->memory_controller_array[i]->set_mvx_latency_complex_op(cfg_memory_controller[ memory_controller_parameters.back() ]);
+
+            memory_controller_parameters.push_back("MVX_LATENCY_BUS");
+            this->memory_controller_array[i]->set_mvx_latency_bus(cfg_memory_controller[ memory_controller_parameters.back() ]);
+
+            memory_controller_parameters.push_back("MVX_OPERATION_SIZE");
+            this->memory_controller_array[i]->set_mvx_operation_size(cfg_memory_controller[ memory_controller_parameters.back() ]);
 
 
             this->memory_controller_array[i]->set_max_ports(1);

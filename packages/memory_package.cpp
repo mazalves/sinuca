@@ -239,14 +239,14 @@ std::string memory_package_t::content_to_string() {
         }
     }
     /// line_status
-    content_string = content_string + "\n\t SubBlocks:";
-    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        if (i % 8 == 0) {
-            content_string = content_string + " | ";
-        }
-        content_string = content_string + utils_t::bool_to_string(this->sub_blocks[i]);
-    }
-    content_string = content_string + "|";
+    // ~ content_string = content_string + "\n\t SubBlocks:";
+    // ~ for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
+        // ~ if (i % 8 == 0) {
+            // ~ content_string = content_string + " | ";
+        // ~ }
+        // ~ content_string = content_string + utils_t::bool_to_string(this->sub_blocks[i]);
+    // ~ }
+    // ~ content_string = content_string + "|";
     return content_string;
 };
 

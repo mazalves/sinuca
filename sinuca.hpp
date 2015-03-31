@@ -36,6 +36,8 @@
 #include <inttypes.h>
 #include <stdint.h>
 #include <signal.h>
+#include <execinfo.h>
+#include <cxxabi.h>
 
 /// C++ Includes
 #include <ctime>
@@ -150,7 +152,7 @@ extern sinuca_engine_t sinuca_engine;
 #define MAX_UOP_DECODED 5       /// processor_t (Max number of uops from one opcode)
 #define MAX_REGISTERS 6         /// opcode_package_t uop_package_t  (Max number of register (read or write) for one opcode/uop)
 #define MAX_ASSEMBLY_SIZE 32    /// In general 20 is enough
-#define MAX_CORES 32            /// Define the max number of cores for the map
+#define MAX_CORES 128            /// Define the max number of cores for the map
 
 #define POSITION_FAIL -1        /// FAIL when return is int32_t
 #define FAIL 0                  /// FAIL when return is uint32_t
@@ -168,7 +170,7 @@ extern sinuca_engine_t sinuca_engine;
 // ~ #define SINUCA_DEBUG
 #ifdef SINUCA_DEBUG
     // ~ #define CONFIGURATOR_DEBUG
-    #define TRACE_READER_DEBUG
+    // ~ #define TRACE_READER_DEBUG
     // ~ #define TRACE_GENERATOR_DEBUG
     // ~ #define PROCESSOR_DEBUG
     // ~ #define SYNC_DEBUG
@@ -212,7 +214,37 @@ extern sinuca_engine_t sinuca_engine;
                                             SINUCA_PRINTF("ERROR: File: %s at Line: %u\n", __FILE__, __LINE__);\
                                             SINUCA_PRINTF("ERROR: Function: %s\n", __PRETTY_FUNCTION__);\
                                             SINUCA_PRINTF("ERROR: Cycle: %" PRIu64 "\n", sinuca_engine.get_global_cycle());\
+                                            void* stack_ptrs[20]; \
+                                            int stack_count = backtrace(stack_ptrs, 20); \
+                                            SINUCA_PRINTF("\n");\
+                                            SINUCA_PRINTF("ERROR: Stack size:%d\n", stack_count); \
+                                            char** stack_funcNames = backtrace_symbols(stack_ptrs, stack_count);\
+                                            for( int stack_it = 0; stack_it < stack_count; stack_it++ ) { \
+                                                char *mangled_name = 0, *offset_begin = 0, *offset_end = 0;\
+                                                for (char *p = stack_funcNames[stack_it]; *p; ++p) {\
+                                                    if (*p == '(') {        mangled_name = p;       }\
+                                                    else if (*p == '+'){    offset_begin = p;       }\
+                                                    else if (*p == ')'){    offset_end = p; break;  }\
+                                                }\
+                                                if (mangled_name && offset_begin && offset_end && mangled_name < offset_begin) {\
+                                                    *mangled_name++ = '\0';\
+                                                    *offset_begin++ = '\0';\
+                                                    *offset_end++ = '\0';\
+                                                }\
+                                                int status;\
+                                                char * real_name = abi::__cxa_demangle(mangled_name, 0, 0, &status);\
+                                                if (status == 0) {SINUCA_PRINTF("ERROR: Call(%d):%s\n", stack_it, real_name); }\
+                                                else { SINUCA_PRINTF("ERROR: Call(%d):%s\n", stack_it, mangled_name); }\
+                                            }\
+                                            SINUCA_PRINTF("\n");\
+                                            free(stack_funcNames); \
                                         }
+
+
+
+
+
+
 
     #define ERROR_ASSERT_PRINTF(v, ...) if (!(v)) {\
                                             ERROR_INFORMATION();\

@@ -49,7 +49,16 @@ enum instruction_operation_t {
     /// NOT IDENTIFIED
     INSTRUCTION_OPERATION_OTHER,
     /// SYNCHRONIZATION
-    INSTRUCTION_OPERATION_BARRIER
+    INSTRUCTION_OPERATION_BARRIER,
+    /// MVX
+    INSTRUCTION_OPERATION_MVX_LOCK,
+    INSTRUCTION_OPERATION_MVX_UNLOCK,
+
+    INSTRUCTION_OPERATION_MVX_LOAD,
+    INSTRUCTION_OPERATION_MVX_STORE,
+
+    INSTRUCTION_OPERATION_MVX_SIMPLEOP,
+    INSTRUCTION_OPERATION_MVX_COMPLEXOP
 };
 const char* get_enum_instruction_operation_char(instruction_operation_t type);
 
@@ -60,7 +69,16 @@ enum memory_operation_t {
     MEMORY_OPERATION_READ,
     MEMORY_OPERATION_WRITE,
     MEMORY_OPERATION_PREFETCH,
-    MEMORY_OPERATION_WRITEBACK
+    MEMORY_OPERATION_WRITEBACK,
+
+    MEMORY_OPERATION_MVX_LOCK,
+    MEMORY_OPERATION_MVX_UNLOCK,
+
+    MEMORY_OPERATION_MVX_LOAD,
+    MEMORY_OPERATION_MVX_STORE,
+
+    MEMORY_OPERATION_MVX_SIMPLEOP,
+    MEMORY_OPERATION_MVX_COMPLEXOP
 };
 const char *get_enum_memory_operation_char(memory_operation_t type);
 
@@ -272,9 +290,11 @@ const char *get_enum_cache_mask_char(cache_mask_t type);
 enum memory_controller_mask_t {
     MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_COLBYTE,
     MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLROW_COLBYTE,
+    MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE,
     MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CHANNEL_COLBYTE,
-    MEMORY_CONTROLLER_MASK_ROW_COLROW_BANK_CHANNEL_COLBYTE,
-    MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE
+    MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CTRL_CHANNEL_COLBYTE,
+    MEMORY_CONTROLLER_MASK_ROW_CTRL_BANK_COLROW_COLBYTE,
+    MEMORY_CONTROLLER_MASK_ROW_COLROW_BANK_CHANNEL_COLBYTE
 };
 const char *get_enum_memory_controller_mask_char(memory_controller_mask_t type);
 
@@ -328,7 +348,13 @@ enum line_sub_block_t {
 };
 const char *get_enum_line_sub_block_t_char(line_sub_block_t type);
 
-
+// ============================================================================
+/// Enumerates the MVX state
+enum mvx_state_t {
+    MVX_STATE_LOCK,
+    MVX_STATE_UNLOCK
+};
+const char *get_enum_mvx_state_t_char(mvx_state_t type);
 
 
 #endif  // _SINUCA_ENUMERATOR_HPP_

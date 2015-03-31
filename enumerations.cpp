@@ -27,7 +27,6 @@
 /// Enumerates the INSTRUCTION (Opcode and Uop) operation type
 const char* get_enum_instruction_operation_char(instruction_operation_t type) {
     switch (type) {
-        case INSTRUCTION_OPERATION_NOP:         return "OP_NOP   "; break;
         // ====================================================================
         /// INTEGERS
         case INSTRUCTION_OPERATION_INT_ALU:     return "OP_IN_ALU"; break;
@@ -46,11 +45,22 @@ const char* get_enum_instruction_operation_char(instruction_operation_t type) {
         case INSTRUCTION_OPERATION_MEM_LOAD:    return "OP_LOAD  "; break;
         case INSTRUCTION_OPERATION_MEM_STORE:   return "OP_STORE "; break;
         // ====================================================================
-        /// NOT IDENTIFIED
+        /// NOP or NOT IDENTIFIED
+        case INSTRUCTION_OPERATION_NOP:         return "OP_NOP   "; break;
         case INSTRUCTION_OPERATION_OTHER:       return "OP_OTHER "; break;
         // ====================================================================
         /// SYNCHRONIZATION
         case INSTRUCTION_OPERATION_BARRIER:     return "OP_BARRIER"; break;
+        // ====================================================================
+        /// MVX
+        case INSTRUCTION_OPERATION_MVX_LOCK:      return "OP_MVX_LK"; break;
+        case INSTRUCTION_OPERATION_MVX_UNLOCK:    return "OP_MVX_UNLK"; break;
+
+        case INSTRUCTION_OPERATION_MVX_LOAD:      return "OP_MVX_LD"; break;
+        case INSTRUCTION_OPERATION_MVX_STORE:     return "OP_MVX_ST"; break;
+
+        case INSTRUCTION_OPERATION_MVX_SIMPLEOP:  return "OP_MVX_SOP"; break;
+        case INSTRUCTION_OPERATION_MVX_COMPLEXOP: return "OP_MVX_COP"; break;
     };
     ERROR_PRINTF("Wrong INSTRUCTION_OPERATION\n");
     return "FAIL";
@@ -64,7 +74,17 @@ const char* get_enum_memory_operation_char(memory_operation_t type) {
         case MEMORY_OPERATION_READ:         return "READ "; break;
         case MEMORY_OPERATION_PREFETCH:     return "PFTCH"; break;
         case MEMORY_OPERATION_WRITE:        return "WRITE"; break;
-        case MEMORY_OPERATION_WRITEBACK:     return "COPYB"; break;
+        case MEMORY_OPERATION_WRITEBACK:    return "WBACK"; break;
+
+        case MEMORY_OPERATION_MVX_LOCK:         return "MVX_LK"; break;
+        case MEMORY_OPERATION_MVX_UNLOCK:       return "MVX_UNLK"; break;
+
+        case MEMORY_OPERATION_MVX_LOAD:         return "MVX_LD"; break;
+        case MEMORY_OPERATION_MVX_STORE:        return "MVX_ST"; break;
+
+        case MEMORY_OPERATION_MVX_SIMPLEOP:     return "MVX_SOP"; break;
+        case MEMORY_OPERATION_MVX_COMPLEXOP:    return "MVX_COP"; break;
+
         // ====================================================================
     };
     ERROR_PRINTF("Wrong MEMORY_OPERATION\n");
@@ -341,9 +361,11 @@ const char *get_enum_memory_controller_mask_char(memory_controller_mask_t type) 
     switch (type) {
         case MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_COLBYTE:              return "ROW_BANK_COLROW_COLBYTE"; break;
         case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLROW_COLBYTE:      return "ROW_BANK_CHANNEL_COLROW_COLBYTE"; break;
-        case MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CHANNEL_COLBYTE:      return "ROW_BANK_COLROW_CHANNEL_COLBYTE"; break;
-        case MEMORY_CONTROLLER_MASK_ROW_COLROW_BANK_CHANNEL_COLBYTE:      return "ROW_COLROW_BANK_CHANNEL_COLBYTE"; break;
         case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE: return "ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE"; break;
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CHANNEL_COLBYTE:      return "ROW_BANK_COLROW_CHANNEL_COLBYTE"; break;
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CTRL_CHANNEL_COLBYTE: return "ROW_BANK_COLROW_CTRL_CHANNEL_COLBYTE"; break;
+        case MEMORY_CONTROLLER_MASK_ROW_CTRL_BANK_COLROW_COLBYTE:        return "ROW_CTRL_BANK_COLROW_COLBYTE,"; break;
+        case MEMORY_CONTROLLER_MASK_ROW_COLROW_BANK_CHANNEL_COLBYTE:      return "ROW_COLROW_BANK_CHANNEL_COLBYTE"; break;
     };
     ERROR_PRINTF("Wrong MEMORY_CONTROLLER_MASK\n");
     return "FAIL";
@@ -412,5 +434,16 @@ const char *get_enum_line_sub_block_t_char(line_sub_block_t type) {
         case LINE_SUB_BLOCK_WRITEBACK:      return "WRITEBACK";    break;
     };
     ERROR_PRINTF("Wrong LINE_SUB_BLOCK\n");
+    return "FAIL";
+};
+
+// ============================================================================
+/// Enumerates the MVX state
+const char *get_enum_mvx_state_t_char(mvx_state_t type) {
+    switch (type) {
+        case MVX_STATE_LOCK:           return "LOCK";     break;
+        case MVX_STATE_UNLOCK:         return "UNLOCK";      break;
+    };
+    ERROR_PRINTF("Wrong MVX_STATE\n");
     return "FAIL";
 };

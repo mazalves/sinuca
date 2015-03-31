@@ -92,6 +92,8 @@ void memory_controller_t::allocate() {
     ERROR_ASSERT_PRINTF(mshr_buffer_writeback_reserved_size > 0, "mshr_buffer_writeback_reserved_size should be bigger than zero.\n");
     ERROR_ASSERT_PRINTF(mshr_buffer_prefetch_reserved_size > 0, "mshr_buffer_prefetch_reserved_size should be bigger than zero.\n");
 
+    ERROR_ASSERT_PRINTF(mvx_operation_size <= bank_row_buffer_size, "MVX does not support operations bigger than the RowBufferSize.\n");
+
 
     /// MSHR = [    REQUEST    | WRITEBACK | PREFETCH ]
     this->mshr_buffer_size = this->mshr_buffer_request_reserved_size +
@@ -133,6 +135,11 @@ void memory_controller_t::allocate() {
         this->channels[i].timing_rtp = ceil(this->timing_rtp * this->core_to_bus_clock_ratio);
         this->channels[i].timing_wr = ceil(this->timing_wr * this->core_to_bus_clock_ratio);
         this->channels[i].timing_wtr = ceil(this->timing_wtr * this->core_to_bus_clock_ratio);
+
+        // MVX
+        this->channels[i].mvx_latency_simple_op = ceil(this->mvx_latency_simple_op * this->core_to_bus_clock_ratio);
+        this->channels[i].mvx_latency_complex_op = ceil(this->mvx_latency_complex_op * this->core_to_bus_clock_ratio);
+        this->channels[i].mvx_latency_bus = ceil(this->mvx_latency_bus * this->core_to_bus_clock_ratio);
 
         /// Copy the masks
         this->channels[i].not_column_bits_mask = this->not_column_bits_mask;
@@ -198,21 +205,19 @@ void memory_controller_t::set_masks() {
     this->bank_bits_mask = 0;
     this->row_bits_mask = 0;
 
+
     switch (this->get_address_mask_type()) {
-        case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE:
-            ERROR_ASSERT_PRINTF(this->get_total_controllers() > 1 &&
-                                utils_t::check_if_power_of_two(this->get_total_controllers()),
-                                "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
-            ERROR_ASSERT_PRINTF(this->get_channels_per_controller() > 1 &&
-                                utils_t::check_if_power_of_two(this->get_channels_per_controller()),
-                                "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_COLBYTE:
+            ERROR_ASSERT_PRINTF(this->get_total_controllers() == 1, "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
+            ERROR_ASSERT_PRINTF(this->get_channels_per_controller() == 1, "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
+
+            this->controller_bits_shift = 0;
+            this->channel_bits_shift = 0;
 
             this->colbyte_bits_shift = 0;
             this->colrow_bits_shift = utils_t::get_power_of_two(this->get_line_size());
-            this->controller_bits_shift = utils_t::get_power_of_two(this->get_bank_row_buffer_size());
-            this->channel_bits_shift = this->controller_bits_shift + utils_t::get_power_of_two(this->get_total_controllers());
-            this->bank_bits_shift = this->channel_bits_shift + utils_t::get_power_of_two(this->get_channels_per_controller());
-            this->row_bits_shift = this->bank_bits_shift + utils_t::get_power_of_two(this->get_bank_per_channel());
+            this->bank_bits_shift = utils_t::get_power_of_two(this->get_bank_row_buffer_size());
+            this->row_bits_shift = bank_bits_shift + utils_t::get_power_of_two(this->get_bank_per_channel());
 
             /// COLBYTE MASK
             for (i = 0; i < utils_t::get_power_of_two(this->get_line_size()); i++) {
@@ -225,16 +230,6 @@ void memory_controller_t::set_masks() {
             }
 
             this->not_column_bits_mask = ~(colbyte_bits_mask | colrow_bits_mask);
-
-            /// CONTROLLER MASK
-            for (i = 0; i < utils_t::get_power_of_two(this->get_total_controllers()); i++) {
-                this->controller_bits_mask |= 1 << (i + controller_bits_shift);
-            }
-
-            /// CHANNEL MASK
-            for (i = 0; i < utils_t::get_power_of_two(this->get_channels_per_controller()); i++) {
-                this->channel_bits_mask |= 1 << (i + channel_bits_shift);
-            }
 
             /// BANK MASK
             for (i = 0; i < utils_t::get_power_of_two(this->get_bank_per_channel()); i++) {
@@ -272,6 +267,55 @@ void memory_controller_t::set_masks() {
             }
 
             this->not_column_bits_mask = ~(colbyte_bits_mask | colrow_bits_mask);
+
+            /// CHANNEL MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_channels_per_controller()); i++) {
+                this->channel_bits_mask |= 1 << (i + channel_bits_shift);
+            }
+
+            /// BANK MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_per_channel()); i++) {
+                this->bank_bits_mask |= 1 << (i + bank_bits_shift);
+            }
+
+            /// ROW MASK
+            for (i = row_bits_shift; i < utils_t::get_power_of_two((uint64_t)INT64_MAX+1); i++) {
+                this->row_bits_mask |= 1 << i;
+            }
+        break;
+
+
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE:
+            ERROR_ASSERT_PRINTF(this->get_total_controllers() > 1 &&
+                                utils_t::check_if_power_of_two(this->get_total_controllers()),
+                                "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
+            ERROR_ASSERT_PRINTF(this->get_channels_per_controller() > 1 &&
+                                utils_t::check_if_power_of_two(this->get_channels_per_controller()),
+                                "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
+
+            this->colbyte_bits_shift = 0;
+            this->colrow_bits_shift = utils_t::get_power_of_two(this->get_line_size());
+            this->controller_bits_shift = utils_t::get_power_of_two(this->get_bank_row_buffer_size());
+            this->channel_bits_shift = this->controller_bits_shift + utils_t::get_power_of_two(this->get_total_controllers());
+            this->bank_bits_shift = this->channel_bits_shift + utils_t::get_power_of_two(this->get_channels_per_controller());
+            this->row_bits_shift = this->bank_bits_shift + utils_t::get_power_of_two(this->get_bank_per_channel());
+
+            /// COLBYTE MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_line_size()); i++) {
+                this->colbyte_bits_mask |= 1 << (i + this->colbyte_bits_shift);
+            }
+
+            /// COLROW MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_row_buffer_size()) - this->colrow_bits_shift; i++) {
+                this->colrow_bits_mask |= 1 << (i + this->colrow_bits_shift);
+            }
+
+            this->not_column_bits_mask = ~(colbyte_bits_mask | colrow_bits_mask);
+
+            /// CONTROLLER MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_total_controllers()); i++) {
+                this->controller_bits_mask |= 1 << (i + controller_bits_shift);
+            }
 
             /// CHANNEL MASK
             for (i = 0; i < utils_t::get_power_of_two(this->get_channels_per_controller()); i++) {
@@ -332,6 +376,101 @@ void memory_controller_t::set_masks() {
             }
         break;
 
+
+        case MEMORY_CONTROLLER_MASK_ROW_CTRL_BANK_COLROW_COLBYTE:
+            ERROR_ASSERT_PRINTF(this->get_channels_per_controller() == 1,
+                                "Wrong number of channels_per_controller (%u).\n", this->get_channels_per_controller());
+            ERROR_ASSERT_PRINTF(this->get_total_controllers() > 1 &&
+                                utils_t::check_if_power_of_two(this->get_total_controllers()),
+                                "Wrong number of memory_channels (%u).\n", this->get_total_controllers());
+
+            this->channel_bits_shift = 0;
+            this->colbyte_bits_shift = 0;
+            this->colrow_bits_shift = utils_t::get_power_of_two(this->get_line_size());
+            this->bank_bits_shift =  this->colrow_bits_shift + utils_t::get_power_of_two(this->get_bank_row_buffer_size() / this->get_line_size());
+            this->controller_bits_shift = this->bank_bits_shift + utils_t::get_power_of_two(this->get_bank_per_channel());
+            this->row_bits_shift = this->controller_bits_shift + utils_t::get_power_of_two(this->get_total_controllers());
+
+            /// COLBYTE MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_line_size()); i++) {
+                this->colbyte_bits_mask |= 1 << (i + this->colbyte_bits_shift);
+            }
+
+            /// COLROW MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_row_buffer_size() / this->get_line_size()); i++) {
+                this->colrow_bits_mask |= 1 << (i + this->colrow_bits_shift);
+            }
+            this->not_column_bits_mask = ~(colbyte_bits_mask | colrow_bits_mask);
+
+            /// BANK MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_per_channel()); i++) {
+                this->bank_bits_mask |= 1 << (i + bank_bits_shift);
+            }
+
+            /// CONTROLLER MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_total_controllers()); i++) {
+                this->controller_bits_mask |= 1 << (i + controller_bits_shift);
+            }
+
+            /// ROW MASK
+            for (i = row_bits_shift; i < utils_t::get_power_of_two((uint64_t)INT64_MAX+1); i++) {
+                this->row_bits_mask |= 1 << i;
+            }
+        break;
+
+
+
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CTRL_CHANNEL_COLBYTE:
+            ERROR_ASSERT_PRINTF(this->get_total_controllers() > 1 &&
+                                utils_t::check_if_power_of_two(this->get_total_controllers()),
+                                "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
+            ERROR_ASSERT_PRINTF(this->get_channels_per_controller() > 1 &&
+                                utils_t::check_if_power_of_two(this->get_channels_per_controller()),
+                                "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
+
+            this->colbyte_bits_shift = 0;
+            this->channel_bits_shift = utils_t::get_power_of_two(this->get_line_size());
+            this->controller_bits_shift = this->channel_bits_shift + utils_t::get_power_of_two(this->get_channels_per_controller());
+            this->colrow_bits_shift = this->controller_bits_shift + utils_t::get_power_of_two(this->get_total_controllers());
+            this->bank_bits_shift = this->colrow_bits_shift + utils_t::get_power_of_two(this->get_bank_row_buffer_size() / this->get_line_size());
+            this->row_bits_shift = this->bank_bits_shift + utils_t::get_power_of_two(this->get_bank_per_channel());
+
+            /// COLBYTE MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_line_size()); i++) {
+                this->colbyte_bits_mask |= 1 << (i + this->colbyte_bits_shift);
+            }
+
+            /// CHANNEL MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_channels_per_controller()); i++) {
+                this->channel_bits_mask |= 1 << (i + channel_bits_shift);
+            }
+
+            /// CONTROLLER MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_total_controllers()); i++) {
+                this->controller_bits_mask |= 1 << (i + controller_bits_shift);
+            }
+
+
+            /// COLROW MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_row_buffer_size() / this->get_line_size()); i++) {
+                this->colrow_bits_mask |= 1 << (i + this->colrow_bits_shift);
+            }
+
+            this->not_column_bits_mask = ~(colbyte_bits_mask | colrow_bits_mask);
+
+
+            /// BANK MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_per_channel()); i++) {
+                this->bank_bits_mask |= 1 << (i + bank_bits_shift);
+            }
+
+            /// ROW MASK
+            for (i = row_bits_shift; i < utils_t::get_power_of_two((uint64_t)INT64_MAX+1); i++) {
+                this->row_bits_mask |= 1 << i;
+            }
+        break;
+
+
         case MEMORY_CONTROLLER_MASK_ROW_COLROW_BANK_CHANNEL_COLBYTE:
             ERROR_ASSERT_PRINTF(this->get_total_controllers() == 1,
                                 "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
@@ -368,42 +507,6 @@ void memory_controller_t::set_masks() {
 
             this->not_column_bits_mask = ~(colbyte_bits_mask | colrow_bits_mask);
 
-
-            /// ROW MASK
-            for (i = row_bits_shift; i < utils_t::get_power_of_two((uint64_t)INT64_MAX+1); i++) {
-                this->row_bits_mask |= 1 << i;
-            }
-        break;
-
-
-        case MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_COLBYTE:
-            ERROR_ASSERT_PRINTF(this->get_total_controllers() == 1, "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
-            ERROR_ASSERT_PRINTF(this->get_channels_per_controller() == 1, "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
-
-            this->controller_bits_shift = 0;
-            this->channel_bits_shift = 0;
-
-            this->colbyte_bits_shift = 0;
-            this->colrow_bits_shift = utils_t::get_power_of_two(this->get_line_size());
-            this->bank_bits_shift = utils_t::get_power_of_two(this->get_bank_row_buffer_size());
-            this->row_bits_shift = bank_bits_shift + utils_t::get_power_of_two(this->get_bank_per_channel());
-
-            /// COLBYTE MASK
-            for (i = 0; i < utils_t::get_power_of_two(this->get_line_size()); i++) {
-                this->colbyte_bits_mask |= 1 << (i + this->colbyte_bits_shift);
-            }
-
-            /// COLROW MASK
-            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_row_buffer_size()) - this->colrow_bits_shift; i++) {
-                this->colrow_bits_mask |= 1 << (i + this->colrow_bits_shift);
-            }
-
-            this->not_column_bits_mask = ~(colbyte_bits_mask | colrow_bits_mask);
-
-            /// BANK MASK
-            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_per_channel()); i++) {
-                this->bank_bits_mask |= 1 << (i + bank_bits_shift);
-            }
 
             /// ROW MASK
             for (i = row_bits_shift; i < utils_t::get_power_of_two((uint64_t)INT64_MAX+1); i++) {
@@ -454,6 +557,31 @@ void memory_controller_t::clock(uint32_t subcycle) {
 
                 case MEMORY_OPERATION_WRITE:
                     this->add_stat_write_completed(this->mshr_born_ordered[i]->born_cycle);
+                break;
+
+                // MVX
+                case MEMORY_OPERATION_MVX_LOCK:
+                    this->add_stat_mvx_lock_completed(this->mshr_born_ordered[i]->born_cycle);
+                break;
+
+                case MEMORY_OPERATION_MVX_UNLOCK:
+                    this->add_stat_mvx_unlock_completed(this->mshr_born_ordered[i]->born_cycle);
+                break;
+
+                case MEMORY_OPERATION_MVX_LOAD:
+                    this->add_stat_mvx_load_completed(this->mshr_born_ordered[i]->born_cycle);
+                break;
+
+                case MEMORY_OPERATION_MVX_STORE:
+                    this->add_stat_mvx_store_completed(this->mshr_born_ordered[i]->born_cycle);
+                break;
+
+                case MEMORY_OPERATION_MVX_SIMPLEOP:
+                    this->add_stat_mvx_simple_op_completed(this->mshr_born_ordered[i]->born_cycle);
+                break;
+
+                case MEMORY_OPERATION_MVX_COMPLEXOP:
+                    this->add_stat_mvx_complex_op_completed(this->mshr_born_ordered[i]->born_cycle);
                 break;
             }
 
@@ -612,7 +740,7 @@ int32_t memory_controller_t::allocate_prefetch(memory_package_t* package){
 // ============================================================================
 int32_t memory_controller_t::send_package(memory_package_t *package) {
     MEMORY_CONTROLLER_DEBUG_PRINTF("send_package() package:%s\n", package->content_to_string().c_str());
-    ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
+    // ~ ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(package->memory_operation != MEMORY_OPERATION_WRITEBACK && package->memory_operation != MEMORY_OPERATION_WRITE, "Main memory must never send answer for WRITE.\n");
 
     if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
@@ -643,7 +771,7 @@ int32_t memory_controller_t::send_package(memory_package_t *package) {
 bool memory_controller_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
     MEMORY_CONTROLLER_DEBUG_PRINTF("receive_package() port:%u, package:%s\n", input_port, package->content_to_string().c_str());
 
-    ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
+    // ~ ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(package->id_dst == this->get_id() && package->hop_count == POSITION_FAIL, "Received some package for a different id_dst.\n");
     ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Received a wrong input_port\n");
     ERROR_ASSERT_PRINTF(package->is_answer == false, "Only requests are expected.\n");
@@ -651,6 +779,15 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
     int32_t slot = POSITION_FAIL;
     if (this->recv_ready_cycle <= sinuca_engine.get_global_cycle()) {
         switch (package->memory_operation) {
+
+            // MVX -> READ buffer
+            case MEMORY_OPERATION_MVX_LOCK:
+            case MEMORY_OPERATION_MVX_UNLOCK:
+            case MEMORY_OPERATION_MVX_LOAD:
+            case MEMORY_OPERATION_MVX_STORE:
+            case MEMORY_OPERATION_MVX_SIMPLEOP:
+            case MEMORY_OPERATION_MVX_COMPLEXOP:
+
             case MEMORY_OPERATION_READ:
             case MEMORY_OPERATION_INST:
                 slot = this->allocate_request(package);
@@ -752,6 +889,14 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
     uint32_t slot, request_number = 0, writeback_number = 0, prefetch_number = 0;
     for (slot = 0; slot < token_pos; slot++) {
         switch (this->token_list[slot].memory_operation) {
+            // MVX -> READ buffer
+            case MEMORY_OPERATION_MVX_LOCK:
+            case MEMORY_OPERATION_MVX_UNLOCK:
+            case MEMORY_OPERATION_MVX_LOAD:
+            case MEMORY_OPERATION_MVX_STORE:
+            case MEMORY_OPERATION_MVX_SIMPLEOP:
+            case MEMORY_OPERATION_MVX_COMPLEXOP:
+
             case MEMORY_OPERATION_READ:
             case MEMORY_OPERATION_INST:
                 request_number++;
@@ -771,6 +916,15 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
     /// 3. Check if the guest can come now, Or it needs to wait for free space.
     /// Hold on !
     switch (package->memory_operation) {
+
+        // MVX -> READ buffer
+        case MEMORY_OPERATION_MVX_LOCK:
+        case MEMORY_OPERATION_MVX_UNLOCK:
+        case MEMORY_OPERATION_MVX_LOAD:
+        case MEMORY_OPERATION_MVX_STORE:
+        case MEMORY_OPERATION_MVX_SIMPLEOP:
+        case MEMORY_OPERATION_MVX_COMPLEXOP:
+
         case MEMORY_OPERATION_READ:
         case MEMORY_OPERATION_INST:
             if (request_number < memory_package_t::count_free(this->mshr_buffer, this->mshr_buffer_request_reserved_size)) {
@@ -855,18 +1009,21 @@ void memory_controller_t::periodic_check(){
     #ifdef MEMORY_CONTROLLER_DEBUG
         this->print_structures();
     #endif
+    /// Check Requests
+    ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->mshr_buffer,
+                                                    this->mshr_buffer_request_reserved_size) == OK, "Check_age failed.\n");
+    /// Check WriteBacks
+    // ~ ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->mshr_buffer +
+                                                    // ~ this->mshr_buffer_request_reserved_size ,
+                                                    // ~ this->mshr_buffer_writeback_reserved_size) == OK, "Check_age failed.\n");
+    /// Check Prefetchs
+    ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->mshr_buffer +
+                                                    this->mshr_buffer_request_reserved_size +
+                                                    this->mshr_buffer_writeback_reserved_size,
+                                                    this->mshr_buffer_prefetch_reserved_size) == OK, "Check_age failed.\n");
 
-    switch (this->write_priority_policy) {
-        case WRITE_PRIORITY_DRAIN_WHEN_FULL:
-        break;
-
-        case WRITE_PRIORITY_SERVICE_AT_NO_READ:
-            ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->mshr_buffer, this->mshr_buffer_size) == OK, "Check_age failed.\n");
-
-            for (uint32_t i = 0; i < this->channels_per_controller; i++) {
-                this->channels[i].periodic_check();
-            }
-        break;
+    for (uint32_t i = 0; i < this->channels_per_controller; i++) {
+        this->channels[i].periodic_check();
     }
 };
 
@@ -901,6 +1058,40 @@ void memory_controller_t::reset_statistics() {
     this->stat_min_writeback_wait_time = MAX_ALIVE_TIME;
     this->stat_max_writeback_wait_time = 0;
     this->stat_accumulated_writeback_wait_time = 0;
+
+    // MVX
+    this->set_stat_mvx_lock_completed(0);
+    this->set_stat_mvx_unlock_completed(0);
+    this->set_stat_mvx_load_completed(0);
+    this->set_stat_mvx_store_completed(0);
+    this->set_stat_mvx_simple_op_completed(0);
+    this->set_stat_mvx_complex_op_completed(0);
+
+    this->stat_min_mvx_lock_wait_time = MAX_ALIVE_TIME;
+    this->stat_max_mvx_lock_wait_time = 0;
+    this->stat_accumulated_mvx_lock_wait_time = 0;
+
+    this->stat_min_mvx_unlock_wait_time = MAX_ALIVE_TIME;
+    this->stat_max_mvx_unlock_wait_time = 0;
+    this->stat_accumulated_mvx_unlock_wait_time = 0;
+
+    this->stat_min_mvx_load_wait_time = MAX_ALIVE_TIME;
+    this->stat_max_mvx_load_wait_time = 0;
+    this->stat_accumulated_mvx_load_wait_time = 0;
+
+    this->stat_min_mvx_store_wait_time = MAX_ALIVE_TIME;
+    this->stat_max_mvx_store_wait_time = 0;
+    this->stat_accumulated_mvx_store_wait_time = 0;
+
+    this->stat_min_mvx_simple_op_wait_time = MAX_ALIVE_TIME;
+    this->stat_max_mvx_simple_op_wait_time = 0;
+    this->stat_accumulated_mvx_simple_op_wait_time = 0;
+
+    this->stat_min_mvx_complex_op_wait_time = MAX_ALIVE_TIME;
+    this->stat_max_mvx_complex_op_wait_time = 0;
+    this->stat_accumulated_mvx_complex_op_wait_time = 0;
+
+
 
     this->stat_full_mshr_buffer_request = 0;
     this->stat_full_mshr_buffer_writeback = 0;
@@ -952,6 +1143,42 @@ void memory_controller_t::print_statistics() {
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_prefetch_wait_time", stat_accumulated_prefetch_wait_time, stat_prefetch_completed);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_write_wait_time", stat_accumulated_write_wait_time, stat_write_completed);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_writeback_wait_time", stat_accumulated_writeback_wait_time, stat_writeback_completed);
+
+    // MVX
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_lock_completed", stat_mvx_lock_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_unlock_completed", stat_mvx_unlock_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_load_completed", stat_mvx_load_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_store_completed", stat_mvx_store_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_simple_op_completed", stat_mvx_simple_op_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_complex_op_completed", stat_mvx_complex_op_completed);
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_lock_wait_time", stat_min_mvx_lock_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_lock_wait_time", stat_max_mvx_lock_wait_time);
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_unlock_wait_time", stat_min_mvx_unlock_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_unlock_wait_time", stat_max_mvx_unlock_wait_time);
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_load_wait_time", stat_min_mvx_load_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_load_wait_time", stat_max_mvx_load_wait_time);
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_store_wait_time", stat_min_mvx_store_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_store_wait_time", stat_max_mvx_store_wait_time);
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_simple_op_wait_time", stat_min_mvx_simple_op_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_simple_op_wait_time", stat_max_mvx_simple_op_wait_time);
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_complex_op_wait_time", stat_min_mvx_complex_op_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_complex_op_wait_time", stat_max_mvx_complex_op_wait_time);
+
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_lock_wait_time", stat_accumulated_mvx_lock_wait_time, stat_mvx_lock_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_unlock_wait_time", stat_accumulated_mvx_unlock_wait_time, stat_mvx_unlock_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_load_wait_time", stat_accumulated_mvx_load_wait_time, stat_mvx_load_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_store_wait_time", stat_accumulated_mvx_store_wait_time, stat_mvx_store_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_simple_op_wait_time", stat_accumulated_mvx_simple_op_wait_time, stat_mvx_simple_op_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_complex_op_wait_time", stat_accumulated_mvx_complex_op_wait_time, stat_mvx_complex_op_completed);
+
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_buffer_request", stat_full_mshr_buffer_request);
@@ -1015,8 +1242,16 @@ void memory_controller_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_rp", timing_rp);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_rrd", timing_rrd);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_rtp", timing_rtp);
+
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_wr", timing_wr);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_wtr", timing_wtr);
+
+    // MVX
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_simple_op", mvx_latency_simple_op);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_complex_op", mvx_latency_complex_op);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_bus", mvx_latency_bus);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_operation_size", mvx_operation_size);
+
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "row_bits_mask", utils_t::address_to_binary(this->row_bits_mask).c_str());

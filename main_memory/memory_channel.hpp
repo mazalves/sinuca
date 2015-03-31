@@ -51,6 +51,16 @@ class memory_channel_t : public interconnection_interface_t {
         uint32_t timing_wtr;    // write to read delay time
         uint32_t timing_burst;
 
+        // MVX
+        uint32_t mvx_latency_simple_op;
+        uint32_t mvx_latency_complex_op;
+        uint32_t mvx_latency_bus;
+        uint32_t mvx_operation_size;
+
+        mvx_state_t channel_mvx_state;
+        uint64_t channel_mvx_id_owner;
+        uint64_t channel_mvx_opcode_number;
+
         /// Set by allocate
         container_ptr_memory_package_t *bank_buffer;
         int32_t *bank_buffer_actual_position;   /// Position inside BankBuffer of the actual request being treated
@@ -149,6 +159,12 @@ class memory_channel_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, timing_rtp)
         INSTANTIATE_GET_SET(uint32_t, timing_wr)
         INSTANTIATE_GET_SET(uint32_t, timing_wtr)
+
+        // MVX
+        INSTANTIATE_GET_SET(uint32_t, mvx_latency_simple_op)
+        INSTANTIATE_GET_SET(uint32_t, mvx_latency_complex_op)
+        INSTANTIATE_GET_SET(uint32_t, mvx_latency_bus)
+        INSTANTIATE_GET_SET(uint32_t, mvx_operation_size)
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_row_buffer_hit);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_row_buffer_miss);

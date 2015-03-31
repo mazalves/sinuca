@@ -443,6 +443,19 @@ uint32_t interconnection_controller_t::find_package_route_latency(memory_package
                 return max_latency;
             }
         break;
+
+        // MVX latency is always low
+        case MEMORY_OPERATION_MVX_LOCK:
+        case MEMORY_OPERATION_MVX_UNLOCK:
+
+        case MEMORY_OPERATION_MVX_LOAD:
+        case MEMORY_OPERATION_MVX_STORE:
+
+        case MEMORY_OPERATION_MVX_SIMPLEOP:
+        case MEMORY_OPERATION_MVX_COMPLEXOP:
+
+            return low_latency;
+        break;
     }
     ERROR_PRINTF("Found MEMORY_OPERATION_NUMBER\n");
     return 1;

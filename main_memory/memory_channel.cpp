@@ -51,6 +51,9 @@ memory_channel_t::memory_channel_t() {
     this->channel_last_command_cycle = NULL;
 
     this->last_bank_selected = 0;
+    this->channel_mvx_state = MVX_STATE_UNLOCK;
+    this->channel_mvx_id_owner = 0;
+    this->channel_mvx_opcode_number = 0;
 };
 
 // ============================================================================
@@ -81,6 +84,7 @@ void memory_channel_t::allocate() {
     this->bank_last_command = utils_t::template_allocate_initialize_array<memory_controller_command_t>(this->get_bank_per_channel(), MEMORY_CONTROLLER_COMMAND_PRECHARGE);
     this->bank_last_command_cycle = utils_t::template_allocate_initialize_matrix<uint64_t>(this->get_bank_per_channel(), MEMORY_CONTROLLER_COMMAND_NUMBER, 0);
     this->channel_last_command_cycle = utils_t::template_allocate_initialize_array<uint64_t>(MEMORY_CONTROLLER_COMMAND_NUMBER, 0);
+
 };
 
 
@@ -91,17 +95,50 @@ int32_t memory_channel_t::find_next_read_operation(uint32_t bank) {
     int32_t slot = POSITION_FAIL;
     uint32_t i;
 
+    // MVX is already running
+    if (this->channel_mvx_state == MVX_STATE_LOCK) {
+        // Try to find MVX in the same OPEN_ROW
+        for (i = 0; i < this->bank_buffer[bank].size(); i++) {
+            if (this->bank_buffer[bank][i]->id_owner == this->channel_mvx_id_owner &&
+                this->bank_buffer[bank][i]->opcode_number == this->channel_mvx_opcode_number + 1) {
+
+                if(this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_MVX_UNLOCK) {
+                    this->channel_mvx_state = MVX_STATE_UNLOCK;
+                    this->channel_mvx_id_owner = 0;
+                    this->channel_mvx_opcode_number = 0;
+                }
+                else {
+                    this->channel_mvx_id_owner = this->bank_buffer[bank][i]->id_owner;
+                    this->channel_mvx_opcode_number = this->bank_buffer[bank][i]->opcode_number;
+                }
+
+                slot = i;
+                return slot;
+            }
+        }
+        return slot;
+    }
+
     switch (this->request_priority_policy) {
         case REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST:
             /// Try to find OPERATION in the same OPEN_ROW
             for (i = 0; i < this->bank_buffer[bank].size(); i++) {
-                if ((this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_READ ||
-                this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_INST ||
-                this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_PREFETCH)
-                &&
-                this->cmp_row_bank_channel(this->bank_buffer[bank][i]->memory_address, this->bank_open_row_address[bank])) {
-                    slot = i;
-                    break;
+                if (this->cmp_row_bank_channel(this->bank_buffer[bank][i]->memory_address, this->bank_open_row_address[bank])) {
+                    if (this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_READ ||
+                    this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_INST ||
+                    this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_PREFETCH) {
+                        slot = i;
+                        break;
+                    }
+
+                    // MVX - Start a new MVX operation
+                    if (this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_MVX_LOCK) {
+                        this->channel_mvx_state = MVX_STATE_LOCK;
+                        this->channel_mvx_id_owner = this->bank_buffer[bank][i]->id_owner;
+                        this->channel_mvx_opcode_number = this->bank_buffer[bank][i]->opcode_number;
+                        slot = i;
+                        break;
+                    }
                 }
             }
             /// If could not find, Try to find OLDER OPERATION
@@ -110,6 +147,15 @@ int32_t memory_channel_t::find_next_read_operation(uint32_t bank) {
                     if (this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_READ ||
                     this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_INST ||
                     this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_PREFETCH) {
+                        slot = i;
+                        break;
+                    }
+
+                    // MVX - Start a new MVX operation
+                    if (this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_MVX_LOCK) {
+                        this->channel_mvx_state = MVX_STATE_LOCK;
+                        this->channel_mvx_id_owner = this->bank_buffer[bank][i]->id_owner;
+                        this->channel_mvx_opcode_number = this->bank_buffer[bank][i]->opcode_number;
                         slot = i;
                         break;
                     }
@@ -123,6 +169,15 @@ int32_t memory_channel_t::find_next_read_operation(uint32_t bank) {
                 if (this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_READ ||
                 this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_INST ||
                 this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_PREFETCH) {
+                    slot = i;
+                    break;
+                }
+
+                // MVX - Start a new MVX operation
+                if (this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_MVX_LOCK) {
+                    this->channel_mvx_state = MVX_STATE_LOCK;
+                    this->channel_mvx_id_owner = this->bank_buffer[bank][i]->id_owner;
+                    this->channel_mvx_opcode_number = this->bank_buffer[bank][i]->opcode_number;
                     slot = i;
                     break;
                 }
@@ -348,9 +403,14 @@ bool memory_channel_t::check_if_minimum_latency(uint32_t bank, memory_controller
 // ============================================================================
 package_state_t memory_channel_t::treat_memory_request(memory_package_t *package) {
     uint32_t bank = get_bank(package->memory_address);
+/*
     uint32_t i;
-
     switch (package->memory_operation) {
+        // MVX
+        case MEMORY_OPERATION_MVX_LD:
+        case MEMORY_OPERATION_MVX_ST:
+        case MEMORY_OPERATION_MVX_OP:
+
         case MEMORY_OPERATION_READ:
         case MEMORY_OPERATION_INST:
         case MEMORY_OPERATION_PREFETCH:
@@ -386,7 +446,7 @@ package_state_t memory_channel_t::treat_memory_request(memory_package_t *package
             // ~ }
         break;
     }
-
+*/
     /// Try to insert into bank buffer
     if (this->bank_buffer[bank].size() < this->bank_buffer_size) {
         this->bank_buffer[bank].push_back(package);
@@ -446,8 +506,65 @@ void memory_channel_t::clock(uint32_t subcycle) {
 
         // =====================================================================
         case MEMORY_CONTROLLER_COMMAND_ROW_ACCESS:
-            ERROR_ASSERT_PRINTF(cmp_row_bank_channel(this->bank_open_row_address[bank], package->memory_address), "Sending READ/WRITE to wrong row.")
+            // ~ ERROR_ASSERT_PRINTF(cmp_row_bank_channel(this->bank_open_row_address[bank], package->memory_address), "Sending READ/WRITE to wrong row.")
             switch (package->memory_operation) {
+
+                // MVX =========================================================
+                case MEMORY_OPERATION_MVX_LOCK:
+                case MEMORY_OPERATION_MVX_UNLOCK:
+                    package->memory_size = 1;
+                    package->is_answer = true;
+                    package->package_transmit(0);
+                break;
+
+                case MEMORY_OPERATION_MVX_LOAD:
+                case MEMORY_OPERATION_MVX_SIMPLEOP:
+                case MEMORY_OPERATION_MVX_COMPLEXOP:
+                    /// Respect Min. Latency
+                    if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ)) {
+                        return;
+                    }
+
+                    this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_READ;
+                    this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
+                    this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
+                    /// Prepare for answer later
+                    package->memory_size = 1;
+                    package->is_answer = true;
+                    // ~ package->package_ready(this->timing_cas + this->timing_burst);
+                    if (package->memory_operation == MEMORY_OPERATION_MVX_SIMPLEOP) {
+                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_simple_op;
+                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_simple_op;
+                    }
+                    else if (package->memory_operation == MEMORY_OPERATION_MVX_COMPLEXOP) {
+                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_complex_op;
+                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_complex_op;
+                    }
+                    else {
+                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_bus;
+                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_bus;
+                    }
+                    package->package_transmit(this->timing_cas);
+
+                break;
+
+                // MVX =========================================================
+                case MEMORY_OPERATION_MVX_STORE:
+                    /// Respect Min. Latency
+                    if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
+                        return;
+                    }
+
+                    this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE;
+                    this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
+                    this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
+                    /// Prepare for answer later
+                    package->memory_size = 1;
+                    package->is_answer = true;
+                    // ~ package->package_transmit(this->timing_cwd + this->timing_burst);
+                    package->package_transmit(this->timing_cwd);
+                break;
+
                 case MEMORY_OPERATION_READ:
                 case MEMORY_OPERATION_INST:
                 case MEMORY_OPERATION_PREFETCH:
@@ -491,6 +608,61 @@ void memory_channel_t::clock(uint32_t subcycle) {
         case MEMORY_CONTROLLER_COMMAND_COLUMN_READ:
             if (cmp_row_bank_channel(this->bank_open_row_address[bank], package->memory_address)) {
                 switch (package->memory_operation) {
+                    // MVX =====================================================
+                    case MEMORY_OPERATION_MVX_LOCK:
+                    case MEMORY_OPERATION_MVX_UNLOCK:
+                        package->memory_size = 1;
+                        package->is_answer = true;
+                        package->package_transmit(0);
+                    break;
+
+                    case MEMORY_OPERATION_MVX_LOAD:
+                    case MEMORY_OPERATION_MVX_SIMPLEOP:
+                    case MEMORY_OPERATION_MVX_COMPLEXOP:
+                        /// Respect Min. Latency
+                        if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ)) {
+                            return;
+                        }
+
+                        this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_READ;
+                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
+                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
+                        package->memory_size = 1;
+                        package->is_answer = true;
+                        // ~ package->package_ready(this->timing_cas + this->timing_burst);
+                        if (package->memory_operation == MEMORY_OPERATION_MVX_SIMPLEOP) {
+                            this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_simple_op;
+                            this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_simple_op;
+                        }
+                        else if (package->memory_operation == MEMORY_OPERATION_MVX_COMPLEXOP) {
+                            this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_complex_op;
+                            this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_complex_op;
+                        }
+                        else {
+                            this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_bus;
+                            this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_bus;
+                        }
+                        package->package_transmit(this->timing_cas);
+                    break;
+
+                    // MVX =====================================================
+                    case MEMORY_OPERATION_MVX_STORE:
+                        /// Respect Min. Latency
+                        if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
+                            return;
+                        }
+
+                        this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE;
+                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
+                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
+                        /// Consider that tRTRS - tCWL is equal to ZERO. (Both are parallel)
+                        package->memory_size = 1;
+                        package->is_answer = true;
+                        // ~ package->package_transmit(this->timing_cwd + this->timing_burst);
+                        package->package_transmit(this->timing_cwd);
+                    break;
+
+
                     case MEMORY_OPERATION_READ:
                     case MEMORY_OPERATION_INST:
                     case MEMORY_OPERATION_PREFETCH:
@@ -517,6 +689,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
                         this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
                         this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
                         /// Consider that tRTRS - tCWL is equal to ZERO. (Both are parallel)
+                        package->memory_size = 1;
                         package->is_answer = true;
                         package->package_ready(this->timing_cwd + this->timing_burst);
                     break;
@@ -544,6 +717,59 @@ void memory_channel_t::clock(uint32_t subcycle) {
         case MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE:
             if (cmp_row_bank_channel(this->bank_open_row_address[bank], package->memory_address)) {
                 switch (package->memory_operation) {
+                    // MVX =====================================================
+                    case MEMORY_OPERATION_MVX_LOCK:
+                    case MEMORY_OPERATION_MVX_UNLOCK:
+                        package->memory_size = 1;
+                        package->is_answer = true;
+                        package->package_transmit(0);
+                    break;
+
+                    case MEMORY_OPERATION_MVX_LOAD:
+                    case MEMORY_OPERATION_MVX_SIMPLEOP:
+                    case MEMORY_OPERATION_MVX_COMPLEXOP:
+                        /// Respect Min. Latency
+                        if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ)) {
+                            return;
+                        }
+
+                        this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_READ;
+                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
+                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
+                        package->is_answer = true;
+                        // ~ package->package_ready(this->timing_cas + this->timing_burst);
+                        if (package->memory_operation == MEMORY_OPERATION_MVX_SIMPLEOP) {
+                            this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_simple_op;
+                            this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_simple_op;
+                        }
+                        else if (package->memory_operation == MEMORY_OPERATION_MVX_COMPLEXOP) {
+                            this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_complex_op;
+                            this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_complex_op;
+                        }
+                        else {
+                            this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_bus;
+                            this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_bus;
+                        }
+                        package->package_transmit(this->timing_cas);
+                    break;
+
+                    // MVX =====================================================
+                    case MEMORY_OPERATION_MVX_STORE:
+                        /// Respect Min. Latency
+                        if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
+                            return;
+                        }
+
+                        this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE;
+                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
+                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
+                        package->memory_size = 1;
+                        package->is_answer = true;
+                        // ~ package->package_transmit(this->timing_cwd + this->timing_burst);
+                        package->package_transmit(this->timing_cwd);
+                    break;
+
+
                     case MEMORY_OPERATION_READ:
                     case MEMORY_OPERATION_INST:
                     case MEMORY_OPERATION_PREFETCH:
@@ -570,7 +796,9 @@ void memory_channel_t::clock(uint32_t subcycle) {
                         this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
                         this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
                         /// Max(tBurst, tCCD)
+                        package->memory_size = 1;
                         package->is_answer = true;
+
                         package->package_ready(this->timing_cwd + this->timing_burst);
                     break;
                 }
@@ -651,6 +879,21 @@ void memory_channel_t::remove_token_list(memory_package_t *package) {
 // ============================================================================
 void memory_channel_t::print_structures() {
 
+    // MVX
+    SINUCA_PRINTF("channel_mvx_state:%s\n", get_enum_mvx_state_t_char(this->channel_mvx_state));
+    SINUCA_PRINTF("channel_mvx_id_owner:%s\n", utils_t::uint64_to_string(this->channel_mvx_id_owner).c_str());
+    SINUCA_PRINTF("channel_mvx_opcode_number:%s\n", utils_t::uint64_to_string(this->channel_mvx_opcode_number).c_str());
+
+    for (uint32_t i = 0; i < this->get_bank_per_channel(); i++) {
+        SINUCA_PRINTF("%s BANK_BUFFER[%s]\n", this->get_label(), utils_t::uint32_to_string(i).c_str());
+        for (uint32_t j = 0; j < this->bank_buffer[i].size(); j++) {
+            SINUCA_PRINTF("%s BANK_BUFFER[%s][%s] %s\n", this->get_label(),
+                                                        utils_t::uint32_to_string(i).c_str(),
+                                                        utils_t::uint32_to_string(j).c_str(),
+                                                        this->bank_buffer[i][j]->content_to_string().c_str());
+        }
+    }
+
 };
 
 // ============================================================================
@@ -700,5 +943,32 @@ void memory_channel_t::print_configuration() {
     sinuca_engine.write_statistics_big_separator();
     sinuca_engine.write_statistics_comments(title);
     sinuca_engine.write_statistics_big_separator();
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "bank_per_channel", bank_per_channel);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "bank_buffer_size", bank_buffer_size);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "bank_row_buffer_size", bank_row_buffer_size);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_burst", timing_burst);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_al", timing_al);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_cas", timing_cas);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_ccd", timing_ccd);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_cwd", timing_cwd);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_faw", timing_faw);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_ras", timing_ras);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_rc", timing_rc);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_rcd", timing_rcd);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_rp", timing_rp);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_rrd", timing_rrd);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_rtp", timing_rtp);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_wr", timing_wr);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_wtr", timing_wtr);
+
+    // MVX
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_simple_op", mvx_latency_simple_op);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_complex_op", mvx_latency_complex_op);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_bus", mvx_latency_bus);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_operation_size", mvx_operation_size);
+
 
 };

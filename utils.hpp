@@ -124,6 +124,9 @@ class utils_t {
         static uint32_t check_if_power_of_two(uint64_t n);
         static uint64_t hash_function(hash_function_t type, uint64_t input1, uint64_t input2, uint64_t bit_size);
         static uint64_t fill_bit(uint32_t start, uint32_t end);
+        static uint32_t max(uint32_t val1, uint32_t val2);
+        static uint64_t max(uint64_t val1, uint64_t val2);
+
 
         static void bool_to_char(char *string, bool input_int);
         static void int32_to_char(char *string, int32_t input_int);
