@@ -20,17 +20,6 @@
 
 class memory_controller_t : public interconnection_interface_t {
     private:
-
-    #ifdef BURST_TRACE
-        char *burst_rqst_name;
-        char *burst_wback_name;
-        char *burst_pftch_name;
-
-        std::ofstream burst_rqst_file;
-        std::ofstream burst_wback_file;
-        std::ofstream burst_pftch_file;
-    #endif
-
         // ====================================================================
         /// Set by sinuca_configurator
         // ====================================================================

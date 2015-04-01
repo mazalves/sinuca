@@ -309,8 +309,6 @@ const char *get_enum_write_priority_char(write_priority_t type);
 /// Enumerates the line usage predictor type
 enum line_usage_predictor_policy_t {
     LINE_USAGE_PREDICTOR_POLICY_DISABLE,
-    LINE_USAGE_PREDICTOR_POLICY_DSBP,
-    LINE_USAGE_PREDICTOR_POLICY_DSBP_ORACLE,
     LINE_USAGE_PREDICTOR_POLICY_DEWP,
     LINE_USAGE_PREDICTOR_POLICY_DEWP_ORACLE,
     LINE_USAGE_PREDICTOR_POLICY_SKEWED
@@ -319,14 +317,14 @@ const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_polic
 
 // ============================================================================
 /// Enumerates the valid sub-block type
-enum line_sub_block_t {
-    LINE_SUB_BLOCK_DISABLE,
-    LINE_SUB_BLOCK_NORMAL,
-    LINE_SUB_BLOCK_LEARN,
-    LINE_SUB_BLOCK_WRONG_FIRST,
-    LINE_SUB_BLOCK_WRITEBACK
+enum line_prediction_t {
+    LINE_PREDICTION_TURNOFF,
+    LINE_PREDICTION_NORMAL,
+    LINE_PREDICTION_LEARN,
+    LINE_PREDICTION_WRONG_FIRST,
+    LINE_PREDICTION_WRITEBACK
 };
-const char *get_enum_line_sub_block_t_char(line_sub_block_t type);
+const char *get_enum_line_prediction_t_char(line_prediction_t type);
 
 
 

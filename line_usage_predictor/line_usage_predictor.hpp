@@ -66,12 +66,6 @@ class line_usage_predictor_t : public interconnection_interface_t {
         // ====================================================================
 
         /// Inspections
-        /// Check the offset and package size and enable correct bits
-        virtual void fill_package_sub_blocks(memory_package_t *package)=0;
-        /// Get the line subblocks and add to package (writeback)
-        virtual void line_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way)=0;
-
-        virtual bool check_sub_block_is_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint64_t index, uint32_t way)=0;
         virtual bool check_line_is_disabled(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way)=0;
         virtual bool check_line_is_last_access(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way)=0;
         virtual bool check_line_is_last_write(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way)=0;

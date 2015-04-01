@@ -28,7 +28,7 @@
 
 // ============================================================================
 dsbp_metadata_line_t::dsbp_metadata_line_t() {
-    this->line_status = LINE_SUB_BLOCK_DISABLE;
+    this->line_status = LINE_PREDICTION_TURNOFF;
 
     this->sub_blocks = NULL;
     this->real_access_counter_read = NULL;
@@ -64,7 +64,7 @@ dsbp_metadata_line_t::~dsbp_metadata_line_t() {
 void dsbp_metadata_line_t::clean() {
     ERROR_ASSERT_PRINTF(this->sub_blocks != NULL, "Cleanning a not allocated line.\n")
 
-    this->line_status = LINE_SUB_BLOCK_DISABLE;
+    this->line_status = LINE_PREDICTION_TURNOFF;
 
     for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
         this->sub_blocks[i] = false;
@@ -99,7 +99,7 @@ std::string dsbp_metadata_line_t::content_to_string() {
     content_string = "";
 
     content_string = content_string + "Metadata -";
-    content_string = content_string + " " + get_enum_line_sub_block_t_char(this->line_status);
+    content_string = content_string + " " + get_enum_line_prediction_t_char(this->line_status);
 
     /// line_status
     content_string = content_string + "\n SubBlocks:\t";

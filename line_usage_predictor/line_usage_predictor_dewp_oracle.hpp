@@ -101,10 +101,6 @@ class line_usage_predictor_dewp_oracle_t : public line_usage_predictor_t {
         /// Inheritance from line_usage_predictor_t
         // ====================================================================
         /// Inspections
-        void fill_package_sub_blocks(memory_package_t *package);
-        void line_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way);
-
-        bool check_sub_block_is_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint64_t index, uint32_t way);
         bool check_line_is_disabled(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
         bool check_line_is_last_access(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
         bool check_line_is_last_write(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);

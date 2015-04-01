@@ -20,7 +20,7 @@
 
 class dsbp_metadata_line_t {
     public:
-        line_sub_block_t line_status;
+        line_prediction_t line_status;
         bool *sub_blocks;
 
         uint64_t *real_access_counter_read;

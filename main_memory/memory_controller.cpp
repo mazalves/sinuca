@@ -77,11 +77,6 @@ memory_controller_t::~memory_controller_t() {
     utils_t::template_delete_array<memory_channel_t>(channels);
     utils_t::template_delete_array<memory_package_t>(mshr_buffer);
 
-    #ifdef BURST_TRACE
-        this->burst_rqst_file.close();
-        this->burst_wback_file.close();
-        this->burst_pftch_file.close();
-    #endif
 
 };
 
@@ -143,37 +138,6 @@ void memory_controller_t::allocate() {
         /// Call the channel allocate()
         this->channels[i].allocate();
     }
-
-
-    // =========================================================================
-    #ifdef BURST_TRACE
-        this->burst_rqst_name = utils_t::template_allocate_array<char>(TRACE_LINE_SIZE);
-        this->burst_wback_name = utils_t::template_allocate_array<char>(TRACE_LINE_SIZE);
-        this->burst_pftch_name = utils_t::template_allocate_array<char>(TRACE_LINE_SIZE);
-
-        snprintf(burst_rqst_name, sizeof(burst_rqst_name), "%s_rqst.burst", sinuca_engine.arg_result_file_name);
-        snprintf(burst_wback_name, sizeof(burst_wback_name), "%s_wback.burst", sinuca_engine.arg_result_file_name);
-        snprintf(burst_pftch_name, sizeof(burst_pftch_name), "%s_pftch.burst", sinuca_engine.arg_result_file_name);
-
-        /// Open the statistics file
-        if (this->burst_rqst_file.is_open() == false) {
-            this->burst_rqst_file.open(this->burst_rqst_name, std::ofstream::app);
-            ERROR_ASSERT_PRINTF(this->burst_rqst_file.is_open() == true, "Could not open the burst_rqst_file.\n")
-        }
-
-        /// Open the statistics file
-        if (this->burst_wback_file.is_open() == false) {
-            this->burst_wback_file.open(this->burst_wback_name, std::ofstream::app);
-            ERROR_ASSERT_PRINTF(this->burst_wback_file.is_open() == true, "Could not open the burst_wback_file.\n")
-        }
-
-        /// Open the statistics file
-        if (this->burst_pftch_file.is_open() == false) {
-            this->burst_pftch_file.open(this->burst_pftch_name, std::ofstream::app);
-            ERROR_ASSERT_PRINTF(this->burst_pftch_file.is_open() == true, "Could not open the burst_pftch_file.\n")
-        }
-    #endif
-
 
     #ifdef MEMORY_CONTROLLER_DEBUG
         this->print_configuration();
@@ -550,14 +514,6 @@ int32_t memory_controller_t::allocate_request(memory_package_t* package){
         MEMORY_CONTROLLER_DEBUG_PRINTF("\t NEW REQUEST\n");
         this->mshr_buffer[slot] = *package;
         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
-
-    // =========================================================================
-    #ifdef BURST_TRACE
-        static char buffer[64] = "\0";
-        snprintf(buffer, sizeof(buffer), "%" PRIu64 "\n", sinuca_engine.get_global_cycle());
-        this->burst_rqst_file.write(buffer, strlen(buffer));
-    #endif
-
     }
     return slot;
 };
@@ -572,14 +528,6 @@ int32_t memory_controller_t::allocate_writeback(memory_package_t* package){
         MEMORY_CONTROLLER_DEBUG_PRINTF("\t NEW WRITEBACK\n");
         this->mshr_buffer[slot] = *package;
         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
-
-    // =========================================================================
-    #ifdef BURST_TRACE
-        static char buffer[64] = "\0";
-        snprintf(buffer, sizeof(buffer), "%" PRIu64 "\n", sinuca_engine.get_global_cycle());
-        this->burst_wback_file.write(buffer, strlen(buffer));
-    #endif
-
     }
     return slot;
 };
@@ -594,15 +542,6 @@ int32_t memory_controller_t::allocate_prefetch(memory_package_t* package){
         MEMORY_CONTROLLER_DEBUG_PRINTF("\t NEW PREFETCH\n");
         this->mshr_buffer[slot] = *package;
         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
-
-
-    // =========================================================================
-    #ifdef BURST_TRACE
-        static char buffer[64] = "\0";
-        snprintf(buffer, sizeof(buffer), "%" PRIu64 "\n", sinuca_engine.get_global_cycle());
-        this->burst_pftch_file.write(buffer, strlen(buffer));
-    #endif
-
     }
     return slot;
 };

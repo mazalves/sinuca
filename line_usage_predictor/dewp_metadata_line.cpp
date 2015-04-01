@@ -37,7 +37,7 @@ dewp_metadata_line_t::~dewp_metadata_line_t() {
 
 // ============================================================================
 void dewp_metadata_line_t::clean() {
-    this->line_status = LINE_SUB_BLOCK_DISABLE;
+    this->line_status = LINE_PREDICTION_TURNOFF;
 
     this->real_access_counter_read = 0;
     this->real_access_counter_writeback = 0;
@@ -67,7 +67,7 @@ std::string dewp_metadata_line_t::content_to_string() {
     content_string = "";
 
     content_string = content_string + "Metadata -";
-    content_string = content_string + " " + get_enum_line_sub_block_t_char(this->line_status);
+    content_string = content_string + " " + get_enum_line_prediction_t_char(this->line_status);
 
     content_string = content_string + " READ: RealAccess:" + utils_t::uint32_to_string(this->real_access_counter_read);
     content_string = content_string + " Predicted:" + utils_t::uint32_to_string(this->access_counter_read);

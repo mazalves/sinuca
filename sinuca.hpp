@@ -97,13 +97,6 @@ class prefetch_disable_t;
 /// Line Usage Predictor
 class line_usage_predictor_t;
 class line_usage_predictor_disable_t;
-/// === DSBP
-class pht_line_t;
-class pht_set_t;
-class dsbp_metadata_line_t;
-class dsbp_metadata_set_t;
-class line_usage_predictor_dsbp_t;
-class line_usage_predictor_dsbp_oracle_t;
 /// === DEWP
 class aht_line_t;
 class aht_set_t;
@@ -162,10 +155,7 @@ extern sinuca_engine_t sinuca_engine;
 /// It will DEACTIVATE all the other messages below
 #define SINUCA_PRINTF(...) printf(__VA_ARGS__);
 
-/// Create an trace with all the requests arriving on the memory controller
-// ~ #define BURST_TRACE
-
-/// DEBUG DESCRIPTION: Lots of details do help during the debug phase.
+/// DEBUG DESCRIPTION: Lots of details to help during the debug phase.
 
 // ~ #define SINUCA_DEBUG
 #ifdef SINUCA_DEBUG
@@ -320,13 +310,6 @@ typedef std::vector <memory_controller_t*>          container_ptr_memory_control
 // ============================================================================
 #include "./line_usage_predictor/line_usage_predictor.hpp"
 #include "./line_usage_predictor/line_usage_predictor_disable.hpp"
-
-#include "./line_usage_predictor/pht_line.hpp"
-#include "./line_usage_predictor/pht_set.hpp"
-#include "./line_usage_predictor/dsbp_metadata_line.hpp"
-#include "./line_usage_predictor/dsbp_metadata_set.hpp"
-#include "./line_usage_predictor/line_usage_predictor_dsbp.hpp"
-#include "./line_usage_predictor/line_usage_predictor_dsbp_oracle.hpp"
 
 #include "./line_usage_predictor/aht_line.hpp"
 #include "./line_usage_predictor/aht_set.hpp"
