@@ -47,6 +47,7 @@
 #include <limits>
 #include <vector>
 #include <string>
+#include <unordered_map>
 
 /// Embedded Libraries
 #include "./extra_libs/include/zlib.h"
@@ -150,7 +151,8 @@ extern sinuca_engine_t sinuca_engine;
 #define MAX_UOP_DECODED 5       /// processor_t (Max number of uops from one opcode)
 #define MAX_REGISTERS 6         /// opcode_package_t uop_package_t  (Max number of register (read or write) for one opcode/uop)
 #define MAX_ASSEMBLY_SIZE 32    /// In general 20 is enough
-#define MAX_CORES 32            /// Define the max number of cores for the map
+#define MAX_CORES 32            /// Define the max number of cores for the set affinity
+#define PAGE_SIZE 4096          /// Pages have always 4KB
 
 #define POSITION_FAIL -1        /// FAIL when return is int32_t
 #define FAIL 0                  /// FAIL when return is uint32_t

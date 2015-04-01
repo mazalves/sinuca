@@ -132,6 +132,7 @@ class utils_t {
         static void int64_to_char(char *string, int64_t input_int);
 
         static uint64_t string_to_uint64(char *string);
+        static uint32_t string_to_uint32(char *string);
 
         static std::string print_mask_of_bits(uint32_t line_size, uint32_t line_number, uint32_t assoc);
         static std::string progress_pretty(uint64_t actual, uint64_t total);

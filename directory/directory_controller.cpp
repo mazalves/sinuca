@@ -19,7 +19,6 @@
  */
 
 #include "../sinuca.hpp"
-#include <string>
 
 #ifdef DIRECTORY_CTRL_DEBUG
     #define DIRECTORY_CTRL_DEBUG_PRINTF(...) DEBUG_PRINTF(__VA_ARGS__);
@@ -76,6 +75,70 @@ void directory_controller_t::allocate() {
 
     }
     this->directory_lines.reserve(sum_mshr_buffer_size);
+
+    // Addres Mapping to Mem.Ctrl.
+    this->address_mapping();
+
+};
+
+// ============================================================================
+void directory_controller_t::address_mapping(){
+
+    /// If user defined address mapping file, then generate hash mapping
+    if (sinuca_engine.arg_map_file_name != NULL) {
+
+        /// PAGE MASK
+        this->page_bits_shift = utils_t::get_power_of_two(PAGE_SIZE);
+        for (uint32_t i = 0; i < this->page_bits_shift; i++) {
+            this->page_bits_mask |= 1 << i;
+        }
+        this->not_page_bits_mask = ~this->page_bits_mask;
+
+        /// Open Map File
+        gzFile gzMapFile = gzopen(sinuca_engine.arg_map_file_name, "ro");   /// Open the .gz file
+        ERROR_ASSERT_PRINTF(gzMapFile != NULL, "Could not open the file.\n%s\n", sinuca_engine.arg_map_file_name);
+
+        DIRECTORY_CTRL_DEBUG_PRINTF("Map File = %s => READY !\n", sinuca_engine.arg_map_file_name);
+
+        gzclearerr(gzMapFile);
+        gzseek(gzMapFile, 0, SEEK_SET);   /// Go to the Begin of the File
+        ERROR_ASSERT_PRINTF(!gzeof(gzMapFile), "Static File Unexpected EOF.\n")
+
+        char *line_map = utils_t::template_allocate_array<char>(TRACE_LINE_SIZE);
+
+        /// Read map file generating Hash table
+        while (!gzeof(gzMapFile)) {
+            char *buffer = gzgets(gzMapFile, line_map, TRACE_LINE_SIZE);
+            char *sub_string = NULL;
+            char *tmp_ptr = NULL;
+            uint32_t count = 0;
+            uint64_t pageaddr = 0;
+            uint32_t memctrl = 0;
+
+            if (line_map[0] == '\0' || line_map[0] == '#' || buffer == NULL) {     /// If Comment, then ignore
+                continue;
+            }
+            else {
+                for (uint32_t i = 0; line_map[i] != '\0' && i < TRACE_LINE_SIZE; i++) {
+                    count += (line_map[i] == ' ');
+                }
+                ERROR_ASSERT_PRINTF(count == 1, "Error converting Mapping file (Wrong  number of fields %d) \n%s\n", count, line_map)
+
+                sub_string = strtok_r(line_map, " ", &tmp_ptr);
+                pageaddr = utils_t::string_to_uint64(sub_string);
+                ERROR_ASSERT_PRINTF(this->mapped_controller.find(pageaddr) == this->mapped_controller.end(),
+                                    "Multiple Mapping to the same pageaddr %" PRIu64 "\n", pageaddr )
+
+                sub_string = strtok_r(NULL, " ", &tmp_ptr);
+                memctrl = utils_t::string_to_uint32(sub_string);
+                ERROR_ASSERT_PRINTF(memctrl < sinuca_engine.memory_controller_array_size,
+                                    "Error converting Mapping file (Wrong  number of Mem. Ctrl. %" PRIu32 ")\n", memctrl)
+                this->mapped_controller[pageaddr] = memctrl;
+            }
+        }
+        gzclose(gzMapFile);
+        utils_t::template_delete_array<char>(line_map);
+    }
 };
 
 // ============================================================================
@@ -1280,9 +1343,37 @@ uint32_t directory_controller_t::find_next_obj_id(cache_memory_t *cache_memory, 
     }
     ERROR_ASSERT_PRINTF(lower_level_cache->empty(), "Could not find a valid lower_level_cache but size != 0.\n")
     /// Find Next Main Memory
-    for (uint32_t i = 0; i < sinuca_engine.memory_controller_array_size; i++) {
-        if (sinuca_engine.memory_controller_array[i]->get_controller(memory_address) == sinuca_engine.memory_controller_array[i]->get_controller_number()) {
-            return sinuca_engine.memory_controller_array[i]->get_id();
+
+    // =====================================
+    // Addres Mapping to Mem.Ctrl.
+    if (sinuca_engine.arg_map_file_name != NULL) {
+        uint64_t memctrl;
+        uint64_t pageaddr;
+
+        pageaddr = (memory_address & this->not_page_bits_mask) >> this->page_bits_shift;
+
+        // ~ printf("%" PRIu64 " -> %" PRIu64 " -> %" PRIu64 "", memory_address, pageaddr, not_page_bits_mask);
+
+        if (this->mapped_controller.find(pageaddr) ==  this->mapped_controller.end()) {
+            for (uint32_t i = 0; i < sinuca_engine.memory_controller_array_size; i++) {
+                if (sinuca_engine.memory_controller_array[i]->get_controller(memory_address) ==
+                    sinuca_engine.memory_controller_array[i]->get_controller_number()) {
+                    return sinuca_engine.memory_controller_array[i]->get_id();
+                }
+            }
+        }
+        else {
+            // ~ ERROR_ASSERT_PRINTF(this->mapped_controller.find(pageaddr) !=  this->mapped_controller.end(), "Mapping not found.\n")
+            memctrl = this->mapped_controller[pageaddr];
+            return sinuca_engine.memory_controller_array[memctrl]->get_id();
+        }
+    }
+    else {
+        for (uint32_t i = 0; i < sinuca_engine.memory_controller_array_size; i++) {
+            if (sinuca_engine.memory_controller_array[i]->get_controller(memory_address) ==
+                sinuca_engine.memory_controller_array[i]->get_controller_number()) {
+                return sinuca_engine.memory_controller_array[i]->get_id();
+            }
         }
     }
     ERROR_PRINTF("Could not find a next_level for the memory address\n")

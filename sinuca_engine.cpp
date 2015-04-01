@@ -30,8 +30,10 @@ sinuca_engine_t::sinuca_engine_t() {
     this->arg_graph_file_name = NULL;
 
     for (uint32_t i = 0; i < MAX_CORES; i++) {
-        this->thread_map[i] = i;
+        this->thread_affinity[i] = i;
     }
+
+    this->arg_map_file_name = NULL;
 
     this->interconnection_interface_array = NULL;
     this->processor_array = NULL;
@@ -531,13 +533,15 @@ void sinuca_engine_t::global_print_configuration() {
     this->write_statistics_value(get_type_component_label(), get_label(), "arg_trace_file_name", arg_trace_file_name);
     this->write_statistics_value(get_type_component_label(), get_label(), "arg_result_file_name", arg_result_file_name);
     this->write_statistics_value(get_type_component_label(), get_label(), "arg_warmup_instructions", arg_warmup_instructions);
-    this->write_statistics_value(get_type_component_label(), get_label(), "arg_default_core_mapping", arg_default_mapping);
+    this->write_statistics_value(get_type_component_label(), get_label(), "arg_default_core_affinity", arg_default_affinity);
 
     char name[100];
     for (uint32_t i = 0; i < sinuca_engine.get_processor_array_size(); i++) {
         sprintf(name, "core_%u_runs_thread", i);
-        sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), name, sinuca_engine.thread_map[i]);
+        sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), name, sinuca_engine.thread_affinity[i]);
     }
+
+    this->write_statistics_value(get_type_component_label(), get_label(), "arg_map_file_name", arg_map_file_name);
 
     this->write_statistics_small_separator();
     snprintf(comment, sizeof(comment), "Defines:");

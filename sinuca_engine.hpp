@@ -29,9 +29,13 @@ class sinuca_engine_t {
         char *arg_trace_file_name;
         char *arg_result_file_name;
         uint32_t arg_warmup_instructions;
-        bool arg_default_mapping;
+        bool arg_default_affinity;
         char *arg_graph_file_name;
-        uint32_t thread_map[MAX_CORES];
+        uint32_t thread_affinity[MAX_CORES];
+
+        // Addres Mapping to Mem.Ctrl.
+        char *arg_map_file_name;
+        std::ofstream map_file;
 
         std::ofstream result_file;
         std::ofstream graph_file;

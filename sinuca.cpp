@@ -39,7 +39,7 @@ static void display_use() {
     SINUCA_PRINTF("\t -warmup     \t INSTRUCTIONS  \t Warm-up instructions (opcodes) before start statistics. Default is 0.\n");
     SINUCA_PRINTF("\t -compressed \t BOOL          \t Set between the compressed (true) and uncompressed (false) trace file. Default is true.\n");
     SINUCA_PRINTF("\t -graph      \t FILE          \t Output graph file name to be used with GraphViz.\n");
-    SINUCA_PRINTF("\t -map        \t THREADS       \t Inform a different mapping between the trace files and the cores.\n");
+    SINUCA_PRINTF("\t -affinity   \t THREADS       \t Inform a different affinity between the trace files and the cores.\n");
 
     exit(EXIT_FAILURE);
 };
@@ -47,14 +47,16 @@ static void display_use() {
 // =============================================================================
 static void process_argv(int argc, char **argv) {
     uint32_t req_args_processed = 0;
-    uint32_t core_map = 0;
+    uint32_t core_affinity = 0;
 
     sinuca_engine.arg_configuration_file_name = NULL;
     sinuca_engine.arg_trace_file_name = NULL;
     sinuca_engine.arg_result_file_name = NULL;
     sinuca_engine.arg_warmup_instructions = 0;
     sinuca_engine.arg_graph_file_name = NULL;
-    sinuca_engine.arg_default_mapping = true;
+    sinuca_engine.arg_default_affinity = true;
+
+    sinuca_engine.arg_map_file_name = NULL;
 
     // Should start using Getopt
 
@@ -100,16 +102,25 @@ static void process_argv(int argc, char **argv) {
                 display_use();
             }
         }
-        else if (strcmp(*argv, "-map") == 0) {
-            sinuca_engine.arg_default_mapping = false;
+        else if (strcmp(*argv, "-affinity") == 0) {
+            sinuca_engine.arg_default_affinity = false;
             argc--;
             argv++;
             char * pch;
             pch = strtok(*argv, ",");
-            core_map = 0;
+            core_affinity = 0;
             while (pch != NULL) {
-                sinuca_engine.thread_map[core_map++] = atoi(pch);
+                sinuca_engine.thread_affinity[core_affinity++] = atoi(pch);
                 pch = strtok(NULL, ",");
+            }
+        }
+        else if (strcmp(*argv, "-map") == 0) {
+            argc--;
+            argv++;
+            sinuca_engine.arg_map_file_name = *argv;
+            if (stat(sinuca_engine.arg_map_file_name, &buf) == true) {
+                SINUCA_PRINTF("Mapping file does not exist: %s\n\n", sinuca_engine.arg_map_file_name)
+                display_use();
             }
         }
         else if (strncmp(*argv, "-", 1) == 0) {
@@ -142,10 +153,11 @@ static void process_argv(int argc, char **argv) {
     SINUCA_PRINTF("RESULT FILE:        %s\n", sinuca_engine.arg_result_file_name        != NULL ? sinuca_engine.arg_result_file_name        : "MISSING");
     SINUCA_PRINTF("WARM-UP OPCODES:    %u\n", sinuca_engine.arg_warmup_instructions);
     SINUCA_PRINTF("GRAPH FILE:         %s\n", sinuca_engine.arg_graph_file_name         != NULL ? sinuca_engine.arg_graph_file_name        : "MISSING");
-    SINUCA_PRINTF("MAP:                %s\n", sinuca_engine.arg_default_mapping ? "DEFAULT" : "USER DEFINED");
-    for (uint32_t i=0; i<core_map; i++) {
-        SINUCA_PRINTF("\t Trace[%" PRIu32 "] -> Core[%" PRIu32 "]\n", sinuca_engine.thread_map[i], i);
+    SINUCA_PRINTF("AFFINITY:           %s\n", sinuca_engine.arg_default_affinity ? "DEFAULT" : "USER DEFINED");
+    for (uint32_t i=0; i<core_affinity; i++) {
+        SINUCA_PRINTF("\t Trace[%" PRIu32 "] -> Core[%" PRIu32 "]\n", sinuca_engine.thread_affinity[i], i);
     }
+    SINUCA_PRINTF("MAP FILE:        %s\n", sinuca_engine.arg_map_file_name        != NULL ? sinuca_engine.arg_map_file_name        : "MISSING");
 
 };
 
@@ -253,7 +265,7 @@ int main(int argc, char **argv) {
 
     sinuca_engine.initialize();
 
-
+    ERROR_ASSERT_PRINTF(sinuca_engine.get_processor_array_size() <= MAX_CORES, "Configuration has more processors than supported (MAX_CORES).\n")
     sinuca_engine.is_processor_trace_eof = utils_t::template_allocate_initialize_array<bool>(sinuca_engine.get_processor_array_size(), false);
     sinuca_engine.trace_reader->allocate(sinuca_engine.arg_trace_file_name, sinuca_engine.get_processor_array_size());
 

@@ -32,7 +32,7 @@ RM = rm -f
 # ~ LDFLAGS = -ggdb
 
 # ~ ## EXECUTION
-FLAGS =   -O3 -ggdb -Wall -Wextra -Werror
+FLAGS =   -O3 -ggdb -Wall -Wextra -Werror -std=c++0x
 LDFLAGS = -ggdb
 
 ########################################################

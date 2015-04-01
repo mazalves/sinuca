@@ -181,7 +181,6 @@ class memory_controller_t : public interconnection_interface_t {
             return (addr & this->channel_bits_mask) >> this->channel_bits_shift;
         }
 
-
         void insert_mshr_born_ordered(memory_package_t* package);
         int32_t allocate_request(memory_package_t* package);
         int32_t allocate_writeback(memory_package_t* package);
