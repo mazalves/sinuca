@@ -713,10 +713,15 @@ void processor_t::stage_decode() {
 
 
         // DECODE MVX ====================================================
-        if (this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_LOCK ||
-            this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_UNLOCK ||
-            this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_SIMPLEOP ||
-            this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_COMPLEXOP){
+        if (this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_LOCK    ||
+            this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_UNLOCK  ||
+            this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_INT_ALU ||
+            this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_INT_MUL ||
+            this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_INT_DIV ||
+
+            this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_FP_ALU  ||
+            this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_FP_MUL  ||
+            this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_FP_DIV  ){
 
             new_uop.package_clean();
             new_uop.opcode_to_uop(this->decode_uop_counter++,
@@ -1109,12 +1114,16 @@ void processor_t::stage_rename() {
         ERROR_ASSERT_PRINTF(this->rename_uop_counter == this->decode_buffer.front()->uop_number, "Renaming out-of-order.\n")
 
         // If MVX => Check free space on the MOB-READ (Wait Answer)
-        if (this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_LOCK ||
-            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_UNLOCK ||
-            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_LOAD ||
-            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_STORE ||
-            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_SIMPLEOP ||
-            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_COMPLEXOP) {
+        if (this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_LOCK    ||
+            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_UNLOCK  ||
+            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_LOAD    ||
+            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_STORE   ||
+            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_INT_ALU ||
+            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_INT_MUL ||
+            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_INT_DIV ||
+            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_FP_ALU  ||
+            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_FP_MUL  ||
+            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_FP_DIV  ) {
 
             position_mob = memory_order_buffer_line_t::find_free(this->memory_order_buffer_read, this->memory_order_buffer_read_size);
             if (position_mob == POSITION_FAIL) {
@@ -1176,12 +1185,16 @@ void processor_t::stage_rename() {
         /// Insert into MOB
         // =====================================================================
         // Place MVX -> MOB
-        if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_LOCK ||
-            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_UNLOCK ||
-            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_LOAD ||
-            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_STORE ||
-            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_SIMPLEOP ||
-            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_COMPLEXOP  ) {
+        if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_LOCK    ||
+            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_UNLOCK  ||
+            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_LOAD    ||
+            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_STORE   ||
+            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_INT_ALU ||
+            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_INT_MUL ||
+            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_INT_DIV ||
+            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_FP_ALU  ||
+            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_FP_MUL  ||
+            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_FP_DIV  ) {
 
             PROCESSOR_DEBUG_PRINTF("Renaming MVX %s.\n", this->reorder_buffer[position_rob].uop.content_to_string().c_str())
 
@@ -1192,7 +1205,7 @@ void processor_t::stage_rename() {
                 this->reorder_buffer[position_rob].uop.memory_size = sinuca_engine.get_global_line_size() - offset;
             }
 
-            memory_operation_t mvx_operation = MEMORY_OPERATION_MVX_SIMPLEOP;
+            memory_operation_t mvx_operation = MEMORY_OPERATION_MVX_LOCK;
             if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_LOCK)
                 mvx_operation = MEMORY_OPERATION_MVX_LOCK;
             else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_UNLOCK)
@@ -1201,10 +1214,18 @@ void processor_t::stage_rename() {
                 mvx_operation = MEMORY_OPERATION_MVX_LOAD;
             else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_STORE)
                 mvx_operation = MEMORY_OPERATION_MVX_STORE;
-            else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_SIMPLEOP)
-                mvx_operation = MEMORY_OPERATION_MVX_SIMPLEOP;
-            else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_COMPLEXOP)
-                mvx_operation = MEMORY_OPERATION_MVX_COMPLEXOP;
+            else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_INT_ALU)
+                mvx_operation = MEMORY_OPERATION_MVX_INT_ALU;
+            else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_INT_MUL)
+                mvx_operation = MEMORY_OPERATION_MVX_INT_MUL;
+            else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_INT_DIV)
+                mvx_operation = MEMORY_OPERATION_MVX_INT_DIV;
+            else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_FP_ALU )
+                mvx_operation = MEMORY_OPERATION_MVX_FP_ALU;
+            else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_FP_MUL )
+                mvx_operation = MEMORY_OPERATION_MVX_FP_MUL;
+            else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_FP_DIV )
+                mvx_operation = MEMORY_OPERATION_MVX_FP_DIV;
 
             this->reorder_buffer[position_rob].mob_ptr->memory_request.packager(
                 this->get_id(),                                         /// Request Owner
@@ -1531,8 +1552,12 @@ void processor_t::stage_dispatch() {
                 case INSTRUCTION_OPERATION_MVX_LOAD:
                 case INSTRUCTION_OPERATION_MVX_STORE:
 
-                case INSTRUCTION_OPERATION_MVX_SIMPLEOP:
-                case INSTRUCTION_OPERATION_MVX_COMPLEXOP:
+                case INSTRUCTION_OPERATION_MVX_INT_ALU:
+                case INSTRUCTION_OPERATION_MVX_INT_MUL:
+                case INSTRUCTION_OPERATION_MVX_INT_DIV:
+                case INSTRUCTION_OPERATION_MVX_FP_ALU :
+                case INSTRUCTION_OPERATION_MVX_FP_MUL :
+                case INSTRUCTION_OPERATION_MVX_FP_DIV :
                     if (fu_mem_load < this->number_fu_mem_load) {
                         for (uint32_t i = 0; i < this->number_fu_mem_load; i++) {
                             if (this->ready_cycle_fu_mem_load[i] <= sinuca_engine.get_global_cycle()) {
@@ -1696,8 +1721,12 @@ void processor_t::stage_execution() {
                 case INSTRUCTION_OPERATION_MVX_LOAD:
                 case INSTRUCTION_OPERATION_MVX_STORE:
 
-                case INSTRUCTION_OPERATION_MVX_SIMPLEOP:
-                case INSTRUCTION_OPERATION_MVX_COMPLEXOP:
+                case INSTRUCTION_OPERATION_MVX_INT_ALU:
+                case INSTRUCTION_OPERATION_MVX_INT_MUL:
+                case INSTRUCTION_OPERATION_MVX_INT_DIV:
+                case INSTRUCTION_OPERATION_MVX_FP_ALU :
+                case INSTRUCTION_OPERATION_MVX_FP_MUL :
+                case INSTRUCTION_OPERATION_MVX_FP_DIV :
                 {
                     ERROR_ASSERT_PRINTF(reorder_buffer_line->mob_ptr != NULL, "Read with a NULL pointer to MOB")
                     this->memory_order_buffer_read_executed++;
@@ -1925,8 +1954,12 @@ void processor_t::stage_commit() {
                 case INSTRUCTION_OPERATION_MVX_UNLOCK:
                 case INSTRUCTION_OPERATION_MVX_LOAD:
                 case INSTRUCTION_OPERATION_MVX_STORE:
-                case INSTRUCTION_OPERATION_MVX_SIMPLEOP:
-                case INSTRUCTION_OPERATION_MVX_COMPLEXOP:
+                case INSTRUCTION_OPERATION_MVX_INT_ALU:
+                case INSTRUCTION_OPERATION_MVX_INT_MUL:
+                case INSTRUCTION_OPERATION_MVX_INT_DIV:
+                case INSTRUCTION_OPERATION_MVX_FP_ALU :
+                case INSTRUCTION_OPERATION_MVX_FP_MUL :
+                case INSTRUCTION_OPERATION_MVX_FP_DIV :
                     this->add_stat_mvx_completed(this->reorder_buffer[pos_buffer].uop.born_cycle);
                 break;
 
@@ -2103,8 +2136,12 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
         case MEMORY_OPERATION_MVX_LOAD:
         case MEMORY_OPERATION_MVX_STORE:
 
-        case MEMORY_OPERATION_MVX_SIMPLEOP:
-        case MEMORY_OPERATION_MVX_COMPLEXOP:
+        case MEMORY_OPERATION_MVX_INT_ALU:
+        case MEMORY_OPERATION_MVX_INT_MUL:
+        case MEMORY_OPERATION_MVX_INT_DIV:
+        case MEMORY_OPERATION_MVX_FP_ALU :
+        case MEMORY_OPERATION_MVX_FP_MUL :
+        case MEMORY_OPERATION_MVX_FP_DIV :
 
         case MEMORY_OPERATION_READ:
 

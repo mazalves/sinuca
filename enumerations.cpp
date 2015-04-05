@@ -53,14 +53,19 @@ const char* get_enum_instruction_operation_char(instruction_operation_t type) {
         case INSTRUCTION_OPERATION_BARRIER:     return "OP_BARRIER"; break;
         // ====================================================================
         /// MVX
-        case INSTRUCTION_OPERATION_MVX_LOCK:      return "OP_MVX_LK"; break;
-        case INSTRUCTION_OPERATION_MVX_UNLOCK:    return "OP_MVX_UNLK"; break;
+        case INSTRUCTION_OPERATION_MVX_LOCK:    return "OP_MVX_LK"; break;
+        case INSTRUCTION_OPERATION_MVX_UNLOCK:  return "OP_MVX_UNLK"; break;
 
-        case INSTRUCTION_OPERATION_MVX_LOAD:      return "OP_MVX_LD"; break;
-        case INSTRUCTION_OPERATION_MVX_STORE:     return "OP_MVX_ST"; break;
+        case INSTRUCTION_OPERATION_MVX_LOAD:    return "OP_MVX_LD"; break;
+        case INSTRUCTION_OPERATION_MVX_STORE:   return "OP_MVX_ST"; break;
 
-        case INSTRUCTION_OPERATION_MVX_SIMPLEOP:  return "OP_MVX_SOP"; break;
-        case INSTRUCTION_OPERATION_MVX_COMPLEXOP: return "OP_MVX_COP"; break;
+        case INSTRUCTION_OPERATION_MVX_INT_ALU: return "OP_MVX_INT_ALU"; break;
+        case INSTRUCTION_OPERATION_MVX_INT_MUL: return "OP_MVX_INT_MUL"; break;
+        case INSTRUCTION_OPERATION_MVX_INT_DIV: return "OP_MVX_INT_DIV"; break;
+
+        case INSTRUCTION_OPERATION_MVX_FP_ALU:  return "OP_MVX_FP_ALU"; break;
+        case INSTRUCTION_OPERATION_MVX_FP_MUL:  return "OP_MVX_FP_MUL"; break;
+        case INSTRUCTION_OPERATION_MVX_FP_DIV:  return "OP_MVX_FP_DIV"; break;
     };
     ERROR_PRINTF("Wrong INSTRUCTION_OPERATION\n");
     return "FAIL";
@@ -76,16 +81,19 @@ const char* get_enum_memory_operation_char(memory_operation_t type) {
         case MEMORY_OPERATION_WRITE:        return "WRITE"; break;
         case MEMORY_OPERATION_WRITEBACK:    return "WBACK"; break;
 
-        case MEMORY_OPERATION_MVX_LOCK:         return "MVX_LK"; break;
-        case MEMORY_OPERATION_MVX_UNLOCK:       return "MVX_UNLK"; break;
+        case MEMORY_OPERATION_MVX_LOCK:     return "MVX_LK"; break;
+        case MEMORY_OPERATION_MVX_UNLOCK:   return "MVX_UNLK"; break;
 
-        case MEMORY_OPERATION_MVX_LOAD:         return "MVX_LD"; break;
-        case MEMORY_OPERATION_MVX_STORE:        return "MVX_ST"; break;
-
-        case MEMORY_OPERATION_MVX_SIMPLEOP:     return "MVX_SOP"; break;
-        case MEMORY_OPERATION_MVX_COMPLEXOP:    return "MVX_COP"; break;
-
+        case MEMORY_OPERATION_MVX_LOAD:     return "MVX_LD"; break;
+        case MEMORY_OPERATION_MVX_STORE:    return "MVX_ST"; break;
         // ====================================================================
+        case MEMORY_OPERATION_MVX_INT_ALU:  return "MVX_INT_ALU"; break;
+        case MEMORY_OPERATION_MVX_INT_MUL:  return "MVX_INT_MUL"; break;
+        case MEMORY_OPERATION_MVX_INT_DIV:  return "MVX_INT_DIV"; break;
+
+        case MEMORY_OPERATION_MVX_FP_ALU:   return "MVX_FP_ALU"; break;
+        case MEMORY_OPERATION_MVX_FP_MUL:   return "MVX_FP_MUL"; break;
+        case MEMORY_OPERATION_MVX_FP_DIV:   return "MVX_FP_DIV"; break;
     };
     ERROR_PRINTF("Wrong MEMORY_OPERATION\n");
     return "FAIL";

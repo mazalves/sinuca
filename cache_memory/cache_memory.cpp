@@ -661,8 +661,12 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
             case MEMORY_OPERATION_MVX_UNLOCK:
             case MEMORY_OPERATION_MVX_LOAD:
             case MEMORY_OPERATION_MVX_STORE:
-            case MEMORY_OPERATION_MVX_SIMPLEOP:
-            case MEMORY_OPERATION_MVX_COMPLEXOP:
+            case MEMORY_OPERATION_MVX_INT_ALU:
+            case MEMORY_OPERATION_MVX_INT_MUL:
+            case MEMORY_OPERATION_MVX_INT_DIV:
+            case MEMORY_OPERATION_MVX_FP_ALU :
+            case MEMORY_OPERATION_MVX_FP_MUL :
+            case MEMORY_OPERATION_MVX_FP_DIV :
             {
                 /// Control Parallel Requests
                 if (this->recv_rqst_read_ready_cycle <= sinuca_engine.get_global_cycle()) {
@@ -857,8 +861,12 @@ void cache_memory_t::cache_stats(memory_operation_t memory_operation, bool is_hi
             case MEMORY_OPERATION_MVX_UNLOCK:
             case MEMORY_OPERATION_MVX_LOAD:
             case MEMORY_OPERATION_MVX_STORE:
-            case MEMORY_OPERATION_MVX_SIMPLEOP:
-            case MEMORY_OPERATION_MVX_COMPLEXOP:
+            case MEMORY_OPERATION_MVX_INT_ALU:
+            case MEMORY_OPERATION_MVX_INT_MUL:
+            case MEMORY_OPERATION_MVX_INT_DIV:
+            case MEMORY_OPERATION_MVX_FP_ALU :
+            case MEMORY_OPERATION_MVX_FP_MUL :
+            case MEMORY_OPERATION_MVX_FP_DIV :
                 ERROR_PRINTF("Entering at cache_stats() for a MVX instruction");
             break;
 
@@ -891,8 +899,12 @@ void cache_memory_t::cache_stats(memory_operation_t memory_operation, bool is_hi
             case MEMORY_OPERATION_MVX_UNLOCK:
             case MEMORY_OPERATION_MVX_LOAD:
             case MEMORY_OPERATION_MVX_STORE:
-            case MEMORY_OPERATION_MVX_SIMPLEOP:
-            case MEMORY_OPERATION_MVX_COMPLEXOP:
+            case MEMORY_OPERATION_MVX_INT_ALU:
+            case MEMORY_OPERATION_MVX_INT_MUL:
+            case MEMORY_OPERATION_MVX_INT_DIV:
+            case MEMORY_OPERATION_MVX_FP_ALU :
+            case MEMORY_OPERATION_MVX_FP_MUL :
+            case MEMORY_OPERATION_MVX_FP_DIV :
                 ERROR_PRINTF("Entering at cache_stats() for a MVX instruction");
             break;
 
@@ -928,9 +940,12 @@ void cache_memory_t::cache_wait(memory_package_t *package) {
         case MEMORY_OPERATION_MVX_UNLOCK:
         case MEMORY_OPERATION_MVX_LOAD:
         case MEMORY_OPERATION_MVX_STORE:
-        case MEMORY_OPERATION_MVX_SIMPLEOP:
-        case MEMORY_OPERATION_MVX_COMPLEXOP:
-            // ~ ERROR_PRINTF("Entering at cache_wait() for a MVX instruction");
+        case MEMORY_OPERATION_MVX_INT_ALU:
+        case MEMORY_OPERATION_MVX_INT_MUL:
+        case MEMORY_OPERATION_MVX_INT_DIV:
+        case MEMORY_OPERATION_MVX_FP_ALU :
+        case MEMORY_OPERATION_MVX_FP_MUL :
+        case MEMORY_OPERATION_MVX_FP_DIV :
             this->add_stat_mvx_wait(package->born_cycle);
         break;
 

@@ -451,8 +451,13 @@ uint32_t interconnection_controller_t::find_package_route_latency(memory_package
         case MEMORY_OPERATION_MVX_LOAD:
         case MEMORY_OPERATION_MVX_STORE:
 
-        case MEMORY_OPERATION_MVX_SIMPLEOP:
-        case MEMORY_OPERATION_MVX_COMPLEXOP:
+        case MEMORY_OPERATION_MVX_INT_ALU:
+        case MEMORY_OPERATION_MVX_INT_MUL:
+        case MEMORY_OPERATION_MVX_INT_DIV:
+
+        case MEMORY_OPERATION_MVX_FP_ALU:
+        case MEMORY_OPERATION_MVX_FP_MUL:
+        case MEMORY_OPERATION_MVX_FP_DIV:
 
             return low_latency;
         break;

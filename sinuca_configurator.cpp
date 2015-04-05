@@ -1439,18 +1439,31 @@ void sinuca_engine_t::initialize_memory_controller() {
             this->memory_controller_array[i]->set_timing_wtr(cfg_memory_controller[ memory_controller_parameters.back() ]);
 
             // MVX
-            memory_controller_parameters.push_back("MVX_LATENCY_SIMPLE_OP");
-            this->memory_controller_array[i]->set_mvx_latency_simple_op(cfg_memory_controller[ memory_controller_parameters.back() ]);
+            if (cfg_memory_controller.exists("MVX_OPERATION_SIZE")) {
+                memory_controller_parameters.push_back("MVX_OPERATION_SIZE");
+                this->memory_controller_array[i]->set_mvx_operation_size(cfg_memory_controller[ memory_controller_parameters.back() ]);
 
-            memory_controller_parameters.push_back("MVX_LATENCY_COMPLEX_OP");
-            this->memory_controller_array[i]->set_mvx_latency_complex_op(cfg_memory_controller[ memory_controller_parameters.back() ]);
+                memory_controller_parameters.push_back("MVX_LATENCY_INT_ALU");
+                this->memory_controller_array[i]->set_mvx_latency_int_alu(cfg_memory_controller[ memory_controller_parameters.back() ]);
 
-            memory_controller_parameters.push_back("MVX_LATENCY_BUS");
-            this->memory_controller_array[i]->set_mvx_latency_bus(cfg_memory_controller[ memory_controller_parameters.back() ]);
+                memory_controller_parameters.push_back("MVX_LATENCY_INT_MUL");
+                this->memory_controller_array[i]->set_mvx_latency_int_mul(cfg_memory_controller[ memory_controller_parameters.back() ]);
 
-            memory_controller_parameters.push_back("MVX_OPERATION_SIZE");
-            this->memory_controller_array[i]->set_mvx_operation_size(cfg_memory_controller[ memory_controller_parameters.back() ]);
+                memory_controller_parameters.push_back("MVX_LATENCY_INT_DIV");
+                this->memory_controller_array[i]->set_mvx_latency_int_div(cfg_memory_controller[ memory_controller_parameters.back() ]);
 
+                memory_controller_parameters.push_back("MVX_LATENCY_FP_ALU");
+                this->memory_controller_array[i]->set_mvx_latency_fp_alu(cfg_memory_controller[ memory_controller_parameters.back() ]);
+
+                memory_controller_parameters.push_back("MVX_LATENCY_FP_MUL");
+                this->memory_controller_array[i]->set_mvx_latency_fp_mul(cfg_memory_controller[ memory_controller_parameters.back() ]);
+
+                memory_controller_parameters.push_back("MVX_LATENCY_FP_DIV");
+                this->memory_controller_array[i]->set_mvx_latency_fp_div(cfg_memory_controller[ memory_controller_parameters.back() ]);
+            }
+            else {
+                this->memory_controller_array[i]->set_mvx_operation_size(0);
+            }
 
             this->memory_controller_array[i]->set_max_ports(1);
 

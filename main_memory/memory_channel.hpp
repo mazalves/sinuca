@@ -52,10 +52,14 @@ class memory_channel_t : public interconnection_interface_t {
         uint32_t timing_burst;
 
         // MVX
-        uint32_t mvx_latency_simple_op;
-        uint32_t mvx_latency_complex_op;
-        uint32_t mvx_latency_bus;
         uint32_t mvx_operation_size;
+        uint32_t mvx_latency_int_alu;
+        uint32_t mvx_latency_int_mul;
+        uint32_t mvx_latency_int_div;
+        uint32_t mvx_latency_fp_alu ;
+        uint32_t mvx_latency_fp_mul ;
+        uint32_t mvx_latency_fp_div ;
+
 
         mvx_state_t channel_mvx_state;
         uint64_t channel_mvx_id_owner;
@@ -161,10 +165,15 @@ class memory_channel_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, timing_wtr)
 
         // MVX
-        INSTANTIATE_GET_SET(uint32_t, mvx_latency_simple_op)
-        INSTANTIATE_GET_SET(uint32_t, mvx_latency_complex_op)
-        INSTANTIATE_GET_SET(uint32_t, mvx_latency_bus)
+        uint32_t get_mvx_latency(memory_operation_t operation);
         INSTANTIATE_GET_SET(uint32_t, mvx_operation_size)
+        INSTANTIATE_GET_SET(uint32_t, mvx_latency_int_alu)
+        INSTANTIATE_GET_SET(uint32_t, mvx_latency_int_mul)
+        INSTANTIATE_GET_SET(uint32_t, mvx_latency_int_div)
+        INSTANTIATE_GET_SET(uint32_t, mvx_latency_fp_alu)
+        INSTANTIATE_GET_SET(uint32_t, mvx_latency_fp_mul)
+        INSTANTIATE_GET_SET(uint32_t, mvx_latency_fp_div)
+
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_row_buffer_hit);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_row_buffer_miss);

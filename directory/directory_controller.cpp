@@ -133,10 +133,14 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     ERROR_ASSERT_PRINTF(cache_id < sinuca_engine.get_cache_memory_array_size(), "Wrong cache_id.\n")
 
     // MVX =====================================================================
-    if (package->memory_operation == MEMORY_OPERATION_MVX_LOCK ||
-        package->memory_operation == MEMORY_OPERATION_MVX_UNLOCK ||
-        package->memory_operation == MEMORY_OPERATION_MVX_SIMPLEOP ||
-        package->memory_operation == MEMORY_OPERATION_MVX_COMPLEXOP ) {
+    if (package->memory_operation == MEMORY_OPERATION_MVX_LOCK    ||
+        package->memory_operation == MEMORY_OPERATION_MVX_UNLOCK  ||
+        package->memory_operation == MEMORY_OPERATION_MVX_INT_ALU ||
+        package->memory_operation == MEMORY_OPERATION_MVX_INT_MUL ||
+        package->memory_operation == MEMORY_OPERATION_MVX_INT_DIV ||
+        package->memory_operation == MEMORY_OPERATION_MVX_FP_ALU  ||
+        package->memory_operation == MEMORY_OPERATION_MVX_FP_MUL  ||
+        package->memory_operation == MEMORY_OPERATION_MVX_FP_DIV  ) {
 
         ERROR_ASSERT_PRINTF(
         // ~ sinuca_engine.memory_controller_array[i]->get_address_mask_type() == MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE ||
@@ -421,8 +425,12 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
         case MEMORY_OPERATION_MVX_UNLOCK:
         case MEMORY_OPERATION_MVX_LOAD:
         case MEMORY_OPERATION_MVX_STORE:
-        case MEMORY_OPERATION_MVX_SIMPLEOP:
-        case MEMORY_OPERATION_MVX_COMPLEXOP:
+        case MEMORY_OPERATION_MVX_INT_ALU:
+        case MEMORY_OPERATION_MVX_INT_MUL:
+        case MEMORY_OPERATION_MVX_INT_DIV:
+        case MEMORY_OPERATION_MVX_FP_ALU :
+        case MEMORY_OPERATION_MVX_FP_MUL :
+        case MEMORY_OPERATION_MVX_FP_DIV :
         {
             /// Send the message to the next level without latency
             ERROR_PRINTF("Found a MVX in a wrong part of directory_controller_t::treat_cache_request()\n");
@@ -747,12 +755,16 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
 
 
     // MVX =====================================================================
-    if (package->memory_operation == MEMORY_OPERATION_MVX_LOCK ||
-        package->memory_operation == MEMORY_OPERATION_MVX_UNLOCK ||
-        package->memory_operation == MEMORY_OPERATION_MVX_SIMPLEOP ||
-        package->memory_operation == MEMORY_OPERATION_MVX_COMPLEXOP ||
-        package->memory_operation == MEMORY_OPERATION_MVX_LOAD ||
-        package->memory_operation == MEMORY_OPERATION_MVX_STORE ) {
+    if (package->memory_operation == MEMORY_OPERATION_MVX_LOCK    ||
+        package->memory_operation == MEMORY_OPERATION_MVX_UNLOCK  ||
+        package->memory_operation == MEMORY_OPERATION_MVX_LOAD    ||
+        package->memory_operation == MEMORY_OPERATION_MVX_STORE   ||
+        package->memory_operation == MEMORY_OPERATION_MVX_INT_ALU ||
+        package->memory_operation == MEMORY_OPERATION_MVX_INT_MUL ||
+        package->memory_operation == MEMORY_OPERATION_MVX_INT_DIV ||
+        package->memory_operation == MEMORY_OPERATION_MVX_FP_ALU  ||
+        package->memory_operation == MEMORY_OPERATION_MVX_FP_MUL  ||
+        package->memory_operation == MEMORY_OPERATION_MVX_FP_DIV  ) {
 
         /// Get CACHE pointer
         cache_memory_t *cache = sinuca_engine.cache_memory_array[cache_id];
@@ -943,8 +955,12 @@ package_state_t directory_controller_t::treat_cache_request_sent(uint32_t cache_
         case MEMORY_OPERATION_MVX_UNLOCK:
         case MEMORY_OPERATION_MVX_LOAD:
         case MEMORY_OPERATION_MVX_STORE:
-        case MEMORY_OPERATION_MVX_SIMPLEOP:
-        case MEMORY_OPERATION_MVX_COMPLEXOP:
+        case MEMORY_OPERATION_MVX_INT_ALU:
+        case MEMORY_OPERATION_MVX_INT_MUL:
+        case MEMORY_OPERATION_MVX_INT_DIV:
+        case MEMORY_OPERATION_MVX_FP_ALU :
+        case MEMORY_OPERATION_MVX_FP_MUL :
+        case MEMORY_OPERATION_MVX_FP_DIV :
             return PACKAGE_STATE_WAIT;
         break;
 
@@ -1380,8 +1396,12 @@ void directory_controller_t::coherence_new_operation(cache_memory_t *cache, cach
                 case MEMORY_OPERATION_MVX_UNLOCK:
                 case MEMORY_OPERATION_MVX_LOAD:
                 case MEMORY_OPERATION_MVX_STORE:
-                case MEMORY_OPERATION_MVX_SIMPLEOP:
-                case MEMORY_OPERATION_MVX_COMPLEXOP:
+                case MEMORY_OPERATION_MVX_INT_ALU:
+                case MEMORY_OPERATION_MVX_INT_MUL:
+                case MEMORY_OPERATION_MVX_INT_DIV:
+                case MEMORY_OPERATION_MVX_FP_ALU :
+                case MEMORY_OPERATION_MVX_FP_MUL :
+                case MEMORY_OPERATION_MVX_FP_DIV :
                     ERROR_PRINTF("Entering at coherence_new_operation() for a MVX instruction");
                 break;
             }
@@ -1491,8 +1511,12 @@ bool directory_controller_t::coherence_is_read(memory_operation_t memory_operati
         case MEMORY_OPERATION_MVX_UNLOCK:
         case MEMORY_OPERATION_MVX_LOAD:
         case MEMORY_OPERATION_MVX_STORE:
-        case MEMORY_OPERATION_MVX_SIMPLEOP:
-        case MEMORY_OPERATION_MVX_COMPLEXOP:
+        case MEMORY_OPERATION_MVX_INT_ALU:
+        case MEMORY_OPERATION_MVX_INT_MUL:
+        case MEMORY_OPERATION_MVX_INT_DIV:
+        case MEMORY_OPERATION_MVX_FP_ALU :
+        case MEMORY_OPERATION_MVX_FP_MUL :
+        case MEMORY_OPERATION_MVX_FP_DIV :
             ERROR_PRINTF("Entering at coherence_is_read() for a MVX instruction\n");
         break;
     }
@@ -1638,8 +1662,12 @@ void directory_controller_t::new_statistics(cache_memory_t *cache, memory_operat
             case MEMORY_OPERATION_MVX_UNLOCK:
             case MEMORY_OPERATION_MVX_LOAD:
             case MEMORY_OPERATION_MVX_STORE:
-            case MEMORY_OPERATION_MVX_SIMPLEOP:
-            case MEMORY_OPERATION_MVX_COMPLEXOP:
+            case MEMORY_OPERATION_MVX_INT_ALU:
+            case MEMORY_OPERATION_MVX_INT_MUL:
+            case MEMORY_OPERATION_MVX_INT_DIV:
+            case MEMORY_OPERATION_MVX_FP_ALU :
+            case MEMORY_OPERATION_MVX_FP_MUL :
+            case MEMORY_OPERATION_MVX_FP_DIV :
                 ERROR_PRINTF("Entering at new_statistics() for a MVX instruction\n");
             break;
 
@@ -1674,8 +1702,12 @@ void directory_controller_t::new_statistics(cache_memory_t *cache, memory_operat
             case MEMORY_OPERATION_MVX_UNLOCK:
             case MEMORY_OPERATION_MVX_LOAD:
             case MEMORY_OPERATION_MVX_STORE:
-            case MEMORY_OPERATION_MVX_SIMPLEOP:
-            case MEMORY_OPERATION_MVX_COMPLEXOP:
+            case MEMORY_OPERATION_MVX_INT_ALU:
+            case MEMORY_OPERATION_MVX_INT_MUL:
+            case MEMORY_OPERATION_MVX_INT_DIV:
+            case MEMORY_OPERATION_MVX_FP_ALU :
+            case MEMORY_OPERATION_MVX_FP_MUL :
+            case MEMORY_OPERATION_MVX_FP_DIV :
                 ERROR_PRINTF("Entering at new_statistics() for a MVX instruction");
             break;
 

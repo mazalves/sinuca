@@ -455,6 +455,32 @@ package_state_t memory_channel_t::treat_memory_request(memory_package_t *package
     return PACKAGE_STATE_UNTREATED;
 };
 
+// ============================================================================
+uint32_t memory_channel_t::get_mvx_latency(memory_operation_t operation) {
+    switch(operation) {
+        case MEMORY_OPERATION_INST:         ERROR_PRINTF("Wrong operation type"); break;
+        case MEMORY_OPERATION_READ:         ERROR_PRINTF("Wrong operation type"); break;
+        case MEMORY_OPERATION_PREFETCH:     ERROR_PRINTF("Wrong operation type"); break;
+        case MEMORY_OPERATION_WRITE:        ERROR_PRINTF("Wrong operation type"); break;
+        case MEMORY_OPERATION_WRITEBACK:    ERROR_PRINTF("Wrong operation type"); break;
+
+        case MEMORY_OPERATION_MVX_LOCK:     return 0; break;
+        case MEMORY_OPERATION_MVX_UNLOCK:   return 0; break;
+
+        case MEMORY_OPERATION_MVX_LOAD:     return 0; break;
+        case MEMORY_OPERATION_MVX_STORE:    return 0; break;
+        // ====================================================================
+        case MEMORY_OPERATION_MVX_INT_ALU:  return this->get_mvx_latency_int_alu(); break;
+        case MEMORY_OPERATION_MVX_INT_MUL:  return this->get_mvx_latency_int_mul(); break;
+        case MEMORY_OPERATION_MVX_INT_DIV:  return this->get_mvx_latency_int_div(); break;
+
+        case MEMORY_OPERATION_MVX_FP_ALU:   return this->get_mvx_latency_fp_alu(); break;
+        case MEMORY_OPERATION_MVX_FP_MUL:   return this->get_mvx_latency_fp_mul(); break;
+        case MEMORY_OPERATION_MVX_FP_DIV:   return this->get_mvx_latency_fp_div(); break;
+    }
+    return 0;
+};
+
 
 // ============================================================================
 void memory_channel_t::clock(uint32_t subcycle) {
@@ -518,8 +544,12 @@ void memory_channel_t::clock(uint32_t subcycle) {
                 break;
 
                 case MEMORY_OPERATION_MVX_LOAD:
-                case MEMORY_OPERATION_MVX_SIMPLEOP:
-                case MEMORY_OPERATION_MVX_COMPLEXOP:
+                case MEMORY_OPERATION_MVX_INT_ALU:
+                case MEMORY_OPERATION_MVX_INT_MUL:
+                case MEMORY_OPERATION_MVX_INT_DIV:
+                case MEMORY_OPERATION_MVX_FP_ALU :
+                case MEMORY_OPERATION_MVX_FP_MUL :
+                case MEMORY_OPERATION_MVX_FP_DIV :
                     /// Respect Min. Latency
                     if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ)) {
                         return;
@@ -532,18 +562,9 @@ void memory_channel_t::clock(uint32_t subcycle) {
                     package->memory_size = 1;
                     package->is_answer = true;
                     // ~ package->package_ready(this->timing_cas + this->timing_burst);
-                    if (package->memory_operation == MEMORY_OPERATION_MVX_SIMPLEOP) {
-                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_simple_op;
-                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_simple_op;
-                    }
-                    else if (package->memory_operation == MEMORY_OPERATION_MVX_COMPLEXOP) {
-                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_complex_op;
-                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_complex_op;
-                    }
-                    else {
-                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_bus;
-                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_bus;
-                    }
+                    this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += get_mvx_latency(package->memory_operation);
+                    this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += get_mvx_latency(package->memory_operation);
+
                     package->package_transmit(this->timing_cas);
 
                 break;
@@ -617,8 +638,12 @@ void memory_channel_t::clock(uint32_t subcycle) {
                     break;
 
                     case MEMORY_OPERATION_MVX_LOAD:
-                    case MEMORY_OPERATION_MVX_SIMPLEOP:
-                    case MEMORY_OPERATION_MVX_COMPLEXOP:
+                    case MEMORY_OPERATION_MVX_INT_ALU:
+                    case MEMORY_OPERATION_MVX_INT_MUL:
+                    case MEMORY_OPERATION_MVX_INT_DIV:
+                    case MEMORY_OPERATION_MVX_FP_ALU :
+                    case MEMORY_OPERATION_MVX_FP_MUL :
+                    case MEMORY_OPERATION_MVX_FP_DIV :
                         /// Respect Min. Latency
                         if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ)) {
                             return;
@@ -630,18 +655,9 @@ void memory_channel_t::clock(uint32_t subcycle) {
                         package->memory_size = 1;
                         package->is_answer = true;
                         // ~ package->package_ready(this->timing_cas + this->timing_burst);
-                        if (package->memory_operation == MEMORY_OPERATION_MVX_SIMPLEOP) {
-                            this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_simple_op;
-                            this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_simple_op;
-                        }
-                        else if (package->memory_operation == MEMORY_OPERATION_MVX_COMPLEXOP) {
-                            this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_complex_op;
-                            this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_complex_op;
-                        }
-                        else {
-                            this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_bus;
-                            this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_bus;
-                        }
+                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += get_mvx_latency(package->memory_operation);
+                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += get_mvx_latency(package->memory_operation);
+
                         package->package_transmit(this->timing_cas);
                     break;
 
@@ -726,8 +742,12 @@ void memory_channel_t::clock(uint32_t subcycle) {
                     break;
 
                     case MEMORY_OPERATION_MVX_LOAD:
-                    case MEMORY_OPERATION_MVX_SIMPLEOP:
-                    case MEMORY_OPERATION_MVX_COMPLEXOP:
+                    case MEMORY_OPERATION_MVX_INT_ALU:
+                    case MEMORY_OPERATION_MVX_INT_MUL:
+                    case MEMORY_OPERATION_MVX_INT_DIV:
+                    case MEMORY_OPERATION_MVX_FP_ALU :
+                    case MEMORY_OPERATION_MVX_FP_MUL :
+                    case MEMORY_OPERATION_MVX_FP_DIV :
                         /// Respect Min. Latency
                         if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ)) {
                             return;
@@ -738,18 +758,8 @@ void memory_channel_t::clock(uint32_t subcycle) {
                         this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
                         package->is_answer = true;
                         // ~ package->package_ready(this->timing_cas + this->timing_burst);
-                        if (package->memory_operation == MEMORY_OPERATION_MVX_SIMPLEOP) {
-                            this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_simple_op;
-                            this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_simple_op;
-                        }
-                        else if (package->memory_operation == MEMORY_OPERATION_MVX_COMPLEXOP) {
-                            this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_complex_op;
-                            this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_complex_op;
-                        }
-                        else {
-                            this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_bus;
-                            this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += this->mvx_latency_bus;
-                        }
+                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += get_mvx_latency(package->memory_operation);
+                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] += get_mvx_latency(package->memory_operation);
                         package->package_transmit(this->timing_cas);
                     break;
 
@@ -965,10 +975,12 @@ void memory_channel_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_wtr", timing_wtr);
 
     // MVX
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_simple_op", mvx_latency_simple_op);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_complex_op", mvx_latency_complex_op);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_bus", mvx_latency_bus);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_operation_size", mvx_operation_size);
-
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_int_alu", mvx_latency_int_alu);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_int_mul", mvx_latency_int_mul);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_int_div", mvx_latency_int_div);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_fp_alu", mvx_latency_fp_alu);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_fp_mul", mvx_latency_fp_mul);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_fp_div", mvx_latency_fp_div);
 
 };

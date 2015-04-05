@@ -75,10 +75,16 @@ class memory_controller_t : public interconnection_interface_t {
         uint32_t timing_wtr;    // write to read delay time
 
         // MVX
-        uint32_t mvx_latency_simple_op;
-        uint32_t mvx_latency_complex_op;
-        uint32_t mvx_latency_bus;
         uint32_t mvx_operation_size;
+
+        uint32_t mvx_latency_int_alu;
+        uint32_t mvx_latency_int_mul;
+        uint32_t mvx_latency_int_div;
+
+        uint32_t mvx_latency_fp_alu;
+        uint32_t mvx_latency_fp_mul;
+        uint32_t mvx_latency_fp_div;
+
 
         // ====================================================================
         /// Set by this->allocate()
@@ -150,8 +156,12 @@ class memory_controller_t : public interconnection_interface_t {
         uint64_t stat_mvx_unlock_completed;
         uint64_t stat_mvx_load_completed;
         uint64_t stat_mvx_store_completed;
-        uint64_t stat_mvx_simple_op_completed;
-        uint64_t stat_mvx_complex_op_completed;
+        uint64_t stat_mvx_int_alu_completed;
+        uint64_t stat_mvx_int_mul_completed;
+        uint64_t stat_mvx_int_div_completed;
+        uint64_t stat_mvx_fp_alu_completed;
+        uint64_t stat_mvx_fp_mul_completed;
+        uint64_t stat_mvx_fp_div_completed;
 
         uint64_t stat_min_mvx_lock_wait_time;
         uint64_t stat_max_mvx_lock_wait_time;
@@ -169,13 +179,30 @@ class memory_controller_t : public interconnection_interface_t {
         uint64_t stat_max_mvx_store_wait_time;
         uint64_t stat_accumulated_mvx_store_wait_time;
 
-        uint64_t stat_min_mvx_simple_op_wait_time;
-        uint64_t stat_max_mvx_simple_op_wait_time;
-        uint64_t stat_accumulated_mvx_simple_op_wait_time;
+        uint64_t stat_min_mvx_int_alu_wait_time;
+        uint64_t stat_max_mvx_int_alu_wait_time;
+        uint64_t stat_accumulated_mvx_int_alu_wait_time;
 
-        uint64_t stat_min_mvx_complex_op_wait_time;
-        uint64_t stat_max_mvx_complex_op_wait_time;
-        uint64_t stat_accumulated_mvx_complex_op_wait_time;
+        uint64_t stat_min_mvx_int_mul_wait_time;
+        uint64_t stat_max_mvx_int_mul_wait_time;
+        uint64_t stat_accumulated_mvx_int_mul_wait_time;
+
+        uint64_t stat_min_mvx_int_div_wait_time;
+        uint64_t stat_max_mvx_int_div_wait_time;
+        uint64_t stat_accumulated_mvx_int_div_wait_time;
+
+        uint64_t stat_min_mvx_fp_alu_wait_time;
+        uint64_t stat_max_mvx_fp_alu_wait_time;
+        uint64_t stat_accumulated_mvx_fp_alu_wait_time;
+
+        uint64_t stat_min_mvx_fp_mul_wait_time;
+        uint64_t stat_max_mvx_fp_mul_wait_time;
+        uint64_t stat_accumulated_mvx_fp_mul_wait_time;
+
+        uint64_t stat_min_mvx_fp_div_wait_time;
+        uint64_t stat_max_mvx_fp_div_wait_time;
+        uint64_t stat_accumulated_mvx_fp_div_wait_time;
+
 
         uint64_t stat_full_mshr_buffer_request;
         uint64_t stat_full_mshr_buffer_writeback;
@@ -274,10 +301,16 @@ class memory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, timing_wtr)
 
         //MVX
-        INSTANTIATE_GET_SET(uint32_t, mvx_latency_simple_op)
-        INSTANTIATE_GET_SET(uint32_t, mvx_latency_complex_op)
-        INSTANTIATE_GET_SET(uint32_t, mvx_latency_bus)
         INSTANTIATE_GET_SET(uint32_t, mvx_operation_size)
+
+        INSTANTIATE_GET_SET(uint32_t, mvx_latency_int_alu)
+        INSTANTIATE_GET_SET(uint32_t, mvx_latency_int_mul)
+        INSTANTIATE_GET_SET(uint32_t, mvx_latency_int_div)
+
+        INSTANTIATE_GET_SET(uint32_t, mvx_latency_fp_alu)
+        INSTANTIATE_GET_SET(uint32_t, mvx_latency_fp_mul)
+        INSTANTIATE_GET_SET(uint32_t, mvx_latency_fp_div)
+
 
         // ====================================================================
         /// Statistics related
@@ -340,8 +373,12 @@ class memory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint64_t, stat_mvx_unlock_completed)
         INSTANTIATE_GET_SET(uint64_t, stat_mvx_load_completed)
         INSTANTIATE_GET_SET(uint64_t, stat_mvx_store_completed)
-        INSTANTIATE_GET_SET(uint64_t, stat_mvx_simple_op_completed)
-        INSTANTIATE_GET_SET(uint64_t, stat_mvx_complex_op_completed)
+        INSTANTIATE_GET_SET(uint64_t, stat_mvx_int_alu_completed)
+        INSTANTIATE_GET_SET(uint64_t, stat_mvx_int_mul_completed)
+        INSTANTIATE_GET_SET(uint64_t, stat_mvx_int_div_completed)
+        INSTANTIATE_GET_SET(uint64_t, stat_mvx_fp_alu_completed)
+        INSTANTIATE_GET_SET(uint64_t, stat_mvx_fp_mul_completed)
+        INSTANTIATE_GET_SET(uint64_t, stat_mvx_fp_div_completed)
 
         inline void add_stat_mvx_lock_completed(uint64_t born_cycle) {
             this->stat_mvx_lock_completed++;
@@ -374,19 +411,48 @@ class memory_controller_t : public interconnection_interface_t {
             if (this->stat_max_mvx_store_wait_time < new_time) this->stat_max_mvx_store_wait_time = new_time;
         };
 
-        inline void add_stat_mvx_simple_op_completed(uint64_t born_cycle) {
-            this->stat_mvx_simple_op_completed++;
+        inline void add_stat_mvx_int_alu_completed(uint64_t born_cycle) {
+            this->stat_mvx_int_alu_completed++;
             uint64_t new_time = sinuca_engine.get_global_cycle() - born_cycle;
-            this->stat_accumulated_mvx_simple_op_wait_time += new_time;
-            if (this->stat_min_mvx_simple_op_wait_time > new_time) this->stat_min_mvx_simple_op_wait_time = new_time;
-            if (this->stat_max_mvx_simple_op_wait_time < new_time) this->stat_max_mvx_simple_op_wait_time = new_time;
+            this->stat_accumulated_mvx_int_alu_wait_time += new_time;
+            if (this->stat_min_mvx_int_alu_wait_time > new_time) this->stat_min_mvx_int_alu_wait_time = new_time;
+            if (this->stat_max_mvx_int_alu_wait_time < new_time) this->stat_max_mvx_int_alu_wait_time = new_time;
         };
-        inline void add_stat_mvx_complex_op_completed(uint64_t born_cycle) {
-            this->stat_mvx_complex_op_completed++;
+        inline void add_stat_mvx_int_mul_completed(uint64_t born_cycle) {
+            this->stat_mvx_int_mul_completed++;
             uint64_t new_time = sinuca_engine.get_global_cycle() - born_cycle;
-            this->stat_accumulated_mvx_complex_op_wait_time += new_time;
-            if (this->stat_min_mvx_complex_op_wait_time > new_time) this->stat_min_mvx_complex_op_wait_time = new_time;
-            if (this->stat_max_mvx_complex_op_wait_time < new_time) this->stat_max_mvx_complex_op_wait_time = new_time;
+            this->stat_accumulated_mvx_int_mul_wait_time += new_time;
+            if (this->stat_min_mvx_int_mul_wait_time > new_time) this->stat_min_mvx_int_mul_wait_time = new_time;
+            if (this->stat_max_mvx_int_mul_wait_time < new_time) this->stat_max_mvx_int_mul_wait_time = new_time;
+        };
+        inline void add_stat_mvx_int_div_completed(uint64_t born_cycle) {
+            this->stat_mvx_int_div_completed++;
+            uint64_t new_time = sinuca_engine.get_global_cycle() - born_cycle;
+            this->stat_accumulated_mvx_int_div_wait_time += new_time;
+            if (this->stat_min_mvx_int_div_wait_time > new_time) this->stat_min_mvx_int_div_wait_time = new_time;
+            if (this->stat_max_mvx_int_div_wait_time < new_time) this->stat_max_mvx_int_div_wait_time = new_time;
+        };
+
+        inline void add_stat_mvx_fp_alu_completed(uint64_t born_cycle) {
+            this->stat_mvx_fp_alu_completed++;
+            uint64_t new_time = sinuca_engine.get_global_cycle() - born_cycle;
+            this->stat_accumulated_mvx_fp_alu_wait_time += new_time;
+            if (this->stat_min_mvx_fp_alu_wait_time > new_time) this->stat_min_mvx_fp_alu_wait_time = new_time;
+            if (this->stat_max_mvx_fp_alu_wait_time < new_time) this->stat_max_mvx_fp_alu_wait_time = new_time;
+        };
+        inline void add_stat_mvx_fp_mul_completed(uint64_t born_cycle) {
+            this->stat_mvx_fp_mul_completed++;
+            uint64_t new_time = sinuca_engine.get_global_cycle() - born_cycle;
+            this->stat_accumulated_mvx_fp_mul_wait_time += new_time;
+            if (this->stat_min_mvx_fp_mul_wait_time > new_time) this->stat_min_mvx_fp_mul_wait_time = new_time;
+            if (this->stat_max_mvx_fp_mul_wait_time < new_time) this->stat_max_mvx_fp_mul_wait_time = new_time;
+        };
+        inline void add_stat_mvx_fp_div_completed(uint64_t born_cycle) {
+            this->stat_mvx_fp_div_completed++;
+            uint64_t new_time = sinuca_engine.get_global_cycle() - born_cycle;
+            this->stat_accumulated_mvx_fp_div_wait_time += new_time;
+            if (this->stat_min_mvx_fp_div_wait_time > new_time) this->stat_min_mvx_fp_div_wait_time = new_time;
+            if (this->stat_max_mvx_fp_div_wait_time < new_time) this->stat_max_mvx_fp_div_wait_time = new_time;
         };
 
 

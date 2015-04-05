@@ -137,9 +137,13 @@ void memory_controller_t::allocate() {
         this->channels[i].timing_wtr = ceil(this->timing_wtr * this->core_to_bus_clock_ratio);
 
         // MVX
-        this->channels[i].mvx_latency_simple_op = ceil(this->mvx_latency_simple_op * this->core_to_bus_clock_ratio);
-        this->channels[i].mvx_latency_complex_op = ceil(this->mvx_latency_complex_op * this->core_to_bus_clock_ratio);
-        this->channels[i].mvx_latency_bus = ceil(this->mvx_latency_bus * this->core_to_bus_clock_ratio);
+
+        this->channels[i].mvx_latency_int_alu = ceil(this->mvx_latency_int_alu * this->core_to_bus_clock_ratio * (this->get_burst_length() / 2));
+        this->channels[i].mvx_latency_int_mul = ceil(this->mvx_latency_int_mul * this->core_to_bus_clock_ratio * (this->get_burst_length() / 2));
+        this->channels[i].mvx_latency_int_div = ceil(this->mvx_latency_int_div * this->core_to_bus_clock_ratio * (this->get_burst_length() / 2));
+        this->channels[i].mvx_latency_fp_alu  = ceil(this->mvx_latency_fp_alu  * this->core_to_bus_clock_ratio * (this->get_burst_length() / 2));
+        this->channels[i].mvx_latency_fp_mul  = ceil(this->mvx_latency_fp_mul  * this->core_to_bus_clock_ratio * (this->get_burst_length() / 2));
+        this->channels[i].mvx_latency_fp_div  = ceil(this->mvx_latency_fp_div  * this->core_to_bus_clock_ratio * (this->get_burst_length() / 2));
 
         /// Copy the masks
         this->channels[i].not_column_bits_mask = this->not_column_bits_mask;
@@ -576,13 +580,30 @@ void memory_controller_t::clock(uint32_t subcycle) {
                     this->add_stat_mvx_store_completed(this->mshr_born_ordered[i]->born_cycle);
                 break;
 
-                case MEMORY_OPERATION_MVX_SIMPLEOP:
-                    this->add_stat_mvx_simple_op_completed(this->mshr_born_ordered[i]->born_cycle);
+                case MEMORY_OPERATION_MVX_INT_ALU:
+                    this->add_stat_mvx_int_alu_completed(this->mshr_born_ordered[i]->born_cycle);
                 break;
 
-                case MEMORY_OPERATION_MVX_COMPLEXOP:
-                    this->add_stat_mvx_complex_op_completed(this->mshr_born_ordered[i]->born_cycle);
+                case MEMORY_OPERATION_MVX_INT_MUL:
+                    this->add_stat_mvx_int_mul_completed(this->mshr_born_ordered[i]->born_cycle);
                 break;
+
+                case MEMORY_OPERATION_MVX_INT_DIV:
+                    this->add_stat_mvx_int_div_completed(this->mshr_born_ordered[i]->born_cycle);
+                break;
+
+                case MEMORY_OPERATION_MVX_FP_ALU:
+                    this->add_stat_mvx_fp_alu_completed(this->mshr_born_ordered[i]->born_cycle);
+                break;
+
+                case MEMORY_OPERATION_MVX_FP_MUL:
+                    this->add_stat_mvx_fp_mul_completed(this->mshr_born_ordered[i]->born_cycle);
+                break;
+
+                case MEMORY_OPERATION_MVX_FP_DIV:
+                    this->add_stat_mvx_fp_div_completed(this->mshr_born_ordered[i]->born_cycle);
+                break;
+
             }
 
             this->add_stat_accesses();
@@ -785,8 +806,12 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
             case MEMORY_OPERATION_MVX_UNLOCK:
             case MEMORY_OPERATION_MVX_LOAD:
             case MEMORY_OPERATION_MVX_STORE:
-            case MEMORY_OPERATION_MVX_SIMPLEOP:
-            case MEMORY_OPERATION_MVX_COMPLEXOP:
+            case MEMORY_OPERATION_MVX_INT_ALU:
+            case MEMORY_OPERATION_MVX_INT_MUL:
+            case MEMORY_OPERATION_MVX_INT_DIV:
+            case MEMORY_OPERATION_MVX_FP_ALU :
+            case MEMORY_OPERATION_MVX_FP_MUL :
+            case MEMORY_OPERATION_MVX_FP_DIV :
 
             case MEMORY_OPERATION_READ:
             case MEMORY_OPERATION_INST:
@@ -894,8 +919,12 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
             case MEMORY_OPERATION_MVX_UNLOCK:
             case MEMORY_OPERATION_MVX_LOAD:
             case MEMORY_OPERATION_MVX_STORE:
-            case MEMORY_OPERATION_MVX_SIMPLEOP:
-            case MEMORY_OPERATION_MVX_COMPLEXOP:
+            case MEMORY_OPERATION_MVX_INT_ALU:
+            case MEMORY_OPERATION_MVX_INT_MUL:
+            case MEMORY_OPERATION_MVX_INT_DIV:
+            case MEMORY_OPERATION_MVX_FP_ALU :
+            case MEMORY_OPERATION_MVX_FP_MUL :
+            case MEMORY_OPERATION_MVX_FP_DIV :
 
             case MEMORY_OPERATION_READ:
             case MEMORY_OPERATION_INST:
@@ -922,8 +951,12 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
         case MEMORY_OPERATION_MVX_UNLOCK:
         case MEMORY_OPERATION_MVX_LOAD:
         case MEMORY_OPERATION_MVX_STORE:
-        case MEMORY_OPERATION_MVX_SIMPLEOP:
-        case MEMORY_OPERATION_MVX_COMPLEXOP:
+        case MEMORY_OPERATION_MVX_INT_ALU:
+        case MEMORY_OPERATION_MVX_INT_MUL:
+        case MEMORY_OPERATION_MVX_INT_DIV:
+        case MEMORY_OPERATION_MVX_FP_ALU :
+        case MEMORY_OPERATION_MVX_FP_MUL :
+        case MEMORY_OPERATION_MVX_FP_DIV :
 
         case MEMORY_OPERATION_READ:
         case MEMORY_OPERATION_INST:
@@ -1064,8 +1097,12 @@ void memory_controller_t::reset_statistics() {
     this->set_stat_mvx_unlock_completed(0);
     this->set_stat_mvx_load_completed(0);
     this->set_stat_mvx_store_completed(0);
-    this->set_stat_mvx_simple_op_completed(0);
-    this->set_stat_mvx_complex_op_completed(0);
+    this->set_stat_mvx_int_alu_completed(0);
+    this->set_stat_mvx_int_mul_completed(0);
+    this->set_stat_mvx_int_div_completed(0);
+    this->set_stat_mvx_fp_alu_completed(0);
+    this->set_stat_mvx_fp_mul_completed(0);
+    this->set_stat_mvx_fp_div_completed(0);
 
     this->stat_min_mvx_lock_wait_time = MAX_ALIVE_TIME;
     this->stat_max_mvx_lock_wait_time = 0;
@@ -1083,15 +1120,29 @@ void memory_controller_t::reset_statistics() {
     this->stat_max_mvx_store_wait_time = 0;
     this->stat_accumulated_mvx_store_wait_time = 0;
 
-    this->stat_min_mvx_simple_op_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_mvx_simple_op_wait_time = 0;
-    this->stat_accumulated_mvx_simple_op_wait_time = 0;
+    this->stat_min_mvx_int_alu_wait_time = MAX_ALIVE_TIME;
+    this->stat_max_mvx_int_alu_wait_time = 0;
+    this->stat_accumulated_mvx_int_alu_wait_time = 0;
 
-    this->stat_min_mvx_complex_op_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_mvx_complex_op_wait_time = 0;
-    this->stat_accumulated_mvx_complex_op_wait_time = 0;
+    this->stat_min_mvx_int_mul_wait_time = MAX_ALIVE_TIME;
+    this->stat_max_mvx_int_mul_wait_time = 0;
+    this->stat_accumulated_mvx_int_mul_wait_time = 0;
 
+    this->stat_min_mvx_int_div_wait_time = MAX_ALIVE_TIME;
+    this->stat_max_mvx_int_div_wait_time = 0;
+    this->stat_accumulated_mvx_int_div_wait_time = 0;
 
+    this->stat_min_mvx_fp_alu_wait_time = MAX_ALIVE_TIME;
+    this->stat_max_mvx_fp_alu_wait_time = 0;
+    this->stat_accumulated_mvx_fp_alu_wait_time = 0;
+
+    this->stat_min_mvx_fp_mul_wait_time = MAX_ALIVE_TIME;
+    this->stat_max_mvx_fp_mul_wait_time = 0;
+    this->stat_accumulated_mvx_fp_mul_wait_time = 0;
+
+    this->stat_min_mvx_fp_div_wait_time = MAX_ALIVE_TIME;
+    this->stat_max_mvx_fp_div_wait_time = 0;
+    this->stat_accumulated_mvx_fp_div_wait_time = 0;
 
     this->stat_full_mshr_buffer_request = 0;
     this->stat_full_mshr_buffer_writeback = 0;
@@ -1149,8 +1200,12 @@ void memory_controller_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_unlock_completed", stat_mvx_unlock_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_load_completed", stat_mvx_load_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_store_completed", stat_mvx_store_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_simple_op_completed", stat_mvx_simple_op_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_complex_op_completed", stat_mvx_complex_op_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_int_alu_completed", stat_mvx_int_alu_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_int_mul_completed", stat_mvx_int_mul_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_int_div_completed", stat_mvx_int_div_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_fp_alu_completed", stat_mvx_fp_alu_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_fp_mul_completed", stat_mvx_fp_mul_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_fp_div_completed", stat_mvx_fp_div_completed);
 
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_lock_wait_time", stat_min_mvx_lock_wait_time);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_lock_wait_time", stat_max_mvx_lock_wait_time);
@@ -1164,11 +1219,23 @@ void memory_controller_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_store_wait_time", stat_min_mvx_store_wait_time);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_store_wait_time", stat_max_mvx_store_wait_time);
 
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_simple_op_wait_time", stat_min_mvx_simple_op_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_simple_op_wait_time", stat_max_mvx_simple_op_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_int_alu_wait_time", stat_min_mvx_int_alu_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_int_alu_wait_time", stat_max_mvx_int_alu_wait_time);
 
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_complex_op_wait_time", stat_min_mvx_complex_op_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_complex_op_wait_time", stat_max_mvx_complex_op_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_int_mul_wait_time", stat_min_mvx_int_mul_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_int_mul_wait_time", stat_max_mvx_int_mul_wait_time);
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_int_div_wait_time", stat_min_mvx_int_div_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_int_div_wait_time", stat_max_mvx_int_div_wait_time);
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_fp_alu_wait_time", stat_min_mvx_fp_alu_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_fp_alu_wait_time", stat_max_mvx_fp_alu_wait_time);
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_fp_mul_wait_time", stat_min_mvx_fp_mul_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_fp_mul_wait_time", stat_max_mvx_fp_mul_wait_time);
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_fp_div_wait_time", stat_min_mvx_fp_div_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_fp_div_wait_time", stat_max_mvx_fp_div_wait_time);
 
 
     sinuca_engine.write_statistics_small_separator();
@@ -1176,8 +1243,12 @@ void memory_controller_t::print_statistics() {
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_unlock_wait_time", stat_accumulated_mvx_unlock_wait_time, stat_mvx_unlock_completed);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_load_wait_time", stat_accumulated_mvx_load_wait_time, stat_mvx_load_completed);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_store_wait_time", stat_accumulated_mvx_store_wait_time, stat_mvx_store_completed);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_simple_op_wait_time", stat_accumulated_mvx_simple_op_wait_time, stat_mvx_simple_op_completed);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_complex_op_wait_time", stat_accumulated_mvx_complex_op_wait_time, stat_mvx_complex_op_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_int_alu_wait_time", stat_accumulated_mvx_int_alu_wait_time, stat_mvx_int_alu_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_int_mul_wait_time", stat_accumulated_mvx_int_mul_wait_time, stat_mvx_int_mul_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_int_div_wait_time", stat_accumulated_mvx_int_div_wait_time, stat_mvx_int_div_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_fp_alu_wait_time", stat_accumulated_mvx_fp_alu_wait_time, stat_mvx_fp_alu_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_fp_mul_wait_time", stat_accumulated_mvx_fp_mul_wait_time, stat_mvx_fp_mul_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_fp_div_wait_time", stat_accumulated_mvx_fp_div_wait_time, stat_mvx_fp_div_completed);
 
 
     sinuca_engine.write_statistics_small_separator();
@@ -1247,10 +1318,15 @@ void memory_controller_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_wtr", timing_wtr);
 
     // MVX
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_simple_op", mvx_latency_simple_op);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_complex_op", mvx_latency_complex_op);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_bus", mvx_latency_bus);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_operation_size", mvx_operation_size);
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_int_alu", mvx_latency_int_alu);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_int_mul", mvx_latency_int_mul);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_int_div", mvx_latency_int_div);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_fp_alu", mvx_latency_fp_alu);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_fp_mul", mvx_latency_fp_mul);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_fp_div", mvx_latency_fp_div);
+
 
 
     sinuca_engine.write_statistics_small_separator();
