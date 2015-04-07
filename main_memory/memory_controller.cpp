@@ -1171,8 +1171,25 @@ void memory_controller_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writeback_completed", stat_writeback_completed);
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_read", stat_instruction_completed + stat_read_completed + stat_prefetch_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write", stat_write_completed + stat_writeback_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_read",
+                                                                                    stat_instruction_completed +
+                                                                                    stat_read_completed +
+                                                                                    stat_prefetch_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write",
+                                                                                    stat_write_completed +
+                                                                                    stat_writeback_completed);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_read_mvx",
+                                                                                    stat_instruction_completed +
+                                                                                    stat_read_completed +
+                                                                                    stat_prefetch_completed +
+                                                                                    stat_mvx_load_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write_mvx",
+                                                                                    stat_write_completed +
+                                                                                    stat_writeback_completed +
+                                                                                    stat_mvx_store_completed);
+
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_instruction_wait_time", stat_min_instruction_wait_time);
@@ -1196,6 +1213,7 @@ void memory_controller_t::print_statistics() {
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_writeback_wait_time", stat_accumulated_writeback_wait_time, stat_writeback_completed);
 
     // MVX
+sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_lock_completed", stat_mvx_lock_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_unlock_completed", stat_mvx_unlock_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_load_completed", stat_mvx_load_completed);
@@ -1206,7 +1224,7 @@ void memory_controller_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_fp_alu_completed", stat_mvx_fp_alu_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_fp_mul_completed", stat_mvx_fp_mul_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_fp_div_completed", stat_mvx_fp_div_completed);
-
+sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_lock_wait_time", stat_min_mvx_lock_wait_time);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_lock_wait_time", stat_max_mvx_lock_wait_time);
 
