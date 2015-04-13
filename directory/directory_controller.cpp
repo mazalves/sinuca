@@ -89,10 +89,6 @@ void directory_controller_t::address_mapping(){
 
         /// PAGE MASK
         this->page_bits_shift = utils_t::get_power_of_two(PAGE_SIZE);
-        for (uint32_t i = 0; i < this->page_bits_shift; i++) {
-            this->page_bits_mask |= 1 << i;
-        }
-        this->not_page_bits_mask = ~this->page_bits_mask;
 
         /// Open Map File
         gzFile gzMapFile = gzopen(sinuca_engine.arg_map_file_name, "ro");   /// Open the .gz file
@@ -1343,7 +1339,7 @@ uint32_t directory_controller_t::find_next_obj_id(cache_memory_t *cache_memory, 
     // =====================================
     // Addres Mapping to Mem.Ctrl.
     if (sinuca_engine.arg_map_file_name != NULL) {
-        uint64_t pageaddr = (memory_address & this->not_page_bits_mask) >> this->page_bits_shift;
+        uint64_t pageaddr = memory_address >> this->page_bits_shift;
 
         /// Try to obtain a valid mapping
         if (this->mapped_controller.find(pageaddr) !=  this->mapped_controller.end()) {
