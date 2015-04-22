@@ -1443,6 +1443,9 @@ void sinuca_engine_t::initialize_memory_controller() {
                 memory_controller_parameters.push_back("MVX_OPERATION_SIZE");
                 this->memory_controller_array[i]->set_mvx_operation_size(cfg_memory_controller[ memory_controller_parameters.back() ]);
 
+                memory_controller_parameters.push_back("MVX_TOTAL_REGISTERS");
+                this->memory_controller_array[i]->set_mvx_total_registers(cfg_memory_controller[ memory_controller_parameters.back() ]);
+
                 memory_controller_parameters.push_back("MVX_LATENCY_INT_ALU");
                 this->memory_controller_array[i]->set_mvx_latency_int_alu(cfg_memory_controller[ memory_controller_parameters.back() ]);
 

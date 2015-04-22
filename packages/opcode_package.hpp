@@ -51,7 +51,12 @@ class opcode_package_t {
 
         bool is_conditional;
         bool is_predicated;
-        bool is_prefetch;
+
+        bool is_mvx;
+        int32_t mvx_read1;
+        int32_t mvx_read2;
+        int32_t mvx_write;
+
 
         /// SINUCA Control Variables
         uint64_t opcode_number;

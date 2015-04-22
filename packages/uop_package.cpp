@@ -44,6 +44,11 @@ uop_package_t::uop_package_t(const uop_package_t& package) {
     memory_address = package.memory_address;
     memory_size = package.memory_size;
 
+    is_mvx    = package.is_mvx   ;
+    mvx_read1 = package.mvx_read1;
+    mvx_read2 = package.mvx_read2;
+    mvx_write = package.mvx_write;
+
     /// SINUCA Control Variables
     opcode_number = package.opcode_number;
     uop_number = package.uop_number;
@@ -76,6 +81,12 @@ bool uop_package_t::operator==(const uop_package_t &package) {
     if (this->memory_address != package.memory_address) return FAIL;
     if (this->memory_size != package.memory_size) return FAIL;
 
+    // MVX
+    if (this->is_mvx    != package.is_mvx   ) return FAIL;
+    if (this->mvx_read1 != package.mvx_read1) return FAIL;
+    if (this->mvx_read2 != package.mvx_read2) return FAIL;
+    if (this->mvx_write != package.mvx_write) return FAIL;
+
     /// SINUCA Control Variables
     if (this->opcode_number != package.opcode_number) return FAIL;
     if (this->uop_number != package.uop_number) return FAIL;
@@ -104,6 +115,12 @@ void uop_package_t::opcode_to_uop(uint64_t uop_number, instruction_operation_t u
     this->memory_address = memory_address;
     this->memory_size = memory_size;
 
+    // MVX
+    this->is_mvx    = is_mvx   ;
+    this->mvx_read1 = mvx_read1;
+    this->mvx_read2 = mvx_read2;
+    this->mvx_write = mvx_write;
+
     /// SINUCA Control Variables
     this->opcode_number = opcode.opcode_number;
     this->uop_number = uop_number;
@@ -126,6 +143,11 @@ void uop_package_t::package_clean() {
     this->uop_operation = INSTRUCTION_OPERATION_NOP;
     this->memory_address = 0;
     this->memory_size = 0;
+
+    this->is_mvx    = false;
+    this->mvx_read1 = -1;
+    this->mvx_read2 = -1;
+    this->mvx_write = -1;
 
     /// SINUCA Control Variables
     this->opcode_number = 0;
@@ -162,45 +184,57 @@ void uop_package_t::package_wait(uint32_t stall_time) {
 // =============================================================================
 /// Convert Instruction variables into String
 std::string uop_package_t::content_to_string() {
-    std::string PackageString;
-    PackageString = "";
+    std::string content_string;
+    content_string = "";
 
     #ifndef SHOW_FREE_PACKAGE
         if (this->state == PACKAGE_STATE_FREE) {
-            return PackageString;
+            return content_string;
         }
     #endif
-    PackageString = PackageString + " UOP: OpCode#" + utils_t::uint64_to_string(this->opcode_number);
-    PackageString = PackageString + " UOP#" + utils_t::uint64_to_string(this->uop_number);
-    PackageString = PackageString + " " + get_enum_instruction_operation_char(this->opcode_operation);
-    PackageString = PackageString + " $" + utils_t::big_uint64_to_string(this->opcode_address);
-    PackageString = PackageString + " Size:" + utils_t::utils_t::uint32_to_string(this->opcode_size);
+    content_string = content_string + " UOP: OpCode#" + utils_t::uint64_to_string(this->opcode_number);
+    content_string = content_string + " UOP#" + utils_t::uint64_to_string(this->uop_number);
+    content_string = content_string + " " + get_enum_instruction_operation_char(this->opcode_operation);
+    content_string = content_string + " $" + utils_t::big_uint64_to_string(this->opcode_address);
+    content_string = content_string + " Size:" + utils_t::utils_t::uint32_to_string(this->opcode_size);
 
-    PackageString = PackageString + " | " + get_enum_instruction_operation_char(this->uop_operation);
-    PackageString = PackageString + " MEM:$" + utils_t::big_uint64_to_string(this->memory_address);
-    PackageString = PackageString + " Size:" + utils_t::uint32_to_string(this->memory_size);
+    content_string = content_string + " | " + get_enum_instruction_operation_char(this->uop_operation);
+    content_string = content_string + " MEM:$" + utils_t::big_uint64_to_string(this->memory_address);
+    content_string = content_string + " Size:" + utils_t::uint32_to_string(this->memory_size);
 
-    PackageString = PackageString + " | " + get_enum_package_state_char(this->state);
-    PackageString = PackageString + " | Ready:" + utils_t::uint64_to_string(this->ready_cycle);
-    PackageString = PackageString + " Born:" + utils_t::uint64_to_string(this->born_cycle);
+    // MVX
+    if (this->is_mvx == true) {
+        content_string = content_string + " | is_mvx";
+        content_string = content_string + " R1:" + utils_t::int32_to_string(this->mvx_read1);
+        content_string = content_string + " R2:" + utils_t::int32_to_string(this->mvx_read2);
+        content_string = content_string + " W:" + utils_t::int32_to_string(this->mvx_write);
+    }
+    else {
+        content_string = content_string + " | not_mvx";
+    }
 
 
-    PackageString = PackageString + " | RRegs[";
+    content_string = content_string + " | " + get_enum_package_state_char(this->state);
+    content_string = content_string + " | Ready:" + utils_t::uint64_to_string(this->ready_cycle);
+    content_string = content_string + " Born:" + utils_t::uint64_to_string(this->born_cycle);
+
+
+    content_string = content_string + " | RRegs[";
     for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
         if (this->read_regs[i] >= 0) {
-            PackageString = PackageString + " " + utils_t::uint32_to_string(this->read_regs[i]);
+            content_string = content_string + " " + utils_t::uint32_to_string(this->read_regs[i]);
         }
     }
 
-    PackageString = PackageString + " ] | WRegs[";
+    content_string = content_string + " ] | WRegs[";
     for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
         if (this->write_regs[i] >= 0) {
-            PackageString = PackageString + " " + utils_t::uint32_to_string(this->write_regs[i]);
+            content_string = content_string + " " + utils_t::uint32_to_string(this->write_regs[i]);
         }
     }
-    PackageString = PackageString + " ]";
+    content_string = content_string + " ]";
 
-    return PackageString;
+    return content_string;
 };
 
 // =============================================================================
@@ -284,15 +318,15 @@ bool uop_package_t::check_age(uop_package_t **input_matrix, uint32_t size_x_matr
 
 // =============================================================================
 std::string uop_package_t::print_all(circular_buffer_t<uop_package_t> *input_array, uint32_t size_array) {
-    std::string PackageString;
+    std::string content_string;
     std::string FinalString;
-    PackageString = "";
+    content_string = "";
     FinalString = "";
 
     for (uint32_t i = 0; i < size_array ; i++) {
-        PackageString = input_array[0][i].content_to_string();
-        if (PackageString.size() > 1) {
-            FinalString = FinalString + "[" + utils_t::utils_t::uint32_to_string(i) + "] " + PackageString + "\n";
+        content_string = input_array[0][i].content_to_string();
+        if (content_string.size() > 1) {
+            FinalString = FinalString + "[" + utils_t::utils_t::uint32_to_string(i) + "] " + content_string + "\n";
         }
     }
     return FinalString;
@@ -300,15 +334,15 @@ std::string uop_package_t::print_all(circular_buffer_t<uop_package_t> *input_arr
 
 // =============================================================================
 std::string uop_package_t::print_all(uop_package_t *input_array, uint32_t size_array) {
-    std::string PackageString;
+    std::string content_string;
     std::string FinalString;
-    PackageString = "";
+    content_string = "";
     FinalString = "";
 
     for (uint32_t i = 0; i < size_array ; i++) {
-        PackageString = input_array[i].content_to_string();
-        if (PackageString.size() > 1) {
-            FinalString = FinalString + "[" + utils_t::utils_t::uint32_to_string(i) + "] " + PackageString + "\n";
+        content_string = input_array[i].content_to_string();
+        if (content_string.size() > 1) {
+            FinalString = FinalString + "[" + utils_t::utils_t::uint32_to_string(i) + "] " + content_string + "\n";
         }
     }
     return FinalString;
@@ -316,18 +350,18 @@ std::string uop_package_t::print_all(uop_package_t *input_array, uint32_t size_a
 
 // =============================================================================
 std::string uop_package_t::print_all(uop_package_t **input_matrix, uint32_t size_x_matrix, uint32_t size_y_matrix) {
-    std::string PackageString;
+    std::string content_string;
     std::string FinalString;
-    PackageString = "";
+    content_string = "";
     FinalString = "";
 
     for (uint32_t i = 0; i < size_x_matrix ; i++) {
         for (uint32_t j = 0; j < size_y_matrix ; j++) {
-            PackageString = input_matrix[i][j].content_to_string();
-            if (PackageString.size() > 1) {
+            content_string = input_matrix[i][j].content_to_string();
+            if (content_string.size() > 1) {
                 FinalString = FinalString +
                                 "[" + utils_t::utils_t::uint32_to_string(i) + "] " +
-                                "[" + utils_t::utils_t::uint32_to_string(j) + "] " + PackageString + "\n";
+                                "[" + utils_t::utils_t::uint32_to_string(j) + "] " + content_string + "\n";
             }
         }
         if (FinalString.size() > 1) {

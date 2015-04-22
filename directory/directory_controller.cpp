@@ -1054,8 +1054,8 @@ memory_package_t* directory_controller_t::create_cache_writeback(cache_memory_t 
                 cache->get_id(),                        /// Src ID
                 cache->get_id(),                        /// Dst ID
                 NULL,                                   /// *Hops
-                POSITION_FAIL                           /// Hop Counter
-                );
+                POSITION_FAIL,                           /// Hop Counter
+                false, -1, -1, -1);
 
     // =========================================================================
     /// Allocate CopyBack at the MSHR

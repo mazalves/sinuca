@@ -38,12 +38,19 @@ class uop_package_t {
         uint64_t memory_address;
         uint32_t memory_size;
 
+        bool is_mvx;
+        int32_t mvx_read1;
+        int32_t mvx_read2;
+        int32_t mvx_write;
+
         /// SINUCA Control Variables
         uint64_t opcode_number;
         uint64_t uop_number;
         package_state_t state;
         uint64_t ready_cycle;
         uint64_t born_cycle;
+
+
 
         // ====================================================================
         /// Methods

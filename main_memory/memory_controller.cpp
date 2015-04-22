@@ -69,6 +69,15 @@ memory_controller_t::memory_controller_t() {
     this->timing_rtp = 0;
     this->timing_wr = 0;
     this->timing_wtr = 0;
+
+    //MVX
+    this->mvx_total_registers = 1;
+    this->mvx_latency_int_alu = 0;
+    this->mvx_latency_int_mul = 0;
+    this->mvx_latency_int_div = 0;
+    this->mvx_latency_fp_alu  = 0;
+    this->mvx_latency_fp_mul  = 0;
+    this->mvx_latency_fp_div  = 0;
 };
 
 // ============================================================================
@@ -137,6 +146,7 @@ void memory_controller_t::allocate() {
         this->channels[i].timing_wtr = ceil(this->timing_wtr * this->core_to_bus_clock_ratio);
 
         // MVX
+        this->channels[i].mvx_total_registers = this->mvx_total_registers;
 
         this->channels[i].mvx_latency_int_alu = ceil(this->mvx_latency_int_alu * this->core_to_bus_clock_ratio * (this->get_burst_length() / 2));
         this->channels[i].mvx_latency_int_mul = ceil(this->mvx_latency_int_mul * this->core_to_bus_clock_ratio * (this->get_burst_length() / 2));

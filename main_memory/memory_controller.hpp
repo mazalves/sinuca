@@ -76,6 +76,7 @@ class memory_controller_t : public interconnection_interface_t {
 
         // MVX
         uint32_t mvx_operation_size;
+        uint32_t mvx_total_registers;
 
         uint32_t mvx_latency_int_alu;
         uint32_t mvx_latency_int_mul;
@@ -302,6 +303,7 @@ class memory_controller_t : public interconnection_interface_t {
 
         //MVX
         INSTANTIATE_GET_SET(uint32_t, mvx_operation_size)
+        INSTANTIATE_GET_SET(uint32_t, mvx_total_registers)
 
         INSTANTIATE_GET_SET(uint32_t, mvx_latency_int_alu)
         INSTANTIATE_GET_SET(uint32_t, mvx_latency_int_mul)

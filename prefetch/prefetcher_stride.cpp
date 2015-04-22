@@ -189,7 +189,8 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
                                                         0,                                      /// Src ID
                                                         0,                                      /// Dst ID
                                                         NULL,                                   /// *Hops
-                                                        0);                                     /// Hop Counter
+                                                        0,
+                                                        false, -1, -1, -1);                                     /// Hop Counter
 
                                     PREFETCHER_DEBUG_PRINTF("\t NEW PREFETCH %s", new_request.content_to_string().c_str());
                                     this->request_buffer.push_back(new_request);
@@ -284,7 +285,8 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
                                     0,                                      /// Src ID
                                     0,                                      /// Dst ID
                                     NULL,                                   /// *Hops
-                                    0);                                     /// Hop Counter
+                                    0,
+                                    false, -1, -1, -1);                                     /// Hop Counter
 
                 PREFETCHER_DEBUG_PRINTF("\t NEW PREFETCH %s", new_request.content_to_string().c_str());
                 this->request_buffer.push_back(new_request);

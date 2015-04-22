@@ -59,7 +59,12 @@ opcode_package_t::opcode_package_t(const opcode_package_t &package) {
 
     is_conditional = package.is_conditional;
     is_predicated = package.is_predicated;
-    is_prefetch = package.is_prefetch;
+
+    // MVX
+    is_mvx = package.is_mvx;
+    mvx_read1 = package.mvx_read1;
+    mvx_read2 = package.mvx_read2;
+    mvx_write = package.mvx_write;
 
     /// SINUCA Control Variables
     opcode_number = package.opcode_number;
@@ -106,7 +111,11 @@ bool opcode_package_t::operator==(const opcode_package_t &package) {
 
     if (this->is_conditional != package.is_conditional) return FAIL;
     if (this->is_predicated != package.is_predicated) return FAIL;
-    if (this->is_prefetch != package.is_prefetch) return FAIL;
+    // MVX
+    if (this->is_mvx != package.is_mvx) return FAIL;
+    if (this->mvx_read1 != package.mvx_read1) return FAIL;
+    if (this->mvx_read2 != package.mvx_read2) return FAIL;
+    if (this->mvx_write != package.mvx_write) return FAIL;
 
     /// SINUCA Control Variables
     if (this->opcode_number != package.opcode_number) return FAIL;
@@ -146,7 +155,12 @@ void opcode_package_t::package_clean() {
 
     this->is_conditional = false;
     this->is_predicated = false;
-    this->is_prefetch = false;
+
+    //MVX
+    this->is_mvx = false;
+    this->mvx_read1 = -1;
+    this->mvx_read2 = -1;
+    this->mvx_write = -1;
 
     /// SINUCA Control Variables
     this->opcode_number = 0;
@@ -180,54 +194,66 @@ void opcode_package_t::package_wait(uint32_t stall_time) {
 // =============================================================================
 /// Convert Instruction variables into String
 std::string opcode_package_t::content_to_string() {
-    std::string PackageString;
-    PackageString = "";
+    std::string content_string;
+    content_string = "";
 
     #ifndef SHOW_FREE_PACKAGE
         if (this->state == PACKAGE_STATE_FREE) {
-            return PackageString;
+            return content_string;
         }
     #endif
-    PackageString = PackageString + " OpCode#" + utils_t::uint64_to_string(this->opcode_number);
-    PackageString = PackageString + " " + get_enum_instruction_operation_char(this->opcode_operation);
-    PackageString = PackageString + " $" + utils_t::big_uint64_to_string(this->opcode_address);
-    PackageString = PackageString + " Size:" + utils_t::uint32_to_string(this->opcode_size);
+    content_string = content_string + " OpCode#" + utils_t::uint64_to_string(this->opcode_number);
+    content_string = content_string + " " + get_enum_instruction_operation_char(this->opcode_operation);
+    content_string = content_string + " $" + utils_t::big_uint64_to_string(this->opcode_address);
+    content_string = content_string + " Size:" + utils_t::uint32_to_string(this->opcode_size);
 
-    PackageString = PackageString + " | R1 $" + utils_t::big_uint64_to_string(this->read_address);
-    PackageString = PackageString + " Size:" + utils_t::uint32_to_string(this->read_size);
+    content_string = content_string + " | R1 $" + utils_t::big_uint64_to_string(this->read_address);
+    content_string = content_string + " Size:" + utils_t::uint32_to_string(this->read_size);
 
-    PackageString = PackageString + " | R2 $" + utils_t::big_uint64_to_string(this->read2_address);
-    PackageString = PackageString + " Size:" + utils_t::uint32_to_string(this->read2_size);
+    content_string = content_string + " | R2 $" + utils_t::big_uint64_to_string(this->read2_address);
+    content_string = content_string + " Size:" + utils_t::uint32_to_string(this->read2_size);
 
-    PackageString = PackageString + " | W $" + utils_t::big_uint64_to_string(this->write_address);
-    PackageString = PackageString + " Size:" + utils_t::uint32_to_string(this->write_size);
+    content_string = content_string + " | W $" + utils_t::big_uint64_to_string(this->write_address);
+    content_string = content_string + " Size:" + utils_t::uint32_to_string(this->write_size);
 
-    PackageString = PackageString + " | " + get_enum_package_state_char(this->state);
-    PackageString = PackageString + " Ready:" + utils_t::uint64_to_string(this->ready_cycle);
-    PackageString = PackageString + " Born:" + utils_t::uint64_to_string(this->born_cycle);
+    content_string = content_string + " | " + get_enum_package_state_char(this->state);
+    content_string = content_string + " Ready:" + utils_t::uint64_to_string(this->ready_cycle);
+    content_string = content_string + " Born:" + utils_t::uint64_to_string(this->born_cycle);
 
 
-    PackageString = PackageString + " | RRegs[";
+    content_string = content_string + " | RRegs[";
     for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
         if (this->read_regs[i] >= 0) {
-            PackageString = PackageString + " " + utils_t::uint32_to_string(this->read_regs[i]);
+            content_string = content_string + " " + utils_t::uint32_to_string(this->read_regs[i]);
         }
     }
 
-    PackageString = PackageString + " ] | WRegs[";
+    content_string = content_string + " ] | WRegs[";
     for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
         if (this->write_regs[i] >= 0) {
-            PackageString = PackageString + " " + utils_t::uint32_to_string(this->write_regs[i]);
+            content_string = content_string + " " + utils_t::uint32_to_string(this->write_regs[i]);
         }
     }
-    PackageString = PackageString + " ]";
+    content_string = content_string + " ]";
 
     if (this->is_conditional == true)
-        PackageString = PackageString + " | is_condt";
+        content_string = content_string + " | is_condt";
     else
-        PackageString = PackageString + " | not_cond";
+        content_string = content_string + " | not_cond";
 
-    return PackageString;
+    // MVX
+    if (this->is_mvx == true) {
+        content_string = content_string + " | is_mvx";
+        content_string = content_string + " R1:" + utils_t::int32_to_string(this->mvx_read1);
+        content_string = content_string + " R2:" + utils_t::int32_to_string(this->mvx_read2);
+        content_string = content_string + " W:" + utils_t::int32_to_string(this->mvx_write);
+    }
+    else {
+        content_string = content_string + " | not_mvx";
+    }
+
+
+    return content_string;
 };
 
 
@@ -298,10 +324,14 @@ void opcode_package_t::opcode_to_trace_string(char *trace_string) {
     else
         strcat(register_string, " 0");
 
-    if (this->is_prefetch == true)
+    if (this->is_mvx == true)
         strcat(register_string, " 1");
     else
         strcat(register_string, " 0");
+
+    sprintf(trace_string, "%s %" PRId32 "", trace_string, this->mvx_read1);
+    sprintf(trace_string, "%s %" PRId32 "", trace_string, this->mvx_read2);
+    sprintf(trace_string, "%s %" PRId32 "", trace_string, this->mvx_write);
 
     sprintf(trace_string, "%s%s\n", trace_string, register_string);
 
@@ -487,8 +517,41 @@ void opcode_package_t::trace_string_to_opcode(char *input_string) {
     sub_string = strtok_r(NULL, " ", &tmp_ptr);
     this->is_predicated = (sub_string[0] == '1');
 
+    // MVX
     sub_string = strtok_r(NULL, " ", &tmp_ptr);
-    this->is_prefetch = (sub_string[0] == '1');
+    this->is_mvx = (sub_string[0] == '1');
+    if (this->is_mvx) {
+        sub_string = strtok_r(NULL, " ", &tmp_ptr);
+        sscanf(sub_string, "%"SCNd32, &this->mvx_read1);
+
+        sub_string = strtok_r(NULL, " ", &tmp_ptr);
+        sscanf(sub_string, "%"SCNd32, &this->mvx_read2);
+
+        sub_string = strtok_r(NULL, " ", &tmp_ptr);
+        sscanf(sub_string, "%"SCNd32, &this->mvx_write);
+
+        ERROR_ASSERT_PRINTF(this->mvx_read1 >= -1 && this->mvx_read1 < (int32_t)sinuca_engine.memory_controller_array[0]->get_mvx_total_registers(), "MVX READ1 register wrong");
+        ERROR_ASSERT_PRINTF(this->mvx_read2 >= -1 && this->mvx_read2 < (int32_t)sinuca_engine.memory_controller_array[0]->get_mvx_total_registers(), "MVX READ2 register wrong");
+        ERROR_ASSERT_PRINTF(this->mvx_write >= -1 && this->mvx_write < (int32_t)sinuca_engine.memory_controller_array[0]->get_mvx_total_registers(), "MVX WRITE register wrong");
+    }
+
+    switch(opcode_operation) {
+        case INSTRUCTION_OPERATION_MVX_LOCK:
+        case INSTRUCTION_OPERATION_MVX_UNLOCK:
+        case INSTRUCTION_OPERATION_MVX_LOAD:
+        case INSTRUCTION_OPERATION_MVX_STORE:
+        case INSTRUCTION_OPERATION_MVX_INT_ALU:
+        case INSTRUCTION_OPERATION_MVX_INT_MUL:
+        case INSTRUCTION_OPERATION_MVX_INT_DIV:
+        case INSTRUCTION_OPERATION_MVX_FP_ALU:
+        case INSTRUCTION_OPERATION_MVX_FP_MUL:
+        case INSTRUCTION_OPERATION_MVX_FP_DIV:
+            ERROR_ASSERT_PRINTF(this->is_mvx, "MVX OPERATION without is_mvx flag");
+        break;
+
+        default:
+        break;
+    }
 
 };
 
@@ -583,15 +646,15 @@ bool opcode_package_t::check_age(opcode_package_t **input_matrix, uint32_t size_
 
 // =============================================================================
 std::string opcode_package_t::print_all(circular_buffer_t<opcode_package_t> *input_array, uint32_t size_array) {
-    std::string PackageString;
+    std::string content_string;
     std::string FinalString;
-    PackageString = "";
+    content_string = "";
     FinalString = "";
 
     for (uint32_t i = 0; i < size_array ; i++) {
-        PackageString = input_array[0][i].content_to_string();
-        if (PackageString.size() > 1) {
-            FinalString = FinalString + "[" + utils_t::uint32_to_string(i) + "] " + PackageString + "\n";
+        content_string = input_array[0][i].content_to_string();
+        if (content_string.size() > 1) {
+            FinalString = FinalString + "[" + utils_t::uint32_to_string(i) + "] " + content_string + "\n";
         }
     }
     return FinalString;
@@ -599,15 +662,15 @@ std::string opcode_package_t::print_all(circular_buffer_t<opcode_package_t> *inp
 
 // =============================================================================
 std::string opcode_package_t::print_all(opcode_package_t *input_array, uint32_t size_array) {
-    std::string PackageString;
+    std::string content_string;
     std::string FinalString;
-    PackageString = "";
+    content_string = "";
     FinalString = "";
 
     for (uint32_t i = 0; i < size_array ; i++) {
-        PackageString = input_array[i].content_to_string();
-        if (PackageString.size() > 1) {
-            FinalString = FinalString + "[" + utils_t::uint32_to_string(i) + "] " + PackageString + "\n";
+        content_string = input_array[i].content_to_string();
+        if (content_string.size() > 1) {
+            FinalString = FinalString + "[" + utils_t::uint32_to_string(i) + "] " + content_string + "\n";
         }
     }
     return FinalString;
@@ -615,18 +678,18 @@ std::string opcode_package_t::print_all(opcode_package_t *input_array, uint32_t 
 
 // =============================================================================
 std::string opcode_package_t::print_all(opcode_package_t **input_matrix, uint32_t size_x_matrix, uint32_t size_y_matrix) {
-    std::string PackageString;
+    std::string content_string;
     std::string FinalString;
-    PackageString = "";
+    content_string = "";
     FinalString = "";
 
     for (uint32_t i = 0; i < size_x_matrix ; i++) {
         for (uint32_t j = 0; j < size_y_matrix ; j++) {
-            PackageString = input_matrix[i][j].content_to_string();
-            if (PackageString.size() > 1) {
+            content_string = input_matrix[i][j].content_to_string();
+            if (content_string.size() > 1) {
                 FinalString = FinalString +
                                 "[" + utils_t::uint32_to_string(i) + "] " +
-                                "[" + utils_t::uint32_to_string(j) + "] " + PackageString;
+                                "[" + utils_t::uint32_to_string(j) + "] " + content_string;
             }
         }
         if (FinalString.size() > 1) {

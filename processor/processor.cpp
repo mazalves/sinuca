@@ -648,7 +648,8 @@ int32_t processor_t::send_instruction_package(opcode_package_t *inst_package) {
         this->get_id(),                                                                 /// Src ID
         this->get_interface_output_component(PROCESSOR_PORT_INST_CACHE)->get_id(),      /// Dst ID
         NULL,                               /// *Hops
-        POSITION_FAIL);                     /// Hop Counter
+        POSITION_FAIL,
+        false, -1, -1, -1);                     /// Hop Counter
 
     return send_package(&package);
 };
@@ -733,6 +734,11 @@ void processor_t::stage_decode() {
             new_uop.package_ready(this->stage_decode_cycles);
             PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", pos_buffer, new_uop.content_to_string().c_str());
 
+            new_uop.is_mvx = this->fetch_buffer.front()->is_mvx;
+            new_uop.mvx_read1 = this->fetch_buffer.front()->mvx_read1;
+            new_uop.mvx_read2 = this->fetch_buffer.front()->mvx_read2;
+            new_uop.mvx_write = this->fetch_buffer.front()->mvx_write;
+
             pos_buffer = this->decode_buffer.push_back(new_uop);
             ERROR_ASSERT_PRINTF(pos_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
 
@@ -751,6 +757,11 @@ void processor_t::stage_decode() {
             new_uop.package_ready(this->stage_decode_cycles);
             PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", pos_buffer, new_uop.content_to_string().c_str());
 
+            new_uop.is_mvx = this->fetch_buffer.front()->is_mvx;
+            new_uop.mvx_read1 = this->fetch_buffer.front()->mvx_read1;
+            new_uop.mvx_read2 = this->fetch_buffer.front()->mvx_read2;
+            new_uop.mvx_write = this->fetch_buffer.front()->mvx_write;
+
             pos_buffer = this->decode_buffer.push_back(new_uop);
             ERROR_ASSERT_PRINTF(pos_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
 
@@ -768,6 +779,11 @@ void processor_t::stage_decode() {
 
             new_uop.package_ready(this->stage_decode_cycles);
             PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", pos_buffer, new_uop.content_to_string().c_str());
+
+            new_uop.is_mvx = this->fetch_buffer.front()->is_mvx;
+            new_uop.mvx_read1 = this->fetch_buffer.front()->mvx_read1;
+            new_uop.mvx_read2 = this->fetch_buffer.front()->mvx_read2;
+            new_uop.mvx_write = this->fetch_buffer.front()->mvx_write;
 
             pos_buffer = this->decode_buffer.push_back(new_uop);
             ERROR_ASSERT_PRINTF(pos_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
@@ -1245,7 +1261,11 @@ void processor_t::stage_rename() {
                 this->get_id(),                                                                 /// Src ID
                 this->get_interface_output_component(PROCESSOR_PORT_DATA_CACHE)->get_id(),      /// Dst ID
                 NULL,                                                   /// *Hops
-                POSITION_FAIL);                                         /// Hop Counter
+                POSITION_FAIL,
+                this->reorder_buffer[position_rob].uop.is_mvx,
+                this->reorder_buffer[position_rob].uop.mvx_read1,
+                this->reorder_buffer[position_rob].uop.mvx_read2,
+                this->reorder_buffer[position_rob].uop.mvx_write);                                         /// Hop Counter
 
             /// Make connections between ROB and MOB
             mob_line->rob_ptr = &this->reorder_buffer[position_rob];
@@ -1278,7 +1298,8 @@ void processor_t::stage_rename() {
                 this->get_id(),                                                                 /// Src ID
                 this->get_interface_output_component(PROCESSOR_PORT_DATA_CACHE)->get_id(),      /// Dst ID
                 NULL,                                                   /// *Hops
-                POSITION_FAIL);                                         /// Hop Counter
+                POSITION_FAIL,
+                false, -1, -1, -1);                                         /// Hop Counter
         }
         else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MEM_STORE) {
             ERROR_ASSERT_PRINTF(this->reorder_buffer[position_rob].mob_ptr->memory_request.state == PACKAGE_STATE_FREE, "ROB has a pointer to a non free package.")
@@ -1306,7 +1327,8 @@ void processor_t::stage_rename() {
                 this->get_id(),                                                                 /// Src ID
                 this->get_interface_output_component(PROCESSOR_PORT_DATA_CACHE)->get_id(),      /// Dst ID
                 NULL,                                                   /// *Hops
-                POSITION_FAIL);                                         /// Hop Counter
+                POSITION_FAIL,
+                false, -1, -1, -1);                                         /// Hop Counter
         }
 
         // =====================================================================

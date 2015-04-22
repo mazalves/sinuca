@@ -53,6 +53,10 @@ class memory_channel_t : public interconnection_interface_t {
 
         // MVX
         uint32_t mvx_operation_size;
+
+        uint32_t mvx_total_registers;
+        uint64_t *mvx_register_ready_cycle;
+
         uint32_t mvx_latency_int_alu;
         uint32_t mvx_latency_int_mul;
         uint32_t mvx_latency_int_div;
@@ -60,6 +64,7 @@ class memory_channel_t : public interconnection_interface_t {
         uint32_t mvx_latency_fp_mul ;
         uint32_t mvx_latency_fp_div ;
 
+        uint32_t mvx_ready_cycle;
 
         mvx_state_t channel_mvx_state;
         uint64_t channel_mvx_id_owner;
@@ -68,6 +73,10 @@ class memory_channel_t : public interconnection_interface_t {
         /// Set by allocate
         container_ptr_memory_package_t *bank_buffer;
         int32_t *bank_buffer_actual_position;   /// Position inside BankBuffer of the actual request being treated
+
+        // MVX
+        container_ptr_memory_package_t mvx_buffer;
+        int32_t mvx_buffer_actual_position;   /// Position inside BankBuffer of the actual request being treated
 
         bool *bank_is_drain_write;              /// Buffer is in drain_write mode
         uint32_t *bank_number_drain_write;      /// Number of writes treated in drain_write mode
@@ -126,6 +135,8 @@ class memory_channel_t : public interconnection_interface_t {
             return (memory_addressA & this->not_column_bits_mask) == (memory_addressB & this->not_column_bits_mask);
         }
 
+        // MVX
+        int32_t find_next_mvx_operation();
 
         int32_t find_next_read_operation(uint32_t bank);
         int32_t find_next_write_operation(uint32_t bank);
@@ -167,6 +178,7 @@ class memory_channel_t : public interconnection_interface_t {
         // MVX
         uint32_t get_mvx_latency(memory_operation_t operation);
         INSTANTIATE_GET_SET(uint32_t, mvx_operation_size)
+        INSTANTIATE_GET_SET(uint32_t, mvx_total_registers)
         INSTANTIATE_GET_SET(uint32_t, mvx_latency_int_alu)
         INSTANTIATE_GET_SET(uint32_t, mvx_latency_int_mul)
         INSTANTIATE_GET_SET(uint32_t, mvx_latency_int_div)

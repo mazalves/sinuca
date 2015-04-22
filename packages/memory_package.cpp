@@ -53,6 +53,11 @@ memory_package_t::memory_package_t(const memory_package_t &package) {
     memory_address = package.memory_address;
     memory_size = package.memory_size;
 
+    is_mvx    = package.is_mvx   ;
+    mvx_read1 = package.mvx_read1;
+    mvx_read2 = package.mvx_read2;
+    mvx_write = package.mvx_write;
+
     state = package.state;
     ready_cycle = package.ready_cycle;
     born_cycle = sinuca_engine.get_global_cycle();
@@ -84,6 +89,13 @@ memory_package_t &memory_package_t::operator=(const memory_package_t &package) {
         this->memory_address = package.memory_address;
         this->memory_size = package.memory_size;
 
+        // MVX
+        this->is_mvx    = package.is_mvx   ;
+        this->mvx_read1 = package.mvx_read1;
+        this->mvx_read2 = package.mvx_read2;
+        this->mvx_write = package.mvx_write;
+
+
         this->state = package.state;
         this->ready_cycle = package.ready_cycle;
         this->born_cycle = sinuca_engine.get_global_cycle();
@@ -114,6 +126,13 @@ void memory_package_t::package_clean() {
     this->uop_number = 0;
     this->memory_address = 0;
     this->memory_size = 0;
+
+    //MVX
+    this->is_mvx    = false;
+    this->mvx_read1 = -1;
+    this->mvx_read2 = -1;
+    this->mvx_write = -1;
+
 
     this->state = PACKAGE_STATE_FREE;
     this->ready_cycle = sinuca_engine.get_global_cycle();
@@ -170,7 +189,8 @@ void memory_package_t::packager(uint32_t id_owner, uint64_t opcode_number, uint6
                                 uint64_t memory_address, uint32_t memory_size,
                                 package_state_t state, uint32_t stall_time,
                                 memory_operation_t memory_operation, bool is_answer,
-                                uint32_t id_src, uint32_t id_dst, uint32_t *hops, uint32_t hop_count) {
+                                uint32_t id_src, uint32_t id_dst, uint32_t *hops, uint32_t hop_count,
+                                bool is_mvx, int32_t mvx_read1, int32_t mvx_read2, int32_t mvx_write) {
 
     ERROR_ASSERT_PRINTF(this->state == PACKAGE_STATE_FREE, "Wrong package state.\n");
     ERROR_ASSERT_PRINTF(stall_time < MAX_ALIVE_TIME, "Stall time should be less than MAX_ALIVE_TIME.\n");
@@ -183,6 +203,12 @@ void memory_package_t::packager(uint32_t id_owner, uint64_t opcode_number, uint6
 
     this->memory_address = memory_address;
     this->memory_size = memory_size;
+
+    //MVX
+    this->is_mvx    = is_mvx    ;
+    this->mvx_read1 = mvx_read1 ;
+    this->mvx_read2 = mvx_read2 ;
+    this->mvx_write = mvx_write ;
 
     this->state = state;
     this->ready_cycle = stall_time + sinuca_engine.get_global_cycle();
@@ -223,6 +249,18 @@ std::string memory_package_t::content_to_string() {
 
     content_string = content_string + " $" + utils_t::big_uint64_to_string(this->memory_address);
     content_string = content_string + " Size:" + utils_t::uint32_to_string(this->memory_size);
+
+    if (this->is_mvx == true) {
+        content_string = content_string + " | is_mvx";
+        content_string = content_string + " R1:" + utils_t::int32_to_string(this->mvx_read1);
+        content_string = content_string + " R2:" + utils_t::int32_to_string(this->mvx_read2);
+        content_string = content_string + " W:" + utils_t::int32_to_string(this->mvx_write);
+    }
+    else {
+        content_string = content_string + " | not_mvx";
+    }
+
+
 
     content_string = content_string + " | " + get_enum_package_state_char(this->state);
     content_string = content_string + " Ready:" + utils_t::uint64_to_string(this->ready_cycle);
