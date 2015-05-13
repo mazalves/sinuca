@@ -258,14 +258,14 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             uint64_t page_address = package->memory_address;
             // Each MVX operation requires mvx_operation_size evictions
             for (uint32_t i = 0; i < mvx_operation_size; i += sinuca_engine.get_global_line_size()){
-                page_address += i;
+                page_address += sinuca_engine.get_global_line_size();
 
-                for (uint32_t i = 0; i < this->directory_lines.size(); i++) {
+                for (uint32_t j = 0; j < this->directory_lines.size(); j++) {
                 /// Transaction on the same address was found
-                    if (this->cmp_index_tag(this->directory_lines[i]->initial_memory_address, page_address) &&
-                    this->directory_lines[i]->initial_memory_operation != MEMORY_OPERATION_MVX_LOAD &&
-                    this->directory_lines[i]->initial_memory_operation != MEMORY_OPERATION_MVX_STORE){
-                        ERROR_ASSERT_PRINTF(directory_lines[i]->lock_type != LOCK_FREE, "Found directory with LOCK_FREE\n");
+                    if (this->cmp_index_tag(this->directory_lines[j]->initial_memory_address, page_address) &&
+                    this->directory_lines[j]->initial_memory_operation != MEMORY_OPERATION_MVX_LOAD &&
+                    this->directory_lines[j]->initial_memory_operation != MEMORY_OPERATION_MVX_STORE){
+                        ERROR_ASSERT_PRINTF(directory_lines[j]->lock_type != LOCK_FREE, "Found directory with LOCK_FREE\n");
 
                         /// Cannot continue right now
                         DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED (Found incompatible LOCK)\n")
