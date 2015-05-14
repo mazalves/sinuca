@@ -257,8 +257,8 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
         if (lower_level_cache->empty()) {
             uint64_t page_address = package->memory_address;
             // Each MVX operation requires mvx_operation_size evictions
-            for (uint32_t i = 0; i < mvx_operation_size; i += sinuca_engine.get_global_line_size()){
-                page_address += sinuca_engine.get_global_line_size();
+            for (uint32_t i = 0; i < mvx_operation_size/sinuca_engine.get_global_line_size(); i++){
+                page_address += (i * sinuca_engine.get_global_line_size());
 
                 for (uint32_t j = 0; j < this->directory_lines.size(); j++) {
                 /// Transaction on the same address was found
