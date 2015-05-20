@@ -41,7 +41,6 @@ class memory_package_t {
         memory_operation_t memory_operation;    /// memory operation
         bool is_answer;                         /// is answer or request
 
-        bool *sub_blocks;                       /// required for the line_usage_predictor
 
         // MVX
         bool is_mvx;
@@ -64,7 +63,6 @@ class memory_package_t {
         ~memory_package_t();
 
         std::string content_to_string();
-        std::string sub_blocks_to_string();
 
         memory_package_t & operator=(const memory_package_t &package);
         void package_clean();

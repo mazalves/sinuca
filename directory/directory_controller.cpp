@@ -142,12 +142,12 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
         package->memory_operation == MEMORY_OPERATION_MVX_FP_MUL  ||
         package->memory_operation == MEMORY_OPERATION_MVX_FP_DIV  ) {
 
-        ERROR_ASSERT_PRINTF(
+        // ~ ERROR_ASSERT_PRINTF(
         // ~ sinuca_engine.memory_controller_array[i]->get_address_mask_type() == MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE ||
         // ~ sinuca_engine.memory_controller_array[i]->get_address_mask_type() == MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLROW_COLBYTE ||
         // ~ sinuca_engine.memory_controller_array[i]->get_address_mask_type() == MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CTRL_CHANNEL_COLBYTE ||
         // ~ sinuca_engine.memory_controller_array[i]->get_address_mask_type() == MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CHANNEL_COLBYTE ||
-        sinuca_engine.memory_controller_array[0]->get_address_mask_type() == MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_COLBYTE, "MVX cannot support this memory controller address mask.\n")
+        // ~ sinuca_engine.memory_controller_array[0]->get_address_mask_type() == MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_COLBYTE, "MVX cannot support this memory controller address mask.\n")
 
 
         /// Get CACHE pointer
@@ -431,6 +431,10 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
         case MEMORY_OPERATION_MVX_FP_ALU :
         case MEMORY_OPERATION_MVX_FP_MUL :
         case MEMORY_OPERATION_MVX_FP_DIV :
+        // Receiving a wrong HVX
+        case MEMORY_OPERATION_MVX_NANO_LOAD:
+        case MEMORY_OPERATION_MVX_NANO_STORE:
+
         {
             /// Send the message to the next level without latency
             ERROR_PRINTF("Found a MVX in a wrong part of directory_controller_t::treat_cache_request()\n");
@@ -950,21 +954,6 @@ package_state_t directory_controller_t::treat_cache_request_sent(uint32_t cache_
 
     switch (package->memory_operation) {
 
-        // MVX sit and wait for the ack;
-        case MEMORY_OPERATION_MVX_LOCK:
-        case MEMORY_OPERATION_MVX_UNLOCK:
-        case MEMORY_OPERATION_MVX_LOAD:
-        case MEMORY_OPERATION_MVX_STORE:
-        case MEMORY_OPERATION_MVX_INT_ALU:
-        case MEMORY_OPERATION_MVX_INT_MUL:
-        case MEMORY_OPERATION_MVX_INT_DIV:
-        case MEMORY_OPERATION_MVX_FP_ALU :
-        case MEMORY_OPERATION_MVX_FP_MUL :
-        case MEMORY_OPERATION_MVX_FP_DIV :
-            return PACKAGE_STATE_WAIT;
-        break;
-
-
         // =============================================================
         /// READ and WRITE
         case MEMORY_OPERATION_READ:
@@ -978,6 +967,7 @@ package_state_t directory_controller_t::treat_cache_request_sent(uint32_t cache_
         /// WRITEBACK
         // =============================================================
         case MEMORY_OPERATION_WRITEBACK:
+        {
             /// Get CACHE pointer
             cache_memory_t *cache = sinuca_engine.cache_memory_array[cache_id];
 
@@ -1001,6 +991,30 @@ package_state_t directory_controller_t::treat_cache_request_sent(uint32_t cache_
             /// Erase the package
             DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (Requester = This)\n")
             return PACKAGE_STATE_READY;
+        }
+        break;
+
+        // MVX sit and wait for the ack;
+        // =============================================================
+        case MEMORY_OPERATION_MVX_LOCK:
+        case MEMORY_OPERATION_MVX_UNLOCK:
+        case MEMORY_OPERATION_MVX_LOAD:
+        case MEMORY_OPERATION_MVX_STORE:
+        case MEMORY_OPERATION_MVX_INT_ALU:
+        case MEMORY_OPERATION_MVX_INT_MUL:
+        case MEMORY_OPERATION_MVX_INT_DIV:
+        case MEMORY_OPERATION_MVX_FP_ALU :
+        case MEMORY_OPERATION_MVX_FP_MUL :
+        case MEMORY_OPERATION_MVX_FP_DIV :
+            return PACKAGE_STATE_WAIT;
+        break;
+
+        // =============================================================
+        // Receiving a wrong HVX
+        case MEMORY_OPERATION_MVX_NANO_LOAD:
+        case MEMORY_OPERATION_MVX_NANO_STORE:
+            ERROR_PRINTF("Directory sending %s.\n", get_enum_memory_operation_char(package->memory_operation));
+            return PACKAGE_STATE_UNTREATED;
         break;
     }
 
@@ -1392,6 +1406,10 @@ void directory_controller_t::coherence_new_operation(cache_memory_t *cache, cach
                     }
                 break;
 
+                // Receiving a wrong HVX
+                case MEMORY_OPERATION_MVX_NANO_LOAD:
+                case MEMORY_OPERATION_MVX_NANO_STORE:
+
                 case MEMORY_OPERATION_MVX_LOCK:
                 case MEMORY_OPERATION_MVX_UNLOCK:
                 case MEMORY_OPERATION_MVX_LOAD:
@@ -1506,6 +1524,10 @@ bool directory_controller_t::coherence_is_read(memory_operation_t memory_operati
             return FAIL;
         break;
 
+        // Receiving a wrong HVX
+        case MEMORY_OPERATION_MVX_NANO_LOAD:
+        case MEMORY_OPERATION_MVX_NANO_STORE:
+
         // MVX
         case MEMORY_OPERATION_MVX_LOCK:
         case MEMORY_OPERATION_MVX_UNLOCK:
@@ -1604,12 +1626,20 @@ uint32_t directory_controller_t::find_next_obj_id(cache_memory_t *cache_memory, 
         }
     }
     ERROR_ASSERT_PRINTF(lower_level_cache->empty(), "Could not find a valid lower_level_cache but size != 0.\n")
+
+    // HVX
+    // CHANGE-ME
+    // If HVX, we should choose one MC in a round-robin fashion
+    // and send all the HVX instructions from this transaction for the choosen MC
+
     /// Find Next Main Memory
     for (uint32_t i = 0; i < sinuca_engine.memory_controller_array_size; i++) {
         if (sinuca_engine.memory_controller_array[i]->get_controller(memory_address) == sinuca_engine.memory_controller_array[i]->get_controller_number()) {
             return sinuca_engine.memory_controller_array[i]->get_id();
         }
     }
+
+
     ERROR_PRINTF("Could not find a next_level for the memory address\n")
     return FAIL;
 };
@@ -1657,6 +1687,10 @@ void directory_controller_t::new_statistics(cache_memory_t *cache, memory_operat
                 this->add_stat_writeback_recv();
             break;
 
+            // Receiving a wrong HVX
+            case MEMORY_OPERATION_MVX_NANO_LOAD:
+            case MEMORY_OPERATION_MVX_NANO_STORE:
+
             // MVX
             case MEMORY_OPERATION_MVX_LOCK:
             case MEMORY_OPERATION_MVX_UNLOCK:
@@ -1696,6 +1730,10 @@ void directory_controller_t::new_statistics(cache_memory_t *cache, memory_operat
             case MEMORY_OPERATION_WRITEBACK:
                 this->add_stat_writeback_send();
             break;
+
+            // Receiving a wrong HVX
+            case MEMORY_OPERATION_MVX_NANO_LOAD:
+            case MEMORY_OPERATION_MVX_NANO_STORE:
 
             // MVX
             case MEMORY_OPERATION_MVX_LOCK:

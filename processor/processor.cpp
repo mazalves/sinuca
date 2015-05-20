@@ -2151,6 +2151,8 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
         }
         break;
 
+
+        case MEMORY_OPERATION_READ:
         // Receiving a MVX
         case MEMORY_OPERATION_MVX_LOCK:
         case MEMORY_OPERATION_MVX_UNLOCK:
@@ -2164,8 +2166,6 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
         case MEMORY_OPERATION_MVX_FP_ALU :
         case MEMORY_OPERATION_MVX_FP_MUL :
         case MEMORY_OPERATION_MVX_FP_DIV :
-
-        case MEMORY_OPERATION_READ:
 
             ERROR_ASSERT_PRINTF(input_port == PROCESSOR_PORT_DATA_CACHE, "Receiving read package from a wrong port.\n");
             /// Control Parallel Requests
@@ -2185,6 +2185,9 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
             }
         break;
 
+        // Receiving a wrong HVX
+        case MEMORY_OPERATION_MVX_NANO_LOAD:
+        case MEMORY_OPERATION_MVX_NANO_STORE:
 
         case MEMORY_OPERATION_WRITE:
         case MEMORY_OPERATION_WRITEBACK:

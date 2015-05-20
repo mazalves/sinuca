@@ -23,19 +23,11 @@
 
 // ============================================================================
 memory_package_t::memory_package_t() {
-    ERROR_ASSERT_PRINTF(sinuca_engine.get_global_line_size() > 0, "Allocating 0 positions.\n")
-
-    this->sub_blocks = NULL;
-    // =============================================================
-    // Line Usage Predictor
-    this->sub_blocks = utils_t::template_allocate_initialize_array<bool>(sinuca_engine.get_global_line_size(), false);
-
     this->package_clean();
 };
 
 // ============================================================================
 memory_package_t::~memory_package_t() {
-    utils_t::template_delete_array<bool>(sub_blocks);
 };
 
 // ============================================================================
@@ -44,7 +36,6 @@ memory_package_t::memory_package_t(const memory_package_t &package) {
     // ~ ERROR_ASSERT_PRINTF(sub_blocks != NULL, "Allocating 0 positions.\n")
     // ~ this->package_clean();
 
-    this->sub_blocks = utils_t::template_allocate_initialize_array<bool>(sinuca_engine.get_global_line_size(), false);
 
     id_owner = package.id_owner;
     opcode_number = package.opcode_number;
@@ -65,10 +56,6 @@ memory_package_t::memory_package_t(const memory_package_t &package) {
     memory_operation = package.memory_operation;
     is_answer = package.is_answer;
 
-    // =============================================================
-    // Line Usage Predictor
-    memcpy(this->sub_blocks, package.sub_blocks, sizeof(bool) * sinuca_engine.get_global_line_size());
-
     /// Routing Control
     id_src = package.id_src;
     id_dst = package.id_dst;
@@ -79,7 +66,6 @@ memory_package_t::memory_package_t(const memory_package_t &package) {
 // ============================================================================
 memory_package_t &memory_package_t::operator=(const memory_package_t &package) {
     ERROR_ASSERT_PRINTF(sinuca_engine.get_global_line_size() > 0, "Allocating 0 positions.\n")
-    ERROR_ASSERT_PRINTF(this->sub_blocks != NULL, "Allocating 0 positions.\n")
 
     if (this!=&package){
         this->id_owner = package.id_owner;
@@ -103,10 +89,6 @@ memory_package_t &memory_package_t::operator=(const memory_package_t &package) {
         this->memory_operation = package.memory_operation;
         this->is_answer = package.is_answer;
 
-        // =============================================================
-        // Line Usage Predictor
-        memcpy(this->sub_blocks, package.sub_blocks, sizeof(bool) * sinuca_engine.get_global_line_size());
-
         /// Routing Control
         this->id_src = package.id_src;
         this->id_dst = package.id_dst;
@@ -118,8 +100,6 @@ memory_package_t &memory_package_t::operator=(const memory_package_t &package) {
 
 // ============================================================================
 void memory_package_t::package_clean() {
-    ERROR_ASSERT_PRINTF(sinuca_engine.get_global_line_size() > 0, "Allocating 0 positions.\n")
-    ERROR_ASSERT_PRINTF(this->sub_blocks != NULL, "Allocating 0 positions.\n")
     this->id_owner = 0;
     this->opcode_number = 0;
     this->opcode_address = 0;
@@ -140,10 +120,6 @@ void memory_package_t::package_clean() {
 
     this->memory_operation = MEMORY_OPERATION_INST;
     this->is_answer = false;
-
-    // =============================================================
-    // Line Usage Predictor
-    memset(this->sub_blocks, false, sizeof(bool) * sinuca_engine.get_global_line_size());
 
     /// Routing Control
     this->id_src = 0;
@@ -276,37 +252,7 @@ std::string memory_package_t::content_to_string() {
             content_string = content_string + " [" + utils_t::uint32_to_string(this->hops[i]) + "]";
         }
     }
-    /// line_status
-    // ~ content_string = content_string + "\n\t SubBlocks:";
-    // ~ for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        // ~ if (i % 8 == 0) {
-            // ~ content_string = content_string + " | ";
-        // ~ }
-        // ~ content_string = content_string + utils_t::bool_to_string(this->sub_blocks[i]);
-    // ~ }
-    // ~ content_string = content_string + "|";
-    return content_string;
-};
 
-// ============================================================================
-std::string memory_package_t::sub_blocks_to_string() {
-    std::string content_string;
-    content_string = "";
-
-    #ifndef SHOW_FREE_PACKAGE
-        if (this->state == PACKAGE_STATE_FREE) {
-            return content_string;
-        }
-    #endif
-
-    content_string = content_string + " SUB_BLOCKS:\t";
-    for (uint32_t i = 0; i < sinuca_engine.get_global_line_size(); i++) {
-        if (i % 4 == 0) {
-            content_string = content_string + "|";
-        }
-        content_string = content_string + "  " + utils_t::bool_to_string(this->sub_blocks[i]);
-    }
-    content_string = content_string + "|";
     return content_string;
 };
 

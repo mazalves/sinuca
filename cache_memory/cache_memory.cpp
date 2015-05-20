@@ -684,6 +684,14 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
             }
             break;
 
+            // =============================================================
+            // Receiving a wrong HVX
+            case MEMORY_OPERATION_MVX_NANO_LOAD:
+            case MEMORY_OPERATION_MVX_NANO_STORE:
+                ERROR_PRINTF("Directory sending %s.\n", get_enum_memory_operation_char(package->memory_operation));
+                return PACKAGE_STATE_UNTREATED;
+            break;
+
 
             case MEMORY_OPERATION_WRITE:
             case MEMORY_OPERATION_WRITEBACK:
@@ -856,6 +864,10 @@ void cache_memory_t::cache_stats(memory_operation_t memory_operation, bool is_hi
                 this->add_stat_writeback_recv();
             break;
 
+            // =============================================================
+            // Receiving a wrong HVX
+            case MEMORY_OPERATION_MVX_NANO_LOAD:
+            case MEMORY_OPERATION_MVX_NANO_STORE:
             // MVX
             case MEMORY_OPERATION_MVX_LOCK:
             case MEMORY_OPERATION_MVX_UNLOCK:
@@ -893,6 +905,11 @@ void cache_memory_t::cache_stats(memory_operation_t memory_operation, bool is_hi
             case MEMORY_OPERATION_WRITEBACK:
                 this->add_stat_writeback_send();
             break;
+
+            // =============================================================
+            // Receiving a wrong HVX
+            case MEMORY_OPERATION_MVX_NANO_LOAD:
+            case MEMORY_OPERATION_MVX_NANO_STORE:
 
             // MVX
             case MEMORY_OPERATION_MVX_LOCK:
@@ -947,6 +964,13 @@ void cache_memory_t::cache_wait(memory_package_t *package) {
         case MEMORY_OPERATION_MVX_FP_MUL :
         case MEMORY_OPERATION_MVX_FP_DIV :
             this->add_stat_mvx_wait(package->born_cycle);
+        break;
+
+        // =============================================================
+        // Receiving a wrong HVX
+        case MEMORY_OPERATION_MVX_NANO_LOAD:
+        case MEMORY_OPERATION_MVX_NANO_STORE:
+            ERROR_PRINTF("Cache receiving %s.\n", get_enum_memory_operation_char(package->memory_operation));
         break;
 
 

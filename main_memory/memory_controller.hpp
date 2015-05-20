@@ -21,16 +21,6 @@
 class memory_controller_t : public interconnection_interface_t {
     private:
 
-    #ifdef BURST_TRACE
-        char *burst_rqst_name;
-        char *burst_wback_name;
-        char *burst_pftch_name;
-
-        std::ofstream burst_rqst_file;
-        std::ofstream burst_wback_file;
-        std::ofstream burst_pftch_file;
-    #endif
-
         // ====================================================================
         /// Set by sinuca_configurator
         // ====================================================================
@@ -74,9 +64,12 @@ class memory_controller_t : public interconnection_interface_t {
         uint32_t timing_wr;     // write recovery time
         uint32_t timing_wtr;    // write to read delay time
 
-        // MVX
+        // HVX
         uint32_t mvx_operation_size;
         uint32_t mvx_total_registers;
+        uint32_t *mvx_wait_registers;
+
+        uint64_t mvx_ready_cycle;
 
         uint32_t mvx_latency_int_alu;
         uint32_t mvx_latency_int_mul;
@@ -85,6 +78,26 @@ class memory_controller_t : public interconnection_interface_t {
         uint32_t mvx_latency_fp_alu;
         uint32_t mvx_latency_fp_mul;
         uint32_t mvx_latency_fp_div;
+
+        // Control the in-order execution
+        mvx_state_t mvx_state;
+        uint64_t mvx_id_owner;
+        uint64_t mvx_opcode_number;
+
+        // Buffer of HVX only
+        container_ptr_memory_package_t mvx_buffer;
+        int32_t mvx_buffer_actual_position;   /// Position inside BankBuffer of the actual request being treated
+
+        memory_package_t **mvx_nano_buffer;
+        uint32_t mvx_nano_buffer_size;
+        uint32_t *mvx_nano_buffer_used;
+        uint32_t mvx_nano_buffer_used_total;
+
+        // HVX
+        int32_t find_next_mvx_operation();
+        uint32_t get_mvx_latency(memory_operation_t operation);
+
+
 
 
         // ====================================================================
@@ -151,12 +164,13 @@ class memory_controller_t : public interconnection_interface_t {
         uint64_t stat_max_writeback_wait_time;
         uint64_t stat_accumulated_writeback_wait_time;
 
-        // MVX
-
+        // HVX
         uint64_t stat_mvx_lock_completed;
         uint64_t stat_mvx_unlock_completed;
         uint64_t stat_mvx_load_completed;
         uint64_t stat_mvx_store_completed;
+        uint64_t stat_mvx_nano_load_completed;
+        uint64_t stat_mvx_nano_store_completed;
         uint64_t stat_mvx_int_alu_completed;
         uint64_t stat_mvx_int_mul_completed;
         uint64_t stat_mvx_int_div_completed;
@@ -179,6 +193,14 @@ class memory_controller_t : public interconnection_interface_t {
         uint64_t stat_min_mvx_store_wait_time;
         uint64_t stat_max_mvx_store_wait_time;
         uint64_t stat_accumulated_mvx_store_wait_time;
+
+        uint64_t stat_min_mvx_nano_load_wait_time;
+        uint64_t stat_max_mvx_nano_load_wait_time;
+        uint64_t stat_accumulated_mvx_nano_load_wait_time;
+
+        uint64_t stat_min_mvx_nano_store_wait_time;
+        uint64_t stat_max_mvx_nano_store_wait_time;
+        uint64_t stat_accumulated_mvx_nano_store_wait_time;
 
         uint64_t stat_min_mvx_int_alu_wait_time;
         uint64_t stat_max_mvx_int_alu_wait_time;
@@ -313,7 +335,6 @@ class memory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, mvx_latency_fp_mul)
         INSTANTIATE_GET_SET(uint32_t, mvx_latency_fp_div)
 
-
         // ====================================================================
         /// Statistics related
         // ====================================================================
@@ -375,6 +396,8 @@ class memory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint64_t, stat_mvx_unlock_completed)
         INSTANTIATE_GET_SET(uint64_t, stat_mvx_load_completed)
         INSTANTIATE_GET_SET(uint64_t, stat_mvx_store_completed)
+        INSTANTIATE_GET_SET(uint64_t, stat_mvx_nano_load_completed)
+        INSTANTIATE_GET_SET(uint64_t, stat_mvx_nano_store_completed)
         INSTANTIATE_GET_SET(uint64_t, stat_mvx_int_alu_completed)
         INSTANTIATE_GET_SET(uint64_t, stat_mvx_int_mul_completed)
         INSTANTIATE_GET_SET(uint64_t, stat_mvx_int_div_completed)
@@ -412,6 +435,23 @@ class memory_controller_t : public interconnection_interface_t {
             if (this->stat_min_mvx_store_wait_time > new_time) this->stat_min_mvx_store_wait_time = new_time;
             if (this->stat_max_mvx_store_wait_time < new_time) this->stat_max_mvx_store_wait_time = new_time;
         };
+
+
+        inline void add_stat_mvx_nano_load_completed(uint64_t born_cycle) {
+            this->stat_mvx_nano_load_completed++;
+            uint64_t new_time = sinuca_engine.get_global_cycle() - born_cycle;
+            this->stat_accumulated_mvx_nano_load_wait_time += new_time;
+            if (this->stat_min_mvx_nano_load_wait_time > new_time) this->stat_min_mvx_nano_load_wait_time = new_time;
+            if (this->stat_max_mvx_nano_load_wait_time < new_time) this->stat_max_mvx_nano_load_wait_time = new_time;
+        };
+        inline void add_stat_mvx_nano_store_completed(uint64_t born_cycle) {
+            this->stat_mvx_nano_store_completed++;
+            uint64_t new_time = sinuca_engine.get_global_cycle() - born_cycle;
+            this->stat_accumulated_mvx_nano_store_wait_time += new_time;
+            if (this->stat_min_mvx_nano_store_wait_time > new_time) this->stat_min_mvx_nano_store_wait_time = new_time;
+            if (this->stat_max_mvx_nano_store_wait_time < new_time) this->stat_max_mvx_nano_store_wait_time = new_time;
+        };
+
 
         inline void add_stat_mvx_int_alu_completed(uint64_t born_cycle) {
             this->stat_mvx_int_alu_completed++;

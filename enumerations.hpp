@@ -88,7 +88,10 @@ enum memory_operation_t {
 
     MEMORY_OPERATION_MVX_FP_ALU,
     MEMORY_OPERATION_MVX_FP_MUL,
-    MEMORY_OPERATION_MVX_FP_DIV
+    MEMORY_OPERATION_MVX_FP_DIV,
+
+    MEMORY_OPERATION_MVX_NANO_LOAD,
+    MEMORY_OPERATION_MVX_NANO_STORE
 };
 const char *get_enum_memory_operation_char(memory_operation_t type);
 

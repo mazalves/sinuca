@@ -81,12 +81,13 @@ const char* get_enum_memory_operation_char(memory_operation_t type) {
         case MEMORY_OPERATION_WRITE:        return "WRITE"; break;
         case MEMORY_OPERATION_WRITEBACK:    return "WBACK"; break;
 
+        // ====================================================================
         case MEMORY_OPERATION_MVX_LOCK:     return "MVX_LK"; break;
         case MEMORY_OPERATION_MVX_UNLOCK:   return "MVX_UNLK"; break;
 
         case MEMORY_OPERATION_MVX_LOAD:     return "MVX_LD"; break;
         case MEMORY_OPERATION_MVX_STORE:    return "MVX_ST"; break;
-        // ====================================================================
+
         case MEMORY_OPERATION_MVX_INT_ALU:  return "MVX_INT_ALU"; break;
         case MEMORY_OPERATION_MVX_INT_MUL:  return "MVX_INT_MUL"; break;
         case MEMORY_OPERATION_MVX_INT_DIV:  return "MVX_INT_DIV"; break;
@@ -94,6 +95,9 @@ const char* get_enum_memory_operation_char(memory_operation_t type) {
         case MEMORY_OPERATION_MVX_FP_ALU:   return "MVX_FP_ALU"; break;
         case MEMORY_OPERATION_MVX_FP_MUL:   return "MVX_FP_MUL"; break;
         case MEMORY_OPERATION_MVX_FP_DIV:   return "MVX_FP_DIV"; break;
+
+        case MEMORY_OPERATION_MVX_NANO_LOAD:     return "MVX_NANO_LD"; break;
+        case MEMORY_OPERATION_MVX_NANO_STORE:    return "MVX_NANO_ST"; break;
     };
     ERROR_PRINTF("Wrong MEMORY_OPERATION\n");
     return "FAIL";

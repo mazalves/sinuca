@@ -16,7 +16,7 @@ RM = rm -f
 ################################################################################
 
 ## DEBUG DEEP
-# ~ FLAGS =  -Wall -O0 -ggdb  -Werror -lefence
+# ~ FLAGS =  -Wall -O1 -ggdb  -Werror -lefence
 # ~ LDFLAGS = -ggdb  -lefence
 
 ## DEBUG PROFILE
@@ -80,10 +80,6 @@ SRC_PREFETCH =		prefetch/prefetcher.cpp \
 
 SRC_LINE_USAGE_PREDICTOR =	line_usage_predictor/line_usage_predictor.cpp \
 							line_usage_predictor/line_usage_predictor_disable.cpp \
-							line_usage_predictor/pht_line.cpp \
-							line_usage_predictor/dsbp_metadata_line.cpp \
-							line_usage_predictor/line_usage_predictor_dsbp.cpp \
-							line_usage_predictor/line_usage_predictor_dsbp_oracle.cpp \
 							line_usage_predictor/aht_line.cpp \
 							line_usage_predictor/dewp_metadata_line.cpp \
 							line_usage_predictor/line_usage_predictor_dewp.cpp \

@@ -51,14 +51,6 @@ memory_channel_t::memory_channel_t() {
     this->channel_last_command_cycle = NULL;
 
     this->last_bank_selected = 0;
-    this->channel_mvx_state = MVX_STATE_UNLOCK;
-    this->channel_mvx_id_owner = 0;
-    this->channel_mvx_opcode_number = 0;
-
-    //MVX
-    this->mvx_ready_cycle = 0;
-    this->mvx_total_registers = 1;
-
 };
 
 // ============================================================================
@@ -74,9 +66,6 @@ memory_channel_t::~memory_channel_t() {
     utils_t::template_delete_array<memory_controller_command_t>(bank_last_command);
     utils_t::template_delete_matrix<uint64_t>(bank_last_command_cycle, this->get_bank_per_channel());
     utils_t::template_delete_array<uint64_t>(channel_last_command_cycle);
-
-    // MVX
-    utils_t::template_delete_array<uint64_t>(mvx_register_ready_cycle);
 };
 
 // ============================================================================
@@ -92,46 +81,6 @@ void memory_channel_t::allocate() {
     this->bank_last_command = utils_t::template_allocate_initialize_array<memory_controller_command_t>(this->get_bank_per_channel(), MEMORY_CONTROLLER_COMMAND_PRECHARGE);
     this->bank_last_command_cycle = utils_t::template_allocate_initialize_matrix<uint64_t>(this->get_bank_per_channel(), MEMORY_CONTROLLER_COMMAND_NUMBER, 0);
     this->channel_last_command_cycle = utils_t::template_allocate_initialize_array<uint64_t>(MEMORY_CONTROLLER_COMMAND_NUMBER, 0);
-
-    //MVX
-    this->mvx_register_ready_cycle = utils_t::template_allocate_initialize_array<uint64_t>(this->get_mvx_total_registers(), 0);
-
-};
-
-
-// ============================================================================
-int32_t memory_channel_t::find_next_mvx_operation() {
-
-    int32_t slot = POSITION_FAIL;
-    uint32_t i;
-
-    // No MVX
-    if (this->mvx_buffer.size() == 0) {
-        return slot;
-    }
-
-    // MVX is already running
-    if (this->channel_mvx_state == MVX_STATE_LOCK) {
-        // Try to find MVX in the same OPEN_ROW
-        for (i = 0; i < this->mvx_buffer.size(); i++) {
-            if (this->mvx_buffer[i]->id_owner == this->channel_mvx_id_owner &&
-                this->mvx_buffer[i]->opcode_number == this->channel_mvx_opcode_number + 1) {
-                slot = i;
-                break;
-            }
-        }
-        return slot;
-    }
-
-    // MVX - Start a new MVX operation
-    for (i = 0; i < this->mvx_buffer.size(); i++) {
-        if (this->mvx_buffer[i]->memory_operation == MEMORY_OPERATION_MVX_LOCK) {
-            slot = i;
-            break;
-        }
-    }
-    return slot;
-
 };
 
 // ============================================================================
@@ -148,7 +97,9 @@ int32_t memory_channel_t::find_next_read_operation(uint32_t bank) {
                 if (this->cmp_row_bank_channel(this->bank_buffer[bank][i]->memory_address, this->bank_open_row_address[bank])) {
                     if (this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_READ ||
                     this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_INST ||
-                    this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_PREFETCH) {
+                    this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_PREFETCH ||
+                    this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_MVX_NANO_LOAD ||
+                    this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_MVX_NANO_STORE) {
                         slot = i;
                         break;
                     }
@@ -159,7 +110,9 @@ int32_t memory_channel_t::find_next_read_operation(uint32_t bank) {
                 for (i = 0; i < this->bank_buffer[bank].size(); i++) {
                     if (this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_READ ||
                     this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_INST ||
-                    this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_PREFETCH) {
+                    this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_PREFETCH ||
+                    this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_MVX_NANO_LOAD ||
+                    this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_MVX_NANO_STORE) {
                         slot = i;
                         break;
                     }
@@ -172,7 +125,9 @@ int32_t memory_channel_t::find_next_read_operation(uint32_t bank) {
             for (i = 0; i < this->bank_buffer[bank].size(); i++) {
                 if (this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_READ ||
                 this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_INST ||
-                this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_PREFETCH) {
+                this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_PREFETCH ||
+                this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_MVX_NANO_LOAD ||
+                this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_MVX_NANO_STORE) {
                     slot = i;
                     break;
                 }
@@ -399,17 +354,6 @@ bool memory_channel_t::check_if_minimum_latency(uint32_t bank, memory_controller
 package_state_t memory_channel_t::treat_memory_request(memory_package_t *package) {
     uint32_t bank = get_bank(package->memory_address);
 
-    // MVX
-    if (package->is_mvx) {
-        if (this->mvx_buffer.size() < this->bank_buffer_size) {
-            this->mvx_buffer.push_back(package);
-            return PACKAGE_STATE_WAIT;
-        }
-        else {
-            return PACKAGE_STATE_UNTREATED;
-        }
-    }
-
     /// Try to insert into bank buffer
     if (this->bank_buffer[bank].size() < this->bank_buffer_size) {
         this->bank_buffer[bank].push_back(package);
@@ -417,30 +361,6 @@ package_state_t memory_channel_t::treat_memory_request(memory_package_t *package
     }
     return PACKAGE_STATE_UNTREATED;
 };
-
-// ============================================================================
-uint32_t memory_channel_t::get_mvx_latency(memory_operation_t operation) {
-    switch(operation) {
-        case MEMORY_OPERATION_MVX_LOCK:     return 0; break;
-        case MEMORY_OPERATION_MVX_UNLOCK:   return 0; break;
-
-        case MEMORY_OPERATION_MVX_LOAD:     return 0; break;
-        case MEMORY_OPERATION_MVX_STORE:    return 0; break;
-        // ====================================================================
-        case MEMORY_OPERATION_MVX_INT_ALU:  return this->get_mvx_latency_int_alu(); break;
-        case MEMORY_OPERATION_MVX_INT_MUL:  return this->get_mvx_latency_int_mul(); break;
-        case MEMORY_OPERATION_MVX_INT_DIV:  return this->get_mvx_latency_int_div(); break;
-
-        case MEMORY_OPERATION_MVX_FP_ALU:   return this->get_mvx_latency_fp_alu(); break;
-        case MEMORY_OPERATION_MVX_FP_MUL:   return this->get_mvx_latency_fp_mul(); break;
-        case MEMORY_OPERATION_MVX_FP_DIV:   return this->get_mvx_latency_fp_div(); break;
-
-        default: ERROR_PRINTF("Wrong operation type"); break;
-
-    }
-    return 0;
-};
-
 
 // ============================================================================
 void memory_channel_t::clock(uint32_t subcycle) {
@@ -464,292 +384,29 @@ void memory_channel_t::clock(uint32_t subcycle) {
         break;
     }
 
-    memory_package_t *package = NULL;
-    memory_package_t *mvx_package = NULL;
-
-    // IF MVX LOCK
-    // Select MVX to be treated
-    this->mvx_buffer_actual_position = find_next_mvx_operation();
-    if (this->mvx_buffer_actual_position != POSITION_FAIL) {
-        mvx_package = this->mvx_buffer[this->mvx_buffer_actual_position];
-    }
-
     /// Select package to be treated
-    if (this->bank_buffer_actual_position[bank] == POSITION_FAIL) {
+    if (this->bank_buffer_actual_position[bank] == -1) {
         this->bank_buffer_actual_position[bank] = find_next_package(bank);
-    }
-    if (this->bank_buffer_actual_position[bank] != POSITION_FAIL) {
-        package = this->bank_buffer[bank][this->bank_buffer_actual_position[bank]];
-    }
-
-
-    if (
-    (mvx_package != NULL && this->channel_mvx_state == MVX_STATE_LOCK) ||
-    (mvx_package != NULL && package == NULL) ||
-    (mvx_package != NULL && mvx_package->born_cycle <= package->born_cycle)) {
-        package = mvx_package;
-    }
-
-    if (package == NULL) {
-        return;
-    }
-
-
-// IF is MVX ...
-    if (package->is_mvx) {
-        // IF LOAD/STORE
-        switch (package->memory_operation) {
-
-            // MVX =========================================================
-            case MEMORY_OPERATION_MVX_LOCK:
-            case MEMORY_OPERATION_MVX_UNLOCK:
-                package->memory_size = 1;
-                package->is_answer = true;
-                package->package_transmit(0);
-                this->mvx_ready_cycle = sinuca_engine.get_global_cycle();
-            break;
-
-            case MEMORY_OPERATION_MVX_INT_ALU:
-            case MEMORY_OPERATION_MVX_INT_MUL:
-            case MEMORY_OPERATION_MVX_INT_DIV:
-            case MEMORY_OPERATION_MVX_FP_ALU :
-            case MEMORY_OPERATION_MVX_FP_MUL :
-            case MEMORY_OPERATION_MVX_FP_DIV :
-                // READY to execute the next
-                if (this->mvx_ready_cycle > sinuca_engine.get_global_cycle()) {
-                    return;
-                }
-
-                // Check if all the registers are ready.
-                if (package->mvx_read1 != -1 && this->mvx_register_ready_cycle[package->mvx_read1] > sinuca_engine.get_global_cycle()) {
-                    return;
-                }
-                if (package->mvx_read2 != -1 && this->mvx_register_ready_cycle[package->mvx_read2] > sinuca_engine.get_global_cycle()) {
-                    return;
-                }
-                if (package->mvx_write != -1 && this->mvx_register_ready_cycle[package->mvx_write] > sinuca_engine.get_global_cycle()) {
-                    ERROR_PRINTF("Should not write in a non_ready register.\n")
-                }
-
-                package->memory_size = 1;
-                package->is_answer = true;
-                package->package_transmit(get_mvx_latency(package->memory_operation));
-                this->mvx_ready_cycle = sinuca_engine.get_global_cycle() + get_mvx_latency(package->memory_operation);
-
-                if (package->mvx_write != -1) {
-                    this->mvx_register_ready_cycle[package->mvx_write] = sinuca_engine.get_global_cycle() + get_mvx_latency(package->memory_operation);
-                }
-            break;
-
-            case MEMORY_OPERATION_MVX_LOAD:
-            case MEMORY_OPERATION_MVX_STORE:
-                bank = get_bank(package->memory_address);
-
-                /// Considering the last command, do the next
-                switch(this->bank_last_command[bank]) {
-                    // =====================================================================
-                    case MEMORY_CONTROLLER_COMMAND_PRECHARGE:
-                        /// Respect Min. Latency
-                        if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_ROW_ACCESS)) {
-                            return;
-                        }
-
-                        this->add_stat_row_buffer_miss();
-                        this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_ROW_ACCESS;
-                        this->bank_open_row_address[bank] = package->memory_address;
-                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] = sinuca_engine.get_global_cycle();
-                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] = sinuca_engine.get_global_cycle();
-                        return;
-                    break;
-
-                    // =====================================================================
-                    case MEMORY_CONTROLLER_COMMAND_ROW_ACCESS:
-                        if (package->memory_operation == MEMORY_OPERATION_MVX_LOAD) {
-                            /// Respect Min. Latency
-                            if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ)) {
-                                return;
-                            }
-
-                            this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_READ;
-                            this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
-                            this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
-                            /// Prepare for answer later
-                            package->memory_size = 1;
-                            package->is_answer = true;
-                            // ~ package->package_transmit(this->timing_cas + this->timing_burst);
-                            package->package_transmit(this->timing_cas);
-
-                            ERROR_ASSERT_PRINTF(package->mvx_write != -1, "Found a mvx_load withou write register.\n")
-                            this->mvx_register_ready_cycle[package->mvx_write] = sinuca_engine.get_global_cycle() + this->timing_cas;
-                        }
-                        else {
-                            /// Respect Min. Latency
-                            ERROR_ASSERT_PRINTF(package->mvx_read1 != -1, "Found a mvx_load withou write register.\n")
-                            if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE) ||
-                            this->mvx_register_ready_cycle[package->mvx_read1] > sinuca_engine.get_global_cycle()) {
-                                return;
-                            }
-
-                            this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE;
-                            this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
-                            this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
-                            /// Prepare for answer later
-                            package->memory_size = 1;
-                            package->is_answer = true;
-                            // ~ package->package_transmit(this->timing_cwd + this->timing_burst);
-                            package->package_transmit(this->timing_cwd);
-                            this->mvx_register_ready_cycle[package->mvx_read1] = sinuca_engine.get_global_cycle() + this->timing_cwd;
-                        }
-                        this->add_stat_row_buffer_hit();
-                    break;
-
-                    // =====================================================================
-                    case MEMORY_CONTROLLER_COMMAND_COLUMN_READ:
-                        if (cmp_row_bank_channel(this->bank_open_row_address[bank], package->memory_address)) {
-                            if (package->memory_operation == MEMORY_OPERATION_MVX_LOAD) {
-                                /// Respect Min. Latency
-                                if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ)) {
-                                    return;
-                                }
-
-                                this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_READ;
-                                this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
-                                this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
-                                package->memory_size = 1;
-                                package->is_answer = true;
-                                // ~ package->package_transmit(this->timing_cas + this->timing_burst);
-                                package->package_transmit(this->timing_cas);
-                                ERROR_ASSERT_PRINTF(package->mvx_write != -1, "Found a mvx_load withou write register.\n")
-                                this->mvx_register_ready_cycle[package->mvx_write] = sinuca_engine.get_global_cycle() + this->timing_cas;
-                            }
-                            else {
-                                /// Respect Min. Latency
-                                ERROR_ASSERT_PRINTF(package->mvx_read1 != -1, "Found a mvx_load withou write register.\n")
-
-                                if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)||
-                                this->mvx_register_ready_cycle[package->mvx_read1] > sinuca_engine.get_global_cycle()) {
-                                    return;
-                                }
-
-                                this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE;
-                                this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
-                                this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
-                                /// Consider that tRTRS - tCWL is equal to ZERO. (Both are parallel)
-                                package->memory_size = 1;
-                                package->is_answer = true;
-                                // ~ package->package_transmit(this->timing_cwd + this->timing_burst);
-                                package->package_transmit(this->timing_cwd);
-                                this->mvx_register_ready_cycle[package->mvx_read1] = sinuca_engine.get_global_cycle() + this->timing_cwd;
-                            }
-
-                            this->add_stat_row_buffer_hit();
-                        }
-                        else {
-                            /// Respect Min. Latency
-                            if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_PRECHARGE)) {
-                                return;
-                            }
-
-                            this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_PRECHARGE;
-                            this->bank_open_row_address[bank] = package->memory_address;
-                            this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_PRECHARGE] = sinuca_engine.get_global_cycle();
-                            this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_PRECHARGE] = sinuca_engine.get_global_cycle();
-                            return;
-                        }
-                    break;
-
-                    // =====================================================================
-                    case MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE:
-                        if (cmp_row_bank_channel(this->bank_open_row_address[bank], package->memory_address)) {
-                            if (package->memory_operation == MEMORY_OPERATION_MVX_LOAD) {
-                                /// Respect Min. Latency
-                                if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ)) {
-                                    return;
-                                }
-
-                                this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_READ;
-                                this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
-                                this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
-                                package->is_answer = true;
-                                // ~ package->package_ready(this->timing_cas + this->timing_burst);
-                                package->package_transmit(this->timing_cas);
-                                ERROR_ASSERT_PRINTF(package->mvx_write != -1, "Found a mvx_load withou write register.\n")
-                                this->mvx_register_ready_cycle[package->mvx_write] = sinuca_engine.get_global_cycle() + this->timing_cas;
-                            }
-                            else {
-                                /// Respect Min. Latency
-                                ERROR_ASSERT_PRINTF(package->mvx_read1 != -1, "Found a mvx_load withou write register.\n")
-                                if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE) ||
-                                this->mvx_register_ready_cycle[package->mvx_read1] > sinuca_engine.get_global_cycle()) {
-                                    return;
-                                }
-
-                                this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE;
-                                this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
-                                this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
-                                package->memory_size = 1;
-                                package->is_answer = true;
-                                // ~ package->package_transmit(this->timing_cwd + this->timing_burst);
-                                package->package_transmit(this->timing_cwd);
-                                this->mvx_register_ready_cycle[package->mvx_read1] = sinuca_engine.get_global_cycle() + this->timing_cwd;
-                            }
-
-                            this->add_stat_row_buffer_hit();
-                        }
-                        else {
-                            /// Respect Min. Latency
-                            if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_PRECHARGE)) {
-                                return;
-                            }
-
-                            this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_PRECHARGE;
-                            this->bank_open_row_address[bank] = package->memory_address;
-                            this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_PRECHARGE] = sinuca_engine.get_global_cycle();
-                            this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_PRECHARGE] = sinuca_engine.get_global_cycle();
-                            return;
-                        }
-                    break;
-
-                    // =====================================================================
-                    case MEMORY_CONTROLLER_COMMAND_NUMBER:
-                        ERROR_PRINTF("Should not receive COMMAND_NUMBER\n")
-                    break;
-                }
-            break;
-
-            default:
-                ERROR_PRINTF("Should not receive a normal package here!\n")
-            break;
+        if (this->bank_buffer_actual_position[bank] == POSITION_FAIL) {
+            MEMORY_CONTROLLER_DEBUG_PRINTF("Could not find a valid position on bank %u\n", bank);
+            return;
         }
-
-        if(package->memory_operation == MEMORY_OPERATION_MVX_UNLOCK) {
-            this->channel_mvx_state = MVX_STATE_UNLOCK;
-            this->channel_mvx_id_owner = 0;
-            this->channel_mvx_opcode_number = 0;
-        }
-        else {
-            this->channel_mvx_state = MVX_STATE_LOCK;
-            this->channel_mvx_id_owner = package->id_owner;
-            this->channel_mvx_opcode_number = package->opcode_number;
-        }
-
-        // Advance the MVX
-        this->mvx_buffer.erase(this->mvx_buffer.begin() + this->mvx_buffer_actual_position);
-        this->mvx_buffer_actual_position = -1;
-
-        return;
     }
 
-    // ELSE (normal operation)
+    memory_package_t *package = this->bank_buffer[bank][this->bank_buffer_actual_position[bank]];
+    MEMORY_CONTROLLER_DEBUG_PRINTF("Channel Treating %s\n", package->content_to_string().c_str());
+
     /// Considering the last command, do the next
     switch(this->bank_last_command[bank]) {
         // =====================================================================
         case MEMORY_CONTROLLER_COMMAND_PRECHARGE:
             /// Respect Min. Latency
             if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_ROW_ACCESS)) {
+                MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
                 return;
             }
 
+            MEMORY_CONTROLLER_DEBUG_PRINTF("PRECHARGE -> ROW_ACCESS.\n");
             this->add_stat_row_buffer_miss();
             this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_ROW_ACCESS;
             this->bank_open_row_address[bank] = package->memory_address;
@@ -764,11 +421,16 @@ void memory_channel_t::clock(uint32_t subcycle) {
                 case MEMORY_OPERATION_READ:
                 case MEMORY_OPERATION_INST:
                 case MEMORY_OPERATION_PREFETCH:
+                // HVX
+                case MEMORY_OPERATION_MVX_NANO_LOAD:
+
                     /// Respect Min. Latency
                     if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ)) {
+                        MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
                         return;
                     }
 
+                    MEMORY_CONTROLLER_DEBUG_PRINTF("ROW_ACCESS -> COLUMN_READ.\n");
                     this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_READ;
                     this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
                     this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
@@ -776,15 +438,22 @@ void memory_channel_t::clock(uint32_t subcycle) {
                     package->memory_size = sinuca_engine.get_global_line_size();
                     package->is_answer = true;
                     package->package_transmit(this->timing_cas + this->timing_burst);
+                    if (package->memory_operation == MEMORY_OPERATION_MVX_NANO_LOAD &&
+                    package->id_owner == this->memory_controller_id)
+                        package->package_ready(this->timing_cas + this->timing_burst);
                 break;
 
                 case MEMORY_OPERATION_WRITEBACK:
                 case MEMORY_OPERATION_WRITE:
+                // HVX
+                case MEMORY_OPERATION_MVX_NANO_STORE:
                     /// Respect Min. Latency
                     if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
+                        MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
                         return;
                     }
 
+                    MEMORY_CONTROLLER_DEBUG_PRINTF("ROW_ACCESS -> COLUMN_WRITE.\n");
                     this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE;
                     this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
                     this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
@@ -794,10 +463,20 @@ void memory_channel_t::clock(uint32_t subcycle) {
                     package->package_ready(this->timing_cwd + this->timing_burst);
                 break;
 
-                default:
-                    ERROR_PRINTF("Should not receive a mvx package here!\n")
+                // =============================================================
+                // Receiving a wrong HVX
+                case MEMORY_OPERATION_MVX_LOCK:
+                case MEMORY_OPERATION_MVX_UNLOCK:
+                case MEMORY_OPERATION_MVX_LOAD:
+                case MEMORY_OPERATION_MVX_STORE:
+                case MEMORY_OPERATION_MVX_INT_ALU:
+                case MEMORY_OPERATION_MVX_INT_MUL:
+                case MEMORY_OPERATION_MVX_INT_DIV:
+                case MEMORY_OPERATION_MVX_FP_ALU :
+                case MEMORY_OPERATION_MVX_FP_MUL :
+                case MEMORY_OPERATION_MVX_FP_DIV :
+                    ERROR_PRINTF("Channel treating %s.\n", get_enum_memory_operation_char(package->memory_operation));
                 break;
-
             }
 
             this->add_stat_row_buffer_hit();
@@ -812,38 +491,59 @@ void memory_channel_t::clock(uint32_t subcycle) {
                     case MEMORY_OPERATION_READ:
                     case MEMORY_OPERATION_INST:
                     case MEMORY_OPERATION_PREFETCH:
+                    // HVX
+                    case MEMORY_OPERATION_MVX_NANO_LOAD:
                         /// Respect Min. Latency
                         if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ)) {
+                            MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
                             return;
                         }
 
+                        MEMORY_CONTROLLER_DEBUG_PRINTF("COLUMN_READ -> COLUMN_READ.\n");
                         this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_READ;
                         this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
                         this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
                         package->is_answer = true;
                         package->package_transmit(this->timing_cas + this->timing_burst);
+                        // HVX
+                        if (package->memory_operation == MEMORY_OPERATION_MVX_NANO_LOAD &&
+                        package->id_owner == this->memory_controller_id)
+                            package->package_ready(this->timing_cas + this->timing_burst);
                     break;
 
                     case MEMORY_OPERATION_WRITEBACK:
                     case MEMORY_OPERATION_WRITE:
+                    // HVX
+                    case MEMORY_OPERATION_MVX_NANO_STORE:
                         /// Respect Min. Latency
                         if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
+                            MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
                             return;
                         }
 
+                        MEMORY_CONTROLLER_DEBUG_PRINTF("COLUMN_READ -> COLUMN_WRITE.\n");
                         this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE;
                         this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
                         this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
                         /// Consider that tRTRS - tCWL is equal to ZERO. (Both are parallel)
-                        package->memory_size = 1;
                         package->is_answer = true;
                         package->package_ready(this->timing_cwd + this->timing_burst);
                     break;
 
-                    default:
-                        ERROR_PRINTF("Should not receive a mvx package here!\n")
+                    // =============================================================
+                    // Receiving a wrong HVX
+                    case MEMORY_OPERATION_MVX_LOCK:
+                    case MEMORY_OPERATION_MVX_UNLOCK:
+                    case MEMORY_OPERATION_MVX_LOAD:
+                    case MEMORY_OPERATION_MVX_STORE:
+                    case MEMORY_OPERATION_MVX_INT_ALU:
+                    case MEMORY_OPERATION_MVX_INT_MUL:
+                    case MEMORY_OPERATION_MVX_INT_DIV:
+                    case MEMORY_OPERATION_MVX_FP_ALU :
+                    case MEMORY_OPERATION_MVX_FP_MUL :
+                    case MEMORY_OPERATION_MVX_FP_DIV :
+                        ERROR_PRINTF("Channel treating %s.\n", get_enum_memory_operation_char(package->memory_operation));
                     break;
-
                 }
 
                 this->add_stat_row_buffer_hit();
@@ -853,10 +553,11 @@ void memory_channel_t::clock(uint32_t subcycle) {
             else {
                 /// Respect Min. Latency
                 if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_PRECHARGE)) {
+                    MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
                     return;
                 }
 
-
+                MEMORY_CONTROLLER_DEBUG_PRINTF("COLUMN_READ -> PRECHARGE (different row).\n");
                 this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_PRECHARGE;
                 this->bank_open_row_address[bank] = package->memory_address;
                 this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_PRECHARGE] = sinuca_engine.get_global_cycle();
@@ -871,37 +572,59 @@ void memory_channel_t::clock(uint32_t subcycle) {
                     case MEMORY_OPERATION_READ:
                     case MEMORY_OPERATION_INST:
                     case MEMORY_OPERATION_PREFETCH:
+                    // HVX
+                    case MEMORY_OPERATION_MVX_NANO_LOAD:
                         /// Respect Min. Latency
                         if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ)) {
+                            MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
                             return;
                         }
 
+                        MEMORY_CONTROLLER_DEBUG_PRINTF("COLUMN_WRITE -> COLUMN_READ.\n");
                         this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_READ;
                         this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
                         this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
                         package->is_answer = true;
                         package->package_transmit(this->timing_cas + this->timing_burst);
+                        // HVX
+                        if (package->memory_operation == MEMORY_OPERATION_MVX_NANO_LOAD &&
+                        package->id_owner == this->memory_controller_id)
+                            package->package_ready(this->timing_cas + this->timing_burst);
+
                     break;
 
                     case MEMORY_OPERATION_WRITEBACK:
                     case MEMORY_OPERATION_WRITE:
+                    // HVX
+                    case MEMORY_OPERATION_MVX_NANO_STORE:
                         /// Respect Min. Latency
                         if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
+                            MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
                             return;
                         }
 
+                        MEMORY_CONTROLLER_DEBUG_PRINTF("COLUMN_WRITE -> COLUMN_WRITE.\n");
                         this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE;
                         this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
                         this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
                         /// Max(tBurst, tCCD)
-                        package->memory_size = 1;
                         package->is_answer = true;
-
                         package->package_ready(this->timing_cwd + this->timing_burst);
                     break;
 
-                    default:
-                        ERROR_PRINTF("Should not receive a mvx package here!\n")
+                    // =============================================================
+                    // Receiving a wrong HVX
+                    case MEMORY_OPERATION_MVX_LOCK:
+                    case MEMORY_OPERATION_MVX_UNLOCK:
+                    case MEMORY_OPERATION_MVX_LOAD:
+                    case MEMORY_OPERATION_MVX_STORE:
+                    case MEMORY_OPERATION_MVX_INT_ALU:
+                    case MEMORY_OPERATION_MVX_INT_MUL:
+                    case MEMORY_OPERATION_MVX_INT_DIV:
+                    case MEMORY_OPERATION_MVX_FP_ALU :
+                    case MEMORY_OPERATION_MVX_FP_MUL :
+                    case MEMORY_OPERATION_MVX_FP_DIV :
+                        ERROR_PRINTF("Channel treating %s.\n", get_enum_memory_operation_char(package->memory_operation));
                     break;
                 }
 
@@ -912,9 +635,11 @@ void memory_channel_t::clock(uint32_t subcycle) {
             else {
                 /// Respect Min. Latency
                 if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_PRECHARGE)) {
+                    MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
                     return;
                 }
 
+                MEMORY_CONTROLLER_DEBUG_PRINTF("COLUMN_WRITE -> PRECHARGE (different row).\n");
                 this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_PRECHARGE;
                 this->bank_open_row_address[bank] = package->memory_address;
                 this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_PRECHARGE] = sinuca_engine.get_global_cycle();
@@ -926,9 +651,9 @@ void memory_channel_t::clock(uint32_t subcycle) {
         case MEMORY_CONTROLLER_COMMAND_NUMBER:
             ERROR_PRINTF("Should not receive COMMAND_NUMBER\n")
         break;
+
     }
 };
-
 
 
 // ============================================================================
@@ -944,9 +669,15 @@ uint32_t memory_channel_t::selection_bank_random() {
 // ============================================================================
 /// Selection strategy: Round Robin
 uint32_t memory_channel_t::selection_bank_round_robin() {
-    this->last_bank_selected++;
-    if (this->last_bank_selected >= this->get_bank_per_channel()) {
-        this->last_bank_selected = 0;
+
+    for (uint32_t i=0; i < this->get_bank_per_channel(); i++) {
+        this->last_bank_selected++;
+        if (this->last_bank_selected >= this->get_bank_per_channel()) {
+            this->last_bank_selected = 0;
+        }
+        if (!this->bank_buffer[last_bank_selected].empty()) {
+            break;
+        }
     }
     return this->last_bank_selected;
 };
@@ -979,12 +710,6 @@ void memory_channel_t::remove_token_list(memory_package_t *package) {
 
 // ============================================================================
 void memory_channel_t::print_structures() {
-
-    // MVX
-    SINUCA_PRINTF("channel_mvx_state:%s\n", get_enum_mvx_state_t_char(this->channel_mvx_state));
-    SINUCA_PRINTF("channel_mvx_id_owner:%s\n", utils_t::uint64_to_string(this->channel_mvx_id_owner).c_str());
-    SINUCA_PRINTF("channel_mvx_opcode_number:%s\n", utils_t::uint64_to_string(this->channel_mvx_opcode_number).c_str());
-
     for (uint32_t i = 0; i < this->get_bank_per_channel(); i++) {
         SINUCA_PRINTF("%s BANK_BUFFER[%s]\n", this->get_label(), utils_t::uint32_to_string(i).c_str());
         for (uint32_t j = 0; j < this->bank_buffer[i].size(); j++) {
@@ -994,13 +719,6 @@ void memory_channel_t::print_structures() {
                                                         this->bank_buffer[i][j]->content_to_string().c_str());
         }
     }
-
-    for (uint32_t j = 0; j < this->mvx_buffer.size(); j++) {
-        SINUCA_PRINTF("%s MVX_BUFFER[%s] %s\n", this->get_label(),
-                                                    utils_t::uint32_to_string(j).c_str(),
-                                                    this->mvx_buffer[j]->content_to_string().c_str());
-    }
-
 };
 
 // ============================================================================
@@ -1053,7 +771,6 @@ void memory_channel_t::print_configuration() {
 
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "bank_per_channel", bank_per_channel);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "bank_buffer_size", bank_buffer_size);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "bank_row_buffer_size", bank_row_buffer_size);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_burst", timing_burst);
@@ -1070,15 +787,5 @@ void memory_channel_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_rtp", timing_rtp);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_wr", timing_wr);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_wtr", timing_wtr);
-
-    // MVX
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_operation_size", mvx_operation_size);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_total_registers", mvx_total_registers);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_int_alu", mvx_latency_int_alu);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_int_mul", mvx_latency_int_mul);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_int_div", mvx_latency_int_div);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_fp_alu", mvx_latency_fp_alu);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_fp_mul", mvx_latency_fp_mul);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_fp_div", mvx_latency_fp_div);
 
 };

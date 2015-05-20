@@ -422,6 +422,8 @@ uint32_t interconnection_controller_t::find_package_route_latency(memory_package
         case MEMORY_OPERATION_INST:
         case MEMORY_OPERATION_READ:
         case MEMORY_OPERATION_PREFETCH:
+        // HVX
+        case MEMORY_OPERATION_MVX_NANO_LOAD:
             /// BIG
             if (package->is_answer) {
                 return max_latency;
@@ -434,6 +436,9 @@ uint32_t interconnection_controller_t::find_package_route_latency(memory_package
 
         case MEMORY_OPERATION_WRITE:
         case MEMORY_OPERATION_WRITEBACK:
+        // HVX
+        case MEMORY_OPERATION_MVX_NANO_STORE:
+
             /// SMALL
             if (package->is_answer) {
                 return low_latency;
