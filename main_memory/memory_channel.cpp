@@ -615,9 +615,15 @@ uint32_t memory_channel_t::selection_bank_random() {
 // ============================================================================
 /// Selection strategy: Round Robin
 uint32_t memory_channel_t::selection_bank_round_robin() {
-    this->last_bank_selected++;
-    if (this->last_bank_selected >= this->get_bank_per_channel()) {
-        this->last_bank_selected = 0;
+
+    for (uint32_t i=0; i < this->get_bank_per_channel(); i++) {
+        this->last_bank_selected++;
+        if (this->last_bank_selected >= this->get_bank_per_channel()) {
+            this->last_bank_selected = 0;
+        }
+        if (!this->bank_buffer[last_bank_selected].empty()) {
+            break;
+        }
     }
     return this->last_bank_selected;
 };
