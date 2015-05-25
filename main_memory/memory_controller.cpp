@@ -1085,8 +1085,8 @@ int32_t memory_controller_t::send_package(memory_package_t *package) {
         // HVX
         if (package->is_mvx &&
         !package->is_answer &&
-        package->memory_operation != MEMORY_OPERATION_MVX_NANO_LOAD &&
-        package->memory_operation != MEMORY_OPERATION_MVX_NANO_STORE) {
+        (package->memory_operation == MEMORY_OPERATION_MVX_NANO_LOAD ||
+        package->memory_operation == MEMORY_OPERATION_MVX_NANO_STORE)) {
             /// Check if DESTINATION has FREE SPACE available.
             if (sinuca_engine.interconnection_interface_array[package->id_dst]->check_token_list(package) == false) {
                 MEMORY_CONTROLLER_DEBUG_PRINTF("\tSEND FAIL (NO TOKENS)\n");
@@ -1134,6 +1134,7 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
             ERROR_ASSERT_PRINTF(package->mvx_write != -1, "Receiving an NANO answer that does not write a register");
             this->mvx_wait_registers[package->mvx_write]--;
             this->recv_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
+            // ~ this->remove_token_list(package);
             return OK;
         }
 
@@ -1392,7 +1393,7 @@ void memory_controller_t::print_structures() {
     SINUCA_PRINTF("mvx_nano_buffer_used_total: %s\n", utils_t::uint32_to_string(this->mvx_nano_buffer_used_total).c_str());
 
     SINUCA_PRINTF("mvx_nano_buffer_used: ");
-    for (uint32_t j = 0; j < this->bank_buffer_size; j++) {
+    for (uint32_t j = 0; j < this->bank_buffer_size * this->channels_per_controller; j++) {
         SINUCA_PRINTF(" %s", utils_t::uint32_to_string(this->mvx_nano_buffer_used[j]).c_str());
     }
     SINUCA_PRINTF("\n");

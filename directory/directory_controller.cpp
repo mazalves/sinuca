@@ -176,8 +176,18 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
         /// LATENCY = NONE
         package->ready_cycle = sinuca_engine.get_global_cycle();
-        package->package_set_src_dst(cache->get_id(), this->find_next_obj_id(cache, package->memory_address));
 
+    // CHANGE-ME always send to the MC0
+    {
+        container_ptr_cache_memory_t *lower_level_cache = cache->get_lower_level_cache();
+        if (lower_level_cache->empty()) {
+            uint32_t mc_id = sinuca_engine.memory_controller_array[0]->get_id();
+            package->package_set_src_dst(cache->get_id(), mc_id);
+        }
+        else {
+            package->package_set_src_dst(cache->get_id(), this->find_next_obj_id(cache, package->memory_address));
+        }
+    }
         DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT RQST (Miss)\n")
         return PACKAGE_STATE_TRANSMIT;
     }
@@ -295,7 +305,18 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
         /// LATENCY = NONE
         package->ready_cycle = sinuca_engine.get_global_cycle();
-        package->package_set_src_dst(cache->get_id(), this->find_next_obj_id(cache, package->memory_address));
+
+    // CHANGE-ME always send to the MC0
+    {
+        container_ptr_cache_memory_t *lower_level_cache = cache->get_lower_level_cache();
+        if (lower_level_cache->empty()) {
+            uint32_t mc_id = sinuca_engine.memory_controller_array[0]->get_id();
+            package->package_set_src_dst(cache->get_id(), mc_id);
+        }
+        else {
+            package->package_set_src_dst(cache->get_id(), this->find_next_obj_id(cache, package->memory_address));
+        }
+    }
 
         DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT RQST (Miss)\n")
         return PACKAGE_STATE_TRANSMIT;
