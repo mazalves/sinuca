@@ -318,6 +318,6 @@ int main(int argc, char **argv) {
     sinuca_engine.global_print_statistics();
     sinuca_engine.global_print_graph();
 
-    exit(EXIT_SUCCESS);
+    return(EXIT_SUCCESS);
 };
 

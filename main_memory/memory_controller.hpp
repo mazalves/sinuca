@@ -82,7 +82,7 @@ class memory_controller_t : public interconnection_interface_t {
         // Control the in-order execution
         mvx_state_t mvx_state;
         uint64_t mvx_id_owner;
-        uint64_t mvx_opcode_number;
+        uint64_t mvx_number;
 
         // Buffer of HVX only
         container_ptr_memory_package_t mvx_buffer;

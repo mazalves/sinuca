@@ -210,7 +210,7 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
                                                     0,                                      /// Dst ID
                                                     NULL,                                   /// *Hops
                                                     0,
-                                                    false, -1, -1, -1);                                     /// Hop Counter
+                                                    false, 0, -1, -1, -1);                                     /// Hop Counter
 
 
                                 PREFETCHER_DEBUG_PRINTF("\t NEW_PREFETCH %s",new_request.content_to_string().c_str());
@@ -275,7 +275,7 @@ void prefetch_stream_t::treat_prefetch(memory_package_t *package) {
                                                     0,                                      /// Dst ID
                                                     NULL,                                   /// *Hops
                                                     0,                                       /// Hop Counter
-                                                    false, -1, -1, -1);
+                                                    false, 0, -1, -1, -1);
 
                                 PREFETCHER_DEBUG_PRINTF("\t NEW_PREFETCH %s",new_request.content_to_string().c_str());
                                 this->request_buffer.push_back(new_request);

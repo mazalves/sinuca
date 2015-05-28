@@ -233,6 +233,7 @@ class processor_t : public interconnection_interface_t {
         uint64_t stat_address_to_address;
 
         // Executed mvx
+        uint64_t rename_mvx_counter;
         uint64_t stat_mvx_completed;
 
         /// Dispatch Cycles Stall

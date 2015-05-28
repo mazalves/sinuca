@@ -84,7 +84,7 @@ memory_controller_t::memory_controller_t() {
 
     this->mvx_state = MVX_STATE_UNLOCK;
     this->mvx_id_owner = 0;
-    this->mvx_opcode_number = 0;
+    this->mvx_number = 0;
 
     this->mvx_nano_buffer = NULL;
     this->mvx_nano_buffer_size = 0;
@@ -571,7 +571,7 @@ int32_t memory_controller_t::find_next_mvx_operation() {
     if (this->mvx_state == MVX_STATE_LOCK) {
         for (i = 0; i < this->mvx_buffer.size(); i++) {
             if (this->mvx_buffer[i]->id_owner == this->mvx_id_owner &&
-                this->mvx_buffer[i]->opcode_number == this->mvx_opcode_number + 1) {
+                this->mvx_buffer[i]->mvx_number == this->mvx_number + 1) {
                 slot = i;
                 break;
             }
@@ -948,13 +948,13 @@ void memory_controller_t::clock(uint32_t subcycle) {
                     MEMORY_CONTROLLER_DEBUG_PRINTF("Untreated MVX_UNLOCK\n");
                     this->mvx_state = MVX_STATE_UNLOCK;
                     this->mvx_id_owner = 0;
-                    this->mvx_opcode_number = 0;
+                    this->mvx_number = 0;
                 }
                 else {
                     MEMORY_CONTROLLER_DEBUG_PRINTF("Untreated MVX_LOCK\n");
                     this->mvx_state = MVX_STATE_LOCK;
                     this->mvx_id_owner = package->id_owner;
-                    this->mvx_opcode_number = package->opcode_number;
+                    this->mvx_number = package->mvx_number;
                 }
 
                 // Advance the MVX
@@ -1380,7 +1380,7 @@ void memory_controller_t::print_structures() {
 
     SINUCA_PRINTF("mvx_state:%s\n", get_enum_mvx_state_t_char(this->mvx_state));
     SINUCA_PRINTF("mvx_id_owner:%s\n", utils_t::uint64_to_string(this->mvx_id_owner).c_str());
-    SINUCA_PRINTF("mvx_opcode_number:%s\n", utils_t::uint64_to_string(this->mvx_opcode_number).c_str());
+    SINUCA_PRINTF("mvx_number:%s\n", utils_t::uint64_to_string(this->mvx_number).c_str());
 
     for (uint32_t j = 0; j < this->mvx_buffer.size(); j++) {
         SINUCA_PRINTF("%s MVX_BUFFER[%s] %s\n", this->get_label(),

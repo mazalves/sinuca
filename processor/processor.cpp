@@ -167,6 +167,9 @@ processor_t::processor_t() {
 
     this->data_cache = NULL;
     this->inst_cache = NULL;
+
+    // MVX
+    this->rename_mvx_counter = 0;
 };
 
 // ============================================================================
@@ -649,7 +652,7 @@ int32_t processor_t::send_instruction_package(opcode_package_t *inst_package) {
         this->get_interface_output_component(PROCESSOR_PORT_INST_CACHE)->get_id(),      /// Dst ID
         NULL,                               /// *Hops
         POSITION_FAIL,
-        false, -1, -1, -1);                     /// Hop Counter
+        false, 0, -1, -1, -1);                     /// Hop Counter
 
     return send_package(&package);
 };
@@ -1263,6 +1266,7 @@ void processor_t::stage_rename() {
                 NULL,                                                   /// *Hops
                 POSITION_FAIL,
                 this->reorder_buffer[position_rob].uop.is_mvx,
+                this->rename_mvx_counter++,
                 this->reorder_buffer[position_rob].uop.mvx_read1,
                 this->reorder_buffer[position_rob].uop.mvx_read2,
                 this->reorder_buffer[position_rob].uop.mvx_write);                                         /// Hop Counter
@@ -1299,7 +1303,7 @@ void processor_t::stage_rename() {
                 this->get_interface_output_component(PROCESSOR_PORT_DATA_CACHE)->get_id(),      /// Dst ID
                 NULL,                                                   /// *Hops
                 POSITION_FAIL,
-                false, -1, -1, -1);                                         /// Hop Counter
+                false, 0, -1, -1, -1);                                         /// Hop Counter
         }
         else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MEM_STORE) {
             ERROR_ASSERT_PRINTF(this->reorder_buffer[position_rob].mob_ptr->memory_request.state == PACKAGE_STATE_FREE, "ROB has a pointer to a non free package.")
@@ -1328,7 +1332,7 @@ void processor_t::stage_rename() {
                 this->get_interface_output_component(PROCESSOR_PORT_DATA_CACHE)->get_id(),      /// Dst ID
                 NULL,                                                   /// *Hops
                 POSITION_FAIL,
-                false, -1, -1, -1);                                         /// Hop Counter
+                false, 0, -1, -1, -1);                                         /// Hop Counter
         }
 
         // =====================================================================
