@@ -344,7 +344,7 @@ void interconnection_controller_t::create_communication_cost() {
 
                 /// Find the min width between two adjacents components
                 min_width = sinuca_engine.interconnection_interface_array[i]->get_interconnection_width();
-                if (sinuca_engine.interconnection_interface_array[j]->get_interconnection_width() > min_width) {
+                if (sinuca_engine.interconnection_interface_array[j]->get_interconnection_width() < min_width) {
                     min_width = sinuca_engine.interconnection_interface_array[j]->get_interconnection_width();
                 }
 
