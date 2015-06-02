@@ -672,14 +672,14 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
                 if (this->recv_rqst_read_ready_cycle <= sinuca_engine.get_global_cycle()) {
                     slot = this->allocate_request(package);
                     if (slot != POSITION_FAIL) {
-                        CACHE_DEBUG_PRINTF("\t RECEIVED READ REQUEST\n");
+                        CACHE_DEBUG_PRINTF("\t RECEIVED MVX\n");
                         this->mshr_buffer[slot].package_untreated(0);
                         this->recv_rqst_read_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
                         this->remove_token_list(package);
                         return OK;
                     }
                 }
-                CACHE_DEBUG_PRINTF("\tRECV DATA FAIL (BUSY)\n");
+                CACHE_DEBUG_PRINTF("\tRECV MVX FAIL (BUSY)\n");
                 return FAIL;
             }
             break;
@@ -741,12 +741,14 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
         this->token_list[token_pos].memory_address == package->memory_address &&
         this->token_list[token_pos].memory_operation == package->memory_operation &&
         this->token_list[token_pos].id_owner == package->id_owner) {
+            CACHE_DEBUG_PRINTF("Found a token\n");
             break;
         }
     }
 
     /// 2. Name is not in the guest (token) list, lets add it.
     if (token_pos == this->token_list.size()) {
+        CACHE_DEBUG_PRINTF("Allocating a new token\n");
         /// Allocate the new token
         token_t new_token;
         new_token.id_owner = package->id_owner;
@@ -760,6 +762,7 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
 
     /// 3. If received already the ticket
     if (this->token_list[token_pos].is_coming) {
+        CACHE_DEBUG_PRINTF("Is coming = true\n");
         /// Come on in! Lets Party !
         return OK;
     }
@@ -779,11 +782,13 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
                     this->token_list[token_pos].is_coming = true;
 
                     /// Come on in! Lets Party !
+                    CACHE_DEBUG_PRINTF("Can come (same address)\n");
                     return OK;
                 }
                 else {
                     /// Hold on, wait in the line!
                     add_stat_full_mshr_buffer_request();
+                    CACHE_DEBUG_PRINTF("Can not come (same address)\n");
                     return FAIL;
                 }
             }
@@ -803,6 +808,7 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
                     this->token_list[token_pos].is_coming = true;
 
                     /// Come on in! Lets Party !
+                    CACHE_DEBUG_PRINTF("Can come (different address)\n");
                     return OK;
                 }
             }
@@ -810,10 +816,12 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
         else {
             /// Hold on, wait in the line!
             add_stat_full_mshr_buffer_request();
+            CACHE_DEBUG_PRINTF("Can not come (different address)\n");
             return FAIL;
         }
     }
 
+    CACHE_DEBUG_PRINTF("Cannot receive, too many requests\n");
     /// Hold on, wait in the line!
     add_stat_full_mshr_buffer_request();
     return FAIL;

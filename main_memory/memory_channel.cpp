@@ -439,8 +439,10 @@ void memory_channel_t::clock(uint32_t subcycle) {
                     package->is_answer = true;
                     package->package_transmit(this->timing_cas + this->timing_burst);
                     if (package->memory_operation == MEMORY_OPERATION_MVX_NANO_LOAD &&
-                    package->id_owner == this->memory_controller_id)
+                    package->id_owner == this->memory_controller_id) {
+                        package->memory_size = 1;
                         package->package_ready(this->timing_cas + this->timing_burst);
+                    }
                 break;
 
                 case MEMORY_OPERATION_WRITEBACK:
@@ -503,12 +505,16 @@ void memory_channel_t::clock(uint32_t subcycle) {
                         this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_READ;
                         this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
                         this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
+                        /// Prepare for answer later
+                        package->memory_size = sinuca_engine.get_global_line_size();
                         package->is_answer = true;
                         package->package_transmit(this->timing_cas + this->timing_burst);
                         // HVX
                         if (package->memory_operation == MEMORY_OPERATION_MVX_NANO_LOAD &&
-                        package->id_owner == this->memory_controller_id)
+                        package->id_owner == this->memory_controller_id) {
+                            package->memory_size = 1;
                             package->package_ready(this->timing_cas + this->timing_burst);
+                        }
                     break;
 
                     case MEMORY_OPERATION_WRITEBACK:
@@ -584,12 +590,17 @@ void memory_channel_t::clock(uint32_t subcycle) {
                         this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_READ;
                         this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
                         this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
+                        /// Prepare for answer later
+                        package->memory_size = sinuca_engine.get_global_line_size();
+
                         package->is_answer = true;
                         package->package_transmit(this->timing_cas + this->timing_burst);
                         // HVX
                         if (package->memory_operation == MEMORY_OPERATION_MVX_NANO_LOAD &&
-                        package->id_owner == this->memory_controller_id)
+                        package->id_owner == this->memory_controller_id){
+                            package->memory_size = 1;
                             package->package_ready(this->timing_cas + this->timing_burst);
+                        }
 
                     break;
 

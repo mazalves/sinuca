@@ -79,14 +79,8 @@ void directory_controller_t::allocate() {
 
     // MVX
     for (uint32_t i = 0; i < sinuca_engine.get_memory_controller_array_size(); i++) {
-        this->total_row_buffer_size = sinuca_engine.memory_controller_array[i]->get_bank_buffer_size();
         this->mvx_operation_size = sinuca_engine.memory_controller_array[i]->get_mvx_operation_size();
     }
-
-    for (uint32_t i = 0; i < utils_t::get_power_of_two(total_row_buffer_size); i++) {
-        this->total_row_buffer_size_bits_mask |= 1 << i;
-    }
-    this->not_total_row_buffer_size_bits_mask = ~total_row_buffer_size_bits_mask;
 };
 
 // ============================================================================
@@ -347,9 +341,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     /// Check for LOCK
     else {
         for (uint32_t i = 0; i < this->directory_lines.size(); i++) {
-            if ((this->cmp_total_row_buffer_size(this->directory_lines[i]->initial_memory_address, package->memory_address)) &&
-            ( this->directory_lines[i]->initial_memory_operation == MEMORY_OPERATION_MVX_LOAD ||
-            this->directory_lines[i]->initial_memory_operation == MEMORY_OPERATION_MVX_STORE )){
+            if  ( (this->directory_lines[i]->initial_memory_operation == MEMORY_OPERATION_MVX_LOAD ||
+            this->directory_lines[i]->initial_memory_operation == MEMORY_OPERATION_MVX_STORE )&&
+            (this->directory_lines[i]->initial_memory_address / mvx_operation_size == package->memory_address / mvx_operation_size)){
                 /// Cannot continue right now
                 DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED (Found MVX LOCK)\n")
 

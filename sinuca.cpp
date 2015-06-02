@@ -128,6 +128,9 @@ static void process_argv(int argc, char **argv) {
         display_use();
     }
 
+    ERROR_ASSERT_PRINTF(sinuca_engine.arg_configuration_file_name != NULL, "Configuration file not defined.\n");
+    ERROR_ASSERT_PRINTF(sinuca_engine.arg_trace_file_name != NULL, "Trace file not defined.\n");
+
     uint32_t configuration_file_size;
     configuration_file_size = strlen(sinuca_engine.arg_configuration_file_name) + 1;
     sinuca_engine.arg_configuration_path = utils_t::template_allocate_array<char>(configuration_file_size);

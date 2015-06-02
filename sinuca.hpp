@@ -132,6 +132,7 @@ extern sinuca_engine_t sinuca_engine;
 #define HEART_BEAT      10000000  /// Period to inform the Progress
 #define MAX_ALIVE_TIME   1000000  /// Max Time for a request to be solved
 #define PERIODIC_CHECK  10000000  /// Period between the Periodic Check
+// ~ #define PERIODIC_CHECK  1  /// Period between the Periodic Check
 
 // ~ #define INITIALIZE_DEBUG 8800000    /// Cycle to start the DEBUG_PRINTF (0 to disable)
 #define INITIALIZE_DEBUG 0    /// Cycle to start the DEBUG_PRINTF (0 to disable)
@@ -169,9 +170,9 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define CACHE_DEBUG
     // ~ #define PREFETCHER_DEBUG
     // ~ #define LINE_USAGE_PREDICTOR_DEBUG
-    #define MEMORY_CONTROLLER_DEBUG
+    // ~ #define MEMORY_CONTROLLER_DEBUG
     // ~ #define ROUTER_DEBUG
-    // ~ #define INTERCONNECTION_CTRL_DEBUG
+    #define INTERCONNECTION_CTRL_DEBUG
     // ~ #define DIRECTORY_CTRL_DEBUG
     // ~ #define SHOW_FREE_PACKAGE
     #define DEBUG_PRINTF(...)   {\

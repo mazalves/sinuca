@@ -37,9 +37,6 @@ class directory_controller_t : public interconnection_interface_t {
         container_ptr_directory_line_t directory_lines;
         uint32_t max_cache_level;
         // MVX
-        uint64_t total_row_buffer_size;
-        uint64_t total_row_buffer_size_bits_mask;
-        uint64_t not_total_row_buffer_size_bits_mask;
         uint32_t mvx_operation_size;
         // ====================================================================
         /// Statistics related
@@ -124,11 +121,6 @@ class directory_controller_t : public interconnection_interface_t {
         inline bool cmp_index_tag(uint64_t memory_addressA, uint64_t memory_addressB) {
             return (memory_addressA & not_offset_bits_mask) == (memory_addressB & not_offset_bits_mask);
         };
-
-        inline bool cmp_total_row_buffer_size(uint64_t memory_addressA, uint64_t memory_addressB) {
-            return (memory_addressA & this->not_total_row_buffer_size_bits_mask) == (memory_addressB & this->not_total_row_buffer_size_bits_mask);
-        }
-
 
         inline uint32_t get_directory_lines_size() {
             return this->directory_lines.size();
