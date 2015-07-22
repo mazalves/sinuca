@@ -369,6 +369,16 @@ void utils_t::int64_to_char(char *string, int64_t input_int) {
 }
 
 // =============================================================================
+uint32_t utils_t::string_to_uint32(char *string) {
+    uint32_t result = 0;
+
+    for (char c ; (c = *string ^ '0') <= 9 && c >= 0; ++string) {
+        result = result * 10 + c;
+    }
+    return result;
+}
+
+// =============================================================================
 uint64_t utils_t::string_to_uint64(char *string) {
     uint64_t result = 0;
 

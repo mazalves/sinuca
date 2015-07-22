@@ -41,13 +41,9 @@ class memory_package_t {
         memory_operation_t memory_operation;    /// memory operation
         bool is_answer;                         /// is answer or request
 
-
-        // MVX
-        bool is_mvx;
-        uint64_t mvx_number;
-        int32_t mvx_read1;
-        int32_t mvx_read2;
-        int32_t mvx_write;
+        // HMC
+        bool is_hmc;
+        uint64_t hmc_number;
 
         /// Router Control
         uint32_t id_src;                        /// id src component
@@ -85,7 +81,6 @@ class memory_package_t {
         static void find_old_rqst_ans_state_ready(memory_package_t *input_array, uint32_t size_array, package_state_t state, int32_t &position_rqst, int32_t &position_ans);
         static int32_t find_old_request_state_ready(memory_package_t *input_array, uint32_t size_array, package_state_t state);
         static int32_t find_old_answer_state_ready(memory_package_t *input_array, uint32_t size_array, package_state_t state);
-        //static int32_t find_state_mem_address(memory_package_t *input_array, uint32_t size_array, package_state_t state, uint64_t address, uint32_t size);
 
         static std::string print_all(circular_buffer_t<memory_package_t> *input_array, uint32_t size_array);
         static std::string print_all(memory_package_t *input_array, uint32_t size_array);

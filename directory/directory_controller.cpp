@@ -19,7 +19,6 @@
  */
 
 #include "../sinuca.hpp"
-#include <string>
 
 #ifdef DIRECTORY_CTRL_DEBUG
     #define DIRECTORY_CTRL_DEBUG_PRINTF(...) DEBUG_PRINTF(__VA_ARGS__);
@@ -77,9 +76,70 @@ void directory_controller_t::allocate() {
     }
     this->directory_lines.reserve(sum_mshr_buffer_size);
 
+<<<<<<< HEAD
     // MVX
     for (uint32_t i = 0; i < sinuca_engine.get_memory_controller_array_size(); i++) {
         this->mvx_operation_size = sinuca_engine.memory_controller_array[i]->get_mvx_operation_size();
+=======
+    // Addres Mapping to Mem.Ctrl.
+    this->address_mapping();
+
+};
+
+// ============================================================================
+void directory_controller_t::address_mapping(){
+
+    /// If user defined address mapping file, then generate hash mapping
+    if (sinuca_engine.arg_map_file_name != NULL) {
+
+        /// PAGE MASK
+        this->page_bits_shift = utils_t::get_power_of_two(PAGE_SIZE);
+
+        /// Open Map File
+        gzFile gzMapFile = gzopen(sinuca_engine.arg_map_file_name, "ro");   /// Open the .gz file
+        ERROR_ASSERT_PRINTF(gzMapFile != NULL, "Could not open the file.\n%s\n", sinuca_engine.arg_map_file_name);
+
+        DIRECTORY_CTRL_DEBUG_PRINTF("Map File = %s => READY !\n", sinuca_engine.arg_map_file_name);
+
+        gzclearerr(gzMapFile);
+        gzseek(gzMapFile, 0, SEEK_SET);   /// Go to the Begin of the File
+        ERROR_ASSERT_PRINTF(!gzeof(gzMapFile), "Static File Unexpected EOF.\n")
+
+        char *line_map = utils_t::template_allocate_array<char>(TRACE_LINE_SIZE);
+
+        /// Read map file generating Hash table
+        while (!gzeof(gzMapFile)) {
+            char *buffer = gzgets(gzMapFile, line_map, TRACE_LINE_SIZE);
+            char *sub_string = NULL;
+            char *tmp_ptr = NULL;
+            uint32_t count = 0;
+            uint64_t pageaddr = 0;
+            uint32_t memctrl = 0;
+
+            if (line_map[0] == '\0' || line_map[0] == '#' || buffer == NULL) {     /// If Comment, then ignore
+                continue;
+            }
+            else {
+                for (uint32_t i = 0; line_map[i] != '\0' && i < TRACE_LINE_SIZE; i++) {
+                    count += (line_map[i] == ' ');
+                }
+                ERROR_ASSERT_PRINTF(count == 1, "Error converting Mapping file (Wrong  number of fields %d) \n%s\n", count, line_map)
+
+                sub_string = strtok_r(line_map, " ", &tmp_ptr);
+                pageaddr = utils_t::string_to_uint64(sub_string);
+                ERROR_ASSERT_PRINTF(this->mapped_controller.find(pageaddr) == this->mapped_controller.end(),
+                                    "Multiple Mapping to the same pageaddr %" PRIu64 "\n", pageaddr )
+
+                sub_string = strtok_r(NULL, " ", &tmp_ptr);
+                memctrl = utils_t::string_to_uint32(sub_string)-1;
+                ERROR_ASSERT_PRINTF(memctrl < sinuca_engine.memory_controller_array_size,
+                                    "Error converting Mapping file (Wrong  number of Mem. Ctrl. %" PRIu32 ")\n", memctrl)
+                this->mapped_controller[pageaddr] = memctrl;
+            }
+        }
+        gzclose(gzMapFile);
+        utils_t::template_delete_array<char>(line_map);
+>>>>>>> remotes/origin/master
     }
 };
 
@@ -372,10 +432,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
         ERROR_ASSERT_PRINTF(directory_line == NULL,
                             "This level RQST must not have a directory_line.\n cache_id:%u, package:%s\n",
                             cache->get_id(), package->content_to_string().c_str())
-        // =============================================================
-        // Line Usage Prediction  => Fill the Sub-Blocks into the package (first cache to treat this package)
-        cache->line_usage_predictor->fill_package_sub_blocks(package);
-
     }
 
     /// Get CACHE_LINE, INDEX, WAY
@@ -392,8 +448,8 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
         this->cmp_index_tag(directory_lines[i]->initial_memory_address, package->memory_address)) {
             // =============================================================
             // Line Usage Prediction => Check if the subblocks were requested
-            bool is_sub_block_hit = cache->line_usage_predictor->check_sub_block_is_hit(cache, cache_line, package, index, way);
-            if (is_sub_block_hit &&
+            bool line_is_disabled = cache->line_usage_predictor->check_line_is_disabled(cache, cache_line, index, way);
+            if (!line_is_disabled &&
             directory_lines[i]->initial_memory_operation != MEMORY_OPERATION_WRITEBACK) {
                 // =============================================================
                 // Line Usage Prediction => The statistics between the cache and our mechanism will be different
@@ -465,16 +521,18 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
         {
             /// Inspect IS_HIT
             bool is_tag_hit = (cache_line != NULL && this->coherence_is_hit(cache_line->status));
-            bool is_sub_block_hit = false;
+            bool line_is_disabled = true;
             if (is_tag_hit) {
                 // =============================================================
                 // Line Usage Prediction
-                is_sub_block_hit = cache->line_usage_predictor->check_sub_block_is_hit(cache, cache_line, package, index, way);
+                line_is_disabled = cache->line_usage_predictor->check_line_is_disabled(cache, cache_line, index, way);
             }
             // =================================================================
             /// TAG hit *AND* SUB-BLOCK hit
             // =================================================================
-            if (is_sub_block_hit) {
+            if (!line_is_disabled) {
+                /// From this point the package is transfering a cache line size
+                package->memory_size = sinuca_engine.get_global_line_size();
 
                 // =============================================================
                 // Line Usage Prediction
@@ -489,7 +547,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 // Line Usage Prediction
                 if (coherence_is_dirty(cache_line->status) && cache->line_usage_predictor->check_line_is_last_write(cache, cache_line, index, way)) {
 
-                    memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
+                    memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line);
 
                     if (writeback_package != NULL) {
                         DIRECTORY_CTRL_DEBUG_PRINTF("\t Early Writeback cache_id:%u, package:%s\n", cache->get_id(), writeback_package->content_to_string().c_str())
@@ -594,10 +652,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 {
 
                     /// Check if some HIGHER LEVEL has the cache line
-                    ///*--------------------------*/ printf("\n %s \n FINDING %s:", directory_line->directory_line_to_string().c_str(), cache->get_label());
                     uint32_t sum_latency = 0;
                     cache->change_status(cache_line, this->find_cache_line_higher_levels(&sum_latency, cache, package->memory_address, true));
-                    ///*--------------------------*/ printf("final lat[%u]",sum_latency);
+
                     /// Higher Level Hit
                     if (this->coherence_is_hit(cache_line->status)) {
                         this->add_stat_cache_to_cache();
@@ -614,7 +671,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                             // =============================================================
                             // Line Usage Prediction
                             if (cache->line_usage_predictor->check_line_is_last_write(cache, cache_line, index, way)) {
-                                memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
+                                memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line);
                                 if (writeback_package != NULL) {
                                     DIRECTORY_CTRL_DEBUG_PRINTF("\t Early Writeback cache_id:%u, package:%s\n", cache->get_id(), writeback_package->content_to_string().c_str())
                                     /// Add statistics to the cache
@@ -666,7 +723,8 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                     cache->line_usage_predictor->line_miss(cache, cache_line, package, index, way);
                 }
                 cache->line_usage_predictor->line_hit(cache, cache_line, package, index, way);
-                cache->line_usage_predictor->line_sub_blocks_to_package(cache, cache_line, package, index, way);
+                /// From this point the package is transfering a cache line size
+                package->memory_size = sinuca_engine.get_global_line_size();
 
 
                 /// Send Request to fill the cache line
@@ -734,7 +792,7 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             // =============================================================
             // Line Usage Prediction
             if (cache->line_usage_predictor->check_line_is_last_write(cache, cache_line, index, way)) {
-                memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
+                memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line);
                 if (writeback_package != NULL) {
                     DIRECTORY_CTRL_DEBUG_PRINTF("\t Early Writeback cache_id:%u, package:%s\n", cache->get_id(), writeback_package->content_to_string().c_str())
                     /// Add statistics to the cache
@@ -1057,7 +1115,7 @@ int32_t directory_controller_t::find_directory_line(memory_package_t *package) {
 /*! This method should be only called if there is no directory lock for the
  * cache line being writeback.
  */
-memory_package_t* directory_controller_t::create_cache_writeback(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way) {
+memory_package_t* directory_controller_t::create_cache_writeback(cache_memory_t *cache, cache_line_t *cache_line) {
     ERROR_ASSERT_PRINTF(cache_line->tag != 0, "Invalid memory_address.\n")
 
     /// Create the writeback package
@@ -1114,10 +1172,8 @@ memory_package_t* directory_controller_t::create_cache_writeback(cache_memory_t 
     directory_line->cache_request_order[cache->get_cache_id()] = ++directory_line->cache_requested;
     DIRECTORY_CTRL_DEBUG_PRINTF("\t Update Directory Line:%s\n", directory_line->directory_line_to_string().c_str())
 
-    // =============================================================
-    // Line Usage Prediction => Take all the line subblocks and put into the package
-    cache->line_usage_predictor->line_sub_blocks_to_package(cache, cache_line, package, index, way);
-
+    /// From this point the package is transfering a cache line size
+    package->memory_size = sinuca_engine.get_global_line_size();
     /// Higher Level Copy Back
     package->package_set_src_dst(cache->get_id(), this->find_next_obj_id(cache, package->memory_address));
 
@@ -1188,7 +1244,7 @@ bool directory_controller_t::inclusiveness_new_eviction(cache_memory_t *cache, c
 
     /// Need CopyBack After all?
     if (coherence_need_writeback(cache, cache_line)) {
-        memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
+        memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line);
         if (writeback_package != NULL) {
             /// Add statistics to the cache
             cache->add_stat_writeback();
@@ -1492,7 +1548,7 @@ bool directory_controller_t::coherence_evict_all() {
                     cache_line_t *cache_line = cache->get_line(index, way);
                     if (this->coherence_is_dirty(cache_line->status)) {
                         all_clean = false;
-                        memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line, index, way);
+                        memory_package_t *writeback_package = this->create_cache_writeback(cache, cache_line);
                         if (writeback_package != NULL) {
                             DIRECTORY_CTRL_DEBUG_PRINTF("%s Evicted... %" PRIu32 " x %" PRIu32 " = %" PRIu64 " \n", cache->get_label(), index, way , writeback_package->memory_address);
                             /// Add statistics to the cache
@@ -1648,9 +1704,33 @@ uint32_t directory_controller_t::find_next_obj_id(cache_memory_t *cache_memory, 
     // and send all the HVX instructions from this transaction for the choosen MC
 
     /// Find Next Main Memory
-    for (uint32_t i = 0; i < sinuca_engine.memory_controller_array_size; i++) {
-        if (sinuca_engine.memory_controller_array[i]->get_controller(memory_address) == sinuca_engine.memory_controller_array[i]->get_controller_number()) {
-            return sinuca_engine.memory_controller_array[i]->get_id();
+
+    // =====================================
+    // Addres Mapping to Mem.Ctrl.
+    if (sinuca_engine.arg_map_file_name != NULL) {
+        uint64_t pageaddr = memory_address >> this->page_bits_shift;
+
+        /// Try to obtain a valid mapping
+        if (this->mapped_controller.find(pageaddr) !=  this->mapped_controller.end()) {
+            uint64_t  memctrl = this->mapped_controller[pageaddr];
+            return sinuca_engine.memory_controller_array[memctrl]->get_id();
+        }
+        ///Otherwise obtain a normal mapping (memory mask)
+        else {
+            for (uint32_t i = 0; i < sinuca_engine.memory_controller_array_size; i++) {
+                if (sinuca_engine.memory_controller_array[i]->get_controller(memory_address) ==
+                    sinuca_engine.memory_controller_array[i]->get_controller_number()) {
+                    return sinuca_engine.memory_controller_array[i]->get_id();
+                }
+            }
+        }
+    }
+    else {
+        for (uint32_t i = 0; i < sinuca_engine.memory_controller_array_size; i++) {
+            if (sinuca_engine.memory_controller_array[i]->get_controller(memory_address) ==
+                sinuca_engine.memory_controller_array[i]->get_controller_number()) {
+                return sinuca_engine.memory_controller_array[i]->get_id();
+            }
         }
     }
 

@@ -18,34 +18,33 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-class dewp_metadata_line_t {
+class dsbp_metadata_line_t {
     public:
         line_prediction_t line_status;
+        bool *sub_blocks;
 
-        uint64_t real_access_counter_read;
-        uint64_t real_access_counter_writeback;
-
-        uint64_t access_counter_read;
-        uint64_t access_counter_writeback;
-
-        bool overflow_read;
-        bool overflow_writeback;
+        uint64_t *real_access_counter_read;
+        uint64_t *access_counter_read;
+        bool *overflow_read;
 
         bool learn_mode;
-        aht_line_t *aht_pointer;
+        pht_line_t *pht_pointer;
 
         /// Special Flags
         bool is_dead_read;
-        bool is_dead_writeback;
         bool is_dirty;
 
         /// Static Energy
         uint64_t clock_last_access;
+        uint32_t active_sub_blocks;
+
+        container_uint64_t cycle_access_list;
+        uint64_t *clock_last_access_subblock; // ORACLE
         // ====================================================================
         /// Methods
         // ====================================================================
-        dewp_metadata_line_t();
-        ~dewp_metadata_line_t();
+        dsbp_metadata_line_t();
+        ~dsbp_metadata_line_t();
 
         void clean();
         std::string content_to_string();

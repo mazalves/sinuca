@@ -32,10 +32,6 @@ memory_package_t::~memory_package_t() {
 
 // ============================================================================
 memory_package_t::memory_package_t(const memory_package_t &package) {
-    // ~ ERROR_ASSERT_PRINTF(sinuca_engine.get_global_line_size() > 0, "Allocating 0 positions.\n")
-    // ~ ERROR_ASSERT_PRINTF(sub_blocks != NULL, "Allocating 0 positions.\n")
-    // ~ this->package_clean();
-
 
     id_owner = package.id_owner;
     opcode_number = package.opcode_number;
@@ -66,36 +62,10 @@ memory_package_t::memory_package_t(const memory_package_t &package) {
 
 // ============================================================================
 memory_package_t &memory_package_t::operator=(const memory_package_t &package) {
-    ERROR_ASSERT_PRINTF(sinuca_engine.get_global_line_size() > 0, "Allocating 0 positions.\n")
 
-    if (this!=&package){
-        this->id_owner = package.id_owner;
-        this->opcode_number = package.opcode_number;
-        this->opcode_address = package.opcode_address;
-        this->uop_number = package.uop_number;
-        this->memory_address = package.memory_address;
-        this->memory_size = package.memory_size;
-
-        // MVX
-        this->is_mvx     = package.is_mvx       ;
-        this->mvx_number = package.mvx_number   ;
-        this->mvx_read1  = package.mvx_read1    ;
-        this->mvx_read2  = package.mvx_read2    ;
-        this->mvx_write  = package.mvx_write    ;
-
-
-        this->state = package.state;
-        this->ready_cycle = package.ready_cycle;
+    if (this != &package){
+        memcpy(this, &package, sizeof(memory_package_t));
         this->born_cycle = sinuca_engine.get_global_cycle();
-
-        this->memory_operation = package.memory_operation;
-        this->is_answer = package.is_answer;
-
-        /// Routing Control
-        this->id_src = package.id_src;
-        this->id_dst = package.id_dst;
-        this->hops = package.hops;
-        this->hop_count = package.hop_count;
     }
     return *this;
 };
@@ -257,7 +227,6 @@ std::string memory_package_t::content_to_string() {
             content_string = content_string + " [" + utils_t::uint32_to_string(this->hops[i]) + "]";
         }
     }
-
     return content_string;
 };
 

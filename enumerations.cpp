@@ -404,8 +404,6 @@ const char *get_enum_write_priority_char(write_priority_t type) {
 const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_policy_t type) {
     switch (type) {
         case LINE_USAGE_PREDICTOR_POLICY_DISABLE:       return "DISABLE";       break;
-        case LINE_USAGE_PREDICTOR_POLICY_DSBP:          return "DSBP";          break;
-        case LINE_USAGE_PREDICTOR_POLICY_DSBP_ORACLE:   return "DSBP_ORACLE";   break;
         case LINE_USAGE_PREDICTOR_POLICY_DEWP:          return "DEWP";          break;
         case LINE_USAGE_PREDICTOR_POLICY_DEWP_ORACLE:   return "DEWP_ORACLE";   break;
         case LINE_USAGE_PREDICTOR_POLICY_SKEWED:        return "SKEWED";   break;
@@ -416,14 +414,14 @@ const char *get_enum_line_usage_predictor_policy_char(line_usage_predictor_polic
 
 // ============================================================================
 /// Enumerates the valid sub-block type
-const char *get_enum_line_sub_block_t_char(line_sub_block_t type) {
+const char *get_enum_line_prediction_t_char(line_prediction_t type) {
     switch (type) {
-        case LINE_SUB_BLOCK_DISABLE:        return "DISABLE";     break;
-        case LINE_SUB_BLOCK_NORMAL:         return "NORMAL";      break;
-        case LINE_SUB_BLOCK_LEARN:          return "LEARN";       break;
-        case LINE_SUB_BLOCK_WRONG_FIRST:    return "WRONG";       break;
-        case LINE_SUB_BLOCK_WRITEBACK:      return "WRITEBACK";    break;
+        case LINE_PREDICTION_TURNOFF:        return "DISABLE";     break;
+        case LINE_PREDICTION_NORMAL:         return "NORMAL";      break;
+        case LINE_PREDICTION_LEARN:          return "LEARN";       break;
+        case LINE_PREDICTION_WRONG_FIRST:    return "WRONG";       break;
+        case LINE_PREDICTION_WRITEBACK:      return "WRITEBACK";    break;
     };
-    ERROR_PRINTF("Wrong LINE_SUB_BLOCK\n");
+    ERROR_PRINTF("Wrong LINE_PREDICTION\n");
     return "FAIL";
 };

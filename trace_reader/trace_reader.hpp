@@ -39,6 +39,8 @@ class trace_reader_t {
         uint32_t total_bbls;
         uint32_t *bbl_size;
 
+        uint32_t total_cores;
+
         opcode_package_t **static_dict;
         uint32_t *actual_bbl;
         uint32_t *actual_bbl_opcode;
@@ -64,6 +66,7 @@ class trace_reader_t {
 
         void define_total_bbls();
         void define_total_bbl_size();
+
 
         uint64_t trace_size(uint32_t cpuid);
         uint32_t trace_next_dynamic(uint32_t cpuid, sync_t *sync_found);

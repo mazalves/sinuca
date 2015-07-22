@@ -52,6 +52,19 @@ trace_reader_t::trace_reader_t() {
 
 // =============================================================================
 trace_reader_t::~trace_reader_t() {
+
+    /// Close trace files
+    if (gzStaticTraceFile != NULL) {
+        gzclose(gzStaticTraceFile);
+    }
+
+    if (gzDynamicTraceFile != NULL && gzMemoryTraceFile != NULL) {
+        for (uint32_t i = 0; i < this->total_cores; i++) {
+            gzclose(gzDynamicTraceFile[i]);
+            gzclose(gzMemoryTraceFile[i]);
+        }
+    }
+
     /// De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<char>(line_static);
     utils_t::template_delete_matrix<char>(line_dynamic, TRACE_LINE_SIZE);
@@ -73,12 +86,14 @@ trace_reader_t::~trace_reader_t() {
 void trace_reader_t::allocate(char *in_file, uint32_t number_cores) {
     uint32_t i, k;
 
+    this->total_cores = number_cores;
+
     this->line_static = utils_t::template_allocate_array<char>(TRACE_LINE_SIZE);
-    this->line_dynamic = utils_t::template_allocate_matrix<char>(number_cores, TRACE_LINE_SIZE);
-    this->line_memory = utils_t::template_allocate_matrix<char>(number_cores, TRACE_LINE_SIZE);
+    this->line_dynamic = utils_t::template_allocate_matrix<char>(this->total_cores, TRACE_LINE_SIZE);
+    this->line_memory = utils_t::template_allocate_matrix<char>(this->total_cores, TRACE_LINE_SIZE);
 
     this->line_static[0] = '\0';
-    for (i = 0; i < number_cores; i++) {
+    for (i = 0; i < this->total_cores; i++) {
         this->line_dynamic[i][0] = '\0';
         this->line_memory[i][0] = '\0';
     }
@@ -102,10 +117,10 @@ void trace_reader_t::allocate(char *in_file, uint32_t number_cores) {
     // =======================================================================
     char dyn_file_name[500];
 
-    gzDynamicTraceFile = utils_t::template_allocate_array<gzFile>(number_cores);
-    for (i = 0; i < number_cores; i++) {
-        /// Make the thread affinity (mapping)
-        k = sinuca_engine.thread_map[i];
+    gzDynamicTraceFile = utils_t::template_allocate_array<gzFile>(this->total_cores);
+    for (i = 0; i < this->total_cores; i++) {
+        /// Make the thread affinity
+        k = sinuca_engine.thread_affinity[i];
 
         dyn_file_name[0] = '\0';
         snprintf(dyn_file_name, sizeof(dyn_file_name), "%s.tid%d.dyn.out.gz", in_file, k);
@@ -133,10 +148,10 @@ void trace_reader_t::allocate(char *in_file, uint32_t number_cores) {
     char mem_file_name[500];
     mem_file_name[0] = '\0';
 
-    gzMemoryTraceFile = utils_t::template_allocate_array<gzFile>(number_cores);
-    for (i = 0; i < number_cores; i++) {
-        /// Make the thread affinity (mapping)
-        k = sinuca_engine.thread_map[i];
+    gzMemoryTraceFile = utils_t::template_allocate_array<gzFile>(this->total_cores);
+    for (i = 0; i < this->total_cores; i++) {
+        /// Make the thread affinity
+        k = sinuca_engine.thread_affinity[i];
 
         snprintf(mem_file_name, sizeof(mem_file_name), "%s.tid%d.mem.out.gz", in_file, k);
 
@@ -170,15 +185,15 @@ void trace_reader_t::allocate(char *in_file, uint32_t number_cores) {
 
     this->generate_static_dict();
 
-    this->insideBBL = utils_t::template_allocate_initialize_array<bool>(number_cores, false);
-    this->trace_opcode_counter = utils_t::template_allocate_initialize_array<uint64_t>(number_cores, 1);
-    this->trace_opcode_max = utils_t::template_allocate_array<uint64_t>(number_cores);
-    for (i = 0; i < number_cores; i++) {
+    this->insideBBL = utils_t::template_allocate_initialize_array<bool>(this->total_cores, false);
+    this->trace_opcode_counter = utils_t::template_allocate_initialize_array<uint64_t>(this->total_cores, 1);
+    this->trace_opcode_max = utils_t::template_allocate_array<uint64_t>(this->total_cores);
+    for (i = 0; i < this->total_cores; i++) {
         this->trace_opcode_max[i] = this->trace_size(i);
     }
 
-    this->actual_bbl = utils_t::template_allocate_initialize_array<uint32_t>(number_cores, 0);
-    this->actual_bbl_opcode = utils_t::template_allocate_initialize_array<uint32_t>(number_cores, 0);
+    this->actual_bbl = utils_t::template_allocate_initialize_array<uint32_t>(this->total_cores, 0);
+    this->actual_bbl_opcode = utils_t::template_allocate_initialize_array<uint32_t>(this->total_cores, 0);
 };
 
 
@@ -310,7 +325,7 @@ void trace_reader_t::trace_next_memory(uint32_t cpuid) {
     this->line_memory[cpuid][0] = '\0';
     while (!valid_memory) {
 
-        ERROR_ASSERT_PRINTF(!gzeof(this->gzDynamicTraceFile[cpuid]), "MemoryTraceFile EOF - cpu id %d\n", cpuid);
+        ERROR_ASSERT_PRINTF(!gzeof(this->gzMemoryTraceFile[cpuid]), "MemoryTraceFile EOF - cpu id %d\n", cpuid);
         char *buffer = gzgets(this->gzMemoryTraceFile[cpuid], this->line_memory[cpuid], TRACE_LINE_SIZE);
         ERROR_ASSERT_PRINTF(buffer != NULL, "MemoryTraceFile EOF - cpu id %d\n", cpuid);
 

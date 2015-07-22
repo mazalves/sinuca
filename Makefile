@@ -32,8 +32,13 @@ RM = rm -f
 # ~ LDFLAGS = -ggdb
 
 # ~ ## EXECUTION
+<<<<<<< HEAD
 FLAGS =   -O3 -ggdb -Wall -Wextra -Werror -rdynamic
 LDFLAGS = -ggdb -rdynamic
+=======
+FLAGS =   -O3 -ggdb -Wall -Wextra -Werror -std=c++0x
+LDFLAGS = -ggdb
+>>>>>>> remotes/origin/master
 
 ########################################################
 # ~ MACHINE=$(shell uname -m)

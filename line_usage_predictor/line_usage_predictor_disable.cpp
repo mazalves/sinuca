@@ -51,41 +51,6 @@ void line_usage_predictor_disable_t::clock(uint32_t subcycle) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("cycle() \n");
 };
 
-// ============================================================================
-
-// ============================================================================
-void line_usage_predictor_disable_t::fill_package_sub_blocks(memory_package_t *package) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("fill_package_sub_blocks() package:%s\n", package->content_to_string().c_str())
-    (void)package;
-
-    package->memory_size = sinuca_engine.get_global_line_size();
-};
-
-// ============================================================================
-void line_usage_predictor_disable_t::line_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_sub_blocks_to_package() package:%s\n", package->content_to_string().c_str())
-
-    (void)cache;
-    (void)cache_line;
-    (void)package;
-    (void)index;
-    (void)way;
-
-    package->memory_size = sinuca_engine.get_global_line_size();
-};
-
-// ============================================================================
-bool line_usage_predictor_disable_t::check_sub_block_is_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint64_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_sub_block_is_hit() package:%s\n", package->content_to_string().c_str())
-
-    (void)cache;
-    (void)cache_line;
-    (void)package;
-    (void)index;
-    (void)way;
-
-    return true;
-};
 
 // ============================================================================
 bool line_usage_predictor_disable_t::check_line_is_disabled(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way){

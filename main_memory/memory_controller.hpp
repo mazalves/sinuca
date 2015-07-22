@@ -20,7 +20,6 @@
 
 class memory_controller_t : public interconnection_interface_t {
     private:
-
         // ====================================================================
         /// Set by sinuca_configurator
         // ====================================================================
@@ -273,7 +272,6 @@ class memory_controller_t : public interconnection_interface_t {
         inline uint64_t get_bank(uint64_t addr) {
             return (addr & this->channels[0].bank_bits_mask) >> this->channels[0].bank_bits_shift;
         }
-
 
         void insert_mshr_born_ordered(memory_package_t* package);
         int32_t allocate_request(memory_package_t* package);

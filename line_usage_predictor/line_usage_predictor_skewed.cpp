@@ -108,55 +108,13 @@ void line_usage_predictor_skewed_t::clock(uint32_t subcycle) {
 
 
 // ============================================================================
-void line_usage_predictor_skewed_t::fill_package_sub_blocks(memory_package_t *package) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("fill_package_sub_blocks() package:%s\n", package->content_to_string().c_str())
-
-    (void)package;
-
-    package->memory_size = sinuca_engine.get_global_line_size();
-};
-
-// ============================================================================
-void line_usage_predictor_skewed_t::line_sub_blocks_to_package(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("line_sub_blocks_to_package() package:%s\n", package->content_to_string().c_str())
-    ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
-    ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
-
-    (void)cache;
-    (void)cache_line;
-    (void)package;
-    (void)index;
-    (void)way;
-
-    package->memory_size = sinuca_engine.get_global_line_size();
-};
-
-// ============================================================================
-bool line_usage_predictor_skewed_t::check_sub_block_is_hit(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint64_t index, uint32_t way) {
-    LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_sub_block_is_hit() package:%s\n", package->content_to_string().c_str())
-
-    (void)cache;
-    (void)cache_line;
-    (void)package;
-
-    if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE) {
-        LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t sub_blocks MISS\n")
-        return false;
-    }
-    else {
-        LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t sub_blocks HIT\n")
-        return true;
-    }
-};
-
-// ============================================================================
 bool line_usage_predictor_skewed_t::check_line_is_disabled(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way){
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("check_line_is_disabled()\n")
 
     (void)cache;
     (void)cache_line;
 
-    if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE) {
+    if (this->metadata_sets[index].ways[way].line_status == LINE_PREDICTION_TURNOFF) {
         LINE_USAGE_PREDICTOR_DEBUG_PRINTF("\t sub_blocks MISS\n")
         return true;
     }
@@ -200,7 +158,7 @@ void line_usage_predictor_skewed_t::line_hit(cache_memory_t *cache, cache_line_t
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
 
     ERROR_ASSERT_PRINTF(package->memory_operation != MEMORY_OPERATION_WRITEBACK, "Line hit received a WRITEBACK.\n");
-    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].line_status != LINE_SUB_BLOCK_DISABLE, "Line hit into a DISABLED sub_block.\n");
+    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].line_status != LINE_PREDICTION_TURNOFF, "Line hit into a DISABLED sub_block.\n");
 
     (void)cache;
     (void)cache_line;
@@ -210,7 +168,7 @@ void line_usage_predictor_skewed_t::line_hit(cache_memory_t *cache, cache_line_t
     this->add_stat_line_hit();
 
     /// Statistics
-    if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE) {
+    if (this->metadata_sets[index].ways[way].line_status == LINE_PREDICTION_TURNOFF) {
         this->stat_cycles_turned_off_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
         if (this->metadata_sets[index].ways[way].clock_last_access == 0){
             stat_cycles_turned_off_whole_line_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
@@ -268,11 +226,11 @@ void line_usage_predictor_skewed_t::line_hit(cache_memory_t *cache, cache_line_t
     uint32_t decision = this->skewed_table_1[signature1] + this->skewed_table_2[signature2] + this->skewed_table_3[signature3];
 
     if (decision >= (this->fsm_dead_threshold * 3) &&
-    this->metadata_sets[index].ways[way].line_status != LINE_SUB_BLOCK_WRONG_FIRST) {
+    this->metadata_sets[index].ways[way].line_status != LINE_PREDICTION_WRONG_FIRST) {
         this->metadata_sets[index].ways[way].is_dead_read = true;
         // Can Turn off the sub_blocks
         if (this->metadata_sets[index].ways[way].is_dirty == false && this->turnoff_dead_lines == true) {
-            this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_DISABLE;
+            this->metadata_sets[index].ways[way].line_status = LINE_PREDICTION_TURNOFF;
         }
     }
     // ===
@@ -288,7 +246,7 @@ void line_usage_predictor_skewed_t::line_miss(cache_memory_t *cache, cache_line_
     ERROR_ASSERT_PRINTF(index < this->metadata_total_sets, "Wrong index %d > total_sets %d", index, this->metadata_total_sets);
     ERROR_ASSERT_PRINTF(way < this->metadata_associativity, "Wrong way %d > associativity %d", way, this->metadata_associativity);
 
-    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE, "Metadata Line should be clean\n");
+    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].line_status == LINE_PREDICTION_TURNOFF, "Metadata Line should be clean\n");
 
     (void)cache;
     (void)cache_line;
@@ -303,7 +261,7 @@ void line_usage_predictor_skewed_t::line_miss(cache_memory_t *cache, cache_line_
         stat_cycles_turned_off_whole_line_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     }
 
-    this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_NORMAL;
+    this->metadata_sets[index].ways[way].line_status = LINE_PREDICTION_NORMAL;
     this->metadata_sets[index].ways[way].clock_last_access = sinuca_engine.get_global_cycle();
 };
 
@@ -312,7 +270,7 @@ void line_usage_predictor_skewed_t::line_miss(cache_memory_t *cache, cache_line_
 void line_usage_predictor_skewed_t::sub_block_miss(cache_memory_t *cache, cache_line_t *cache_line, memory_package_t *package, uint32_t index, uint32_t way) {
     LINE_USAGE_PREDICTOR_DEBUG_PRINTF("sub_block_miss() package:%s\n", package->content_to_string().c_str())
 
-    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE, "Metadata Line should be clean\n");
+    ERROR_ASSERT_PRINTF(this->metadata_sets[index].ways[way].line_status == LINE_PREDICTION_TURNOFF, "Metadata Line should be clean\n");
 
     (void)cache;
     (void)cache_line;
@@ -330,10 +288,10 @@ void line_usage_predictor_skewed_t::sub_block_miss(cache_memory_t *cache, cache_
 
     /// If caused by misprediction or invalidation?!
     if (this->metadata_sets[index].ways[way].is_dead_read == true) {
-        this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_WRONG_FIRST;
+        this->metadata_sets[index].ways[way].line_status = LINE_PREDICTION_WRONG_FIRST;
     }
     else {
-        this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_NORMAL;
+        this->metadata_sets[index].ways[way].line_status = LINE_PREDICTION_NORMAL;
     }
 
     this->metadata_sets[index].ways[way].is_dead_read = false;
@@ -360,12 +318,12 @@ void line_usage_predictor_skewed_t::line_send_writeback(cache_memory_t *cache, c
     /// METADATA Not Learn Mode
     // ================================================================
     this->metadata_sets[index].ways[way].is_dirty = false;
-    this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_WRITEBACK;
+    this->metadata_sets[index].ways[way].line_status = LINE_PREDICTION_WRITEBACK;
 
     // If predicted as dead
     if (this->metadata_sets[index].ways[way].is_dead_read == true && this->turnoff_dead_lines == true) {
         // METADATA Turn off the sub_blocks
-        this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_DISABLE;
+        this->metadata_sets[index].ways[way].line_status = LINE_PREDICTION_TURNOFF;
     }
 
     this->metadata_sets[index].ways[way].clock_last_access = sinuca_engine.get_global_cycle();
@@ -385,7 +343,7 @@ void line_usage_predictor_skewed_t::line_recv_writeback(cache_memory_t *cache, c
     this->add_stat_recv_writeback();
 
     /// Statistics
-    if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE) {
+    if (this->metadata_sets[index].ways[way].line_status == LINE_PREDICTION_TURNOFF) {
         this->stat_cycles_turned_off_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
         if (this->metadata_sets[index].ways[way].clock_last_access == 0){
             stat_cycles_turned_off_whole_line_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
@@ -398,12 +356,12 @@ void line_usage_predictor_skewed_t::line_recv_writeback(cache_memory_t *cache, c
     this->metadata_sets[index].ways[way].real_access_counter_writeback++;
     this->metadata_sets[index].ways[way].is_dirty = true;
 
-    if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE) {
-        this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_NORMAL;
+    if (this->metadata_sets[index].ways[way].line_status == LINE_PREDICTION_TURNOFF) {
+        this->metadata_sets[index].ways[way].line_status = LINE_PREDICTION_NORMAL;
     }
-    else if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_WRITEBACK) {
+    else if (this->metadata_sets[index].ways[way].line_status == LINE_PREDICTION_WRITEBACK) {
         // Enable Learn_mode
-        this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_WRONG_FIRST;
+        this->metadata_sets[index].ways[way].line_status = LINE_PREDICTION_WRONG_FIRST;
         this->metadata_sets[index].ways[way].is_dead_read = false;
     }
 
@@ -485,23 +443,23 @@ void line_usage_predictor_skewed_t::line_eviction(cache_memory_t *cache, cache_l
     // Prediction Accuracy Statistics
     if (this->metadata_sets[index].ways[way].is_dirty == true) {
         switch (this->metadata_sets[index].ways[way].line_status) {
-            case LINE_SUB_BLOCK_LEARN:
-                ERROR_PRINTF("Should not be in LINE_SUB_BLOCK_LEARN status\n")
+            case LINE_PREDICTION_LEARN:
+                ERROR_PRINTF("Should not be in LINE_PREDICTION_LEARN status\n")
             break;
 
-            case LINE_SUB_BLOCK_NORMAL:
+            case LINE_PREDICTION_NORMAL:
                 this->add_stat_dead_writeback_notsent_over();
             break;
 
-            case LINE_SUB_BLOCK_DISABLE:
-                ERROR_PRINTF("Should not be in LINE_SUB_BLOCK_DISABLE status\n")
+            case LINE_PREDICTION_TURNOFF:
+                ERROR_PRINTF("Should not be in LINE_PREDICTION_TURNOFF status\n")
             break;
 
-            case LINE_SUB_BLOCK_WRITEBACK:
+            case LINE_PREDICTION_WRITEBACK:
                 this->add_stat_dead_read_disable_under();
             break;
 
-            case LINE_SUB_BLOCK_WRONG_FIRST:
+            case LINE_PREDICTION_WRONG_FIRST:
                 this->add_stat_dead_writeback_sent_under();
             break;
 
@@ -509,30 +467,30 @@ void line_usage_predictor_skewed_t::line_eviction(cache_memory_t *cache, cache_l
     }
     else {
         switch (this->metadata_sets[index].ways[way].line_status) {
-            case LINE_SUB_BLOCK_LEARN:
-                ERROR_PRINTF("Should not be in LINE_SUB_BLOCK_LEARN status\n")
+            case LINE_PREDICTION_LEARN:
+                ERROR_PRINTF("Should not be in LINE_PREDICTION_LEARN status\n")
             break;
 
-            case LINE_SUB_BLOCK_NORMAL:
+            case LINE_PREDICTION_NORMAL:
                 this->add_stat_dead_read_normal_over();
             break;
 
-            case LINE_SUB_BLOCK_DISABLE:
+            case LINE_PREDICTION_TURNOFF:
                 this->add_stat_dead_read_disable_correct();
             break;
 
-            case LINE_SUB_BLOCK_WRONG_FIRST:
+            case LINE_PREDICTION_WRONG_FIRST:
                 this->add_stat_dead_read_disable_under();
             break;
 
-            case LINE_SUB_BLOCK_WRITEBACK:
+            case LINE_PREDICTION_WRITEBACK:
                 this->add_stat_dead_writeback_sent_correct();
             break;
         }
     }
 
     /// Statistics
-    if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE) {
+    if (this->metadata_sets[index].ways[way].line_status == LINE_PREDICTION_TURNOFF) {
         this->stat_cycles_turned_off_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
         if (this->metadata_sets[index].ways[way].clock_last_access == 0){
             stat_cycles_turned_off_whole_line_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
@@ -583,7 +541,7 @@ void line_usage_predictor_skewed_t::line_invalidation(cache_memory_t *cache, cac
     this->add_stat_invalidation();
 
     /// Statistics
-    if (this->metadata_sets[index].ways[way].line_status == LINE_SUB_BLOCK_DISABLE) {
+    if (this->metadata_sets[index].ways[way].line_status == LINE_PREDICTION_TURNOFF) {
         this->stat_cycles_turned_off_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
         if (this->metadata_sets[index].ways[way].clock_last_access == 0){
             stat_cycles_turned_off_whole_line_since_begin += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
@@ -593,7 +551,7 @@ void line_usage_predictor_skewed_t::line_invalidation(cache_memory_t *cache, cac
         this->stat_cycles_turned_on_whole_line += sinuca_engine.get_global_cycle() - this->metadata_sets[index].ways[way].clock_last_access;
     }
 
-    this->metadata_sets[index].ways[way].line_status = LINE_SUB_BLOCK_DISABLE;
+    this->metadata_sets[index].ways[way].line_status = LINE_PREDICTION_TURNOFF;
     this->metadata_sets[index].ways[way].is_dirty = false;
     this->metadata_sets[index].ways[way].clock_last_access = sinuca_engine.get_global_cycle();
 };

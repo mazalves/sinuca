@@ -97,11 +97,6 @@ memory_controller_t::~memory_controller_t() {
     // De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<memory_channel_t>(channels);
     utils_t::template_delete_array<memory_package_t>(mshr_buffer);
-
-    // HVX
-    utils_t::template_delete_array<uint32_t>(mvx_wait_registers);
-    utils_t::template_delete_matrix<memory_package_t>(mvx_nano_buffer, this->mvx_nano_buffer_size);
-    utils_t::template_delete_array<uint32_t>(mvx_nano_buffer_used);
 };
 
 // ============================================================================
@@ -173,19 +168,6 @@ void memory_controller_t::allocate() {
         /// Call the channel allocate()
         this->channels[i].allocate();
     }
-
-    // HVX
-    MEMORY_CONTROLLER_DEBUG_PRINTF("total registers %d\n",this->get_mvx_total_registers() );
-    this->mvx_wait_registers = utils_t::template_allocate_initialize_array<uint32_t>(this->get_mvx_total_registers(), 0);
-    if (this->get_mvx_operation_size() == 0) {
-        this->mvx_nano_buffer_size = sinuca_engine.get_global_line_size();
-    }
-    else {
-        this->mvx_nano_buffer_size = this->get_mvx_operation_size() / sinuca_engine.get_global_line_size();
-    }
-    MEMORY_CONTROLLER_DEBUG_PRINTF("nano_buffer_size %d\n",mvx_nano_buffer_size );
-    this->mvx_nano_buffer = utils_t::template_allocate_matrix<memory_package_t>(this->bank_buffer_size * this->channels_per_controller ,this->mvx_nano_buffer_size);
-    this->mvx_nano_buffer_used = utils_t::template_allocate_array<uint32_t>(this->bank_buffer_size * this->channels_per_controller);
 
     #ifdef MEMORY_CONTROLLER_DEBUG
         this->print_configuration();
@@ -1031,15 +1013,7 @@ int32_t memory_controller_t::allocate_request(memory_package_t* package){
     if (slot != POSITION_FAIL) {
         MEMORY_CONTROLLER_DEBUG_PRINTF("\t NEW REQUEST\n");
         this->mshr_buffer[slot] = *package;
-        // HVX
-        if (package->is_mvx &&
-        package->memory_operation != MEMORY_OPERATION_MVX_NANO_LOAD &&
-        package->memory_operation != MEMORY_OPERATION_MVX_NANO_STORE) {
-            this->mvx_buffer.push_back(&this->mshr_buffer[slot]);
-        }
-        else {
-            this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
-        }
+        this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
     }
     return slot;
 };

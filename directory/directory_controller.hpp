@@ -36,8 +36,17 @@ class directory_controller_t : public interconnection_interface_t {
         container_ptr_cache_memory_t llc_caches;
         container_ptr_directory_line_t directory_lines;
         uint32_t max_cache_level;
+<<<<<<< HEAD
         // MVX
         uint32_t mvx_operation_size;
+=======
+
+        // Addres Mapping to Mem.Ctrl.
+        std::unordered_map<uint64_t, uint32_t> mapped_controller;
+        uint64_t page_bits_mask;
+        uint64_t not_page_bits_mask;
+        uint64_t page_bits_shift;
+>>>>>>> remotes/origin/master
         // ====================================================================
         /// Statistics related
         // ====================================================================
@@ -97,8 +106,10 @@ class directory_controller_t : public interconnection_interface_t {
         package_state_t treat_cache_answer(uint32_t obj_id, memory_package_t *package);
         package_state_t treat_cache_request_sent(uint32_t obj_id, memory_package_t *package);
 
-        memory_package_t* create_cache_writeback(cache_memory_t *cache, cache_line_t *cache_line, uint32_t index, uint32_t way);
+        memory_package_t* create_cache_writeback(cache_memory_t *cache, cache_line_t *cache_line);
 
+        // Addres Mapping to Mem.Ctrl.
+        void address_mapping();
         uint32_t find_next_obj_id(cache_memory_t *cache_memory, uint64_t memory_address);
         bool is_locked(uint64_t memory_address);
 

@@ -358,7 +358,7 @@ void opcode_package_t::trace_string_to_read(char *input_string, uint32_t actual_
         count += (input_string[i] == ' ');
         i++;
     }
-    ERROR_ASSERT_PRINTF(count != 4, "Error converting Text to Memory (Wrong  number of fields %d)\n", count)
+    ERROR_ASSERT_PRINTF(count == 3, "Error converting Text to Memory (Wrong  number of fields %d)\n", count)
 
     sub_string = strtok_r(input_string, " ", &tmp_ptr);
     ERROR_ASSERT_PRINTF(strcmp(sub_string, "R") == 0, "MemoryTraceFile Type (R) expected.\n Inst: %s\n Mem:%s\n",
