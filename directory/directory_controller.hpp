@@ -36,17 +36,13 @@ class directory_controller_t : public interconnection_interface_t {
         container_ptr_cache_memory_t llc_caches;
         container_ptr_directory_line_t directory_lines;
         uint32_t max_cache_level;
-<<<<<<< HEAD
-        // MVX
-        uint32_t mvx_operation_size;
-=======
 
         // Addres Mapping to Mem.Ctrl.
         std::unordered_map<uint64_t, uint32_t> mapped_controller;
         uint64_t page_bits_mask;
         uint64_t not_page_bits_mask;
         uint64_t page_bits_shift;
->>>>>>> remotes/origin/master
+
         // ====================================================================
         /// Statistics related
         // ====================================================================

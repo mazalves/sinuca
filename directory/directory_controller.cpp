@@ -76,11 +76,6 @@ void directory_controller_t::allocate() {
     }
     this->directory_lines.reserve(sum_mshr_buffer_size);
 
-<<<<<<< HEAD
-    // MVX
-    for (uint32_t i = 0; i < sinuca_engine.get_memory_controller_array_size(); i++) {
-        this->mvx_operation_size = sinuca_engine.memory_controller_array[i]->get_mvx_operation_size();
-=======
     // Addres Mapping to Mem.Ctrl.
     this->address_mapping();
 
@@ -139,7 +134,6 @@ void directory_controller_t::address_mapping(){
         }
         gzclose(gzMapFile);
         utils_t::template_delete_array<char>(line_map);
->>>>>>> remotes/origin/master
     }
 };
 
