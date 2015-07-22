@@ -52,20 +52,9 @@ const char* get_enum_instruction_operation_char(instruction_operation_t type) {
         /// SYNCHRONIZATION
         case INSTRUCTION_OPERATION_BARRIER:     return "OP_BARRIER"; break;
         // ====================================================================
-        /// MVX
-        case INSTRUCTION_OPERATION_MVX_LOCK:    return "OP_MVX_LK"; break;
-        case INSTRUCTION_OPERATION_MVX_UNLOCK:  return "OP_MVX_UNLK"; break;
-
-        case INSTRUCTION_OPERATION_MVX_LOAD:    return "OP_MVX_LD"; break;
-        case INSTRUCTION_OPERATION_MVX_STORE:   return "OP_MVX_ST"; break;
-
-        case INSTRUCTION_OPERATION_MVX_INT_ALU: return "OP_MVX_INT_ALU"; break;
-        case INSTRUCTION_OPERATION_MVX_INT_MUL: return "OP_MVX_INT_MUL"; break;
-        case INSTRUCTION_OPERATION_MVX_INT_DIV: return "OP_MVX_INT_DIV"; break;
-
-        case INSTRUCTION_OPERATION_MVX_FP_ALU:  return "OP_MVX_FP_ALU"; break;
-        case INSTRUCTION_OPERATION_MVX_FP_MUL:  return "OP_MVX_FP_MUL"; break;
-        case INSTRUCTION_OPERATION_MVX_FP_DIV:  return "OP_MVX_FP_DIV"; break;
+        /// HMC
+        case INSTRUCTION_OPERATION_HMC_ALU:     return "OP_HMC_ALU"; break;
+        case INSTRUCTION_OPERATION_HMC_ALUR:    return "OP_HMC_ALUR"; break;
     };
     ERROR_PRINTF("Wrong INSTRUCTION_OPERATION\n");
     return "FAIL";
@@ -82,22 +71,12 @@ const char* get_enum_memory_operation_char(memory_operation_t type) {
         case MEMORY_OPERATION_WRITEBACK:    return "WBACK"; break;
 
         // ====================================================================
-        case MEMORY_OPERATION_MVX_LOCK:     return "MVX_LK"; break;
-        case MEMORY_OPERATION_MVX_UNLOCK:   return "MVX_UNLK"; break;
+        /// HMC
+        case MEMORY_OPERATION_HMC_ALU:      return "HMC_ALU"; break;
+        case MEMORY_OPERATION_HMC_ALUR:     return "HMC_ALUR"; break;
 
-        case MEMORY_OPERATION_MVX_LOAD:     return "MVX_LD"; break;
-        case MEMORY_OPERATION_MVX_STORE:    return "MVX_ST"; break;
-
-        case MEMORY_OPERATION_MVX_INT_ALU:  return "MVX_INT_ALU"; break;
-        case MEMORY_OPERATION_MVX_INT_MUL:  return "MVX_INT_MUL"; break;
-        case MEMORY_OPERATION_MVX_INT_DIV:  return "MVX_INT_DIV"; break;
-
-        case MEMORY_OPERATION_MVX_FP_ALU:   return "MVX_FP_ALU"; break;
-        case MEMORY_OPERATION_MVX_FP_MUL:   return "MVX_FP_MUL"; break;
-        case MEMORY_OPERATION_MVX_FP_DIV:   return "MVX_FP_DIV"; break;
-
-        case MEMORY_OPERATION_MVX_NANO_LOAD:     return "MVX_NANO_LD"; break;
-        case MEMORY_OPERATION_MVX_NANO_STORE:    return "MVX_NANO_ST"; break;
+        case MEMORY_OPERATION_HMC_LOAD:     return "HMC_LD"; break;
+        case MEMORY_OPERATION_HMC_STORE:    return "HMC_ST"; break;
     };
     ERROR_PRINTF("Wrong MEMORY_OPERATION\n");
     return "FAIL";
@@ -446,16 +425,5 @@ const char *get_enum_line_sub_block_t_char(line_sub_block_t type) {
         case LINE_SUB_BLOCK_WRITEBACK:      return "WRITEBACK";    break;
     };
     ERROR_PRINTF("Wrong LINE_SUB_BLOCK\n");
-    return "FAIL";
-};
-
-// ============================================================================
-/// Enumerates the MVX state
-const char *get_enum_mvx_state_t_char(mvx_state_t type) {
-    switch (type) {
-        case MVX_STATE_LOCK:           return "LOCK";     break;
-        case MVX_STATE_UNLOCK:         return "UNLOCK";      break;
-    };
-    ERROR_PRINTF("Wrong MVX_STATE\n");
     return "FAIL";
 };

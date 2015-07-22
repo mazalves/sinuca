@@ -64,7 +64,7 @@ enum memory_operation_t {
     MEMORY_OPERATION_WRITE,
     MEMORY_OPERATION_PREFETCH,
     MEMORY_OPERATION_WRITEBACK,
-
+    /// HMC
     MEMORY_OPERATION_HMC_ALU,
     MEMORY_OPERATION_HMC_ALUR,
 
@@ -338,14 +338,6 @@ enum line_sub_block_t {
     LINE_SUB_BLOCK_WRITEBACK
 };
 const char *get_enum_line_sub_block_t_char(line_sub_block_t type);
-
-// ============================================================================
-/// Enumerates the MVX state
-enum mvx_state_t {
-    MVX_STATE_LOCK,
-    MVX_STATE_UNLOCK
-};
-const char *get_enum_mvx_state_t_char(mvx_state_t type);
 
 
 #endif  // _SINUCA_ENUMERATOR_HPP_
