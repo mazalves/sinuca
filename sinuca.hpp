@@ -173,7 +173,7 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define LINE_USAGE_PREDICTOR_DEBUG
     // ~ #define MEMORY_CONTROLLER_DEBUG
     // ~ #define ROUTER_DEBUG
-    #define INTERCONNECTION_CTRL_DEBUG
+    // ~ #define INTERCONNECTION_CTRL_DEBUG
     // ~ #define DIRECTORY_CTRL_DEBUG
     // ~ #define SHOW_FREE_PACKAGE
     #define DEBUG_PRINTF(...)   {\
@@ -232,11 +232,6 @@ extern sinuca_engine_t sinuca_engine;
                                             SINUCA_PRINTF("\n");\
                                             free(stack_funcNames); \
                                         }
-
-
-
-
-
 
 
     #define ERROR_ASSERT_PRINTF(v, ...) if (!(v)) {\

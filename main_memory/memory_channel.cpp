@@ -98,8 +98,8 @@ int32_t memory_channel_t::find_next_read_operation(uint32_t bank) {
                     if (this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_READ ||
                     this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_INST ||
                     this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_PREFETCH ||
-                    this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_MVX_NANO_LOAD ||
-                    this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_MVX_NANO_STORE) {
+                    this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_HMC_ALU ||
+                    this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_HMC_ALUR) {
                         slot = i;
                         break;
                     }
@@ -111,8 +111,8 @@ int32_t memory_channel_t::find_next_read_operation(uint32_t bank) {
                     if (this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_READ ||
                     this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_INST ||
                     this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_PREFETCH ||
-                    this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_MVX_NANO_LOAD ||
-                    this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_MVX_NANO_STORE) {
+                    this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_HMC_ALU||
+                    this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_HMC_ALUR) {
                         slot = i;
                         break;
                     }
@@ -126,8 +126,8 @@ int32_t memory_channel_t::find_next_read_operation(uint32_t bank) {
                 if (this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_READ ||
                 this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_INST ||
                 this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_PREFETCH ||
-                this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_MVX_NANO_LOAD ||
-                this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_MVX_NANO_STORE) {
+                this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_HMC_ALU ||
+                this->bank_buffer[bank][i]->memory_operation == MEMORY_OPERATION_HMC_ALUR) {
                     slot = i;
                     break;
                 }
@@ -286,15 +286,17 @@ bool memory_channel_t::check_if_minimum_latency(uint32_t bank, memory_controller
             if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_rcd - this->timing_al)
             > actual_cycle)
                 return false;
-            else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_burst)
-            > actual_cycle)
-                return false;
-            else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_ccd)
-            > actual_cycle)
-                return false;
-            else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_cwd + this->timing_burst + this->timing_wtr)
-            > actual_cycle)
-                return false;
+
+        // ~ The channel verifications overlap these !!!
+            // ~ else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_burst)
+            // ~ > actual_cycle)
+                // ~ return false;
+            // ~ else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_ccd)
+            // ~ > actual_cycle)
+                // ~ return false;
+            // ~ else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_cwd + this->timing_burst + this->timing_wtr)
+            // ~ > actual_cycle)
+                // ~ return false;
             // ================================================================
             /// Same channel
             else if ((this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_burst)
@@ -316,16 +318,18 @@ bool memory_channel_t::check_if_minimum_latency(uint32_t bank, memory_controller
             if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_rcd - this->timing_al)
             > actual_cycle)
                 return false;
-            /// Consider that tRTRS - tCWL is equal to ZERO. (Both are parallel)
-            else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_cas + this->timing_burst)
-            > actual_cycle)
-                return false;
-            else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_burst)
-            > actual_cycle)
-                return false;
-            else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_ccd)
-            > actual_cycle)
-                return false;
+
+        // ~ The channel verifications overlap these !!!
+            // ~ /// Consider that tRTRS - tCWL is equal to ZERO. (Both are parallel)
+            // ~ else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_cas + this->timing_burst)
+            // ~ > actual_cycle)
+                // ~ return false;
+            // ~ else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_burst)
+            // ~ > actual_cycle)
+                // ~ return false;
+            // ~ else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_ccd)
+            // ~ > actual_cycle)
+                // ~ return false;
             // ================================================================
             /// Same channel
             else if ((this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_cas + this->timing_burst)
@@ -418,12 +422,46 @@ void memory_channel_t::clock(uint32_t subcycle) {
         case MEMORY_CONTROLLER_COMMAND_ROW_ACCESS:
             ERROR_ASSERT_PRINTF(cmp_row_bank_channel(this->bank_open_row_address[bank], package->memory_address), "Sending READ/WRITE to wrong row.")
             switch (package->memory_operation) {
+                // HMC
+                case MEMORY_OPERATION_HMC_ALU:
+                case MEMORY_OPERATION_HMC_ALUR:
+                {
+                    /// Respect Min. Latency
+                    if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ) ||
+                    !check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
+                        MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
+                        return;
+                    }
+
+                    MEMORY_CONTROLLER_DEBUG_PRINTF("ROW_ACCESS -> COLUMN_READ.\n");
+                    this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE;
+                    this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
+                    this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
+
+                    uint64_t r_to_w_latency = this->timing_cas + this->timing_burst;
+
+                    if (package->memory_operation == MEMORY_OPERATION_HMC_ALUR) {
+                        /// Prepare for answer later
+                        package->is_answer = true;
+                        r_to_w_latency += this->hmc_latency_alur;
+                        package->package_transmit(r_to_w_latency + this->timing_cwd + this->timing_burst);
+                    }
+                    else {
+                        /// Prepare for answer later
+                        package->memory_size = 1;
+                        package->is_answer = true;
+                        r_to_w_latency += this->hmc_latency_alu;
+                        package->package_ready(r_to_w_latency + this->timing_cwd + this->timing_burst);
+                    }
+
+                    this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle() + r_to_w_latency;
+                    this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle() + r_to_w_latency;
+                }
+                break;
+
                 case MEMORY_OPERATION_READ:
                 case MEMORY_OPERATION_INST:
                 case MEMORY_OPERATION_PREFETCH:
-                // HVX
-                case MEMORY_OPERATION_MVX_NANO_LOAD:
-
                     /// Respect Min. Latency
                     if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ)) {
                         MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
@@ -438,17 +476,10 @@ void memory_channel_t::clock(uint32_t subcycle) {
                     package->memory_size = sinuca_engine.get_global_line_size();
                     package->is_answer = true;
                     package->package_transmit(this->timing_cas + this->timing_burst);
-                    if (package->memory_operation == MEMORY_OPERATION_MVX_NANO_LOAD &&
-                    package->id_owner == this->memory_controller_id) {
-                        package->memory_size = 1;
-                        package->package_ready(this->timing_cas + this->timing_burst);
-                    }
                 break;
 
                 case MEMORY_OPERATION_WRITEBACK:
                 case MEMORY_OPERATION_WRITE:
-                // HVX
-                case MEMORY_OPERATION_MVX_NANO_STORE:
                     /// Respect Min. Latency
                     if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
                         MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
@@ -464,21 +495,6 @@ void memory_channel_t::clock(uint32_t subcycle) {
                     package->is_answer = true;
                     package->package_ready(this->timing_cwd + this->timing_burst);
                 break;
-
-                // =============================================================
-                // Receiving a wrong HVX
-                case MEMORY_OPERATION_MVX_LOCK:
-                case MEMORY_OPERATION_MVX_UNLOCK:
-                case MEMORY_OPERATION_MVX_LOAD:
-                case MEMORY_OPERATION_MVX_STORE:
-                case MEMORY_OPERATION_MVX_INT_ALU:
-                case MEMORY_OPERATION_MVX_INT_MUL:
-                case MEMORY_OPERATION_MVX_INT_DIV:
-                case MEMORY_OPERATION_MVX_FP_ALU :
-                case MEMORY_OPERATION_MVX_FP_MUL :
-                case MEMORY_OPERATION_MVX_FP_DIV :
-                    ERROR_PRINTF("Channel treating %s.\n", get_enum_memory_operation_char(package->memory_operation));
-                break;
             }
 
             this->add_stat_row_buffer_hit();
@@ -490,11 +506,48 @@ void memory_channel_t::clock(uint32_t subcycle) {
         case MEMORY_CONTROLLER_COMMAND_COLUMN_READ:
             if (cmp_row_bank_channel(this->bank_open_row_address[bank], package->memory_address)) {
                 switch (package->memory_operation) {
+                    // HMC
+                    case MEMORY_OPERATION_HMC_ALU:
+                    case MEMORY_OPERATION_HMC_ALUR:
+                    {
+                        /// Respect Min. Latency
+                        if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ) ||
+                        !check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
+                            MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
+                            return;
+                        }
+
+                        MEMORY_CONTROLLER_DEBUG_PRINTF("ROW_ACCESS -> COLUMN_READ.\n");
+                        this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE;
+                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
+                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
+
+                        uint64_t r_to_w_latency = this->timing_cas + this->timing_burst;
+
+                        if (package->memory_operation == MEMORY_OPERATION_HMC_ALUR) {
+                            /// Prepare for answer later
+                            package->is_answer = true;
+                            r_to_w_latency += this->hmc_latency_alur;
+                            package->package_transmit(r_to_w_latency + this->timing_cwd + this->timing_burst);
+                        }
+                        else {
+                            /// Prepare for answer later
+                            package->memory_size = 1;
+                            package->is_answer = true;
+                            r_to_w_latency += this->hmc_latency_alu;
+                            package->package_ready(r_to_w_latency + this->timing_cwd + this->timing_burst);
+                        }
+
+                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle() + r_to_w_latency;
+                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle() + r_to_w_latency;
+                    }
+                    break;
+
+
+
                     case MEMORY_OPERATION_READ:
                     case MEMORY_OPERATION_INST:
                     case MEMORY_OPERATION_PREFETCH:
-                    // HVX
-                    case MEMORY_OPERATION_MVX_NANO_LOAD:
                         /// Respect Min. Latency
                         if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ)) {
                             MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
@@ -509,18 +562,10 @@ void memory_channel_t::clock(uint32_t subcycle) {
                         package->memory_size = sinuca_engine.get_global_line_size();
                         package->is_answer = true;
                         package->package_transmit(this->timing_cas + this->timing_burst);
-                        // HVX
-                        if (package->memory_operation == MEMORY_OPERATION_MVX_NANO_LOAD &&
-                        package->id_owner == this->memory_controller_id) {
-                            package->memory_size = 1;
-                            package->package_ready(this->timing_cas + this->timing_burst);
-                        }
                     break;
 
                     case MEMORY_OPERATION_WRITEBACK:
                     case MEMORY_OPERATION_WRITE:
-                    // HVX
-                    case MEMORY_OPERATION_MVX_NANO_STORE:
                         /// Respect Min. Latency
                         if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
                             MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
@@ -534,21 +579,6 @@ void memory_channel_t::clock(uint32_t subcycle) {
                         /// Consider that tRTRS - tCWL is equal to ZERO. (Both are parallel)
                         package->is_answer = true;
                         package->package_ready(this->timing_cwd + this->timing_burst);
-                    break;
-
-                    // =============================================================
-                    // Receiving a wrong HVX
-                    case MEMORY_OPERATION_MVX_LOCK:
-                    case MEMORY_OPERATION_MVX_UNLOCK:
-                    case MEMORY_OPERATION_MVX_LOAD:
-                    case MEMORY_OPERATION_MVX_STORE:
-                    case MEMORY_OPERATION_MVX_INT_ALU:
-                    case MEMORY_OPERATION_MVX_INT_MUL:
-                    case MEMORY_OPERATION_MVX_INT_DIV:
-                    case MEMORY_OPERATION_MVX_FP_ALU :
-                    case MEMORY_OPERATION_MVX_FP_MUL :
-                    case MEMORY_OPERATION_MVX_FP_DIV :
-                        ERROR_PRINTF("Channel treating %s.\n", get_enum_memory_operation_char(package->memory_operation));
                     break;
                 }
 
@@ -575,11 +605,46 @@ void memory_channel_t::clock(uint32_t subcycle) {
         case MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE:
             if (cmp_row_bank_channel(this->bank_open_row_address[bank], package->memory_address)) {
                 switch (package->memory_operation) {
+                    // HMC
+                    case MEMORY_OPERATION_HMC_ALU:
+                    case MEMORY_OPERATION_HMC_ALUR:
+                    {
+                        /// Respect Min. Latency
+                        if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ) ||
+                        !check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
+                            MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
+                            return;
+                        }
+
+                        MEMORY_CONTROLLER_DEBUG_PRINTF("ROW_ACCESS -> COLUMN_READ.\n");
+                        this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE;
+                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
+                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
+
+                        uint64_t r_to_w_latency = this->timing_cas + this->timing_burst;
+
+                        if (package->memory_operation == MEMORY_OPERATION_HMC_ALUR) {
+                            /// Prepare for answer later
+                            package->is_answer = true;
+                            r_to_w_latency += this->hmc_latency_alur;
+                            package->package_transmit(r_to_w_latency + this->timing_cwd + this->timing_burst);
+                        }
+                        else {
+                            /// Prepare for answer later
+                            package->memory_size = 1;
+                            package->is_answer = true;
+                            r_to_w_latency += this->hmc_latency_alu;
+                            package->package_ready(r_to_w_latency + this->timing_cwd + this->timing_burst);
+                        }
+
+                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle() + r_to_w_latency;
+                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle() + r_to_w_latency;
+                    }
+                    break;
+
                     case MEMORY_OPERATION_READ:
                     case MEMORY_OPERATION_INST:
                     case MEMORY_OPERATION_PREFETCH:
-                    // HVX
-                    case MEMORY_OPERATION_MVX_NANO_LOAD:
                         /// Respect Min. Latency
                         if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ)) {
                             MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
@@ -595,19 +660,10 @@ void memory_channel_t::clock(uint32_t subcycle) {
 
                         package->is_answer = true;
                         package->package_transmit(this->timing_cas + this->timing_burst);
-                        // HVX
-                        if (package->memory_operation == MEMORY_OPERATION_MVX_NANO_LOAD &&
-                        package->id_owner == this->memory_controller_id){
-                            package->memory_size = 1;
-                            package->package_ready(this->timing_cas + this->timing_burst);
-                        }
-
                     break;
 
                     case MEMORY_OPERATION_WRITEBACK:
                     case MEMORY_OPERATION_WRITE:
-                    // HVX
-                    case MEMORY_OPERATION_MVX_NANO_STORE:
                         /// Respect Min. Latency
                         if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
                             MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
@@ -621,21 +677,6 @@ void memory_channel_t::clock(uint32_t subcycle) {
                         /// Max(tBurst, tCCD)
                         package->is_answer = true;
                         package->package_ready(this->timing_cwd + this->timing_burst);
-                    break;
-
-                    // =============================================================
-                    // Receiving a wrong HVX
-                    case MEMORY_OPERATION_MVX_LOCK:
-                    case MEMORY_OPERATION_MVX_UNLOCK:
-                    case MEMORY_OPERATION_MVX_LOAD:
-                    case MEMORY_OPERATION_MVX_STORE:
-                    case MEMORY_OPERATION_MVX_INT_ALU:
-                    case MEMORY_OPERATION_MVX_INT_MUL:
-                    case MEMORY_OPERATION_MVX_INT_DIV:
-                    case MEMORY_OPERATION_MVX_FP_ALU :
-                    case MEMORY_OPERATION_MVX_FP_MUL :
-                    case MEMORY_OPERATION_MVX_FP_DIV :
-                        ERROR_PRINTF("Channel treating %s.\n", get_enum_memory_operation_char(package->memory_operation));
                     break;
                 }
 
@@ -662,7 +703,6 @@ void memory_channel_t::clock(uint32_t subcycle) {
         case MEMORY_CONTROLLER_COMMAND_NUMBER:
             ERROR_PRINTF("Should not receive COMMAND_NUMBER\n")
         break;
-
     }
 };
 
@@ -798,5 +838,10 @@ void memory_channel_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_rtp", timing_rtp);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_wr", timing_wr);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_wtr", timing_wtr);
+
+    // HMC
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "hmc_latency_alu", hmc_latency_alu);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "hmc_latency_alur", hmc_latency_alur);
+
 
 };

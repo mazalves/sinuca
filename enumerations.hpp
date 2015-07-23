@@ -66,10 +66,7 @@ enum memory_operation_t {
     MEMORY_OPERATION_WRITEBACK,
     /// HMC
     MEMORY_OPERATION_HMC_ALU,
-    MEMORY_OPERATION_HMC_ALUR,
-
-    MEMORY_OPERATION_HMC_LOAD,
-    MEMORY_OPERATION_HMC_STORE
+    MEMORY_OPERATION_HMC_ALUR
 };
 const char *get_enum_memory_operation_char(memory_operation_t type);
 

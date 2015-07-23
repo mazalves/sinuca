@@ -41,9 +41,6 @@ class memory_package_t {
         memory_operation_t memory_operation;    /// memory operation
         bool is_answer;                         /// is answer or request
 
-        // HMC
-        bool is_hmc;
-        uint64_t hmc_number;
 
         /// Router Control
         uint32_t id_src;                        /// id src component
@@ -72,8 +69,7 @@ class memory_package_t {
                     uint64_t memory_address, uint32_t memory_size,
                     package_state_t state, uint32_t stall_time,
                     memory_operation_t memory_operation, bool is_answer,
-                    uint32_t id_src, uint32_t id_dst, uint32_t *hops, uint32_t hop_count,
-                    bool is_mvx, uint64_t mvx_number, int32_t mvx_read1, int32_t mvx_read2, int32_t mvx_write);
+                    uint32_t id_src, uint32_t id_dst, uint32_t *hops, uint32_t hop_count);
 
         static int32_t find_free(memory_package_t *input_array, uint32_t size_array);
         static uint32_t count_free(memory_package_t *input_array, uint32_t size_array);

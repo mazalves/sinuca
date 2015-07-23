@@ -52,6 +52,10 @@ class memory_channel_t : public interconnection_interface_t {
         uint32_t timing_wtr;    // write to read delay time
         uint32_t timing_burst;
 
+        // HMC
+        uint32_t hmc_latency_alu;
+        uint32_t hmc_latency_alur;
+
         /// Set by allocate
         container_ptr_memory_package_t *bank_buffer;
         int32_t *bank_buffer_actual_position;   /// Position inside BankBuffer of the actual request being treated
@@ -150,6 +154,8 @@ class memory_channel_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, timing_wr)
         INSTANTIATE_GET_SET(uint32_t, timing_wtr)
 
+        INSTANTIATE_GET_SET(uint32_t, hmc_latency_alu)
+        INSTANTIATE_GET_SET(uint32_t, hmc_latency_alur)
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_row_buffer_hit);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_row_buffer_miss);

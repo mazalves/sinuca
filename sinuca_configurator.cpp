@@ -1357,35 +1357,19 @@ void sinuca_engine_t::initialize_memory_controller() {
             memory_controller_parameters.push_back("TIMING_WTR");
             this->memory_controller_array[i]->set_timing_wtr(cfg_memory_controller[ memory_controller_parameters.back() ]);
 
-            // MVX
-            if (cfg_memory_controller.exists("MVX_OPERATION_SIZE")) {
-                memory_controller_parameters.push_back("MVX_OPERATION_SIZE");
-                this->memory_controller_array[i]->set_mvx_operation_size(cfg_memory_controller[ memory_controller_parameters.back() ]);
+            // HMC
+            if (cfg_memory_controller.exists("HMC_LATENCY_ALU") || cfg_memory_controller.exists("HMC_LATENCY_ALUR")) {
+                memory_controller_parameters.push_back("HMC_LATENCY_ALU");
+                this->memory_controller_array[i]->set_hmc_latency_alu(cfg_memory_controller[ memory_controller_parameters.back() ]);
 
-                memory_controller_parameters.push_back("MVX_TOTAL_REGISTERS");
-                this->memory_controller_array[i]->set_mvx_total_registers(cfg_memory_controller[ memory_controller_parameters.back() ]);
-
-                memory_controller_parameters.push_back("MVX_LATENCY_INT_ALU");
-                this->memory_controller_array[i]->set_mvx_latency_int_alu(cfg_memory_controller[ memory_controller_parameters.back() ]);
-
-                memory_controller_parameters.push_back("MVX_LATENCY_INT_MUL");
-                this->memory_controller_array[i]->set_mvx_latency_int_mul(cfg_memory_controller[ memory_controller_parameters.back() ]);
-
-                memory_controller_parameters.push_back("MVX_LATENCY_INT_DIV");
-                this->memory_controller_array[i]->set_mvx_latency_int_div(cfg_memory_controller[ memory_controller_parameters.back() ]);
-
-                memory_controller_parameters.push_back("MVX_LATENCY_FP_ALU");
-                this->memory_controller_array[i]->set_mvx_latency_fp_alu(cfg_memory_controller[ memory_controller_parameters.back() ]);
-
-                memory_controller_parameters.push_back("MVX_LATENCY_FP_MUL");
-                this->memory_controller_array[i]->set_mvx_latency_fp_mul(cfg_memory_controller[ memory_controller_parameters.back() ]);
-
-                memory_controller_parameters.push_back("MVX_LATENCY_FP_DIV");
-                this->memory_controller_array[i]->set_mvx_latency_fp_div(cfg_memory_controller[ memory_controller_parameters.back() ]);
+                memory_controller_parameters.push_back("HMC_LATENCY_ALUR");
+                this->memory_controller_array[i]->set_hmc_latency_alur(cfg_memory_controller[ memory_controller_parameters.back() ]);
             }
             else {
-                this->memory_controller_array[i]->set_mvx_operation_size(0);
+                this->memory_controller_array[i]->set_hmc_latency_alu(0);
+                this->memory_controller_array[i]->set_hmc_latency_alur(0);
             }
+
 
             this->memory_controller_array[i]->set_max_ports(1);
 

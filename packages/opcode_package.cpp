@@ -60,12 +60,6 @@ opcode_package_t::opcode_package_t(const opcode_package_t &package) {
     is_conditional = package.is_conditional;
     is_predicated = package.is_predicated;
 
-    // MVX
-    is_mvx = package.is_mvx;
-    mvx_read1 = package.mvx_read1;
-    mvx_read2 = package.mvx_read2;
-    mvx_write = package.mvx_write;
-
     /// SINUCA Control Variables
     opcode_number = package.opcode_number;
     state = package.state;
@@ -111,11 +105,6 @@ bool opcode_package_t::operator==(const opcode_package_t &package) {
 
     if (this->is_conditional != package.is_conditional) return FAIL;
     if (this->is_predicated != package.is_predicated) return FAIL;
-    // MVX
-    if (this->is_mvx != package.is_mvx) return FAIL;
-    if (this->mvx_read1 != package.mvx_read1) return FAIL;
-    if (this->mvx_read2 != package.mvx_read2) return FAIL;
-    if (this->mvx_write != package.mvx_write) return FAIL;
 
     /// SINUCA Control Variables
     if (this->opcode_number != package.opcode_number) return FAIL;
@@ -155,12 +144,6 @@ void opcode_package_t::package_clean() {
 
     this->is_conditional = false;
     this->is_predicated = false;
-
-    //MVX
-    this->is_mvx = false;
-    this->mvx_read1 = -1;
-    this->mvx_read2 = -1;
-    this->mvx_write = -1;
 
     /// SINUCA Control Variables
     this->opcode_number = 0;
@@ -241,18 +224,6 @@ std::string opcode_package_t::content_to_string() {
     else
         content_string = content_string + " | not_cond";
 
-    // MVX
-    if (this->is_mvx == true) {
-        content_string = content_string + " | is_mvx";
-        content_string = content_string + " R1:" + utils_t::int32_to_string(this->mvx_read1);
-        content_string = content_string + " R2:" + utils_t::int32_to_string(this->mvx_read2);
-        content_string = content_string + " W:" + utils_t::int32_to_string(this->mvx_write);
-    }
-    else {
-        content_string = content_string + " | not_mvx";
-    }
-
-
     return content_string;
 };
 
@@ -323,15 +294,6 @@ void opcode_package_t::opcode_to_trace_string(char *trace_string) {
         strcat(register_string, " 1");
     else
         strcat(register_string, " 0");
-
-    if (this->is_mvx == true)
-        strcat(register_string, " 1");
-    else
-        strcat(register_string, " 0");
-
-    sprintf(trace_string, "%s %" PRId32 "", trace_string, this->mvx_read1);
-    sprintf(trace_string, "%s %" PRId32 "", trace_string, this->mvx_read2);
-    sprintf(trace_string, "%s %" PRId32 "", trace_string, this->mvx_write);
 
     sprintf(trace_string, "%s%s\n", trace_string, register_string);
 
@@ -516,43 +478,6 @@ void opcode_package_t::trace_string_to_opcode(char *input_string) {
 
     sub_string = strtok_r(NULL, " ", &tmp_ptr);
     this->is_predicated = (sub_string[0] == '1');
-
-    // MVX
-    sub_string = strtok_r(NULL, " ", &tmp_ptr);
-    this->is_mvx = (sub_string[0] == '1');
-    if (this->is_mvx) {
-        sub_string = strtok_r(NULL, " ", &tmp_ptr);
-        sscanf(sub_string, "%"SCNd32, &this->mvx_read1);
-
-        sub_string = strtok_r(NULL, " ", &tmp_ptr);
-        sscanf(sub_string, "%"SCNd32, &this->mvx_read2);
-
-        sub_string = strtok_r(NULL, " ", &tmp_ptr);
-        sscanf(sub_string, "%"SCNd32, &this->mvx_write);
-
-        ERROR_ASSERT_PRINTF(this->mvx_read1 >= -1 && this->mvx_read1 < (int32_t)sinuca_engine.memory_controller_array[0]->get_mvx_total_registers(), "MVX READ1 register wrong");
-        ERROR_ASSERT_PRINTF(this->mvx_read2 >= -1 && this->mvx_read2 < (int32_t)sinuca_engine.memory_controller_array[0]->get_mvx_total_registers(), "MVX READ2 register wrong");
-        ERROR_ASSERT_PRINTF(this->mvx_write >= -1 && this->mvx_write < (int32_t)sinuca_engine.memory_controller_array[0]->get_mvx_total_registers(), "MVX WRITE register wrong");
-    }
-
-    switch(opcode_operation) {
-        case INSTRUCTION_OPERATION_MVX_LOCK:
-        case INSTRUCTION_OPERATION_MVX_UNLOCK:
-        case INSTRUCTION_OPERATION_MVX_LOAD:
-        case INSTRUCTION_OPERATION_MVX_STORE:
-        case INSTRUCTION_OPERATION_MVX_INT_ALU:
-        case INSTRUCTION_OPERATION_MVX_INT_MUL:
-        case INSTRUCTION_OPERATION_MVX_INT_DIV:
-        case INSTRUCTION_OPERATION_MVX_FP_ALU:
-        case INSTRUCTION_OPERATION_MVX_FP_MUL:
-        case INSTRUCTION_OPERATION_MVX_FP_DIV:
-            ERROR_ASSERT_PRINTF(this->is_mvx, "MVX OPERATION without is_mvx flag");
-        break;
-
-        default:
-        break;
-    }
-
 };
 
 

@@ -74,9 +74,6 @@ const char* get_enum_memory_operation_char(memory_operation_t type) {
         /// HMC
         case MEMORY_OPERATION_HMC_ALU:      return "HMC_ALU"; break;
         case MEMORY_OPERATION_HMC_ALUR:     return "HMC_ALUR"; break;
-
-        case MEMORY_OPERATION_HMC_LOAD:     return "HMC_LD"; break;
-        case MEMORY_OPERATION_HMC_STORE:    return "HMC_ST"; break;
     };
     ERROR_PRINTF("Wrong MEMORY_OPERATION\n");
     return "FAIL";

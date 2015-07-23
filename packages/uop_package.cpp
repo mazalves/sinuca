@@ -44,11 +44,6 @@ uop_package_t::uop_package_t(const uop_package_t& package) {
     memory_address = package.memory_address;
     memory_size = package.memory_size;
 
-    is_mvx    = package.is_mvx   ;
-    mvx_read1 = package.mvx_read1;
-    mvx_read2 = package.mvx_read2;
-    mvx_write = package.mvx_write;
-
     /// SINUCA Control Variables
     opcode_number = package.opcode_number;
     uop_number = package.uop_number;
@@ -81,12 +76,6 @@ bool uop_package_t::operator==(const uop_package_t &package) {
     if (this->memory_address != package.memory_address) return FAIL;
     if (this->memory_size != package.memory_size) return FAIL;
 
-    // MVX
-    if (this->is_mvx    != package.is_mvx   ) return FAIL;
-    if (this->mvx_read1 != package.mvx_read1) return FAIL;
-    if (this->mvx_read2 != package.mvx_read2) return FAIL;
-    if (this->mvx_write != package.mvx_write) return FAIL;
-
     /// SINUCA Control Variables
     if (this->opcode_number != package.opcode_number) return FAIL;
     if (this->uop_number != package.uop_number) return FAIL;
@@ -115,12 +104,6 @@ void uop_package_t::opcode_to_uop(uint64_t uop_number, instruction_operation_t u
     this->memory_address = memory_address;
     this->memory_size = memory_size;
 
-    // MVX
-    this->is_mvx    = is_mvx   ;
-    this->mvx_read1 = mvx_read1;
-    this->mvx_read2 = mvx_read2;
-    this->mvx_write = mvx_write;
-
     /// SINUCA Control Variables
     this->opcode_number = opcode.opcode_number;
     this->uop_number = uop_number;
@@ -143,11 +126,6 @@ void uop_package_t::package_clean() {
     this->uop_operation = INSTRUCTION_OPERATION_NOP;
     this->memory_address = 0;
     this->memory_size = 0;
-
-    this->is_mvx    = false;
-    this->mvx_read1 = -1;
-    this->mvx_read2 = -1;
-    this->mvx_write = -1;
 
     /// SINUCA Control Variables
     this->opcode_number = 0;
@@ -201,18 +179,6 @@ std::string uop_package_t::content_to_string() {
     content_string = content_string + " | " + get_enum_instruction_operation_char(this->uop_operation);
     content_string = content_string + " MEM:$" + utils_t::big_uint64_to_string(this->memory_address);
     content_string = content_string + " Size:" + utils_t::uint32_to_string(this->memory_size);
-
-    // MVX
-    if (this->is_mvx == true) {
-        content_string = content_string + " | is_mvx";
-        content_string = content_string + " R1:" + utils_t::int32_to_string(this->mvx_read1);
-        content_string = content_string + " R2:" + utils_t::int32_to_string(this->mvx_read2);
-        content_string = content_string + " W:" + utils_t::int32_to_string(this->mvx_write);
-    }
-    else {
-        content_string = content_string + " | not_mvx";
-    }
-
 
     content_string = content_string + " | " + get_enum_package_state_char(this->state);
     content_string = content_string + " | Ready:" + utils_t::uint64_to_string(this->ready_cycle);

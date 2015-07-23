@@ -70,26 +70,9 @@ memory_controller_t::memory_controller_t() {
     this->timing_wr = 0;
     this->timing_wtr = 0;
 
-    // HVX
-    this->mvx_operation_size = 0;
-    this->mvx_total_registers = 1;
-    this->mvx_ready_cycle = 0;
-
-    this->mvx_latency_int_alu = 0;
-    this->mvx_latency_int_mul = 0;
-    this->mvx_latency_int_div = 0;
-    this->mvx_latency_fp_alu  = 0;
-    this->mvx_latency_fp_mul  = 0;
-    this->mvx_latency_fp_div  = 0;
-
-    this->mvx_state = MVX_STATE_UNLOCK;
-    this->mvx_id_owner = 0;
-    this->mvx_number = 0;
-
-    this->mvx_nano_buffer = NULL;
-    this->mvx_nano_buffer_size = 0;
-    this->mvx_nano_buffer_used = NULL;
-    this->mvx_nano_buffer_used_total = 0;
+    // hmc
+    this->hmc_latency_alu = 0;
+    this->hmc_latency_alur = 0;
 };
 
 // ============================================================================
@@ -136,28 +119,24 @@ void memory_controller_t::allocate() {
         this->channels[i].write_priority_policy = this->write_priority_policy;
 
         /// Consider the latency in terms of processor cycles
-        this->channels[i].timing_burst = ceil(this->timing_burst * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_al = ceil(this->timing_al * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_cas = ceil(this->timing_cas * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_ccd = ceil(this->timing_ccd * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_cwd = ceil(this->timing_cwd * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_faw = ceil(this->timing_faw * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_ras = ceil(this->timing_ras * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_rc = ceil(this->timing_rc * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_rcd = ceil(this->timing_rcd * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_rp = ceil(this->timing_rp * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_rrd = ceil(this->timing_rrd * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_rtp = ceil(this->timing_rtp * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_wr = ceil(this->timing_wr * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_wtr = ceil(this->timing_wtr * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_burst  = ceil(this->timing_burst   * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_al     = ceil(this->timing_al      * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_cas    = ceil(this->timing_cas     * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_ccd    = ceil(this->timing_ccd     * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_cwd    = ceil(this->timing_cwd     * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_faw    = ceil(this->timing_faw     * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_ras    = ceil(this->timing_ras     * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_rc     = ceil(this->timing_rc      * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_rcd    = ceil(this->timing_rcd     * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_rp     = ceil(this->timing_rp      * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_rrd    = ceil(this->timing_rrd     * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_rtp    = ceil(this->timing_rtp     * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_wr     = ceil(this->timing_wr      * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_wtr    = ceil(this->timing_wtr     * this->core_to_bus_clock_ratio);
 
-        // HVX
-        // ~ this->mvx_latency_int_alu = ceil(this->mvx_latency_int_alu * this->core_to_bus_clock_ratio);
-        // ~ this->mvx_latency_int_mul = ceil(this->mvx_latency_int_mul * this->core_to_bus_clock_ratio);
-        // ~ this->mvx_latency_int_div = ceil(this->mvx_latency_int_div * this->core_to_bus_clock_ratio);
-        // ~ this->mvx_latency_fp_alu  = ceil(this->mvx_latency_fp_alu  * this->core_to_bus_clock_ratio);
-        // ~ this->mvx_latency_fp_mul  = ceil(this->mvx_latency_fp_mul  * this->core_to_bus_clock_ratio);
-        // ~ this->mvx_latency_fp_div  = ceil(this->mvx_latency_fp_div  * this->core_to_bus_clock_ratio);
+        // HMC
+        this->channels[i].hmc_latency_alu  = this->hmc_latency_alu ; // ceil(this->hmc_latency_alu  * this->core_to_bus_clock_ratio);
+        this->channels[i].hmc_latency_alur = this->hmc_latency_alur; // ceil(this->hmc_latency_alur * this->core_to_bus_clock_ratio);
 
         /// Copy the masks
         this->channels[i].not_column_bits_mask = this->not_column_bits_mask;
@@ -511,66 +490,6 @@ void memory_controller_t::set_masks() {
     MEMORY_CONTROLLER_DEBUG_PRINTF("ctrl    %s\n", utils_t::address_to_binary(this->controller_bits_mask).c_str());
 };
 
-// ============================================================================
-uint32_t memory_controller_t::get_mvx_latency(memory_operation_t operation) {
-    switch(operation) {
-        case MEMORY_OPERATION_MVX_LOCK:     return 0; break;
-        case MEMORY_OPERATION_MVX_UNLOCK:   return 0; break;
-
-        case MEMORY_OPERATION_MVX_LOAD:     return 0; break;
-        case MEMORY_OPERATION_MVX_STORE:    return 0; break;
-
-        case MEMORY_OPERATION_MVX_NANO_LOAD:     return 0; break;
-        case MEMORY_OPERATION_MVX_NANO_STORE:    return 0; break;
-        // ====================================================================
-        case MEMORY_OPERATION_MVX_INT_ALU:  return this->get_mvx_latency_int_alu(); break;
-        case MEMORY_OPERATION_MVX_INT_MUL:  return this->get_mvx_latency_int_mul(); break;
-        case MEMORY_OPERATION_MVX_INT_DIV:  return this->get_mvx_latency_int_div(); break;
-
-        case MEMORY_OPERATION_MVX_FP_ALU:   return this->get_mvx_latency_fp_alu(); break;
-        case MEMORY_OPERATION_MVX_FP_MUL:   return this->get_mvx_latency_fp_mul(); break;
-        case MEMORY_OPERATION_MVX_FP_DIV:   return this->get_mvx_latency_fp_div(); break;
-
-        default: ERROR_PRINTF("Wrong operation type"); break;
-
-    }
-    return 0;
-};
-
-
-// ============================================================================
-int32_t memory_controller_t::find_next_mvx_operation() {
-
-    int32_t slot = POSITION_FAIL;
-    uint32_t i;
-
-    // No MVX
-    if (this->mvx_buffer.empty()) {
-        return slot;
-    }
-
-    // MVX is already running
-    if (this->mvx_state == MVX_STATE_LOCK) {
-        for (i = 0; i < this->mvx_buffer.size(); i++) {
-            if (this->mvx_buffer[i]->id_owner == this->mvx_id_owner &&
-                this->mvx_buffer[i]->mvx_number == this->mvx_number + 1) {
-                slot = i;
-                break;
-            }
-        }
-        return slot;
-    }
-
-    // MVX - Start a new MVX operation
-    for (i = 0; i < this->mvx_buffer.size(); i++) {
-        if (this->mvx_buffer[i]->memory_operation == MEMORY_OPERATION_MVX_LOCK) {
-            slot = i;
-            break;
-        }
-    }
-    return slot;
-};
-
 
 // ============================================================================
 void memory_controller_t::clock(uint32_t subcycle) {
@@ -606,186 +525,19 @@ void memory_controller_t::clock(uint32_t subcycle) {
                     this->add_stat_write_completed(this->mshr_born_ordered[i]->born_cycle);
                 break;
 
-                // HVX - NANO LOAD/STORE (Requests from a different MC)
-                case MEMORY_OPERATION_MVX_NANO_LOAD:
-                case MEMORY_OPERATION_MVX_NANO_STORE:
-
+                // HMC
+                case MEMORY_OPERATION_HMC_ALU:
+                    this->add_stat_hmc_alu_completed(this->mshr_born_ordered[i]->born_cycle);
                 break;
 
-
-                // HVX
-                case MEMORY_OPERATION_MVX_LOCK:
-                case MEMORY_OPERATION_MVX_UNLOCK:
-                case MEMORY_OPERATION_MVX_LOAD:
-                case MEMORY_OPERATION_MVX_STORE:
-                case MEMORY_OPERATION_MVX_INT_ALU:
-                case MEMORY_OPERATION_MVX_INT_MUL:
-                case MEMORY_OPERATION_MVX_INT_DIV:
-                case MEMORY_OPERATION_MVX_FP_ALU :
-                case MEMORY_OPERATION_MVX_FP_MUL :
-                case MEMORY_OPERATION_MVX_FP_DIV :
-                    ERROR_PRINTF("Memory Controller MSHR ordered treating %s.\n", get_enum_memory_operation_char(this->mshr_born_ordered[i]->memory_operation));
+                case MEMORY_OPERATION_HMC_ALUR:
+                    this->add_stat_hmc_alur_completed(this->mshr_born_ordered[i]->born_cycle);
                 break;
             }
 
             this->add_stat_accesses();
             this->mshr_born_ordered[i]->package_clean();
             this->mshr_born_ordered.erase(this->mshr_born_ordered.begin() + i);
-        }
-    }
-
-    // HVX - NANO LOAD/STORE
-    for (uint32_t i = 0; i < this->bank_buffer_size * this->channels_per_controller; i++){
-        if (this->mvx_nano_buffer_used[i] == 0) {
-            continue;
-        }
-        for (uint32_t j = 0; j < this->mvx_nano_buffer_size; j++){
-            if (mvx_nano_buffer[i][j].state == PACKAGE_STATE_READY &&
-            this->mvx_nano_buffer[i][j].ready_cycle <= sinuca_engine.get_global_cycle()) {
-                if (this->mvx_nano_buffer[i][j].memory_operation == MEMORY_OPERATION_MVX_NANO_LOAD) {
-                    MEMORY_CONTROLLER_DEBUG_PRINTF("Solving MVX_NANO_LOAD %s\n", this->mvx_nano_buffer[i][j].content_to_string().c_str());
-                    this->add_stat_mvx_nano_load_completed(this->mvx_nano_buffer[i][j].born_cycle);
-                    ERROR_ASSERT_PRINTF(mvx_nano_buffer[i][j].mvx_write != -1, "Receiving an NANO answer that does not write a register");
-                    this->mvx_wait_registers[mvx_nano_buffer[i][j].mvx_write]--;
-                    ERROR_ASSERT_PRINTF(this->mvx_nano_buffer_used[i] > 0, "Decreasing the used nano buffer below zero.\n")
-                    this->mvx_nano_buffer_used[i]--;
-                }
-                else if (this->mvx_nano_buffer[i][j].memory_operation == MEMORY_OPERATION_MVX_NANO_STORE) {
-                    MEMORY_CONTROLLER_DEBUG_PRINTF("Solving MVX_NANO_STORE %s\n", this->mvx_nano_buffer[i][j].content_to_string().c_str());
-                    this->add_stat_mvx_nano_store_completed(this->mvx_nano_buffer[i][j].born_cycle);
-                    ERROR_ASSERT_PRINTF(this->mvx_nano_buffer_used[i] > 0, "Decreasing the used nano buffer below zero.\n")
-                    this->mvx_nano_buffer_used[i]--;
-                }
-                this->mvx_nano_buffer[i][j].package_clean();
-            }
-        }
-        // One more free line
-        if (this->mvx_nano_buffer_used[i] == 0) {
-            ERROR_ASSERT_PRINTF(this->mvx_nano_buffer_used_total > 0, "Decreasing the used nano buffer below zero.\n")
-            mvx_nano_buffer_used_total--;
-        }
-    }
-
-    // HVX - NORMAL OPERATIONS
-    for (uint32_t i = 0; i < this->mvx_buffer.size(); i++){
-        if (mvx_buffer[i]->state == PACKAGE_STATE_READY &&
-        this->mvx_buffer[i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
-            switch (this->mvx_buffer[i]->memory_operation) {
-                case MEMORY_OPERATION_MVX_LOCK:
-                    this->add_stat_mvx_lock_completed(this->mvx_buffer[i]->born_cycle);
-                break;
-
-                case MEMORY_OPERATION_MVX_UNLOCK:
-                    this->add_stat_mvx_unlock_completed(this->mvx_buffer[i]->born_cycle);
-                break;
-
-                case MEMORY_OPERATION_MVX_LOAD:
-                    this->add_stat_mvx_load_completed(this->mvx_buffer[i]->born_cycle);
-                break;
-
-                case MEMORY_OPERATION_MVX_STORE:
-                    this->add_stat_mvx_store_completed(this->mvx_buffer[i]->born_cycle);
-                break;
-
-                case MEMORY_OPERATION_MVX_INT_ALU:
-                    this->add_stat_mvx_int_alu_completed(this->mvx_buffer[i]->born_cycle);
-                break;
-
-                case MEMORY_OPERATION_MVX_INT_MUL:
-                    this->add_stat_mvx_int_mul_completed(this->mvx_buffer[i]->born_cycle);
-                break;
-
-                case MEMORY_OPERATION_MVX_INT_DIV:
-                    this->add_stat_mvx_int_div_completed(this->mvx_buffer[i]->born_cycle);
-                break;
-
-                case MEMORY_OPERATION_MVX_FP_ALU:
-                    this->add_stat_mvx_fp_alu_completed(this->mvx_buffer[i]->born_cycle);
-                break;
-
-                case MEMORY_OPERATION_MVX_FP_MUL:
-                    this->add_stat_mvx_fp_mul_completed(this->mvx_buffer[i]->born_cycle);
-                break;
-
-                case MEMORY_OPERATION_MVX_FP_DIV:
-                    this->add_stat_mvx_fp_div_completed(this->mvx_buffer[i]->born_cycle);
-                break;
-
-                case MEMORY_OPERATION_INST:
-                case MEMORY_OPERATION_READ:
-                case MEMORY_OPERATION_WRITE:
-                case MEMORY_OPERATION_PREFETCH:
-                case MEMORY_OPERATION_WRITEBACK:
-                case MEMORY_OPERATION_MVX_NANO_LOAD:
-                case MEMORY_OPERATION_MVX_NANO_STORE:
-                    ERROR_PRINTF("Memory Controller MVX buffer treating %s.\n", get_enum_memory_operation_char(this->mshr_born_ordered[i]->memory_operation));
-                break;
-            }
-
-            this->add_stat_accesses();
-            this->mvx_buffer[i]->package_clean();
-            this->mvx_buffer.erase(this->mvx_buffer.begin() + i);
-        }
-    }
-
-
-    // =================================================================
-    // MVX_NANO_BUFFER - UNTREATED (Local / Remote)
-    // =================================================================
-    for (uint32_t i = 0; i < this->bank_buffer_size * this->channels_per_controller; i++){
-        if (this->mvx_nano_buffer_used[i] == 0) {
-            continue;
-        }
-        for (uint32_t j = 0; j < this->mvx_nano_buffer_size; j++){
-            if (mvx_nano_buffer[i][j].state == PACKAGE_STATE_UNTREATED &&
-            this->mvx_nano_buffer[i][j].ready_cycle <= sinuca_engine.get_global_cycle()) {
-                uint32_t controller = this->get_controller(this->mvx_nano_buffer[i][j].memory_address);
-                uint32_t channel = this->get_channel(this->mvx_nano_buffer[i][j].memory_address);
-                mvx_nano_buffer[i][j].id_owner = this->get_id();
-
-                // LOCAL REQUESTS
-                if (controller == this->controller_number) {
-                    MEMORY_CONTROLLER_DEBUG_PRINTF("Treating Local MVX_NANO_LOAD %s\n", this->mvx_nano_buffer[i][j].content_to_string().c_str());
-                    ERROR_ASSERT_PRINTF(this->mvx_nano_buffer[i][j].is_answer == false, "Packages being treated should not be answer.")
-
-                    this->mvx_nano_buffer[i][j].state = this->channels[channel].treat_memory_request(&this->mvx_nano_buffer[i][j]);
-                    ERROR_ASSERT_PRINTF(this->mvx_nano_buffer[i][j].state != PACKAGE_STATE_FREE, "Must not receive back a FREE, should receive READY/TRANSMIT + Latency")
-                }
-                // REMOTE REQUESTS
-                else {
-                    /// Prepare for answer later
-                    MEMORY_CONTROLLER_DEBUG_PRINTF("Treating Remote MVX_NANO_LOAD %s\n", this->mvx_nano_buffer[i][j].content_to_string().c_str());
-                    this->mvx_nano_buffer[i][j].package_set_src_dst(this->get_id(), sinuca_engine.memory_controller_array[controller]->get_id());
-                    MEMORY_CONTROLLER_DEBUG_PRINTF("\t Send RQST this->mvx_nano_buffer[%d] %s\n", i, this->mvx_nano_buffer[i][j].content_to_string().c_str());
-                    int32_t transmission_latency = send_package(&mvx_nano_buffer[i][j]);
-                    if (transmission_latency != POSITION_FAIL) {
-                        this->mvx_nano_buffer[i][j].package_clean();
-                        this->mvx_nano_buffer_used[i]--;
-                    }
-                }
-            }
-        }
-        // One more free line (in case of remote accesses)
-        if (this->mvx_nano_buffer_used[i] == 0) {
-            ERROR_ASSERT_PRINTF(this->mvx_nano_buffer_used_total > 0, "Decreasing the used nano buffer below zero.\n")
-            mvx_nano_buffer_used_total--;
-        }
-    }
-
-    // =================================================================
-    // MVX_BUFFER - TRANSMISSION
-    // =================================================================
-    for (uint32_t i = 0; i < this->mvx_buffer.size(); i++){
-        if (mvx_buffer[i]->state == PACKAGE_STATE_TRANSMIT &&
-        this->mvx_buffer[i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
-
-            ERROR_ASSERT_PRINTF(this->mvx_buffer[i]->is_answer == true, "Packages being transmited should be answer.")
-            MEMORY_CONTROLLER_DEBUG_PRINTF("\t Send ANSWER this->mvx_buffer[%d] %s\n", i, this->mvx_buffer[i]->content_to_string().c_str());
-            int32_t transmission_latency = send_package(mvx_buffer[i]);
-            if (transmission_latency != POSITION_FAIL) {
-                this->mvx_buffer[i]->package_ready(transmission_latency);
-            }
-            break;
         }
     }
 
@@ -805,146 +557,6 @@ void memory_controller_t::clock(uint32_t subcycle) {
             break;
         }
     }
-
-
-
-    // =================================================================
-    // MVX_BUFFER - UNTREATED
-    // =================================================================
-    // READY to execute the next
-    if (this->mvx_ready_cycle <= sinuca_engine.get_global_cycle()) {
-        memory_package_t *package = NULL;
-        bool completed = true;
-        this->mvx_buffer_actual_position = find_next_mvx_operation();
-        if (this->mvx_buffer_actual_position != POSITION_FAIL) {
-            package = this->mvx_buffer[this->mvx_buffer_actual_position];
-        }
-        if (package != NULL) {
-            switch (package->memory_operation) {
-
-                // MVX =========================================================
-                case MEMORY_OPERATION_MVX_LOCK:
-                case MEMORY_OPERATION_MVX_UNLOCK:
-                    package->memory_size = 1;
-                    package->is_answer = true;
-                    package->package_transmit(0);
-                    this->mvx_ready_cycle = sinuca_engine.get_global_cycle();
-                break;
-
-                case MEMORY_OPERATION_MVX_INT_ALU:
-                case MEMORY_OPERATION_MVX_INT_MUL:
-                case MEMORY_OPERATION_MVX_INT_DIV:
-                case MEMORY_OPERATION_MVX_FP_ALU :
-                case MEMORY_OPERATION_MVX_FP_MUL :
-                case MEMORY_OPERATION_MVX_FP_DIV :
-
-                    // Check if all the registers are ready.
-                    if (package->mvx_read1 != -1 && this->mvx_wait_registers[package->mvx_read1] != 0 ) {
-                        completed = false;
-                        break;
-                    }
-                    if (package->mvx_read2 != -1 && this->mvx_wait_registers[package->mvx_read2] != 0 ) {
-                        completed = false;
-                        break;
-                    }
-                    if (package->mvx_write != -1 && this->mvx_wait_registers[package->mvx_write] != 0 ) {
-                        ERROR_PRINTF("Should not write in a non_ready register.\n")
-                    }
-                    MEMORY_CONTROLLER_DEBUG_PRINTF("Untreated MVX_OP\n");
-                    package->memory_size = 1;
-                    package->is_answer = true;
-                    package->package_transmit(get_mvx_latency(package->memory_operation));
-                    // Control the FU's usage, that's why no register dep is created.
-                    this->mvx_ready_cycle = sinuca_engine.get_global_cycle() + get_mvx_latency(package->memory_operation);
-                break;
-
-                case MEMORY_OPERATION_MVX_LOAD:
-                    if (this->mvx_nano_buffer_used_total < this->bank_buffer_size * this->channels_per_controller){
-                        MEMORY_CONTROLLER_DEBUG_PRINTF("Untreated MVX_LOAD\n");
-                        for (uint32_t i = 0; i < this->bank_buffer_size * this->channels_per_controller; i++){
-                            if (this->mvx_nano_buffer_used[i] == 0) {
-
-                                this->mvx_nano_buffer_used_total++;
-                                this->mvx_nano_buffer_used[i] = mvx_nano_buffer_size;
-
-                                ERROR_ASSERT_PRINTF(package->mvx_write != -1, "LOAD into the register -1.\n")
-                                ERROR_ASSERT_PRINTF(this->mvx_wait_registers[package->mvx_write] == 0, "Should not write in a non_ready register.\n")
-                                this->mvx_wait_registers[package->mvx_write] = mvx_nano_buffer_size;
-                                for (uint32_t j=0; j < mvx_nano_buffer_size; j++){
-                                    this->mvx_nano_buffer[i][j] = *package;
-                                    this->mvx_nano_buffer[i][j].memory_operation = MEMORY_OPERATION_MVX_NANO_LOAD;
-                                    this->mvx_nano_buffer[i][j].memory_address += j * sinuca_engine.get_global_line_size();
-                                }
-
-                                package->memory_size = 1;
-                                package->is_answer = true;
-                                package->package_transmit(get_mvx_latency(package->memory_operation));
-                                this->mvx_ready_cycle = sinuca_engine.get_global_cycle() + get_mvx_latency(package->memory_operation);
-                                break;
-                            }
-                        }
-                    }
-                    else {
-                        completed = false;
-                        break;
-                    }
-                break;
-
-                case MEMORY_OPERATION_MVX_STORE:
-                    if (this->mvx_nano_buffer_used_total < this->bank_buffer_size * this->channels_per_controller){
-                        MEMORY_CONTROLLER_DEBUG_PRINTF("Untreated MVX_STORE\n");
-                        for (uint32_t i = 0; i < this->bank_buffer_size * this->channels_per_controller; i++){
-                            if (this->mvx_nano_buffer_used[i] == 0) {
-
-                                this->mvx_nano_buffer_used_total++;
-                                this->mvx_nano_buffer_used[i] = mvx_nano_buffer_size;
-
-                                for (uint32_t j=0; j < mvx_nano_buffer_size; j++){
-                                    this->mvx_nano_buffer[i][j] = *package;
-                                    this->mvx_nano_buffer[i][j].memory_operation = MEMORY_OPERATION_MVX_NANO_STORE;
-                                    this->mvx_nano_buffer[i][j].memory_address += j * sinuca_engine.get_global_line_size();
-                                }
-
-                                package->memory_size = 1;
-                                package->is_answer = true;
-                                package->package_transmit(get_mvx_latency(package->memory_operation));
-                                this->mvx_ready_cycle = sinuca_engine.get_global_cycle() + get_mvx_latency(package->memory_operation);
-                                break;
-                            }
-                        }
-                    }
-                    else {
-                        completed = false;
-                        break;
-                    }
-                break;
-
-
-                default:
-                    ERROR_PRINTF("Should not receive a normal package here!\n")
-                break;
-            }
-
-            if (completed) {
-                if(package->memory_operation == MEMORY_OPERATION_MVX_UNLOCK) {
-                    MEMORY_CONTROLLER_DEBUG_PRINTF("Untreated MVX_UNLOCK\n");
-                    this->mvx_state = MVX_STATE_UNLOCK;
-                    this->mvx_id_owner = 0;
-                    this->mvx_number = 0;
-                }
-                else {
-                    MEMORY_CONTROLLER_DEBUG_PRINTF("Untreated MVX_LOCK\n");
-                    this->mvx_state = MVX_STATE_LOCK;
-                    this->mvx_id_owner = package->id_owner;
-                    this->mvx_number = package->mvx_number;
-                }
-
-                // Advance the MVX
-                this->mvx_buffer_actual_position = POSITION_FAIL;
-            }
-        }
-    }
-
 
     // =================================================================
     /// MSHR_BUFFER - UNTREATED
@@ -1056,18 +668,6 @@ int32_t memory_controller_t::send_package(memory_package_t *package) {
 
     if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
 
-        // HVX
-        if (package->is_mvx &&
-        !package->is_answer &&
-        (package->memory_operation == MEMORY_OPERATION_MVX_NANO_LOAD ||
-        package->memory_operation == MEMORY_OPERATION_MVX_NANO_STORE)) {
-            /// Check if DESTINATION has FREE SPACE available.
-            if (sinuca_engine.interconnection_interface_array[package->id_dst]->check_token_list(package) == false) {
-                MEMORY_CONTROLLER_DEBUG_PRINTF("\tSEND FAIL (NO TOKENS)\n");
-                return POSITION_FAIL;
-            }
-        }
-
         sinuca_engine.interconnection_controller->find_package_route(package);
         ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
         uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
@@ -1103,30 +703,12 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
     int32_t slot = POSITION_FAIL;
     if (this->recv_ready_cycle <= sinuca_engine.get_global_cycle()) {
 
-        /// HVX ANSWER
-        if (package->is_answer) {
-            ERROR_ASSERT_PRINTF(package->mvx_write != -1, "Receiving an NANO answer that does not write a register");
-            this->mvx_wait_registers[package->mvx_write]--;
-            this->recv_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
-            // ~ this->remove_token_list(package);
-            return OK;
-        }
 
         switch (package->memory_operation) {
 
-            // MVX -> READ buffer
-            case MEMORY_OPERATION_MVX_LOCK:
-            case MEMORY_OPERATION_MVX_UNLOCK:
-            case MEMORY_OPERATION_MVX_LOAD:
-            case MEMORY_OPERATION_MVX_STORE:
-            case MEMORY_OPERATION_MVX_NANO_LOAD:
-            case MEMORY_OPERATION_MVX_NANO_STORE:
-            case MEMORY_OPERATION_MVX_INT_ALU:
-            case MEMORY_OPERATION_MVX_INT_MUL:
-            case MEMORY_OPERATION_MVX_INT_DIV:
-            case MEMORY_OPERATION_MVX_FP_ALU :
-            case MEMORY_OPERATION_MVX_FP_MUL :
-            case MEMORY_OPERATION_MVX_FP_DIV :
+            // HMC -> READ buffer
+            case MEMORY_OPERATION_HMC_ALU:
+            case MEMORY_OPERATION_HMC_ALUR:
 
             case MEMORY_OPERATION_READ:
             case MEMORY_OPERATION_INST:
@@ -1231,19 +813,9 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
         switch (this->token_list[slot].memory_operation) {
             case MEMORY_OPERATION_READ:
             case MEMORY_OPERATION_INST:
-            // MVX -> READ buffer
-            case MEMORY_OPERATION_MVX_LOCK:
-            case MEMORY_OPERATION_MVX_UNLOCK:
-            case MEMORY_OPERATION_MVX_LOAD:
-            case MEMORY_OPERATION_MVX_STORE:
-            case MEMORY_OPERATION_MVX_NANO_LOAD:
-            case MEMORY_OPERATION_MVX_NANO_STORE:
-            case MEMORY_OPERATION_MVX_INT_ALU:
-            case MEMORY_OPERATION_MVX_INT_MUL:
-            case MEMORY_OPERATION_MVX_INT_DIV:
-            case MEMORY_OPERATION_MVX_FP_ALU :
-            case MEMORY_OPERATION_MVX_FP_MUL :
-            case MEMORY_OPERATION_MVX_FP_DIV :
+            // HMC -> READ buffer
+            case MEMORY_OPERATION_HMC_ALU:
+            case MEMORY_OPERATION_HMC_ALUR:
                 request_number++;
             break;
 
@@ -1264,19 +836,9 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
 
         case MEMORY_OPERATION_READ:
         case MEMORY_OPERATION_INST:
-        // MVX -> READ buffer
-        case MEMORY_OPERATION_MVX_LOCK:
-        case MEMORY_OPERATION_MVX_UNLOCK:
-        case MEMORY_OPERATION_MVX_LOAD:
-        case MEMORY_OPERATION_MVX_STORE:
-        case MEMORY_OPERATION_MVX_NANO_LOAD:
-        case MEMORY_OPERATION_MVX_NANO_STORE:
-        case MEMORY_OPERATION_MVX_INT_ALU:
-        case MEMORY_OPERATION_MVX_INT_MUL:
-        case MEMORY_OPERATION_MVX_INT_DIV:
-        case MEMORY_OPERATION_MVX_FP_ALU :
-        case MEMORY_OPERATION_MVX_FP_MUL :
-        case MEMORY_OPERATION_MVX_FP_DIV :
+        // HMC -> READ buffer
+        case MEMORY_OPERATION_HMC_ALU:
+        case MEMORY_OPERATION_HMC_ALUR:
 
             if (request_number < memory_package_t::count_free(this->mshr_buffer, this->mshr_buffer_request_reserved_size)) {
                 this->token_list[token_pos].is_coming = true;
@@ -1345,47 +907,6 @@ void memory_controller_t::print_structures() {
         SINUCA_PRINTF("%s\n", this->token_list[i].content_to_string().c_str())
     }
 
-    // HVX
-    for (uint32_t j = 0; j < this->mvx_total_registers; j++) {
-        SINUCA_PRINTF("REGISTER[%s] %s\n", utils_t::uint32_to_string(j).c_str(),
-                                            utils_t::uint32_to_string(this->mvx_wait_registers[j]).c_str());
-    }
-
-
-    SINUCA_PRINTF("mvx_state:%s\n", get_enum_mvx_state_t_char(this->mvx_state));
-    SINUCA_PRINTF("mvx_id_owner:%s\n", utils_t::uint64_to_string(this->mvx_id_owner).c_str());
-    SINUCA_PRINTF("mvx_number:%s\n", utils_t::uint64_to_string(this->mvx_number).c_str());
-
-    for (uint32_t j = 0; j < this->mvx_buffer.size(); j++) {
-        SINUCA_PRINTF("%s MVX_BUFFER[%s] %s\n", this->get_label(),
-                                                    utils_t::uint32_to_string(j).c_str(),
-                                                    this->mvx_buffer[j]->content_to_string().c_str());
-    }
-
-    SINUCA_PRINTF("mvx_nano_buffer_size:%s\n", utils_t::uint32_to_string(this->mvx_nano_buffer_size).c_str());
-
-    SINUCA_PRINTF("mvx_nano_buffer_used_total: %s\n", utils_t::uint32_to_string(this->mvx_nano_buffer_used_total).c_str());
-
-    SINUCA_PRINTF("mvx_nano_buffer_used: ");
-    for (uint32_t j = 0; j < this->bank_buffer_size * this->channels_per_controller; j++) {
-        SINUCA_PRINTF(" %s", utils_t::uint32_to_string(this->mvx_nano_buffer_used[j]).c_str());
-    }
-    SINUCA_PRINTF("\n");
-
-
-    for (uint32_t i = 0; i < this->bank_buffer_size * this->channels_per_controller; i++) {
-        if (mvx_nano_buffer_used[i] == 0) {
-            continue;
-        }
-        for (uint32_t j = 0; j < this->mvx_nano_buffer_size; j++) {
-            SINUCA_PRINTF("%s MVX_NANO_BUFFER[%s][%s] %s\n", this->get_label(),
-                                                        utils_t::uint32_to_string(i).c_str(),
-                                                        utils_t::uint32_to_string(j).c_str(),
-                                                        this->mvx_nano_buffer[i][j].content_to_string().c_str());
-        }
-        SINUCA_PRINTF("\n");
-    }
-
     for (uint32_t i = 0; i < this->channels_per_controller; i++) {
         this->channels[i].print_structures();
     }
@@ -1452,67 +973,17 @@ void memory_controller_t::reset_statistics() {
     this->stat_max_writeback_wait_time = 0;
     this->stat_accumulated_writeback_wait_time = 0;
 
-    // MVX
-    this->set_stat_mvx_lock_completed(0);
-    this->set_stat_mvx_unlock_completed(0);
-    this->set_stat_mvx_load_completed(0);
-    this->set_stat_mvx_store_completed(0);
-    this->set_stat_mvx_nano_load_completed(0);
-    this->set_stat_mvx_nano_store_completed(0);
-    this->set_stat_mvx_int_alu_completed(0);
-    this->set_stat_mvx_int_mul_completed(0);
-    this->set_stat_mvx_int_div_completed(0);
-    this->set_stat_mvx_fp_alu_completed(0);
-    this->set_stat_mvx_fp_mul_completed(0);
-    this->set_stat_mvx_fp_div_completed(0);
+    // HMC
+    this->set_stat_hmc_alu_completed(0);
+    this->set_stat_hmc_alur_completed(0);
 
-    this->stat_min_mvx_lock_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_mvx_lock_wait_time = 0;
-    this->stat_accumulated_mvx_lock_wait_time = 0;
+    this->stat_min_hmc_alu_wait_time = MAX_ALIVE_TIME;
+    this->stat_max_hmc_alu_wait_time = 0;
+    this->stat_accumulated_hmc_alu_wait_time = 0;
 
-    this->stat_min_mvx_unlock_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_mvx_unlock_wait_time = 0;
-    this->stat_accumulated_mvx_unlock_wait_time = 0;
-
-    this->stat_min_mvx_load_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_mvx_load_wait_time = 0;
-    this->stat_accumulated_mvx_load_wait_time = 0;
-
-    this->stat_min_mvx_store_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_mvx_store_wait_time = 0;
-    this->stat_accumulated_mvx_store_wait_time = 0;
-
-    this->stat_min_mvx_nano_load_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_mvx_nano_load_wait_time = 0;
-    this->stat_accumulated_mvx_nano_load_wait_time = 0;
-
-    this->stat_min_mvx_nano_store_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_mvx_nano_store_wait_time = 0;
-    this->stat_accumulated_mvx_nano_store_wait_time = 0;
-
-    this->stat_min_mvx_int_alu_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_mvx_int_alu_wait_time = 0;
-    this->stat_accumulated_mvx_int_alu_wait_time = 0;
-
-    this->stat_min_mvx_int_mul_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_mvx_int_mul_wait_time = 0;
-    this->stat_accumulated_mvx_int_mul_wait_time = 0;
-
-    this->stat_min_mvx_int_div_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_mvx_int_div_wait_time = 0;
-    this->stat_accumulated_mvx_int_div_wait_time = 0;
-
-    this->stat_min_mvx_fp_alu_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_mvx_fp_alu_wait_time = 0;
-    this->stat_accumulated_mvx_fp_alu_wait_time = 0;
-
-    this->stat_min_mvx_fp_mul_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_mvx_fp_mul_wait_time = 0;
-    this->stat_accumulated_mvx_fp_mul_wait_time = 0;
-
-    this->stat_min_mvx_fp_div_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_mvx_fp_div_wait_time = 0;
-    this->stat_accumulated_mvx_fp_div_wait_time = 0;
+    this->stat_min_hmc_alur_wait_time = MAX_ALIVE_TIME;
+    this->stat_max_hmc_alur_wait_time = 0;
+    this->stat_accumulated_hmc_alur_wait_time = 0;
 
     this->stat_full_mshr_buffer_request = 0;
     this->stat_full_mshr_buffer_writeback = 0;
@@ -1549,17 +1020,6 @@ void memory_controller_t::print_statistics() {
                                                                                     stat_write_completed +
                                                                                     stat_writeback_completed);
 
-    sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_read_mvx",
-                                                                                    stat_instruction_completed +
-                                                                                    stat_read_completed +
-                                                                                    stat_prefetch_completed +
-                                                                                    stat_mvx_load_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write_mvx",
-                                                                                    stat_write_completed +
-                                                                                    stat_writeback_completed +
-                                                                                    stat_mvx_store_completed);
-
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_instruction_wait_time", stat_min_instruction_wait_time);
@@ -1582,73 +1042,21 @@ void memory_controller_t::print_statistics() {
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_write_wait_time", stat_accumulated_write_wait_time, stat_write_completed);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_writeback_wait_time", stat_accumulated_writeback_wait_time, stat_writeback_completed);
 
-    // MVX
-sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_lock_completed", stat_mvx_lock_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_unlock_completed", stat_mvx_unlock_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_load_completed", stat_mvx_load_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_store_completed", stat_mvx_store_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_nano_load_completed", stat_mvx_nano_load_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_nano_store_completed", stat_mvx_nano_store_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_int_alu_completed", stat_mvx_int_alu_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_int_mul_completed", stat_mvx_int_mul_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_int_div_completed", stat_mvx_int_div_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_fp_alu_completed", stat_mvx_fp_alu_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_fp_mul_completed", stat_mvx_fp_mul_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_fp_div_completed", stat_mvx_fp_div_completed);
-sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_lock_wait_time", stat_min_mvx_lock_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_lock_wait_time", stat_max_mvx_lock_wait_time);
-
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_unlock_wait_time", stat_min_mvx_unlock_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_unlock_wait_time", stat_max_mvx_unlock_wait_time);
-
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_load_wait_time", stat_min_mvx_load_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_load_wait_time", stat_max_mvx_load_wait_time);
-
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_store_wait_time", stat_min_mvx_store_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_store_wait_time", stat_max_mvx_store_wait_time);
-
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_nano_load_wait_time", stat_min_mvx_nano_load_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_nano_load_wait_time", stat_max_mvx_nano_load_wait_time);
-
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_nano_store_wait_time", stat_min_mvx_nano_store_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_nano_store_wait_time", stat_max_mvx_nano_store_wait_time);
-
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_int_alu_wait_time", stat_min_mvx_int_alu_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_int_alu_wait_time", stat_max_mvx_int_alu_wait_time);
-
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_int_mul_wait_time", stat_min_mvx_int_mul_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_int_mul_wait_time", stat_max_mvx_int_mul_wait_time);
-
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_int_div_wait_time", stat_min_mvx_int_div_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_int_div_wait_time", stat_max_mvx_int_div_wait_time);
-
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_fp_alu_wait_time", stat_min_mvx_fp_alu_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_fp_alu_wait_time", stat_max_mvx_fp_alu_wait_time);
-
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_fp_mul_wait_time", stat_min_mvx_fp_mul_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_fp_mul_wait_time", stat_max_mvx_fp_mul_wait_time);
-
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_fp_div_wait_time", stat_min_mvx_fp_div_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_fp_div_wait_time", stat_max_mvx_fp_div_wait_time);
-
+    // HMC
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_hmc_alu_completed", stat_hmc_alu_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_hmc_alur_completed", stat_hmc_alur_completed);
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_lock_wait_time", stat_accumulated_mvx_lock_wait_time, stat_mvx_lock_completed);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_unlock_wait_time", stat_accumulated_mvx_unlock_wait_time, stat_mvx_unlock_completed);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_load_wait_time", stat_accumulated_mvx_load_wait_time, stat_mvx_load_completed);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_store_wait_time", stat_accumulated_mvx_store_wait_time, stat_mvx_store_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_hmc_alu_wait_time", stat_min_hmc_alu_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_hmc_alu_wait_time", stat_max_hmc_alu_wait_time);
 
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_nano_load_wait_time", stat_accumulated_mvx_nano_load_wait_time, stat_mvx_nano_load_completed);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_nano_store_wait_time", stat_accumulated_mvx_nano_store_wait_time, stat_mvx_nano_store_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_hmc_alur_wait_time", stat_min_hmc_alur_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_hmc_alur_wait_time", stat_max_hmc_alur_wait_time);
 
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_int_alu_wait_time", stat_accumulated_mvx_int_alu_wait_time, stat_mvx_int_alu_completed);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_int_mul_wait_time", stat_accumulated_mvx_int_mul_wait_time, stat_mvx_int_mul_completed);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_int_div_wait_time", stat_accumulated_mvx_int_div_wait_time, stat_mvx_int_div_completed);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_fp_alu_wait_time", stat_accumulated_mvx_fp_alu_wait_time, stat_mvx_fp_alu_completed);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_fp_mul_wait_time", stat_accumulated_mvx_fp_mul_wait_time, stat_mvx_fp_mul_completed);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_fp_div_wait_time", stat_accumulated_mvx_fp_div_wait_time, stat_mvx_fp_div_completed);
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_hmc_alu_wait_time", stat_accumulated_hmc_alu_wait_time, stat_hmc_alu_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_hmc_alur_wait_time", stat_accumulated_hmc_alur_wait_time, stat_hmc_alur_completed);
 
 
     sinuca_engine.write_statistics_small_separator();
@@ -1717,16 +1125,9 @@ void memory_controller_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_wr", timing_wr);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_wtr", timing_wtr);
 
-    // HVX
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_operation_size", mvx_operation_size);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_total_registers", mvx_total_registers);
-
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_int_alu", mvx_latency_int_alu);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_int_mul", mvx_latency_int_mul);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_int_div", mvx_latency_int_div);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_fp_alu", mvx_latency_fp_alu);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_fp_mul", mvx_latency_fp_mul);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mvx_latency_fp_div", mvx_latency_fp_div);
+    // HMC
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "hmc_latency_alu", hmc_latency_alu);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "hmc_latency_alur", hmc_latency_alur);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "row_bits_mask", utils_t::address_to_binary(this->row_bits_mask).c_str());

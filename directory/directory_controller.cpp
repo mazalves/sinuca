@@ -180,74 +180,16 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     DIRECTORY_CTRL_DEBUG_PRINTF("new_cache_request() cache_id:%u, package:%s\n", cache_id, package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(cache_id < sinuca_engine.get_cache_memory_array_size(), "Wrong cache_id.\n")
 
-    // MVX =====================================================================
-    if (package->memory_operation == MEMORY_OPERATION_MVX_LOCK    ||
-        package->memory_operation == MEMORY_OPERATION_MVX_UNLOCK  ||
-        package->memory_operation == MEMORY_OPERATION_MVX_INT_ALU ||
-        package->memory_operation == MEMORY_OPERATION_MVX_INT_MUL ||
-        package->memory_operation == MEMORY_OPERATION_MVX_INT_DIV ||
-        package->memory_operation == MEMORY_OPERATION_MVX_FP_ALU  ||
-        package->memory_operation == MEMORY_OPERATION_MVX_FP_MUL  ||
-        package->memory_operation == MEMORY_OPERATION_MVX_FP_DIV  ) {
 
-        // ~ ERROR_ASSERT_PRINTF(
-        // ~ sinuca_engine.memory_controller_array[i]->get_address_mask_type() == MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE ||
-        // ~ sinuca_engine.memory_controller_array[i]->get_address_mask_type() == MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLROW_COLBYTE ||
-        // ~ sinuca_engine.memory_controller_array[i]->get_address_mask_type() == MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CTRL_CHANNEL_COLBYTE ||
-        // ~ sinuca_engine.memory_controller_array[i]->get_address_mask_type() == MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CHANNEL_COLBYTE ||
-        // ~ sinuca_engine.memory_controller_array[0]->get_address_mask_type() == MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_COLBYTE, "MVX cannot support this memory controller address mask.\n")
-
+    if (package->memory_operation == MEMORY_OPERATION_HMC_ALU  ||
+        package->memory_operation == MEMORY_OPERATION_HMC_ALUR ) {
 
         /// Get CACHE pointer
         cache_memory_t *cache = sinuca_engine.cache_memory_array[cache_id];
         directory_line_t *directory_line = NULL;
         int32_t directory_line_number = POSITION_FAIL;
 
-        if (cache->get_hierarchy_level() != 1 && cache->get_id() != package->id_owner) {
-            directory_line_number = find_directory_line(package);
-            ERROR_ASSERT_PRINTF(directory_line_number != POSITION_FAIL,
-                                "High level RQST must have a directory_line.\n. cache_id:%u, package:%s\n",
-                                cache->get_id(), package->content_to_string().c_str())
-            directory_line = this->directory_lines[directory_line_number];
-        }
-        else {
-            this->directory_lines.push_back(new directory_line_t());
-            directory_line = this->directory_lines.back();
-
-            directory_line->packager(package->id_owner, package->opcode_number, package->opcode_address, package->uop_number,
-                                        LOCK_READ,
-                                        package->memory_operation, package->memory_address, package->memory_size);
-            DIRECTORY_CTRL_DEBUG_PRINTF("\t New Directory Line:%s\n", directory_line->directory_line_to_string().c_str())
-        }
-        /// Update existing Directory_Line
-        directory_line->cache_request_order[cache_id] = ++directory_line->cache_requested;
-
-        /// LATENCY = NONE
-        package->ready_cycle = sinuca_engine.get_global_cycle();
-
-    // CHANGE-ME always send to the MC0
-    {
-        container_ptr_cache_memory_t *lower_level_cache = cache->get_lower_level_cache();
-        if (lower_level_cache->empty()) {
-            uint32_t mc_id = sinuca_engine.memory_controller_array[0]->get_id();
-            package->package_set_src_dst(cache->get_id(), mc_id);
-        }
-        else {
-            package->package_set_src_dst(cache->get_id(), this->find_next_obj_id(cache, package->memory_address));
-        }
-    }
-        DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT RQST (Miss)\n")
-        return PACKAGE_STATE_TRANSMIT;
-    }
-    else if (package->memory_operation == MEMORY_OPERATION_MVX_LOAD ||
-        package->memory_operation == MEMORY_OPERATION_MVX_STORE ) {
-
-        /// Get CACHE pointer
-        cache_memory_t *cache = sinuca_engine.cache_memory_array[cache_id];
-        directory_line_t *directory_line = NULL;
-        int32_t directory_line_number = POSITION_FAIL;
-
-        if (cache->get_hierarchy_level() != 1 && cache->get_id() != package->id_owner) {
+        if (cache->get_hierarchy_level() != 1) {
             directory_line_number = find_directory_line(package);
             ERROR_ASSERT_PRINTF(directory_line_number != POSITION_FAIL,
                                 "High level RQST must have a directory_line.\n. cache_id:%u, package:%s\n",
@@ -260,9 +202,9 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 /// Transaction on the same address was found
                 if (this->cmp_index_tag(this->directory_lines[i]->initial_memory_address, package->memory_address)) {
 
-                    // MVX lock
-                    if (this->directory_lines[i]->initial_memory_operation == MEMORY_OPERATION_MVX_LOAD ||
-                    this->directory_lines[i]->initial_memory_operation == MEMORY_OPERATION_MVX_STORE){
+                    // HMC lock
+                    if (this->directory_lines[i]->initial_memory_operation == MEMORY_OPERATION_HMC_ALU ||
+                    this->directory_lines[i]->initial_memory_operation == MEMORY_OPERATION_HMC_ALUR){
                         break;
                     }
 
@@ -277,7 +219,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
             ERROR_ASSERT_PRINTF(directory_line == NULL,
                                 "This level RQST must not have a directory_line.\n cache_id:%u, package:%s\n",
                                 cache->get_id(), package->content_to_string().c_str())
-
         }
 
 
@@ -294,6 +235,8 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
                 SINUCA_PRINTF("\t RETURN UNTREATED (Cache_line == NULL) could not evict-inclusiveness\n")
                 return PACKAGE_STATE_UNTREATED;
             }
+            /// Coherence Invalidate
+            cache->change_status(cache_line, PROTOCOL_STATUS_I);
         }
 
         /// The request can be treated now !
@@ -310,61 +253,10 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
         /// Update existing Directory_Line
         directory_line->cache_request_order[cache_id] = ++directory_line->cache_requested;
 
-        /// If LLC, then Evict all the lines within the page size
-        container_ptr_cache_memory_t *lower_level_cache = cache->get_lower_level_cache();
-        if (lower_level_cache->empty()) {
-            uint64_t page_address = package->memory_address;
-            // Each MVX operation requires mvx_operation_size evictions
-            for (uint32_t i = 0; i < mvx_operation_size/sinuca_engine.get_global_line_size(); i++){
-                page_address += (i * sinuca_engine.get_global_line_size());
-
-                for (uint32_t j = 0; j < this->directory_lines.size(); j++) {
-                /// Transaction on the same address was found
-                    if (this->cmp_index_tag(this->directory_lines[j]->initial_memory_address, page_address) &&
-                    this->directory_lines[j]->initial_memory_operation != MEMORY_OPERATION_MVX_LOAD &&
-                    this->directory_lines[j]->initial_memory_operation != MEMORY_OPERATION_MVX_STORE){
-                        ERROR_ASSERT_PRINTF(directory_lines[j]->lock_type != LOCK_FREE, "Found directory with LOCK_FREE\n");
-
-                        /// Cannot continue right now
-                        DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED (Found incompatible LOCK)\n")
-                        SINUCA_PRINTF("\t RETURN UNTREATED (Found incompatible LOCK) inside the 1KB\n")
-                        return PACKAGE_STATE_UNTREATED;
-                    }
-                }
-
-                /// Get CACHE_LINE, INDEX, WAY
-                uint32_t index, way;
-                cache_line_t *cache_line = cache->find_line(page_address, index, way);
-                if (cache_line != NULL) {
-                    // =====================================================
-                    /// Takes care about INCLUSIVENESS / WRITEBACK
-                    // =====================================================
-                    if (this->inclusiveness_new_eviction(cache, cache_line, index, way, package) == FAIL) {
-                        /// Cannot continue right now
-                        DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED (Cache_line == NULL)\n")
-                        SINUCA_PRINTF("\t RETURN UNTREATED (Cache_line == NULL) inside the 1KB\n")
-                        return PACKAGE_STATE_UNTREATED;
-                    }
-                    /// Coherence Invalidate
-                    cache->change_status(cache_line, PROTOCOL_STATUS_I);
-                }
-            }
-        }
-
         /// LATENCY = NONE
         package->ready_cycle = sinuca_engine.get_global_cycle();
 
-    // CHANGE-ME always send to the MC0
-    {
-        container_ptr_cache_memory_t *lower_level_cache = cache->get_lower_level_cache();
-        if (lower_level_cache->empty()) {
-            uint32_t mc_id = sinuca_engine.memory_controller_array[0]->get_id();
-            package->package_set_src_dst(cache->get_id(), mc_id);
-        }
-        else {
-            package->package_set_src_dst(cache->get_id(), this->find_next_obj_id(cache, package->memory_address));
-        }
-    }
+        package->package_set_src_dst(cache->get_id(), this->find_next_obj_id(cache, package->memory_address));
 
         DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT RQST (Miss)\n")
         return PACKAGE_STATE_TRANSMIT;
@@ -372,8 +264,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
 
 
     // NORMAL DIRECTORY OPERATION ==============================================
-
-
     /// Get CACHE pointer
     cache_memory_t *cache = sinuca_engine.cache_memory_array[cache_id];
 
@@ -395,15 +285,6 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     /// Check for LOCK
     else {
         for (uint32_t i = 0; i < this->directory_lines.size(); i++) {
-            if  ( (this->directory_lines[i]->initial_memory_operation == MEMORY_OPERATION_MVX_LOAD ||
-            this->directory_lines[i]->initial_memory_operation == MEMORY_OPERATION_MVX_STORE )&&
-            (this->directory_lines[i]->initial_memory_address / mvx_operation_size == package->memory_address / mvx_operation_size)){
-                /// Cannot continue right now
-                DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED (Found MVX LOCK)\n")
-
-                return PACKAGE_STATE_UNTREATED;
-            }
-
             /// Transaction on the same address was found
             if (this->cmp_index_tag(this->directory_lines[i]->initial_memory_address, package->memory_address)){
                 ERROR_ASSERT_PRINTF(directory_lines[i]->lock_type != LOCK_FREE, "Found directory with LOCK_FREE\n");
@@ -485,24 +366,12 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     // ================================================================================
     switch (package->memory_operation) {
         // =====================================================================
-        // MVX
-        case MEMORY_OPERATION_MVX_LOCK:
-        case MEMORY_OPERATION_MVX_UNLOCK:
-        case MEMORY_OPERATION_MVX_LOAD:
-        case MEMORY_OPERATION_MVX_STORE:
-        case MEMORY_OPERATION_MVX_INT_ALU:
-        case MEMORY_OPERATION_MVX_INT_MUL:
-        case MEMORY_OPERATION_MVX_INT_DIV:
-        case MEMORY_OPERATION_MVX_FP_ALU :
-        case MEMORY_OPERATION_MVX_FP_MUL :
-        case MEMORY_OPERATION_MVX_FP_DIV :
-        // Receiving a wrong HVX
-        case MEMORY_OPERATION_MVX_NANO_LOAD:
-        case MEMORY_OPERATION_MVX_NANO_STORE:
-
+        // Receiving a wrong HMC
+        case MEMORY_OPERATION_HMC_ALU:
+        case MEMORY_OPERATION_HMC_ALUR:
         {
             /// Send the message to the next level without latency
-            ERROR_PRINTF("Found a MVX in a wrong part of directory_controller_t::treat_cache_request()\n");
+            ERROR_PRINTF("Found a HMC in a wrong part of directory_controller_t::treat_cache_request()\n");
         }
 
 
@@ -825,17 +694,12 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
     ERROR_ASSERT_PRINTF(cache_id < sinuca_engine.get_cache_memory_array_size(), "Wrong cache_id.\n")
 
 
-    // MVX =====================================================================
-    if (package->memory_operation == MEMORY_OPERATION_MVX_LOCK    ||
-        package->memory_operation == MEMORY_OPERATION_MVX_UNLOCK  ||
-        package->memory_operation == MEMORY_OPERATION_MVX_LOAD    ||
-        package->memory_operation == MEMORY_OPERATION_MVX_STORE   ||
-        package->memory_operation == MEMORY_OPERATION_MVX_INT_ALU ||
-        package->memory_operation == MEMORY_OPERATION_MVX_INT_MUL ||
-        package->memory_operation == MEMORY_OPERATION_MVX_INT_DIV ||
-        package->memory_operation == MEMORY_OPERATION_MVX_FP_ALU  ||
-        package->memory_operation == MEMORY_OPERATION_MVX_FP_MUL  ||
-        package->memory_operation == MEMORY_OPERATION_MVX_FP_DIV  ) {
+    // HMC =====================================================================
+    if (package->memory_operation == MEMORY_OPERATION_HMC_ALU) {
+            /// Send the message to the next level without latency
+            ERROR_PRINTF("Found a HMC_ALU in a wrong part of directory_controller_t::treat_cache_answer()\n");
+    }
+    else if (package->memory_operation == MEMORY_OPERATION_HMC_ALUR) {
 
         /// Get CACHE pointer
         cache_memory_t *cache = sinuca_engine.cache_memory_array[cache_id];
@@ -890,7 +754,7 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
                     return PACKAGE_STATE_TRANSMIT;
                 }
             }
-            ERROR_PRINTF("Could not find the processor that requested a MVX.\n")
+            ERROR_PRINTF("Could not find the processor that requested a HMC.\n")
         }
     }
 
@@ -1022,6 +886,9 @@ package_state_t directory_controller_t::treat_cache_request_sent(uint32_t cache_
     switch (package->memory_operation) {
 
         // =============================================================
+        // HMC
+        case MEMORY_OPERATION_HMC_ALUR:
+
         /// READ and WRITE
         case MEMORY_OPERATION_READ:
         case MEMORY_OPERATION_INST:
@@ -1031,8 +898,9 @@ package_state_t directory_controller_t::treat_cache_request_sent(uint32_t cache_
         break;
 
         // =============================================================
+        // HMC
+        case MEMORY_OPERATION_HMC_ALU:
         /// WRITEBACK
-        // =============================================================
         case MEMORY_OPERATION_WRITEBACK:
         {
             /// Get CACHE pointer
@@ -1061,28 +929,6 @@ package_state_t directory_controller_t::treat_cache_request_sent(uint32_t cache_
         }
         break;
 
-        // MVX sit and wait for the ack;
-        // =============================================================
-        case MEMORY_OPERATION_MVX_LOCK:
-        case MEMORY_OPERATION_MVX_UNLOCK:
-        case MEMORY_OPERATION_MVX_LOAD:
-        case MEMORY_OPERATION_MVX_STORE:
-        case MEMORY_OPERATION_MVX_INT_ALU:
-        case MEMORY_OPERATION_MVX_INT_MUL:
-        case MEMORY_OPERATION_MVX_INT_DIV:
-        case MEMORY_OPERATION_MVX_FP_ALU :
-        case MEMORY_OPERATION_MVX_FP_MUL :
-        case MEMORY_OPERATION_MVX_FP_DIV :
-            return PACKAGE_STATE_WAIT;
-        break;
-
-        // =============================================================
-        // Receiving a wrong HVX
-        case MEMORY_OPERATION_MVX_NANO_LOAD:
-        case MEMORY_OPERATION_MVX_NANO_STORE:
-            ERROR_PRINTF("Directory sending %s.\n", get_enum_memory_operation_char(package->memory_operation));
-            return PACKAGE_STATE_UNTREATED;
-        break;
     }
 
     ERROR_PRINTF("Could not treat the cache answer\n")
@@ -1135,8 +981,7 @@ memory_package_t* directory_controller_t::create_cache_writeback(cache_memory_t 
                 cache->get_id(),                        /// Src ID
                 cache->get_id(),                        /// Dst ID
                 NULL,                                   /// *Hops
-                POSITION_FAIL,                           /// Hop Counter
-                false, 0, -1, -1, -1);
+                POSITION_FAIL);                         /// Hop Counter
 
     // =========================================================================
     /// Allocate CopyBack at the MSHR
@@ -1471,21 +1316,10 @@ void directory_controller_t::coherence_new_operation(cache_memory_t *cache, cach
                     }
                 break;
 
-                // Receiving a wrong HVX
-                case MEMORY_OPERATION_MVX_NANO_LOAD:
-                case MEMORY_OPERATION_MVX_NANO_STORE:
-
-                case MEMORY_OPERATION_MVX_LOCK:
-                case MEMORY_OPERATION_MVX_UNLOCK:
-                case MEMORY_OPERATION_MVX_LOAD:
-                case MEMORY_OPERATION_MVX_STORE:
-                case MEMORY_OPERATION_MVX_INT_ALU:
-                case MEMORY_OPERATION_MVX_INT_MUL:
-                case MEMORY_OPERATION_MVX_INT_DIV:
-                case MEMORY_OPERATION_MVX_FP_ALU :
-                case MEMORY_OPERATION_MVX_FP_MUL :
-                case MEMORY_OPERATION_MVX_FP_DIV :
-                    ERROR_PRINTF("Entering at coherence_new_operation() for a MVX instruction");
+                // Receiving a wrong HMC
+                case MEMORY_OPERATION_HMC_ALU:
+                case MEMORY_OPERATION_HMC_ALUR:
+                    ERROR_PRINTF("Entering at coherence_new_operation() for a HMC instruction");
                 break;
             }
         break;
@@ -1589,22 +1423,10 @@ bool directory_controller_t::coherence_is_read(memory_operation_t memory_operati
             return FAIL;
         break;
 
-        // Receiving a wrong HVX
-        case MEMORY_OPERATION_MVX_NANO_LOAD:
-        case MEMORY_OPERATION_MVX_NANO_STORE:
-
-        // MVX
-        case MEMORY_OPERATION_MVX_LOCK:
-        case MEMORY_OPERATION_MVX_UNLOCK:
-        case MEMORY_OPERATION_MVX_LOAD:
-        case MEMORY_OPERATION_MVX_STORE:
-        case MEMORY_OPERATION_MVX_INT_ALU:
-        case MEMORY_OPERATION_MVX_INT_MUL:
-        case MEMORY_OPERATION_MVX_INT_DIV:
-        case MEMORY_OPERATION_MVX_FP_ALU :
-        case MEMORY_OPERATION_MVX_FP_MUL :
-        case MEMORY_OPERATION_MVX_FP_DIV :
-            ERROR_PRINTF("Entering at coherence_is_read() for a MVX instruction\n");
+        // Receiving a wrong HMC
+        case MEMORY_OPERATION_HMC_ALU:
+        case MEMORY_OPERATION_HMC_ALUR:
+            ERROR_PRINTF("Entering at coherence_is_read() for a HMC instruction\n");
         break;
     }
     ERROR_PRINTF("Wrong memory_operation_t\n")
@@ -1692,11 +1514,6 @@ uint32_t directory_controller_t::find_next_obj_id(cache_memory_t *cache_memory, 
     }
     ERROR_ASSERT_PRINTF(lower_level_cache->empty(), "Could not find a valid lower_level_cache but size != 0.\n")
 
-    // HVX
-    // CHANGE-ME
-    // If HVX, we should choose one MC in a round-robin fashion
-    // and send all the HVX instructions from this transaction for the choosen MC
-
     /// Find Next Main Memory
 
     // =====================================
@@ -1776,22 +1593,10 @@ void directory_controller_t::new_statistics(cache_memory_t *cache, memory_operat
                 this->add_stat_writeback_recv();
             break;
 
-            // Receiving a wrong HVX
-            case MEMORY_OPERATION_MVX_NANO_LOAD:
-            case MEMORY_OPERATION_MVX_NANO_STORE:
-
-            // MVX
-            case MEMORY_OPERATION_MVX_LOCK:
-            case MEMORY_OPERATION_MVX_UNLOCK:
-            case MEMORY_OPERATION_MVX_LOAD:
-            case MEMORY_OPERATION_MVX_STORE:
-            case MEMORY_OPERATION_MVX_INT_ALU:
-            case MEMORY_OPERATION_MVX_INT_MUL:
-            case MEMORY_OPERATION_MVX_INT_DIV:
-            case MEMORY_OPERATION_MVX_FP_ALU :
-            case MEMORY_OPERATION_MVX_FP_MUL :
-            case MEMORY_OPERATION_MVX_FP_DIV :
-                ERROR_PRINTF("Entering at new_statistics() for a MVX instruction\n");
+            // HMC
+            case MEMORY_OPERATION_HMC_ALU:
+            case MEMORY_OPERATION_HMC_ALUR:
+                ERROR_PRINTF("Entering at new_statistics() for a HMC instruction\n");
             break;
 
         }
@@ -1820,22 +1625,10 @@ void directory_controller_t::new_statistics(cache_memory_t *cache, memory_operat
                 this->add_stat_writeback_send();
             break;
 
-            // Receiving a wrong HVX
-            case MEMORY_OPERATION_MVX_NANO_LOAD:
-            case MEMORY_OPERATION_MVX_NANO_STORE:
-
-            // MVX
-            case MEMORY_OPERATION_MVX_LOCK:
-            case MEMORY_OPERATION_MVX_UNLOCK:
-            case MEMORY_OPERATION_MVX_LOAD:
-            case MEMORY_OPERATION_MVX_STORE:
-            case MEMORY_OPERATION_MVX_INT_ALU:
-            case MEMORY_OPERATION_MVX_INT_MUL:
-            case MEMORY_OPERATION_MVX_INT_DIV:
-            case MEMORY_OPERATION_MVX_FP_ALU :
-            case MEMORY_OPERATION_MVX_FP_MUL :
-            case MEMORY_OPERATION_MVX_FP_DIV :
-                ERROR_PRINTF("Entering at new_statistics() for a MVX instruction");
+            // HMC
+            case MEMORY_OPERATION_HMC_ALU:
+            case MEMORY_OPERATION_HMC_ALUR:
+                ERROR_PRINTF("Entering at new_statistics() for a HMC instruction");
             break;
 
 

@@ -167,9 +167,6 @@ processor_t::processor_t() {
 
     this->data_cache = NULL;
     this->inst_cache = NULL;
-
-    // MVX
-    this->rename_mvx_counter = 0;
 };
 
 // ============================================================================
@@ -651,8 +648,7 @@ int32_t processor_t::send_instruction_package(opcode_package_t *inst_package) {
         this->get_id(),                                                                 /// Src ID
         this->get_interface_output_component(PROCESSOR_PORT_INST_CACHE)->get_id(),      /// Dst ID
         NULL,                               /// *Hops
-        POSITION_FAIL,
-        false, 0, -1, -1, -1);                     /// Hop Counter
+        POSITION_FAIL);                     /// Hop Counter
 
     return send_package(&package);
 };
@@ -716,40 +712,10 @@ void processor_t::stage_decode() {
         this->decode_opcode_counter++;
 
 
-        // DECODE MVX ====================================================
-        if (this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_LOCK    ||
-            this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_UNLOCK  ||
-            this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_INT_ALU ||
-            this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_INT_MUL ||
-            this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_INT_DIV ||
+        // DECODE HMC ====================================================
+        if (this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_HMC_ALU    ||
+            this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_HMC_ALUR   ){
 
-            this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_FP_ALU  ||
-            this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_FP_MUL  ||
-            this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_FP_DIV  ){
-
-            new_uop.package_clean();
-            new_uop.opcode_to_uop(this->decode_uop_counter++,
-                                    this->fetch_buffer.front()->opcode_operation,
-                                    0,
-                                    1,
-                                    *this->fetch_buffer.front());
-
-            new_uop.package_ready(this->stage_decode_cycles);
-            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", pos_buffer, new_uop.content_to_string().c_str());
-
-            new_uop.is_mvx = this->fetch_buffer.front()->is_mvx;
-            new_uop.mvx_read1 = this->fetch_buffer.front()->mvx_read1;
-            new_uop.mvx_read2 = this->fetch_buffer.front()->mvx_read2;
-            new_uop.mvx_write = this->fetch_buffer.front()->mvx_write;
-
-            pos_buffer = this->decode_buffer.push_back(new_uop);
-            ERROR_ASSERT_PRINTF(pos_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
-
-            /// Remove the oldest OPCODE (just decoded) from the fetch buffer
-            this->fetch_buffer.pop_front();
-            continue;
-        }
-        else if (this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_LOAD){
             new_uop.package_clean();
             new_uop.opcode_to_uop(this->decode_uop_counter++,
                                     this->fetch_buffer.front()->opcode_operation,
@@ -760,11 +726,6 @@ void processor_t::stage_decode() {
             new_uop.package_ready(this->stage_decode_cycles);
             PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", pos_buffer, new_uop.content_to_string().c_str());
 
-            new_uop.is_mvx = this->fetch_buffer.front()->is_mvx;
-            new_uop.mvx_read1 = this->fetch_buffer.front()->mvx_read1;
-            new_uop.mvx_read2 = this->fetch_buffer.front()->mvx_read2;
-            new_uop.mvx_write = this->fetch_buffer.front()->mvx_write;
-
             pos_buffer = this->decode_buffer.push_back(new_uop);
             ERROR_ASSERT_PRINTF(pos_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
 
@@ -772,30 +733,6 @@ void processor_t::stage_decode() {
             this->fetch_buffer.pop_front();
             continue;
         }
-        else if (this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_MVX_STORE) {
-            new_uop.package_clean();
-            new_uop.opcode_to_uop(this->decode_uop_counter++,
-                                    this->fetch_buffer.front()->opcode_operation,
-                                    this->fetch_buffer.front()->write_address,
-                                    this->fetch_buffer.front()->write_size,
-                                    *this->fetch_buffer.front());
-
-            new_uop.package_ready(this->stage_decode_cycles);
-            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", pos_buffer, new_uop.content_to_string().c_str());
-
-            new_uop.is_mvx = this->fetch_buffer.front()->is_mvx;
-            new_uop.mvx_read1 = this->fetch_buffer.front()->mvx_read1;
-            new_uop.mvx_read2 = this->fetch_buffer.front()->mvx_read2;
-            new_uop.mvx_write = this->fetch_buffer.front()->mvx_write;
-
-            pos_buffer = this->decode_buffer.push_back(new_uop);
-            ERROR_ASSERT_PRINTF(pos_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
-
-            /// Remove the oldest OPCODE (just decoded) from the fetch buffer
-            this->fetch_buffer.pop_front();
-            continue;
-        }
-
 
         /// DECODE READ ====================================================
         if (this->fetch_buffer.front()->is_read) {
@@ -1132,28 +1069,9 @@ void processor_t::stage_rename() {
         }
         ERROR_ASSERT_PRINTF(this->rename_uop_counter == this->decode_buffer.front()->uop_number, "Renaming out-of-order.\n")
 
-        // If MVX => Check free space on the MOB-READ (Wait Answer)
-        if (this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_LOCK    ||
-            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_UNLOCK  ||
-            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_LOAD    ||
-            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_STORE   ||
-            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_INT_ALU ||
-            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_INT_MUL ||
-            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_INT_DIV ||
-            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_FP_ALU  ||
-            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_FP_MUL  ||
-            this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MVX_FP_DIV  ) {
-
-            position_mob = memory_order_buffer_line_t::find_free(this->memory_order_buffer_read, this->memory_order_buffer_read_size);
-            if (position_mob == POSITION_FAIL) {
-                this->add_stat_full_memory_order_buffer_read();
-                break;
-            }
-            mob_line = &this->memory_order_buffer_read[position_mob];
-        }
-
         /// If READ => Check free space on the MOB-READ
-        if (this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MEM_LOAD) {
+        if (this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MEM_LOAD ||
+        this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_HMC_ALUR) {
             position_mob = memory_order_buffer_line_t::find_free(this->memory_order_buffer_read, this->memory_order_buffer_read_size);
             if (position_mob == POSITION_FAIL) {
                 this->add_stat_full_memory_order_buffer_read();
@@ -1162,7 +1080,8 @@ void processor_t::stage_rename() {
             mob_line = &this->memory_order_buffer_read[position_mob];
         }
         /// If WRITE => Check free space on the MOB-WRITE
-        else if (this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MEM_STORE) {
+        else if (this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MEM_STORE ||
+        this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_HMC_ALU) {
             position_mob = memory_order_buffer_line_t::find_free(this->memory_order_buffer_write, this->memory_order_buffer_write_size);
             if (position_mob == POSITION_FAIL) {
                 this->add_stat_full_memory_order_buffer_write();
@@ -1170,7 +1089,6 @@ void processor_t::stage_rename() {
             }
             mob_line = &this->memory_order_buffer_write[position_mob];
         }
-
 
         /// Check free space on the ROB
         position_rob = this->rob_insert();
@@ -1203,48 +1121,14 @@ void processor_t::stage_rename() {
         // =====================================================================
         /// Insert into MOB
         // =====================================================================
-        // Place MVX -> MOB
-        if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_LOCK    ||
-            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_UNLOCK  ||
-            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_LOAD    ||
-            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_STORE   ||
-            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_INT_ALU ||
-            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_INT_MUL ||
-            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_INT_DIV ||
-            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_FP_ALU  ||
-            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_FP_MUL  ||
-            this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_FP_DIV  ) {
-
-            PROCESSOR_DEBUG_PRINTF("Renaming MVX %s.\n", this->reorder_buffer[position_rob].uop.content_to_string().c_str())
-
+        if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MEM_LOAD ||
+        this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_HMC_ALUR) {
             ERROR_ASSERT_PRINTF(this->reorder_buffer[position_rob].mob_ptr->memory_request.state == PACKAGE_STATE_FREE, "ROB has a pointer to a non free package.")
             /// Fix the request size to fit inside the cache line
             uint64_t offset = this->reorder_buffer[position_rob].uop.memory_address & this->offset_bits_mask;
             if (offset + this->reorder_buffer[position_rob].uop.memory_size >= sinuca_engine.get_global_line_size()) {
                 this->reorder_buffer[position_rob].uop.memory_size = sinuca_engine.get_global_line_size() - offset;
             }
-
-            memory_operation_t mvx_operation = MEMORY_OPERATION_MVX_LOCK;
-            if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_LOCK)
-                mvx_operation = MEMORY_OPERATION_MVX_LOCK;
-            else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_UNLOCK)
-                mvx_operation = MEMORY_OPERATION_MVX_UNLOCK;
-            else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_LOAD)
-                mvx_operation = MEMORY_OPERATION_MVX_LOAD;
-            else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_STORE)
-                mvx_operation = MEMORY_OPERATION_MVX_STORE;
-            else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_INT_ALU)
-                mvx_operation = MEMORY_OPERATION_MVX_INT_ALU;
-            else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_INT_MUL)
-                mvx_operation = MEMORY_OPERATION_MVX_INT_MUL;
-            else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_INT_DIV)
-                mvx_operation = MEMORY_OPERATION_MVX_INT_DIV;
-            else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_FP_ALU )
-                mvx_operation = MEMORY_OPERATION_MVX_FP_ALU;
-            else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_FP_MUL )
-                mvx_operation = MEMORY_OPERATION_MVX_FP_MUL;
-            else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MVX_FP_DIV )
-                mvx_operation = MEMORY_OPERATION_MVX_FP_DIV;
 
             this->reorder_buffer[position_rob].mob_ptr->memory_request.packager(
                 this->get_id(),                                         /// Request Owner
@@ -1258,25 +1142,16 @@ void processor_t::stage_rename() {
                 PACKAGE_STATE_TRANSMIT,                                 /// Pack. State
                 this->stage_rename_cycles + this->stage_dispatch_cycles + this->stage_execution_cycles,  /// Stall Cycles
 
-                mvx_operation,                                          // MVX Operation
+                this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_HMC_ALUR ? MEMORY_OPERATION_HMC_ALUR : MEMORY_OPERATION_READ,                                  /// Mem. Operation
                 false,                                                  /// Is Answer
 
                 this->get_id(),                                                                 /// Src ID
                 this->get_interface_output_component(PROCESSOR_PORT_DATA_CACHE)->get_id(),      /// Dst ID
                 NULL,                                                   /// *Hops
-                POSITION_FAIL,
-                this->reorder_buffer[position_rob].uop.is_mvx,
-                this->rename_mvx_counter++,
-                this->reorder_buffer[position_rob].uop.mvx_read1,
-                this->reorder_buffer[position_rob].uop.mvx_read2,
-                this->reorder_buffer[position_rob].uop.mvx_write);                                         /// Hop Counter
-
-            /// Make connections between ROB and MOB
-            mob_line->rob_ptr = &this->reorder_buffer[position_rob];
-
+                POSITION_FAIL);  /// Hop Counter
         }
-
-        if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MEM_LOAD) {
+        else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MEM_STORE ||
+        this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_HMC_ALU) {
             ERROR_ASSERT_PRINTF(this->reorder_buffer[position_rob].mob_ptr->memory_request.state == PACKAGE_STATE_FREE, "ROB has a pointer to a non free package.")
             /// Fix the request size to fit inside the cache line
             uint64_t offset = this->reorder_buffer[position_rob].uop.memory_address & this->offset_bits_mask;
@@ -1296,50 +1171,22 @@ void processor_t::stage_rename() {
                 PACKAGE_STATE_TRANSMIT,                                 /// Pack. State
                 this->stage_rename_cycles + this->stage_dispatch_cycles + this->stage_execution_cycles,  /// Stall Cycles
 
-                MEMORY_OPERATION_READ,                                  /// Mem. Operation
+                this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_HMC_ALU ? MEMORY_OPERATION_HMC_ALU : MEMORY_OPERATION_WRITE,                                  /// Mem. Operation
                 false,                                                  /// Is Answer
 
                 this->get_id(),                                                                 /// Src ID
                 this->get_interface_output_component(PROCESSOR_PORT_DATA_CACHE)->get_id(),      /// Dst ID
                 NULL,                                                   /// *Hops
-                POSITION_FAIL,
-                false, 0, -1, -1, -1);                                         /// Hop Counter
-        }
-        else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MEM_STORE) {
-            ERROR_ASSERT_PRINTF(this->reorder_buffer[position_rob].mob_ptr->memory_request.state == PACKAGE_STATE_FREE, "ROB has a pointer to a non free package.")
-            /// Fix the request size to fit inside the cache line
-            uint64_t offset = this->reorder_buffer[position_rob].uop.memory_address & this->offset_bits_mask;
-            if (offset + this->reorder_buffer[position_rob].uop.memory_size >= sinuca_engine.get_global_line_size()) {
-                this->reorder_buffer[position_rob].uop.memory_size = sinuca_engine.get_global_line_size() - offset;
-            }
-
-            this->reorder_buffer[position_rob].mob_ptr->memory_request.packager(
-                this->get_id(),                                         /// Request Owner
-                this->reorder_buffer[position_rob].uop.opcode_number,   /// Opcode. Number
-                this->reorder_buffer[position_rob].uop.opcode_address,  /// Opcode. Address
-                this->reorder_buffer[position_rob].uop.uop_number,      /// Uop. Number
-
-                this->reorder_buffer[position_rob].uop.memory_address,  /// Mem. Address
-                this->reorder_buffer[position_rob].uop.memory_size,     /// Block Size
-
-                PACKAGE_STATE_TRANSMIT,                                 /// Pack. State
-                this->stage_rename_cycles + this->stage_dispatch_cycles + this->stage_execution_cycles,  /// Stall Cycles
-
-                MEMORY_OPERATION_WRITE,                                 /// Mem. Operation
-                false,                                                  /// Is Answer
-
-                this->get_id(),                                                                 /// Src ID
-                this->get_interface_output_component(PROCESSOR_PORT_DATA_CACHE)->get_id(),      /// Dst ID
-                NULL,                                                   /// *Hops
-                POSITION_FAIL,
-                false, 0, -1, -1, -1);                                         /// Hop Counter
+                POSITION_FAIL);  /// Hop Counter
         }
 
         // =====================================================================
         /// MEMORY DISAMBIGUATION
         /// Control the Memory Dependency - Memory READ/WRITE
         if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MEM_LOAD ||
-        this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MEM_STORE) {
+        this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MEM_STORE ||
+        this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_HMC_ALU ||
+        this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_HMC_ALUR) {
             /// Make connections between ROB and MOB
             mob_line->rob_ptr = &this->reorder_buffer[position_rob];
 
@@ -1538,6 +1385,7 @@ void processor_t::stage_dispatch() {
                 // =============================================================
                 // MEMORY OPERATIONS ==========================================
                 case INSTRUCTION_OPERATION_MEM_LOAD:
+                case INSTRUCTION_OPERATION_HMC_ALUR:
                     if (fu_mem_load < this->number_fu_mem_load) {
                         for (uint32_t i = 0; i < this->number_fu_mem_load; i++) {
                             if (this->ready_cycle_fu_mem_load[i] <= sinuca_engine.get_global_cycle()) {
@@ -1553,7 +1401,9 @@ void processor_t::stage_dispatch() {
                         }
                     }
                 break;
+
                 case INSTRUCTION_OPERATION_MEM_STORE:
+                case INSTRUCTION_OPERATION_HMC_ALU:
                     if (fu_mem_store < this->number_fu_mem_store) {
                         for (uint32_t i = 0; i < this->number_fu_mem_store; i++) {
                             if (this->ready_cycle_fu_mem_store[i] <= sinuca_engine.get_global_cycle()) {
@@ -1564,36 +1414,6 @@ void processor_t::stage_dispatch() {
                                 reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
                                 this->stat_dispatch_cycles_fu_mem_store += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
                                 reorder_buffer_line->uop.package_ready(this->latency_fu_mem_store);
-                                break;
-                            }
-                        }
-                    }
-                break;
-
-                // =============================================================
-                // MVX OPERATIONS (Wait Answer) ================================
-                case INSTRUCTION_OPERATION_MVX_LOCK:
-                case INSTRUCTION_OPERATION_MVX_UNLOCK:
-
-                case INSTRUCTION_OPERATION_MVX_LOAD:
-                case INSTRUCTION_OPERATION_MVX_STORE:
-
-                case INSTRUCTION_OPERATION_MVX_INT_ALU:
-                case INSTRUCTION_OPERATION_MVX_INT_MUL:
-                case INSTRUCTION_OPERATION_MVX_INT_DIV:
-                case INSTRUCTION_OPERATION_MVX_FP_ALU :
-                case INSTRUCTION_OPERATION_MVX_FP_MUL :
-                case INSTRUCTION_OPERATION_MVX_FP_DIV :
-                    if (fu_mem_load < this->number_fu_mem_load) {
-                        for (uint32_t i = 0; i < this->number_fu_mem_load; i++) {
-                            if (this->ready_cycle_fu_mem_load[i] <= sinuca_engine.get_global_cycle()) {
-                                this->ready_cycle_fu_mem_load[i] = sinuca_engine.get_global_cycle() + this->wait_between_fu_mem_load;
-
-                                fu_mem_load++;
-                                dispatched = true;
-                                reorder_buffer_line->stage = PROCESSOR_STAGE_EXECUTION;
-                                this->stat_dispatch_cycles_fu_mem_load += sinuca_engine.get_global_cycle() - reorder_buffer_line->uop.ready_cycle;
-                                reorder_buffer_line->uop.package_ready(this->latency_fu_mem_load);
                                 break;
                             }
                         }
@@ -1697,7 +1517,9 @@ void processor_t::stage_execution() {
 
                 // MEMORY LOAD/STORE ==========================================
                 /// FUNC_UNIT_MEM_LOAD => READ_BUFFER
-                case INSTRUCTION_OPERATION_MEM_LOAD: {
+                case INSTRUCTION_OPERATION_MEM_LOAD:
+                case INSTRUCTION_OPERATION_HMC_ALUR:
+                {
                     ERROR_ASSERT_PRINTF(reorder_buffer_line->mob_ptr != NULL, "Read with a NULL pointer to MOB")
                     this->memory_order_buffer_read_executed++;
                     reorder_buffer_line->mob_ptr->uop_executed = true;
@@ -1713,7 +1535,9 @@ void processor_t::stage_execution() {
 
 
                 /// FUNC_UNIT_MEM_STORE => WRITE_BUFFER
-                case INSTRUCTION_OPERATION_MEM_STORE: {
+                case INSTRUCTION_OPERATION_MEM_STORE:
+                case INSTRUCTION_OPERATION_HMC_ALU:
+                {
                     ERROR_ASSERT_PRINTF(reorder_buffer_line->mob_ptr != NULL, "Write with a NULL pointer to MOB")
                     this->memory_order_buffer_write_executed++;
                     reorder_buffer_line->mob_ptr->uop_executed = true;
@@ -1732,34 +1556,6 @@ void processor_t::stage_execution() {
                         this->solve_register_dependency(reorder_buffer_line);
                     }
 
-                    total_executed++;
-                    /// Remove from the Functional Units
-                    this->unified_functional_units.erase(this->unified_functional_units.begin() + k);
-                    k--;
-                }
-                break;
-
-                // MVX ==========================================
-                /// FUNC_UNIT_MEM_LOAD => READ_BUFFER (Wait Answer)
-                case INSTRUCTION_OPERATION_MVX_LOCK:
-                case INSTRUCTION_OPERATION_MVX_UNLOCK:
-
-                case INSTRUCTION_OPERATION_MVX_LOAD:
-                case INSTRUCTION_OPERATION_MVX_STORE:
-
-                case INSTRUCTION_OPERATION_MVX_INT_ALU:
-                case INSTRUCTION_OPERATION_MVX_INT_MUL:
-                case INSTRUCTION_OPERATION_MVX_INT_DIV:
-                case INSTRUCTION_OPERATION_MVX_FP_ALU :
-                case INSTRUCTION_OPERATION_MVX_FP_MUL :
-                case INSTRUCTION_OPERATION_MVX_FP_DIV :
-                {
-                    ERROR_ASSERT_PRINTF(reorder_buffer_line->mob_ptr != NULL, "Read with a NULL pointer to MOB")
-                    this->memory_order_buffer_read_executed++;
-                    reorder_buffer_line->mob_ptr->uop_executed = true;
-                    /// Waits for the cache to send the answer
-                    reorder_buffer_line->uop.state = PACKAGE_STATE_TRANSMIT;
-                    reorder_buffer_line->uop.package_ready(this->stage_execution_cycles);
                     total_executed++;
                     /// Remove from the Functional Units
                     this->unified_functional_units.erase(this->unified_functional_units.begin() + k);
@@ -1975,18 +1771,10 @@ void processor_t::stage_commit() {
                     this->add_stat_memory_write_completed(this->reorder_buffer[pos_buffer].uop.born_cycle);
                 break;
 
-                // MVX OPERATIONS
-                case INSTRUCTION_OPERATION_MVX_LOCK:
-                case INSTRUCTION_OPERATION_MVX_UNLOCK:
-                case INSTRUCTION_OPERATION_MVX_LOAD:
-                case INSTRUCTION_OPERATION_MVX_STORE:
-                case INSTRUCTION_OPERATION_MVX_INT_ALU:
-                case INSTRUCTION_OPERATION_MVX_INT_MUL:
-                case INSTRUCTION_OPERATION_MVX_INT_DIV:
-                case INSTRUCTION_OPERATION_MVX_FP_ALU :
-                case INSTRUCTION_OPERATION_MVX_FP_MUL :
-                case INSTRUCTION_OPERATION_MVX_FP_DIV :
-                    this->add_stat_mvx_completed(this->reorder_buffer[pos_buffer].uop.born_cycle);
+                // HMC OPERATIONS
+                case INSTRUCTION_OPERATION_HMC_ALU:
+                case INSTRUCTION_OPERATION_HMC_ALUR:
+                    this->add_stat_hmc_completed(this->reorder_buffer[pos_buffer].uop.born_cycle);
                 break;
 
                 // BRANCHES
@@ -2156,20 +1944,10 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
         break;
 
 
+        // Receiving a HMC
+        case MEMORY_OPERATION_HMC_ALUR:
+
         case MEMORY_OPERATION_READ:
-        // Receiving a MVX
-        case MEMORY_OPERATION_MVX_LOCK:
-        case MEMORY_OPERATION_MVX_UNLOCK:
-
-        case MEMORY_OPERATION_MVX_LOAD:
-        case MEMORY_OPERATION_MVX_STORE:
-
-        case MEMORY_OPERATION_MVX_INT_ALU:
-        case MEMORY_OPERATION_MVX_INT_MUL:
-        case MEMORY_OPERATION_MVX_INT_DIV:
-        case MEMORY_OPERATION_MVX_FP_ALU :
-        case MEMORY_OPERATION_MVX_FP_MUL :
-        case MEMORY_OPERATION_MVX_FP_DIV :
 
             ERROR_ASSERT_PRINTF(input_port == PROCESSOR_PORT_DATA_CACHE, "Receiving read package from a wrong port.\n");
             /// Control Parallel Requests
@@ -2189,9 +1967,8 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
             }
         break;
 
-        // Receiving a wrong HVX
-        case MEMORY_OPERATION_MVX_NANO_LOAD:
-        case MEMORY_OPERATION_MVX_NANO_STORE:
+        // Receiving a wrong HMC
+        case MEMORY_OPERATION_HMC_ALU:
 
         case MEMORY_OPERATION_WRITE:
         case MEMORY_OPERATION_WRITEBACK:
@@ -2296,8 +2073,8 @@ void processor_t::reset_statistics() {
     this->set_stat_memory_write_completed(0);
     this->set_stat_address_to_address(0);
 
-    // MVX Executed Instructions
-    this->set_stat_mvx_completed(0);
+    // HMC Executed Instructions
+    this->set_stat_hmc_completed(0);
 
     /// Dispatch Cycles Stall
     this->set_stat_dispatch_cycles_fu_int_alu(0);
@@ -2324,10 +2101,10 @@ void processor_t::reset_statistics() {
     this->stat_max_memory_write_wait_time = 0;
     this->stat_accumulated_memory_write_wait_time = 0;
 
-    // MVX Cycles Stall
-    this->stat_min_mvx_wait_time = MAX_ALIVE_TIME;
-    this->stat_max_mvx_wait_time = 0;
-    this->stat_accumulated_mvx_wait_time = 0;
+    // HMC Cycles Stall
+    this->stat_min_hmc_wait_time = MAX_ALIVE_TIME;
+    this->stat_max_hmc_wait_time = 0;
+    this->stat_accumulated_hmc_wait_time = 0;
 
 
     this->branch_predictor->reset_statistics();
@@ -2409,8 +2186,8 @@ void processor_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_memory_write_completed", stat_memory_write_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_address_to_address", stat_address_to_address);
 
-    // MVX
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_mvx_completed", stat_mvx_completed);
+    // HMC
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_hmc_completed", stat_hmc_completed);
 
     /// Dispatch Cycles Stall
     sinuca_engine.write_statistics_small_separator();
@@ -2459,11 +2236,11 @@ void processor_t::print_statistics() {
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_memory_write_wait_time_ratio", stat_accumulated_memory_write_wait_time, stat_memory_write_completed);
 
 
-    // MVX Cycles Stall
+    // HMC Cycles Stall
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_mvx_wait_time", stat_min_mvx_wait_time);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_mvx_wait_time", stat_max_mvx_wait_time);
-    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_mvx_wait_time_ratio", stat_accumulated_mvx_wait_time, stat_memory_read_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_hmc_wait_time", stat_min_hmc_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_hmc_wait_time", stat_max_hmc_wait_time);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_hmc_wait_time_ratio", stat_accumulated_hmc_wait_time, stat_memory_read_completed);
 
 
 

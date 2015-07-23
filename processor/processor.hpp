@@ -232,9 +232,8 @@ class processor_t : public interconnection_interface_t {
         uint64_t stat_memory_write_completed;
         uint64_t stat_address_to_address;
 
-        // Executed mvx
-        uint64_t rename_mvx_counter;
-        uint64_t stat_mvx_completed;
+        // Executed HMC
+        uint64_t stat_hmc_completed;
 
         /// Dispatch Cycles Stall
         uint64_t stat_dispatch_cycles_fu_int_alu;
@@ -261,10 +260,10 @@ class processor_t : public interconnection_interface_t {
         uint64_t stat_max_memory_write_wait_time;
         uint64_t stat_accumulated_memory_write_wait_time;
 
-        // MVX Cycles Stall
-        uint64_t stat_min_mvx_wait_time;
-        uint64_t stat_max_mvx_wait_time;
-        uint64_t stat_accumulated_mvx_wait_time;
+        // HMC Cycles Stall
+        uint64_t stat_min_hmc_wait_time;
+        uint64_t stat_max_hmc_wait_time;
+        uint64_t stat_accumulated_hmc_wait_time;
 
 
 
@@ -494,14 +493,14 @@ class processor_t : public interconnection_interface_t {
             if (this->stat_max_memory_write_wait_time < new_time) this->stat_max_memory_write_wait_time = new_time;
         };
 
-        // MVX
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_mvx_completed)
-        inline void add_stat_mvx_completed(uint64_t born_cycle) {
-            this->stat_mvx_completed++;
+        // HMC
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_hmc_completed)
+        inline void add_stat_hmc_completed(uint64_t born_cycle) {
+            this->stat_hmc_completed++;
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
-            this->stat_accumulated_mvx_wait_time += new_time;
-            if (this->stat_min_mvx_wait_time > new_time) this->stat_min_mvx_wait_time = new_time;
-            if (this->stat_max_mvx_wait_time < new_time) this->stat_max_mvx_wait_time = new_time;
+            this->stat_accumulated_hmc_wait_time += new_time;
+            if (this->stat_min_hmc_wait_time > new_time) this->stat_min_hmc_wait_time = new_time;
+            if (this->stat_max_hmc_wait_time < new_time) this->stat_max_hmc_wait_time = new_time;
         };
 
 

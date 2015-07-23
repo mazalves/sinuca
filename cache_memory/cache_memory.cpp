@@ -629,6 +629,7 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
     else {
         int32_t slot = POSITION_FAIL;
         switch (package->memory_operation) {
+
             case MEMORY_OPERATION_READ:
             case MEMORY_OPERATION_INST:
             case MEMORY_OPERATION_PREFETCH:
@@ -656,40 +657,25 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
             }
             break;
 
-            // MVX
-            case MEMORY_OPERATION_MVX_LOCK:
-            case MEMORY_OPERATION_MVX_UNLOCK:
-            case MEMORY_OPERATION_MVX_LOAD:
-            case MEMORY_OPERATION_MVX_STORE:
-            case MEMORY_OPERATION_MVX_INT_ALU:
-            case MEMORY_OPERATION_MVX_INT_MUL:
-            case MEMORY_OPERATION_MVX_INT_DIV:
-            case MEMORY_OPERATION_MVX_FP_ALU :
-            case MEMORY_OPERATION_MVX_FP_MUL :
-            case MEMORY_OPERATION_MVX_FP_DIV :
+            // HMC
+            case MEMORY_OPERATION_HMC_ALU:
+            case MEMORY_OPERATION_HMC_ALUR:
             {
                 /// Control Parallel Requests
                 if (this->recv_rqst_read_ready_cycle <= sinuca_engine.get_global_cycle()) {
                     slot = this->allocate_request(package);
                     if (slot != POSITION_FAIL) {
-                        CACHE_DEBUG_PRINTF("\t RECEIVED MVX\n");
+                        CACHE_DEBUG_PRINTF("\t RECEIVED READ REQUEST\n");
                         this->mshr_buffer[slot].package_untreated(0);
                         this->recv_rqst_read_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
                         this->remove_token_list(package);
+
                         return OK;
                     }
                 }
-                CACHE_DEBUG_PRINTF("\tRECV MVX FAIL (BUSY)\n");
+                CACHE_DEBUG_PRINTF("\tRECV DATA FAIL (BUSY)\n");
                 return FAIL;
             }
-            break;
-
-            // =============================================================
-            // Receiving a wrong HVX
-            case MEMORY_OPERATION_MVX_NANO_LOAD:
-            case MEMORY_OPERATION_MVX_NANO_STORE:
-                ERROR_PRINTF("Directory sending %s.\n", get_enum_memory_operation_char(package->memory_operation));
-                return PACKAGE_STATE_UNTREATED;
             break;
 
 
@@ -873,21 +859,10 @@ void cache_memory_t::cache_stats(memory_operation_t memory_operation, bool is_hi
             break;
 
             // =============================================================
-            // Receiving a wrong HVX
-            case MEMORY_OPERATION_MVX_NANO_LOAD:
-            case MEMORY_OPERATION_MVX_NANO_STORE:
-            // MVX
-            case MEMORY_OPERATION_MVX_LOCK:
-            case MEMORY_OPERATION_MVX_UNLOCK:
-            case MEMORY_OPERATION_MVX_LOAD:
-            case MEMORY_OPERATION_MVX_STORE:
-            case MEMORY_OPERATION_MVX_INT_ALU:
-            case MEMORY_OPERATION_MVX_INT_MUL:
-            case MEMORY_OPERATION_MVX_INT_DIV:
-            case MEMORY_OPERATION_MVX_FP_ALU :
-            case MEMORY_OPERATION_MVX_FP_MUL :
-            case MEMORY_OPERATION_MVX_FP_DIV :
-                ERROR_PRINTF("Entering at cache_stats() for a MVX instruction");
+            // Receiving a wrong HMC
+            case MEMORY_OPERATION_HMC_ALU:
+            case MEMORY_OPERATION_HMC_ALUR:
+                ERROR_PRINTF("Entering at cache_stats() for a HMC instruction");
             break;
 
         }
@@ -915,22 +890,10 @@ void cache_memory_t::cache_stats(memory_operation_t memory_operation, bool is_hi
             break;
 
             // =============================================================
-            // Receiving a wrong HVX
-            case MEMORY_OPERATION_MVX_NANO_LOAD:
-            case MEMORY_OPERATION_MVX_NANO_STORE:
-
-            // MVX
-            case MEMORY_OPERATION_MVX_LOCK:
-            case MEMORY_OPERATION_MVX_UNLOCK:
-            case MEMORY_OPERATION_MVX_LOAD:
-            case MEMORY_OPERATION_MVX_STORE:
-            case MEMORY_OPERATION_MVX_INT_ALU:
-            case MEMORY_OPERATION_MVX_INT_MUL:
-            case MEMORY_OPERATION_MVX_INT_DIV:
-            case MEMORY_OPERATION_MVX_FP_ALU :
-            case MEMORY_OPERATION_MVX_FP_MUL :
-            case MEMORY_OPERATION_MVX_FP_DIV :
-                ERROR_PRINTF("Entering at cache_stats() for a MVX instruction");
+            // Receiving a wrong HMC
+            case MEMORY_OPERATION_HMC_ALU:
+            case MEMORY_OPERATION_HMC_ALUR:
+                ERROR_PRINTF("Entering at cache_stats() for a HMC instruction");
             break;
 
         }
@@ -960,27 +923,11 @@ void cache_memory_t::cache_wait(memory_package_t *package) {
             this->add_stat_writeback_wait(package->born_cycle);
         break;
 
-        // MVX
-        case MEMORY_OPERATION_MVX_LOCK:
-        case MEMORY_OPERATION_MVX_UNLOCK:
-        case MEMORY_OPERATION_MVX_LOAD:
-        case MEMORY_OPERATION_MVX_STORE:
-        case MEMORY_OPERATION_MVX_INT_ALU:
-        case MEMORY_OPERATION_MVX_INT_MUL:
-        case MEMORY_OPERATION_MVX_INT_DIV:
-        case MEMORY_OPERATION_MVX_FP_ALU :
-        case MEMORY_OPERATION_MVX_FP_MUL :
-        case MEMORY_OPERATION_MVX_FP_DIV :
-            this->add_stat_mvx_wait(package->born_cycle);
+        // HMC
+        case MEMORY_OPERATION_HMC_ALU:
+        case MEMORY_OPERATION_HMC_ALUR:
+            this->add_stat_hmc_wait(package->born_cycle);
         break;
-
-        // =============================================================
-        // Receiving a wrong HVX
-        case MEMORY_OPERATION_MVX_NANO_LOAD:
-        case MEMORY_OPERATION_MVX_NANO_STORE:
-            ERROR_PRINTF("Cache receiving %s.\n", get_enum_memory_operation_char(package->memory_operation));
-        break;
-
 
     }
 };

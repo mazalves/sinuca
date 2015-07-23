@@ -32,11 +32,8 @@ RM = rm -f
 # ~ LDFLAGS = -ggdb
 
 # ~ ## EXECUTION
-FLAGS =   -O3 -ggdb -Wall -Wextra -Werror -rdynamic
+FLAGS =   -O3 -ggdb -Wall -Wextra -Werror -rdynamic -std=c++0x
 LDFLAGS = -ggdb -rdynamic
-# ~ =======
-# ~ FLAGS =   -O3 -ggdb -Wall -Wextra -Werror -std=c++0x
-# ~ LDFLAGS = -ggdb
 
 ########################################################
 # ~ MACHINE=$(shell uname -m)
