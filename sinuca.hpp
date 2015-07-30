@@ -160,7 +160,7 @@ extern sinuca_engine_t sinuca_engine;
 
 /// DEBUG DESCRIPTION: Lots of details do help during the debug phase.
 
-#define SINUCA_DEBUG
+// ~ #define SINUCA_DEBUG
 #ifdef SINUCA_DEBUG
     // ~ #define CONFIGURATOR_DEBUG
     // ~ #define TRACE_READER_DEBUG
@@ -173,7 +173,7 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define LINE_USAGE_PREDICTOR_DEBUG
     // ~ #define MEMORY_CONTROLLER_DEBUG
     // ~ #define ROUTER_DEBUG
-    #define INTERCONNECTION_CTRL_DEBUG
+    // ~ #define INTERCONNECTION_CTRL_DEBUG
     // ~ #define DIRECTORY_CTRL_DEBUG
     // ~ #define SHOW_FREE_PACKAGE
     #define DEBUG_PRINTF(...)   {\

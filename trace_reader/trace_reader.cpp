@@ -340,6 +340,22 @@ bool trace_reader_t::trace_fetch(uint32_t cpuid, opcode_package_t *m) {
     opcode_package_t NewOpcode;
     sync_t sync_found = SYNC_FREE;
 
+    /// Spawn Warmup
+    if (trace_opcode_total == sinuca_engine.arg_warmup_instructions) {
+        /// Next cycle all the statistics will be reset
+        sinuca_engine.set_is_warmup(true);
+    }
+
+    /// Spawn Stopat
+    if (sinuca_engine.arg_stopat_instructions != 0 && trace_opcode_total == sinuca_engine.arg_stopat_instructions) {
+        /// All the cores will achieve the EOF
+        sinuca_engine.set_is_processor_trace_eof(cpuid);
+        return FAIL;
+    }
+
+    this->trace_opcode_total++;
+
+
     // =========================================================================
     /// Fetch new BBL inside the dynamic file.
     // =========================================================================
@@ -398,13 +414,6 @@ bool trace_reader_t::trace_fetch(uint32_t cpuid, opcode_package_t *m) {
     m->sync_type = sync_found;
     this->trace_opcode_counter[cpuid]++;
 
-    /// Spawn Warmup
-    if (trace_opcode_total == sinuca_engine.arg_warmup_instructions) {
-        /// Next cycle all the statistics will be reset
-        sinuca_engine.set_is_warm_up(true);
-    }
-    this->trace_opcode_total++;
-
     // =========================================================================
     /// If it is LOAD/STORE -> Fetch new MEMORY inside the memory file
     // =========================================================================
@@ -422,6 +431,8 @@ bool trace_reader_t::trace_fetch(uint32_t cpuid, opcode_package_t *m) {
         this->trace_next_memory(cpuid);
         m->trace_string_to_write(this->line_memory[cpuid], this->actual_bbl[cpuid]);
     }
+
+
 
     TRACE_READER_DEBUG_PRINTF("CPU[%d] Found Operation [%s]. Found Memory [%s].\n", cpuid, m->content_to_string().c_str(), this->line_memory[cpuid]);
     return OK;

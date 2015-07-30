@@ -664,7 +664,7 @@ int32_t memory_controller_t::allocate_prefetch(memory_package_t* package){
 // ============================================================================
 int32_t memory_controller_t::send_package(memory_package_t *package) {
     MEMORY_CONTROLLER_DEBUG_PRINTF("send_package() package:%s\n", package->content_to_string().c_str());
-    // ~ ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
+    ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(package->memory_operation != MEMORY_OPERATION_WRITEBACK && package->memory_operation != MEMORY_OPERATION_WRITE, "Main memory must never send answer for WRITE.\n");
 
     if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
@@ -678,7 +678,7 @@ int32_t memory_controller_t::send_package(memory_package_t *package) {
         uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(package, this, this->get_interface_output_component(output_port));
         bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port), transmission_latency);
         if (sent) {
-            MEMORY_CONTROLLER_DEBUG_PRINTF("\tSEND OK\n");
+            MEMORY_CONTROLLER_DEBUG_PRINTF("\tSEND OK (latency:%u)\n", transmission_latency);
             this->send_ready_cycle = sinuca_engine.get_global_cycle() + transmission_latency;
             return transmission_latency;
         }

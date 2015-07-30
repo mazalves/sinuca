@@ -37,6 +37,7 @@ static void display_use() {
     SINUCA_PRINTF("\t -trace      \t FILE          \t Trace file base name. **Required\n");
     SINUCA_PRINTF("\t -result     \t FILE          \t Output result file name. Default is \"stdout\".\n");
     SINUCA_PRINTF("\t -warmup     \t INSTRUCTIONS  \t Warm-up instructions (opcodes) before start statistics. Default is 0.\n");
+    SINUCA_PRINTF("\t -stopat     \t INSTRUCTIONS  \t Instructions (opcodes) to be executed before stop the simulation. Default is trace size.\n");
     SINUCA_PRINTF("\t -compressed \t BOOL          \t Set between the compressed (true) and uncompressed (false) trace file. Default is true.\n");
     SINUCA_PRINTF("\t -graph      \t FILE          \t Output graph file name to be used with GraphViz.\n");
     SINUCA_PRINTF("\t -affinity   \t THREADS       \t Inform a different affinity between the trace files and the cores.\n");
@@ -53,6 +54,7 @@ static void process_argv(int argc, char **argv) {
     sinuca_engine.arg_trace_file_name = NULL;
     sinuca_engine.arg_result_file_name = NULL;
     sinuca_engine.arg_warmup_instructions = 0;
+    sinuca_engine.arg_stopat_instructions = 0;
     sinuca_engine.arg_graph_file_name = NULL;
     sinuca_engine.arg_default_affinity = true;
 
@@ -90,6 +92,15 @@ static void process_argv(int argc, char **argv) {
             sinuca_engine.arg_warmup_instructions = atoi(*argv);
             if (atoi(*argv) < 0) {
                 SINUCA_PRINTF(">> Warm-up instructions should be greater or equal than zero.\n\n")
+                display_use();
+            }
+        }
+        else if (strcmp(*argv, "-stopat") == 0) {
+            argc--;
+            argv++;
+            sinuca_engine.arg_stopat_instructions = atoi(*argv);
+            if (atoi(*argv) <= 0) {
+                SINUCA_PRINTF(">> Stop-at instructions should be greater than zero.\n\n")
                 display_use();
             }
         }
@@ -155,6 +166,7 @@ static void process_argv(int argc, char **argv) {
     SINUCA_PRINTF("TRACE FILE:         %s\n", sinuca_engine.arg_trace_file_name         != NULL ? sinuca_engine.arg_trace_file_name         : "MISSING");
     SINUCA_PRINTF("RESULT FILE:        %s\n", sinuca_engine.arg_result_file_name        != NULL ? sinuca_engine.arg_result_file_name        : "MISSING");
     SINUCA_PRINTF("WARM-UP OPCODES:    %u\n", sinuca_engine.arg_warmup_instructions);
+    SINUCA_PRINTF("STOP-AT OPCODES:    %u\n", sinuca_engine.arg_stopat_instructions);
     SINUCA_PRINTF("GRAPH FILE:         %s\n", sinuca_engine.arg_graph_file_name         != NULL ? sinuca_engine.arg_graph_file_name        : "MISSING");
     SINUCA_PRINTF("AFFINITY:           %s\n", sinuca_engine.arg_default_affinity ? "DEFAULT" : "USER DEFINED");
     for (uint32_t i=0; i<core_affinity; i++) {
@@ -281,12 +293,12 @@ int main(int argc, char **argv) {
 
     /// Start CLOCK
     while (sinuca_engine.get_is_simulation_allocated() && sinuca_engine.alive()) {
-        /// Spawn Warmup - is_warm_up is set inside the trace_reader
-        if (sinuca_engine.is_warm_up == true) {
+        /// Spawn Warmup - is_warmup is set inside the trace_reader
+        if (sinuca_engine.is_warmup == true) {
             SINUCA_PRINTF("Warm-Up End - Cycle: %-12" PRIu64 "\n", sinuca_engine.get_global_cycle() );
 
             sinuca_engine.global_reset_statistics();
-            sinuca_engine.is_warm_up = false;
+            sinuca_engine.is_warmup = false;
         }
 
         /// Progress Information

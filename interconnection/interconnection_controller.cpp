@@ -424,16 +424,35 @@ uint32_t interconnection_controller_t::find_package_route_latency(memory_package
         case MEMORY_OPERATION_INST:
         case MEMORY_OPERATION_READ:
         case MEMORY_OPERATION_PREFETCH:
+            /// BIG
+            if (package->is_answer) {
+                return max_latency;
+            }
+            /// SMALL
+            else {
+                return low_latency;
+            }
+        break;
 
         case MEMORY_OPERATION_WRITE:
         case MEMORY_OPERATION_WRITEBACK:
+            /// SMALL
+            if (package->is_answer) {
+                return low_latency;
+            }
+            /// BIG
+            else {
+                return max_latency;
+            }
+        break;
 
         // HMC
         case MEMORY_OPERATION_HMC_ALU:
         case MEMORY_OPERATION_HMC_ALUR:
-
-            return low_latency;
+            /// BIG
+            return max_latency;
         break;
+
     }
     ERROR_PRINTF("Found MEMORY_OPERATION_NUMBER\n");
     return 1;
