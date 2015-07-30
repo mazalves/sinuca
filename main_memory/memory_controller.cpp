@@ -112,8 +112,10 @@ void memory_controller_t::allocate() {
         this->channels[i].set_memory_controller_id(this->get_id());
 
         this->channels[i].bank_per_channel = this->bank_per_channel;
-        this->channels[i].bank_buffer_size = this->bank_buffer_size;
         this->channels[i].bank_selection_policy = this->bank_selection_policy;
+        this->channels[i].bank_buffer_size = this->bank_buffer_size;
+
+        this->channels[i].page_policy = this->page_policy;
 
         this->channels[i].request_priority_policy = this->request_priority_policy;
         this->channels[i].write_priority_policy = this->write_priority_policy;

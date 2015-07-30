@@ -1283,6 +1283,17 @@ void sinuca_engine_t::initialize_memory_controller() {
                 ERROR_PRINTF("MAIN MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_memory_controller[ memory_controller_parameters.back() ].c_str(), memory_controller_parameters.back());
             }
 
+            memory_controller_parameters.push_back("PAGE_POLICY");
+            if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "OPEN_ROW") ==  0) {
+                this->memory_controller_array[i]->set_page_policy(PAGE_POLICY_OPEN_ROW);
+            }
+            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "CLOSE_ROW") ==  0) {
+                this->memory_controller_array[i]->set_page_policy(PAGE_POLICY_CLOSE_ROW);
+            }
+            else {
+                ERROR_PRINTF("MAIN MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_memory_controller[ memory_controller_parameters.back() ].c_str(), memory_controller_parameters.back());
+            }
+
             memory_controller_parameters.push_back("REQUEST_PRIORITY_POLICY");
             if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BUFFER_HITS_FIRST") ==  0) {
                 this->memory_controller_array[i]->set_request_priority_policy(REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST);

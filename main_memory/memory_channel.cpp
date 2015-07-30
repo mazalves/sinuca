@@ -235,114 +235,50 @@ int32_t memory_channel_t::find_next_package(uint32_t bank) {
 
 
 // ============================================================================
-bool memory_channel_t::check_if_minimum_latency(uint32_t bank, memory_controller_command_t next_command) {
-    uint64_t actual_cycle = sinuca_engine.get_global_cycle();
+uint64_t memory_channel_t::get_minimum_latency(uint32_t bank, memory_controller_command_t next_command) {
+    uint64_t min_cycle = 0;
+    uint64_t a = 0;
+    uint64_t b = 0;
+    uint64_t c = 0;
+    uint64_t d = 0;
 
     switch (next_command){
         case MEMORY_CONTROLLER_COMMAND_PRECHARGE:
-            // ================================================================
-            /// Same Bank
-            if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_ras)
-            > actual_cycle)
-                return false;
-            else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_al + this->timing_burst + this->timing_rtp - this->timing_ccd)
-            > actual_cycle)
-                return false;
-            else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_al + this->timing_cwd + this->timing_burst + this->timing_wr)
-            > actual_cycle)
-                return false;
-            // ================================================================
-            return true;
+            a = this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_ras;
+            b = this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_al + this->timing_burst + this->timing_rtp - this->timing_ccd;
+            c = this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_al + this->timing_cwd + this->timing_burst + this->timing_wr;
         break;
 
         case MEMORY_CONTROLLER_COMMAND_ROW_ACCESS:
-            // ================================================================
-            /// Same Bank
-            if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_rc)
-            > actual_cycle)
-                return false;
-            // ================================================================
-            /// Same Channel
-            else if ((this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_rrd)
-            > actual_cycle)
-                return false;
-            // ================================================================
-            else {
-                uint32_t row_activated_inside_window = 0;
-                for (uint32_t i = 0; i < this->get_bank_per_channel(); i++) {
-                    if ((this->bank_last_command_cycle[i][MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_faw)
-                    > actual_cycle)
-                        row_activated_inside_window++;
-                }
-                if (row_activated_inside_window >= 4)
-                    return false;
+        {
+            /// Obtain the 4th newer RAS+FAW command amoung the banks.
+            uint64_t last_ras = 0;
+            for (uint32_t i = 0; i < this->get_bank_per_channel(); i++) {
+                last_ras = this->bank_last_command_cycle[i][MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_faw;
+                if ((a < last_ras) && (d = c) && (c = b) && (b=a) && (a=last_ras)) continue;
+                if ((b < last_ras) && (d = c) && (c = b) && (b=last_ras)) continue;
+                if ((c < last_ras) && (d = c) && (c = last_ras)) continue;
+                if ((d < last_ras) && (d = last_ras)) continue;
             }
-            return true;
+
+            a = this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_PRECHARGE] + this->timing_rp;
+            b = this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_rc;
+            c = this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_rrd;
+        }
         break;
 
         case MEMORY_CONTROLLER_COMMAND_COLUMN_READ:
-            // ================================================================
-            /// Same Bank
-            if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_rcd - this->timing_al)
-            > actual_cycle)
-                return false;
-
-        // ~ The channel verifications overlap these !!!
-            // ~ else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_burst)
-            // ~ > actual_cycle)
-                // ~ return false;
-            // ~ else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_ccd)
-            // ~ > actual_cycle)
-                // ~ return false;
-            // ~ else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_cwd + this->timing_burst + this->timing_wtr)
-            // ~ > actual_cycle)
-                // ~ return false;
-            // ================================================================
-            /// Same channel
-            else if ((this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_burst)
-            > actual_cycle)
-                return false;
-            else if ((this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_ccd)
-            > actual_cycle)
-                return false;
-            else if ((this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_cwd + this->timing_burst + this->timing_wtr)
-            > actual_cycle)
-                return false;
-            // ================================================================
-            return true;
+            a = this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_rcd - this->timing_al;
+            b = this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_burst;
+            c = this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_ccd;
+            d = this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_cwd + this->timing_burst + this->timing_wtr;
         break;
 
         case MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE:
-            // ================================================================
-            /// Same Bank
-            if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_rcd - this->timing_al)
-            > actual_cycle)
-                return false;
-
-        // ~ The channel verifications overlap these !!!
-            // ~ /// Consider that tRTRS - tCWL is equal to ZERO. (Both are parallel)
-            // ~ else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_cas + this->timing_burst)
-            // ~ > actual_cycle)
-                // ~ return false;
-            // ~ else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_burst)
-            // ~ > actual_cycle)
-                // ~ return false;
-            // ~ else if ((this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_ccd)
-            // ~ > actual_cycle)
-                // ~ return false;
-            // ================================================================
-            /// Same channel
-            else if ((this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_cas + this->timing_burst)
-            > actual_cycle)
-                return false;
-            else if ((this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_burst)
-            > actual_cycle)
-                return false;
-            else if ((this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_ccd)
-            > actual_cycle)
-                return false;
-            // ================================================================
-            return true;
+            a = this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_ROW_ACCESS] + this->timing_rcd - this->timing_al;
+            b = this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] + this->timing_cas + this->timing_burst;
+            c = this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_burst;
+            d = this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] + this->timing_ccd;
         break;
 
         case MEMORY_CONTROLLER_COMMAND_NUMBER:
@@ -350,8 +286,14 @@ bool memory_channel_t::check_if_minimum_latency(uint32_t bank, memory_controller
         break;
     }
 
-    ERROR_PRINTF("Could not check the minimum latency\n")
-    return false;
+
+    /// Obtain the maximum value to be respected
+    min_cycle = a;
+    (min_cycle < b) && (min_cycle = b);
+    (min_cycle < c) && (min_cycle = c);
+    (min_cycle < d) && (min_cycle = d);
+
+    return min_cycle;
 };
 
 // ============================================================================
@@ -405,7 +347,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
         // =====================================================================
         case MEMORY_CONTROLLER_COMMAND_PRECHARGE:
             /// Respect Min. Latency
-            if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_ROW_ACCESS)) {
+            if (get_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_ROW_ACCESS) > sinuca_engine.get_global_cycle()) {
                 MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
                 return;
             }
@@ -427,8 +369,8 @@ void memory_channel_t::clock(uint32_t subcycle) {
                 case MEMORY_OPERATION_HMC_ALUR:
                 {
                     /// Respect Min. Latency
-                    if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ) ||
-                    !check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
+                    if (get_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ) > sinuca_engine.get_global_cycle() ||
+                    get_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE) > sinuca_engine.get_global_cycle()) {
                         MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
                         return;
                     }
@@ -463,7 +405,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
                 case MEMORY_OPERATION_INST:
                 case MEMORY_OPERATION_PREFETCH:
                     /// Respect Min. Latency
-                    if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ)) {
+                    if (get_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ) > sinuca_engine.get_global_cycle()) {
                         MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
                         return;
                     }
@@ -481,7 +423,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
                 case MEMORY_OPERATION_WRITEBACK:
                 case MEMORY_OPERATION_WRITE:
                     /// Respect Min. Latency
-                    if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
+                    if (get_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE) > sinuca_engine.get_global_cycle()) {
                         MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
                         return;
                     }
@@ -500,10 +442,42 @@ void memory_channel_t::clock(uint32_t subcycle) {
             this->add_stat_row_buffer_hit();
             this->bank_buffer[bank].erase(this->bank_buffer[bank].begin() + this->bank_buffer_actual_position[bank]);
             this->bank_buffer_actual_position[bank] = -1;
+
+            //==================================================================
+            // CONTROL THE PAGE_POLICY
+            // If page_policy == close_row
+            if (this->page_policy == PAGE_POLICY_CLOSE_ROW) {
+                /// Select package to be treated
+                this->bank_buffer_actual_position[bank] = find_next_package(bank);
+                // If buffer is empty --->>> RowPrecharge
+                if (this->bank_buffer_actual_position[bank] == POSITION_FAIL) {
+                    uint64_t previous_latency = get_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_ROW_ACCESS);
+                    // Row precharge code here!!!!
+                    MEMORY_CONTROLLER_DEBUG_PRINTF("COLUMN_READ -> PRECHARGE (different row).\n");
+                    this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_PRECHARGE;
+                    this->bank_open_row_address[bank] = package->memory_address;
+                    this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_PRECHARGE] = sinuca_engine.get_global_cycle() + previous_latency;
+                    this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_PRECHARGE] = sinuca_engine.get_global_cycle() + previous_latency;
+                }
+                else {
+                    package = this->bank_buffer[bank][this->bank_buffer_actual_position[bank]];
+                    // If next package == row buffer miss --->>> RowPrecharge
+                    if (!cmp_row_bank_channel(this->bank_open_row_address[bank], package->memory_address)) {
+                        uint64_t previous_latency = get_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_ROW_ACCESS);
+                        // Row precharge code here!!!!
+                        MEMORY_CONTROLLER_DEBUG_PRINTF("COLUMN_READ -> PRECHARGE (different row).\n");
+                        this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_PRECHARGE;
+                        this->bank_open_row_address[bank] = package->memory_address;
+                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_PRECHARGE] = sinuca_engine.get_global_cycle() + previous_latency;
+                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_PRECHARGE] = sinuca_engine.get_global_cycle() + previous_latency;
+                    }
+                }
+            }
         break;
 
         // =====================================================================
         case MEMORY_CONTROLLER_COMMAND_COLUMN_READ:
+        case MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE:
             if (cmp_row_bank_channel(this->bank_open_row_address[bank], package->memory_address)) {
                 switch (package->memory_operation) {
                     // HMC
@@ -511,8 +485,8 @@ void memory_channel_t::clock(uint32_t subcycle) {
                     case MEMORY_OPERATION_HMC_ALUR:
                     {
                         /// Respect Min. Latency
-                        if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ) ||
-                        !check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
+                        if (get_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ) > sinuca_engine.get_global_cycle() ||
+                        get_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE) > sinuca_engine.get_global_cycle()) {
                             MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
                             return;
                         }
@@ -543,13 +517,11 @@ void memory_channel_t::clock(uint32_t subcycle) {
                     }
                     break;
 
-
-
                     case MEMORY_OPERATION_READ:
                     case MEMORY_OPERATION_INST:
                     case MEMORY_OPERATION_PREFETCH:
                         /// Respect Min. Latency
-                        if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ)) {
+                        if (get_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ) > sinuca_engine.get_global_cycle()) {
                             MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
                             return;
                         }
@@ -567,7 +539,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
                     case MEMORY_OPERATION_WRITEBACK:
                     case MEMORY_OPERATION_WRITE:
                         /// Respect Min. Latency
-                        if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
+                        if (get_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE) > sinuca_engine.get_global_cycle()) {
                             MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
                             return;
                         }
@@ -585,113 +557,46 @@ void memory_channel_t::clock(uint32_t subcycle) {
                 this->add_stat_row_buffer_hit();
                 this->bank_buffer[bank].erase(this->bank_buffer[bank].begin() + this->bank_buffer_actual_position[bank]);
                 this->bank_buffer_actual_position[bank] = -1;
+
+                //==================================================================
+                // CONTROL THE PAGE_POLICY
+                // If page_policy == close_row
+                if (this->page_policy == PAGE_POLICY_CLOSE_ROW) {
+                    /// Select package to be treated
+                    this->bank_buffer_actual_position[bank] = find_next_package(bank);
+                    // If buffer is empty --->>> RowPrecharge
+                    if (this->bank_buffer_actual_position[bank] == POSITION_FAIL) {
+                        uint64_t previous_latency = get_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_ROW_ACCESS);
+                        // Row precharge code here!!!!
+                        MEMORY_CONTROLLER_DEBUG_PRINTF("COLUMN_READ -> PRECHARGE (different row).\n");
+                        this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_PRECHARGE;
+                        this->bank_open_row_address[bank] = package->memory_address;
+                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_PRECHARGE] = sinuca_engine.get_global_cycle() + previous_latency;
+                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_PRECHARGE] = sinuca_engine.get_global_cycle() + previous_latency;
+                    }
+                    else {
+                        package = this->bank_buffer[bank][this->bank_buffer_actual_position[bank]];
+                        // If next package == row buffer miss --->>> RowPrecharge
+                        if (!cmp_row_bank_channel(this->bank_open_row_address[bank], package->memory_address)) {
+                            uint64_t previous_latency = get_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_ROW_ACCESS);
+                            // Row precharge code here!!!!
+                            MEMORY_CONTROLLER_DEBUG_PRINTF("COLUMN_READ -> PRECHARGE (different row).\n");
+                            this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_PRECHARGE;
+                            this->bank_open_row_address[bank] = package->memory_address;
+                            this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_PRECHARGE] = sinuca_engine.get_global_cycle() + previous_latency;
+                            this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_PRECHARGE] = sinuca_engine.get_global_cycle() + previous_latency;
+                        }
+                    }
+                }
             }
             else {
                 /// Respect Min. Latency
-                if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_PRECHARGE)) {
+                if (get_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_PRECHARGE) > sinuca_engine.get_global_cycle()) {
                     MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
                     return;
                 }
 
                 MEMORY_CONTROLLER_DEBUG_PRINTF("COLUMN_READ -> PRECHARGE (different row).\n");
-                this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_PRECHARGE;
-                this->bank_open_row_address[bank] = package->memory_address;
-                this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_PRECHARGE] = sinuca_engine.get_global_cycle();
-                this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_PRECHARGE] = sinuca_engine.get_global_cycle();
-            }
-        break;
-
-        // =====================================================================
-        case MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE:
-            if (cmp_row_bank_channel(this->bank_open_row_address[bank], package->memory_address)) {
-                switch (package->memory_operation) {
-                    // HMC
-                    case MEMORY_OPERATION_HMC_ALU:
-                    case MEMORY_OPERATION_HMC_ALUR:
-                    {
-                        /// Respect Min. Latency
-                        if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ) ||
-                        !check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
-                            MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
-                            return;
-                        }
-
-                        MEMORY_CONTROLLER_DEBUG_PRINTF("ROW_ACCESS -> COLUMN_READ.\n");
-                        this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE;
-                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
-                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
-
-                        uint64_t r_to_w_latency = this->timing_cas + this->timing_burst;
-
-                        if (package->memory_operation == MEMORY_OPERATION_HMC_ALUR) {
-                            /// Prepare for answer later
-                            package->is_answer = true;
-                            r_to_w_latency += this->hmc_latency_alur;
-                            package->package_transmit(r_to_w_latency + this->timing_cwd + this->timing_burst);
-                        }
-                        else {
-                            /// Prepare for answer later
-                            package->memory_size = 1;
-                            package->is_answer = true;
-                            r_to_w_latency += this->hmc_latency_alu;
-                            package->package_ready(r_to_w_latency + this->timing_cwd + this->timing_burst);
-                        }
-
-                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle() + r_to_w_latency;
-                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle() + r_to_w_latency;
-                    }
-                    break;
-
-                    case MEMORY_OPERATION_READ:
-                    case MEMORY_OPERATION_INST:
-                    case MEMORY_OPERATION_PREFETCH:
-                        /// Respect Min. Latency
-                        if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_READ)) {
-                            MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
-                            return;
-                        }
-
-                        MEMORY_CONTROLLER_DEBUG_PRINTF("COLUMN_WRITE -> COLUMN_READ.\n");
-                        this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_READ;
-                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
-                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_READ] = sinuca_engine.get_global_cycle();
-                        /// Prepare for answer later
-                        package->memory_size = sinuca_engine.get_global_line_size();
-
-                        package->is_answer = true;
-                        package->package_transmit(this->timing_cas + this->timing_burst);
-                    break;
-
-                    case MEMORY_OPERATION_WRITEBACK:
-                    case MEMORY_OPERATION_WRITE:
-                        /// Respect Min. Latency
-                        if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE)) {
-                            MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
-                            return;
-                        }
-
-                        MEMORY_CONTROLLER_DEBUG_PRINTF("COLUMN_WRITE -> COLUMN_WRITE.\n");
-                        this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE;
-                        this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
-                        this->channel_last_command_cycle[MEMORY_CONTROLLER_COMMAND_COLUMN_WRITE] = sinuca_engine.get_global_cycle();
-                        /// Max(tBurst, tCCD)
-                        package->is_answer = true;
-                        package->package_ready(this->timing_cwd + this->timing_burst);
-                    break;
-                }
-
-                this->add_stat_row_buffer_hit();
-                this->bank_buffer[bank].erase(this->bank_buffer[bank].begin() + this->bank_buffer_actual_position[bank]);
-                this->bank_buffer_actual_position[bank] = -1;
-            }
-            else {
-                /// Respect Min. Latency
-                if (!check_if_minimum_latency(bank, MEMORY_CONTROLLER_COMMAND_PRECHARGE)) {
-                    MEMORY_CONTROLLER_DEBUG_PRINTF("Minimum latency not ready yet.\n");
-                    return;
-                }
-
-                MEMORY_CONTROLLER_DEBUG_PRINTF("COLUMN_WRITE -> PRECHARGE (different row).\n");
                 this->bank_last_command[bank] = MEMORY_CONTROLLER_COMMAND_PRECHARGE;
                 this->bank_open_row_address[bank] = package->memory_address;
                 this->bank_last_command_cycle[bank][MEMORY_CONTROLLER_COMMAND_PRECHARGE] = sinuca_engine.get_global_cycle();

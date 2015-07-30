@@ -306,6 +306,14 @@ enum request_priority_t {
 const char *get_enum_request_priority_char(request_priority_t type);
 
 // ============================================================================
+/// Enumerates the policies to control the page (row buffer) inside the memory controller
+enum page_policy_t {
+    PAGE_POLICY_OPEN_ROW,
+    PAGE_POLICY_CLOSE_ROW
+};
+const char *get_enum_page_policy_char(page_policy_t type);
+
+// ============================================================================
 /// Enumerates the policies to give privilege of some operations over others
 enum write_priority_t {
     WRITE_PRIORITY_SERVICE_AT_NO_READ,

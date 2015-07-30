@@ -26,6 +26,7 @@ class memory_channel_t : public interconnection_interface_t {
         uint32_t bank_buffer_size;
         selection_t bank_selection_policy;
         uint32_t bank_row_buffer_size;
+        page_policy_t page_policy;
 
         request_priority_t request_priority_policy;
         write_priority_t write_priority_policy;
@@ -121,7 +122,7 @@ class memory_channel_t : public interconnection_interface_t {
         int32_t find_next_write_operation(uint32_t bank);
         int32_t find_next_package(uint32_t bank);
 
-        bool check_if_minimum_latency(uint32_t bank, memory_controller_command_t next_command);
+        uint64_t get_minimum_latency(uint32_t bank, memory_controller_command_t next_command);
 
         package_state_t treat_memory_request(memory_package_t *package);
 
@@ -134,6 +135,7 @@ class memory_channel_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, bank_per_channel)
         INSTANTIATE_GET_SET(uint32_t, bank_buffer_size)
         INSTANTIATE_GET_SET(selection_t, bank_selection_policy)
+        INSTANTIATE_GET_SET(page_policy_t, page_policy)
         INSTANTIATE_GET_SET(request_priority_t, request_priority_policy)
         INSTANTIATE_GET_SET(write_priority_t, write_priority_policy)
 

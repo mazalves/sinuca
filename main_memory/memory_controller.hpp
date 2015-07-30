@@ -39,6 +39,8 @@ class memory_controller_t : public interconnection_interface_t {
         selection_t bank_selection_policy;
         uint32_t bank_row_buffer_size;
 
+        page_policy_t page_policy;
+
         request_priority_t request_priority_policy;
         write_priority_t write_priority_policy;
 
@@ -212,6 +214,7 @@ class memory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, bank_buffer_size)
         INSTANTIATE_GET_SET(selection_t, bank_selection_policy)
         INSTANTIATE_GET_SET(uint32_t, bank_row_buffer_size)
+        INSTANTIATE_GET_SET(page_policy_t, page_policy)
 
         INSTANTIATE_GET_SET(request_priority_t, request_priority_policy)
         INSTANTIATE_GET_SET(write_priority_t, write_priority_policy)
