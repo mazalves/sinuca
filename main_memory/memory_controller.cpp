@@ -548,8 +548,8 @@ void memory_controller_t::clock(uint32_t subcycle) {
         if (mshr_born_ordered[i]->state == PACKAGE_STATE_TRANSMIT &&
         this->mshr_born_ordered[i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
 
-            // ~ ERROR_ASSERT_PRINTF(this->mshr_born_ordered[i]->is_answer == true, "Packages being transmited should be answer.")
-            MEMORY_CONTROLLER_DEBUG_PRINTF("\t Send RQST/ANSWER this->mshr_born_ordered[%d] %s\n", i, this->mshr_born_ordered[i]->content_to_string().c_str());
+            ERROR_ASSERT_PRINTF(this->mshr_born_ordered[i]->is_answer == true, "Packages being transmited should be answer.")
+            MEMORY_CONTROLLER_DEBUG_PRINTF("\t Send ANSWER this->mshr_born_ordered[%d] %s\n", i, this->mshr_born_ordered[i]->content_to_string().c_str());
             int32_t transmission_latency = send_package(mshr_born_ordered[i]);
             if (transmission_latency != POSITION_FAIL) {
                 this->mshr_born_ordered[i]->package_ready(transmission_latency);
@@ -620,6 +620,7 @@ void memory_controller_t::insert_mshr_born_ordered(memory_package_t* package){
 
 // ============================================================================
 int32_t memory_controller_t::allocate_request(memory_package_t* package){
+
     int32_t slot = memory_package_t::find_free(this->mshr_buffer, this->mshr_buffer_request_reserved_size);
     ERROR_ASSERT_PRINTF(slot != POSITION_FAIL, "Receiving a REQUEST package, but MSHR is full\n")
     if (slot != POSITION_FAIL) {
@@ -936,8 +937,17 @@ void memory_controller_t::periodic_check(){
                                                     this->mshr_buffer_writeback_reserved_size,
                                                     this->mshr_buffer_prefetch_reserved_size) == OK, "Check_age failed.\n");
 
-    for (uint32_t i = 0; i < this->channels_per_controller; i++) {
-        this->channels[i].periodic_check();
+    switch (this->write_priority_policy) {
+        case WRITE_PRIORITY_DRAIN_WHEN_FULL:
+        break;
+
+        case WRITE_PRIORITY_SERVICE_AT_NO_READ:
+            ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->mshr_buffer, this->mshr_buffer_size) == OK, "Check_age failed.\n");
+
+            for (uint32_t i = 0; i < this->channels_per_controller; i++) {
+                this->channels[i].periodic_check();
+            }
+        break;
     }
 };
 
