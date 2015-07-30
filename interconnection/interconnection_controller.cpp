@@ -350,7 +350,7 @@ void interconnection_controller_t::create_communication_cost() {
                 }
 
                 /// Set the high_latency (full package / answer)
-                this->high_latency_matrix[i][j] = max_latency * ((sinuca_engine.global_line_size / min_width) + 1 * ((sinuca_engine.global_line_size % min_width) != 0));
+                this->high_latency_matrix[i][j] = max_latency * ((sinuca_engine.global_line_size / min_width) + ((sinuca_engine.global_line_size % min_width) != 0));
 
                 /// Set the low_latency (empty package / request)
                 this->low_latency_matrix[i][j] = max_latency;

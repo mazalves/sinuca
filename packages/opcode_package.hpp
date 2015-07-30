@@ -51,6 +51,7 @@ class opcode_package_t {
 
         bool is_conditional;
         bool is_predicated;
+        bool is_prefetch;
 
         /// SINUCA Control Variables
         uint64_t opcode_number;
