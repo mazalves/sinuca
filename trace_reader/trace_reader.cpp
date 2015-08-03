@@ -392,7 +392,7 @@ bool trace_reader_t::trace_fetch(uint32_t cpuid, opcode_package_t *m) {
     // =========================================================================
     /// Fetch new INSTRUCTION inside the static file.
     // =========================================================================
-    ERROR_ASSERT_PRINTF(this->actual_bbl[cpuid] != 0, "Vai dar merdar essa porra");
+    ERROR_ASSERT_PRINTF(this->actual_bbl[cpuid] != 0, "First BBL from the dynamic trace file should be zero.\n");
     NewOpcode = this->static_dict[this->actual_bbl[cpuid]][this->actual_bbl_opcode[cpuid]];
     // ~ printf("CPU:%u  BBL:%u  OPCODE:%u = %s\n",cpuid, this->actual_bbl[cpuid], this->actual_bbl_opcode[cpuid], NewOpcode.content_to_string().c_str());
 

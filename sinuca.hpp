@@ -135,7 +135,7 @@ extern sinuca_engine_t sinuca_engine;
 #define PERIODIC_CHECK  10000000  /// Period between the Periodic Check
 // ~ #define PERIODIC_CHECK  1  /// Period between the Periodic Check
 
-// ~ #define INITIALIZE_DEBUG 8800000    /// Cycle to start the DEBUG_PRINTF (0 to disable)
+// ~ #define INITIALIZE_DEBUG 6800000    /// Cycle to start the DEBUG_PRINTF (0 to disable)
 #define INITIALIZE_DEBUG 0    /// Cycle to start the DEBUG_PRINTF (0 to disable)
 #define FINALIZE_DEBUG 0      /// Cycle to stop the DEBUG_PRINTF (0 to disable)
 
