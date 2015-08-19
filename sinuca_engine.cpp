@@ -27,6 +27,7 @@ sinuca_engine_t::sinuca_engine_t() {
     this->arg_trace_file_name = NULL;
     this->arg_result_file_name = NULL;
     this->arg_warmup_instructions = 0;
+    this->arg_stopat_instructions = 0;
     this->arg_graph_file_name = NULL;
 
     for (uint32_t i = 0; i < MAX_CORES; i++) {
@@ -75,7 +76,7 @@ sinuca_engine_t::sinuca_engine_t() {
     this->is_processor_trace_eof = NULL;
     this->is_simulation_eof = false;
     this->is_runtime_debug = true;
-    this->is_warm_up = false;
+    this->is_warmup = false;
     this->is_global_panic = false;
 
     this->trace_reader = new trace_reader_t;

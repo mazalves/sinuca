@@ -523,7 +523,7 @@ int32_t cache_memory_t::allocate_prefetch(memory_package_t* package){
 // ============================================================================
 int32_t cache_memory_t::send_package(memory_package_t *package) {
     CACHE_DEBUG_PRINTF("send_package() package:%s\n", package->content_to_string().c_str());
-    ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
+    // ~ ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
 
     /// NEW ANSWER
     if (package->is_answer) {
@@ -594,7 +594,7 @@ int32_t cache_memory_t::send_package(memory_package_t *package) {
 bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
     CACHE_DEBUG_PRINTF("receive_package() port:%u, package:%s\n", input_port, package->content_to_string().c_str());
 
-    ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
+    // ~ ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(get_bank(package->memory_address) == this->get_bank_number(), "Wrong bank.\n%s\n", package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(package->id_dst == this->get_id() && package->hop_count == POSITION_FAIL, "Received some package for a different id_dst(%d).\n%s\n", this->get_id(), package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Received a wrong input_port\n%s\n", package->content_to_string().c_str());
@@ -629,6 +629,7 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
     else {
         int32_t slot = POSITION_FAIL;
         switch (package->memory_operation) {
+
             case MEMORY_OPERATION_READ:
             case MEMORY_OPERATION_INST:
             case MEMORY_OPERATION_PREFETCH:
@@ -655,6 +656,28 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
                 return FAIL;
             }
             break;
+
+            // HMC
+            case MEMORY_OPERATION_HMC_ALU:
+            case MEMORY_OPERATION_HMC_ALUR:
+            {
+                /// Control Parallel Requests
+                if (this->recv_rqst_read_ready_cycle <= sinuca_engine.get_global_cycle()) {
+                    slot = this->allocate_request(package);
+                    if (slot != POSITION_FAIL) {
+                        CACHE_DEBUG_PRINTF("\t RECEIVED READ REQUEST\n");
+                        this->mshr_buffer[slot].package_untreated(0);
+                        this->recv_rqst_read_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
+                        this->remove_token_list(package);
+
+                        return OK;
+                    }
+                }
+                CACHE_DEBUG_PRINTF("\tRECV DATA FAIL (BUSY)\n");
+                return FAIL;
+            }
+            break;
+
 
             case MEMORY_OPERATION_WRITE:
             case MEMORY_OPERATION_WRITEBACK:
@@ -704,12 +727,14 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
         this->token_list[token_pos].memory_address == package->memory_address &&
         this->token_list[token_pos].memory_operation == package->memory_operation &&
         this->token_list[token_pos].id_owner == package->id_owner) {
+            CACHE_DEBUG_PRINTF("Found a token\n");
             break;
         }
     }
 
     /// 2. Name is not in the guest (token) list, lets add it.
     if (token_pos == this->token_list.size()) {
+        CACHE_DEBUG_PRINTF("Allocating a new token\n");
         /// Allocate the new token
         token_t new_token;
         new_token.id_owner = package->id_owner;
@@ -723,6 +748,7 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
 
     /// 3. If received already the ticket
     if (this->token_list[token_pos].is_coming) {
+        CACHE_DEBUG_PRINTF("Is coming = true\n");
         /// Come on in! Lets Party !
         return OK;
     }
@@ -742,11 +768,13 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
                     this->token_list[token_pos].is_coming = true;
 
                     /// Come on in! Lets Party !
+                    CACHE_DEBUG_PRINTF("Can come (same address)\n");
                     return OK;
                 }
                 else {
                     /// Hold on, wait in the line!
                     add_stat_full_mshr_buffer_request();
+                    CACHE_DEBUG_PRINTF("Can not come (same address)\n");
                     return FAIL;
                 }
             }
@@ -766,6 +794,7 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
                     this->token_list[token_pos].is_coming = true;
 
                     /// Come on in! Lets Party !
+                    CACHE_DEBUG_PRINTF("Can come (different address)\n");
                     return OK;
                 }
             }
@@ -773,10 +802,12 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
         else {
             /// Hold on, wait in the line!
             add_stat_full_mshr_buffer_request();
+            CACHE_DEBUG_PRINTF("Can not come (different address)\n");
             return FAIL;
         }
     }
 
+    CACHE_DEBUG_PRINTF("Cannot receive, too many requests\n");
     /// Hold on, wait in the line!
     add_stat_full_mshr_buffer_request();
     return FAIL;
@@ -826,6 +857,14 @@ void cache_memory_t::cache_stats(memory_operation_t memory_operation, bool is_hi
             case MEMORY_OPERATION_WRITEBACK:
                 this->add_stat_writeback_recv();
             break;
+
+            // =============================================================
+            // Receiving a wrong HMC
+            case MEMORY_OPERATION_HMC_ALU:
+            case MEMORY_OPERATION_HMC_ALUR:
+                ERROR_PRINTF("Entering at cache_stats() for a HMC instruction");
+            break;
+
         }
     }
     else {
@@ -849,6 +888,14 @@ void cache_memory_t::cache_stats(memory_operation_t memory_operation, bool is_hi
             case MEMORY_OPERATION_WRITEBACK:
                 this->add_stat_writeback_send();
             break;
+
+            // =============================================================
+            // Receiving a wrong HMC
+            case MEMORY_OPERATION_HMC_ALU:
+            case MEMORY_OPERATION_HMC_ALUR:
+                ERROR_PRINTF("Entering at cache_stats() for a HMC instruction");
+            break;
+
         }
     }
 };
@@ -875,6 +922,13 @@ void cache_memory_t::cache_wait(memory_package_t *package) {
         case MEMORY_OPERATION_WRITEBACK:
             this->add_stat_writeback_wait(package->born_cycle);
         break;
+
+        // HMC
+        case MEMORY_OPERATION_HMC_ALU:
+        case MEMORY_OPERATION_HMC_ALUR:
+            this->add_stat_hmc_wait(package->born_cycle);
+        break;
+
     }
 };
 

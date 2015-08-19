@@ -976,6 +976,7 @@ void sinuca_engine_t::initialize_cache_memory() {
             libconfig::Setting &cfg_line_usage_predictor = cfg_cache_memory_list[i][cache_memory_parameters.back()];
 
             line_usage_predictor_parameters.push_back("TYPE");
+
             if (strcasecmp(cfg_line_usage_predictor[ line_usage_predictor_parameters.back() ], "DEWP") ==  0) {
                 this->cache_memory_array[i]->line_usage_predictor = new line_usage_predictor_dewp_t;
                 line_usage_predictor_dewp_t *line_usage_predictor_ptr = static_cast<line_usage_predictor_dewp_t*>(this->cache_memory_array[i]->line_usage_predictor);
@@ -1210,20 +1211,26 @@ void sinuca_engine_t::initialize_memory_controller() {
             this->memory_controller_array[i]->set_interconnection_width(cfg_memory_controller[ memory_controller_parameters.back() ]);
 
             memory_controller_parameters.push_back("ADDRESS_MASK");
-            if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE") ==  0) {
-                this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE);
+            if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ],      "ROW_BANK_COLROW_COLBYTE") ==  0) {
+                this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_COLBYTE);
             }
             else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_CHANNEL_COLROW_COLBYTE") ==  0) {
                 this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLROW_COLBYTE);
             }
+            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE") ==  0) {
+                this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE);
+            }
             else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_COLROW_CHANNEL_COLBYTE") ==  0) {
                 this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CHANNEL_COLBYTE);
             }
+            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_COLROW_CTRL_CHANNEL_COLBYTE") ==  0) {
+                this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CTRL_CHANNEL_COLBYTE);
+            }
+            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_CTRL_BANK_COLROW_COLBYTE") ==  0) {
+                this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_CTRL_BANK_COLROW_COLBYTE);
+            }
             else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_COLROW_BANK_CHANNEL_COLBYTE") ==  0) {
                 this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_COLROW_BANK_CHANNEL_COLBYTE);
-            }
-            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BANK_COLROW_COLBYTE") ==  0) {
-                this->memory_controller_array[i]->set_address_mask_type(MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_COLBYTE);
             }
             else {
                 ERROR_PRINTF("MAIN MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_memory_controller[ memory_controller_parameters.back() ].c_str(), memory_controller_parameters.back());
@@ -1276,6 +1283,17 @@ void sinuca_engine_t::initialize_memory_controller() {
                 ERROR_PRINTF("MAIN MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_memory_controller[ memory_controller_parameters.back() ].c_str(), memory_controller_parameters.back());
             }
 
+            memory_controller_parameters.push_back("PAGE_POLICY");
+            if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "OPEN_ROW") ==  0) {
+                this->memory_controller_array[i]->set_page_policy(PAGE_POLICY_OPEN_ROW);
+            }
+            else if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "CLOSE_ROW") ==  0) {
+                this->memory_controller_array[i]->set_page_policy(PAGE_POLICY_CLOSE_ROW);
+            }
+            else {
+                ERROR_PRINTF("MAIN MEMORY %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_memory_controller[ memory_controller_parameters.back() ].c_str(), memory_controller_parameters.back());
+            }
+
             memory_controller_parameters.push_back("REQUEST_PRIORITY_POLICY");
             if (strcasecmp(cfg_memory_controller[ memory_controller_parameters.back() ], "ROW_BUFFER_HITS_FIRST") ==  0) {
                 this->memory_controller_array[i]->set_request_priority_policy(REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST);
@@ -1299,10 +1317,6 @@ void sinuca_engine_t::initialize_memory_controller() {
             }
 
             /// DRAM configuration
-
-            memory_controller_parameters.push_back("BUS_FREQUENCY");
-            this->memory_controller_array[i]->set_bus_frequency(cfg_memory_controller[ memory_controller_parameters.back() ]);
-
             memory_controller_parameters.push_back("BURST_LENGTH");
             this->memory_controller_array[i]->set_burst_length(cfg_memory_controller[ memory_controller_parameters.back() ]);
 
@@ -1349,6 +1363,19 @@ void sinuca_engine_t::initialize_memory_controller() {
 
             memory_controller_parameters.push_back("TIMING_WTR");
             this->memory_controller_array[i]->set_timing_wtr(cfg_memory_controller[ memory_controller_parameters.back() ]);
+
+            // HMC
+            if (cfg_memory_controller.exists("HMC_LATENCY_ALU") || cfg_memory_controller.exists("HMC_LATENCY_ALUR")) {
+                memory_controller_parameters.push_back("HMC_LATENCY_ALU");
+                this->memory_controller_array[i]->set_hmc_latency_alu(cfg_memory_controller[ memory_controller_parameters.back() ]);
+
+                memory_controller_parameters.push_back("HMC_LATENCY_ALUR");
+                this->memory_controller_array[i]->set_hmc_latency_alur(cfg_memory_controller[ memory_controller_parameters.back() ]);
+            }
+            else {
+                this->memory_controller_array[i]->set_hmc_latency_alu(0);
+                this->memory_controller_array[i]->set_hmc_latency_alur(0);
+            }
 
 
             this->memory_controller_array[i]->set_max_ports(1);

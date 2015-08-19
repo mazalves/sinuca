@@ -332,6 +332,7 @@ void interconnection_controller_t::create_route(interconnection_interface_t *src
 void interconnection_controller_t::create_communication_cost() {
     uint32_t max_latency = 0, min_latency = 0;
     uint32_t min_width = 0;
+    INTERCONNECTION_CTRL_DEBUG_PRINTF("Max Cost:\n");
     /// Generate the maximum (full line) and minimum (request only) latency between two ADJACENT components
     for (uint32_t i = 0; i < sinuca_engine.get_interconnection_interface_array_size(); i++) {
         for (uint32_t j = 0; j < sinuca_engine.get_interconnection_interface_array_size(); j++) {
@@ -349,11 +350,12 @@ void interconnection_controller_t::create_communication_cost() {
                 }
 
                 /// Set the high_latency (full package / answer)
-                this->high_latency_matrix[i][j] = max_latency * ((sinuca_engine.global_line_size / min_width) + 1 * ((sinuca_engine.global_line_size % min_width) != 0));
+                this->high_latency_matrix[i][j] = max_latency * ((sinuca_engine.global_line_size / min_width) + ((sinuca_engine.global_line_size % min_width) != 0));
 
                 /// Set the low_latency (empty package / request)
                 this->low_latency_matrix[i][j] = max_latency;
             }
+            INTERCONNECTION_CTRL_DEBUG_PRINTF("%s<->%s[%u]\n", sinuca_engine.interconnection_interface_array[i]->get_label(), sinuca_engine.interconnection_interface_array[j]->get_label(), this->high_latency_matrix[i][j]);
         }
     }
 
@@ -443,6 +445,14 @@ uint32_t interconnection_controller_t::find_package_route_latency(memory_package
                 return max_latency;
             }
         break;
+
+        // HMC
+        case MEMORY_OPERATION_HMC_ALU:
+        case MEMORY_OPERATION_HMC_ALUR:
+            /// BIG
+            return max_latency;
+        break;
+
     }
     ERROR_PRINTF("Found MEMORY_OPERATION_NUMBER\n");
     return 1;

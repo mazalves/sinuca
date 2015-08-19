@@ -29,6 +29,7 @@ class sinuca_engine_t {
         char *arg_trace_file_name;
         char *arg_result_file_name;
         uint32_t arg_warmup_instructions;
+        uint32_t arg_stopat_instructions;
         bool arg_default_affinity;
         char *arg_graph_file_name;
         uint32_t thread_affinity[MAX_CORES];
@@ -73,7 +74,7 @@ class sinuca_engine_t {
         /// Control the Trace Reading
         bool *is_processor_trace_eof;
         bool is_simulation_eof;
-        bool is_warm_up;
+        bool is_warmup;
 
         trace_reader_t *trace_reader;
         directory_controller_t *directory_controller;
@@ -154,7 +155,7 @@ class sinuca_engine_t {
         INSTANTIATE_GET_SET(bool, is_simulation_allocated);
         INSTANTIATE_GET_SET(bool, is_runtime_debug);
         INSTANTIATE_GET_SET(bool, is_simulation_eof);
-        INSTANTIATE_GET_SET(bool, is_warm_up);
+        INSTANTIATE_GET_SET(bool, is_warmup);
 
         INSTANTIATE_GET_SET(uint64_t, global_cycle);
 

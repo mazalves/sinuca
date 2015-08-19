@@ -39,11 +39,12 @@ class memory_controller_t : public interconnection_interface_t {
         selection_t bank_selection_policy;
         uint32_t bank_row_buffer_size;
 
+        page_policy_t page_policy;
+
         request_priority_t request_priority_policy;
         write_priority_t write_priority_policy;
 
         /// DRAM configuration
-        uint32_t bus_frequency; // DRAM to core bus frequency
         uint32_t burst_length;  // DDR1 has a BL=2, DDR2 has a BL=4, DDR3 has a BL=8
         float core_to_bus_clock_ratio;  // Ratio between PROCESSOR and BUS frequency
 
@@ -62,6 +63,10 @@ class memory_controller_t : public interconnection_interface_t {
         uint32_t timing_rtp;    // read to precharge
         uint32_t timing_wr;     // write recovery time
         uint32_t timing_wtr;    // write to read delay time
+
+        // HMC
+        uint32_t hmc_latency_alu;
+        uint32_t hmc_latency_alur;
 
         // ====================================================================
         /// Set by this->allocate()
@@ -127,6 +132,18 @@ class memory_controller_t : public interconnection_interface_t {
         uint64_t stat_max_writeback_wait_time;
         uint64_t stat_accumulated_writeback_wait_time;
 
+        // HMC
+        uint64_t stat_hmc_alu_completed;
+        uint64_t stat_hmc_alur_completed;
+
+        uint64_t stat_min_hmc_alu_wait_time;
+        uint64_t stat_max_hmc_alu_wait_time;
+        uint64_t stat_accumulated_hmc_alu_wait_time;
+
+        uint64_t stat_min_hmc_alur_wait_time;
+        uint64_t stat_max_hmc_alur_wait_time;
+        uint64_t stat_accumulated_hmc_alur_wait_time;
+
         uint64_t stat_full_mshr_buffer_request;
         uint64_t stat_full_mshr_buffer_writeback;
         uint64_t stat_full_mshr_buffer_prefetch;
@@ -170,6 +187,10 @@ class memory_controller_t : public interconnection_interface_t {
             return (addr & this->channel_bits_mask) >> this->channel_bits_shift;
         }
 
+        inline uint64_t get_bank(uint64_t addr) {
+            return (addr & this->channels[0].bank_bits_mask) >> this->channels[0].bank_bits_shift;
+        }
+
         void insert_mshr_born_ordered(memory_package_t* package);
         int32_t allocate_request(memory_package_t* package);
         int32_t allocate_writeback(memory_package_t* package);
@@ -192,12 +213,12 @@ class memory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, bank_buffer_size)
         INSTANTIATE_GET_SET(selection_t, bank_selection_policy)
         INSTANTIATE_GET_SET(uint32_t, bank_row_buffer_size)
+        INSTANTIATE_GET_SET(page_policy_t, page_policy)
 
         INSTANTIATE_GET_SET(request_priority_t, request_priority_policy)
         INSTANTIATE_GET_SET(write_priority_t, write_priority_policy)
 
         /// DRAM configuration
-        INSTANTIATE_GET_SET(uint32_t, bus_frequency)
         INSTANTIATE_GET_SET(uint32_t, burst_length)
         INSTANTIATE_GET_SET(float, core_to_bus_clock_ratio)
 
@@ -217,6 +238,10 @@ class memory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, timing_rtp)
         INSTANTIATE_GET_SET(uint32_t, timing_wr)
         INSTANTIATE_GET_SET(uint32_t, timing_wtr)
+
+        // HMC
+        INSTANTIATE_GET_SET(uint32_t, hmc_latency_alu)
+        INSTANTIATE_GET_SET(uint32_t, hmc_latency_alur)
 
         // ====================================================================
         /// Statistics related
@@ -274,4 +299,22 @@ class memory_controller_t : public interconnection_interface_t {
             if (this->stat_max_writeback_wait_time < new_time) this->stat_max_writeback_wait_time = new_time;
         };
 
+        // HMC
+        INSTANTIATE_GET_SET(uint64_t, stat_hmc_alu_completed)
+        INSTANTIATE_GET_SET(uint64_t, stat_hmc_alur_completed)
+
+        inline void add_stat_hmc_alu_completed(uint64_t born_cycle) {
+            this->stat_hmc_alu_completed++;
+            uint64_t new_time = sinuca_engine.get_global_cycle() - born_cycle;
+            this->stat_accumulated_hmc_alu_wait_time += new_time;
+            if (this->stat_min_hmc_alu_wait_time > new_time) this->stat_min_hmc_alu_wait_time = new_time;
+            if (this->stat_max_hmc_alu_wait_time < new_time) this->stat_max_hmc_alu_wait_time = new_time;
+        };
+        inline void add_stat_hmc_alur_completed(uint64_t born_cycle) {
+            this->stat_hmc_alur_completed++;
+            uint64_t new_time = sinuca_engine.get_global_cycle() - born_cycle;
+            this->stat_accumulated_hmc_alur_wait_time += new_time;
+            if (this->stat_min_hmc_alur_wait_time > new_time) this->stat_min_hmc_alur_wait_time = new_time;
+            if (this->stat_max_hmc_alur_wait_time < new_time) this->stat_max_hmc_alur_wait_time = new_time;
+        };
 };

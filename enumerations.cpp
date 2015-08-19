@@ -27,7 +27,6 @@
 /// Enumerates the INSTRUCTION (Opcode and Uop) operation type
 const char* get_enum_instruction_operation_char(instruction_operation_t type) {
     switch (type) {
-        case INSTRUCTION_OPERATION_NOP:         return "OP_NOP   "; break;
         // ====================================================================
         /// INTEGERS
         case INSTRUCTION_OPERATION_INT_ALU:     return "OP_IN_ALU"; break;
@@ -46,11 +45,16 @@ const char* get_enum_instruction_operation_char(instruction_operation_t type) {
         case INSTRUCTION_OPERATION_MEM_LOAD:    return "OP_LOAD  "; break;
         case INSTRUCTION_OPERATION_MEM_STORE:   return "OP_STORE "; break;
         // ====================================================================
-        /// NOT IDENTIFIED
+        /// NOP or NOT IDENTIFIED
+        case INSTRUCTION_OPERATION_NOP:         return "OP_NOP   "; break;
         case INSTRUCTION_OPERATION_OTHER:       return "OP_OTHER "; break;
         // ====================================================================
         /// SYNCHRONIZATION
         case INSTRUCTION_OPERATION_BARRIER:     return "OP_BARRIER"; break;
+        // ====================================================================
+        /// HMC
+        case INSTRUCTION_OPERATION_HMC_ALU:     return "OP_HMC_ALU"; break;
+        case INSTRUCTION_OPERATION_HMC_ALUR:    return "OP_HMC_ALUR"; break;
     };
     ERROR_PRINTF("Wrong INSTRUCTION_OPERATION\n");
     return "FAIL";
@@ -64,8 +68,12 @@ const char* get_enum_memory_operation_char(memory_operation_t type) {
         case MEMORY_OPERATION_READ:         return "READ "; break;
         case MEMORY_OPERATION_PREFETCH:     return "PFTCH"; break;
         case MEMORY_OPERATION_WRITE:        return "WRITE"; break;
-        case MEMORY_OPERATION_WRITEBACK:     return "COPYB"; break;
+        case MEMORY_OPERATION_WRITEBACK:    return "WBACK"; break;
+
         // ====================================================================
+        /// HMC
+        case MEMORY_OPERATION_HMC_ALU:      return "HMC_ALU"; break;
+        case MEMORY_OPERATION_HMC_ALUR:     return "HMC_ALUR"; break;
     };
     ERROR_PRINTF("Wrong MEMORY_OPERATION\n");
     return "FAIL";
@@ -341,9 +349,11 @@ const char *get_enum_memory_controller_mask_char(memory_controller_mask_t type) 
     switch (type) {
         case MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_COLBYTE:              return "ROW_BANK_COLROW_COLBYTE"; break;
         case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLROW_COLBYTE:      return "ROW_BANK_CHANNEL_COLROW_COLBYTE"; break;
-        case MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CHANNEL_COLBYTE:      return "ROW_BANK_COLROW_CHANNEL_COLBYTE"; break;
-        case MEMORY_CONTROLLER_MASK_ROW_COLROW_BANK_CHANNEL_COLBYTE:      return "ROW_COLROW_BANK_CHANNEL_COLBYTE"; break;
         case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE: return "ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE"; break;
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CHANNEL_COLBYTE:      return "ROW_BANK_COLROW_CHANNEL_COLBYTE"; break;
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CTRL_CHANNEL_COLBYTE: return "ROW_BANK_COLROW_CTRL_CHANNEL_COLBYTE"; break;
+        case MEMORY_CONTROLLER_MASK_ROW_CTRL_BANK_COLROW_COLBYTE:        return "ROW_CTRL_BANK_COLROW_COLBYTE,"; break;
+        case MEMORY_CONTROLLER_MASK_ROW_COLROW_BANK_CHANNEL_COLBYTE:      return "ROW_COLROW_BANK_CHANNEL_COLBYTE"; break;
     };
     ERROR_PRINTF("Wrong MEMORY_CONTROLLER_MASK\n");
     return "FAIL";
@@ -371,7 +381,18 @@ const char *get_enum_request_priority_char(request_priority_t type) {
         case REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST:    return "ROW_BUFFER_HITS_FIRST"; break;
         case REQUEST_PRIORITY_FIRST_COME_FIRST_SERVE:   return "FIRST_COME_FIRST_SERVE"; break;
     };
-    ERROR_PRINTF("Wrong MEMORY_CONTROLLER_REQUEST_PRIORITY\n");
+    ERROR_PRINTF("Wrong MEMORY_CONTROLLER REQUEST_PRIORITY\n");
+    return "FAIL";
+};
+
+// ============================================================================
+/// Enumerates the policies to control the page (row buffer) inside the memory controller
+const char *get_enum_page_policy_char(page_policy_t type) {
+    switch (type) {
+        case PAGE_POLICY_OPEN_ROW:    return "PAGE_POLICY_OPEN_ROW"; break;
+        case PAGE_POLICY_CLOSE_ROW:   return "PAGE_POLICY_CLOSE_ROW"; break;
+    };
+    ERROR_PRINTF("Wrong MEMORY_CONTROLLER PAGE_POLICY\n");
     return "FAIL";
 };
 

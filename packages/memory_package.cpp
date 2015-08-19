@@ -32,6 +32,7 @@ memory_package_t::~memory_package_t() {
 
 // ============================================================================
 memory_package_t::memory_package_t(const memory_package_t &package) {
+
     id_owner = package.id_owner;
     opcode_number = package.opcode_number;
     opcode_address = package.opcode_address;
@@ -46,6 +47,7 @@ memory_package_t::memory_package_t(const memory_package_t &package) {
     memory_operation = package.memory_operation;
     is_answer = package.is_answer;
 
+    /// Routing Control
     id_src = package.id_src;
     id_dst = package.id_dst;
     hops = package.hops;
@@ -54,6 +56,7 @@ memory_package_t::memory_package_t(const memory_package_t &package) {
 
 // ============================================================================
 memory_package_t &memory_package_t::operator=(const memory_package_t &package) {
+
     if (this != &package){
         memcpy(this, &package, sizeof(memory_package_t));
         this->born_cycle = sinuca_engine.get_global_cycle();
@@ -191,7 +194,6 @@ std::string memory_package_t::content_to_string() {
     }
     return content_string;
 };
-
 
 // ============================================================================
 int32_t memory_package_t::find_free(memory_package_t *input_array, uint32_t size_array) {

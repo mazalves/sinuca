@@ -42,6 +42,7 @@ class directory_controller_t : public interconnection_interface_t {
         uint64_t page_bits_mask;
         uint64_t not_page_bits_mask;
         uint64_t page_bits_shift;
+
         // ====================================================================
         /// Statistics related
         // ====================================================================

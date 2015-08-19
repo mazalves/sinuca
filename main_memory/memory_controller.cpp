@@ -51,7 +51,6 @@ memory_controller_t::memory_controller_t() {
     this->channels = NULL;
     this->mshr_buffer = NULL;
 
-    this->bus_frequency = 0;
     this->burst_length = 0;
     this->core_to_bus_clock_ratio = 0;
 
@@ -69,6 +68,10 @@ memory_controller_t::memory_controller_t() {
     this->timing_rtp = 0;
     this->timing_wr = 0;
     this->timing_wtr = 0;
+
+    // hmc
+    this->hmc_latency_alu = 0;
+    this->hmc_latency_alur = 0;
 };
 
 // ============================================================================
@@ -76,8 +79,6 @@ memory_controller_t::~memory_controller_t() {
     // De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<memory_channel_t>(channels);
     utils_t::template_delete_array<memory_package_t>(mshr_buffer);
-
-
 };
 
 // ============================================================================
@@ -86,6 +87,7 @@ void memory_controller_t::allocate() {
     ERROR_ASSERT_PRINTF(mshr_buffer_request_reserved_size > 0, "mshr_buffer_request_reserved_size should be bigger than zero.\n");
     ERROR_ASSERT_PRINTF(mshr_buffer_writeback_reserved_size > 0, "mshr_buffer_writeback_reserved_size should be bigger than zero.\n");
     ERROR_ASSERT_PRINTF(mshr_buffer_prefetch_reserved_size > 0, "mshr_buffer_prefetch_reserved_size should be bigger than zero.\n");
+
 
 
     /// MSHR = [    REQUEST    | WRITEBACK | PREFETCH ]
@@ -106,28 +108,36 @@ void memory_controller_t::allocate() {
         sprintf(label, "%s_MEMORY_CHANNEL_%d", this->get_label(), i);
         this->channels[i].set_label(label);
 
+        this->channels[i].set_memory_controller_id(this->get_id());
+
         this->channels[i].bank_per_channel = this->bank_per_channel;
-        this->channels[i].bank_buffer_size = this->bank_buffer_size;
         this->channels[i].bank_selection_policy = this->bank_selection_policy;
+        this->channels[i].bank_buffer_size = this->bank_buffer_size;
+
+        this->channels[i].page_policy = this->page_policy;
 
         this->channels[i].request_priority_policy = this->request_priority_policy;
         this->channels[i].write_priority_policy = this->write_priority_policy;
 
         /// Consider the latency in terms of processor cycles
-        this->channels[i].timing_burst = ceil(this->timing_burst * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_al = ceil(this->timing_al * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_cas = ceil(this->timing_cas * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_ccd = ceil(this->timing_ccd * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_cwd = ceil(this->timing_cwd * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_faw = ceil(this->timing_faw * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_ras = ceil(this->timing_ras * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_rc = ceil(this->timing_rc * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_rcd = ceil(this->timing_rcd * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_rp = ceil(this->timing_rp * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_rrd = ceil(this->timing_rrd * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_rtp = ceil(this->timing_rtp * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_wr = ceil(this->timing_wr * this->core_to_bus_clock_ratio);
-        this->channels[i].timing_wtr = ceil(this->timing_wtr * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_burst  = ceil(this->timing_burst   * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_al     = ceil(this->timing_al      * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_cas    = ceil(this->timing_cas     * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_ccd    = ceil(this->timing_ccd     * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_cwd    = ceil(this->timing_cwd     * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_faw    = ceil(this->timing_faw     * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_ras    = ceil(this->timing_ras     * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_rc     = ceil(this->timing_rc      * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_rcd    = ceil(this->timing_rcd     * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_rp     = ceil(this->timing_rp      * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_rrd    = ceil(this->timing_rrd     * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_rtp    = ceil(this->timing_rtp     * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_wr     = ceil(this->timing_wr      * this->core_to_bus_clock_ratio);
+        this->channels[i].timing_wtr    = ceil(this->timing_wtr     * this->core_to_bus_clock_ratio);
+
+        // HMC
+        this->channels[i].hmc_latency_alu  = this->hmc_latency_alu ; // ceil(this->hmc_latency_alu  * this->core_to_bus_clock_ratio);
+        this->channels[i].hmc_latency_alur = this->hmc_latency_alur; // ceil(this->hmc_latency_alur * this->core_to_bus_clock_ratio);
 
         /// Copy the masks
         this->channels[i].not_column_bits_mask = this->not_column_bits_mask;
@@ -162,21 +172,19 @@ void memory_controller_t::set_masks() {
     this->bank_bits_mask = 0;
     this->row_bits_mask = 0;
 
+
     switch (this->get_address_mask_type()) {
-        case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE:
-            ERROR_ASSERT_PRINTF(this->get_total_controllers() > 1 &&
-                                utils_t::check_if_power_of_two(this->get_total_controllers()),
-                                "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
-            ERROR_ASSERT_PRINTF(this->get_channels_per_controller() > 1 &&
-                                utils_t::check_if_power_of_two(this->get_channels_per_controller()),
-                                "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_COLBYTE:
+            ERROR_ASSERT_PRINTF(this->get_total_controllers() == 1, "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
+            ERROR_ASSERT_PRINTF(this->get_channels_per_controller() == 1, "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
+
+            this->controller_bits_shift = 0;
+            this->channel_bits_shift = 0;
 
             this->colbyte_bits_shift = 0;
             this->colrow_bits_shift = utils_t::get_power_of_two(this->get_line_size());
-            this->controller_bits_shift = utils_t::get_power_of_two(this->get_bank_row_buffer_size());
-            this->channel_bits_shift = this->controller_bits_shift + utils_t::get_power_of_two(this->get_total_controllers());
-            this->bank_bits_shift = this->channel_bits_shift + utils_t::get_power_of_two(this->get_channels_per_controller());
-            this->row_bits_shift = this->bank_bits_shift + utils_t::get_power_of_two(this->get_bank_per_channel());
+            this->bank_bits_shift = utils_t::get_power_of_two(this->get_bank_row_buffer_size());
+            this->row_bits_shift = bank_bits_shift + utils_t::get_power_of_two(this->get_bank_per_channel());
 
             /// COLBYTE MASK
             for (i = 0; i < utils_t::get_power_of_two(this->get_line_size()); i++) {
@@ -189,16 +197,6 @@ void memory_controller_t::set_masks() {
             }
 
             this->not_column_bits_mask = ~(colbyte_bits_mask | colrow_bits_mask);
-
-            /// CONTROLLER MASK
-            for (i = 0; i < utils_t::get_power_of_two(this->get_total_controllers()); i++) {
-                this->controller_bits_mask |= 1 << (i + controller_bits_shift);
-            }
-
-            /// CHANNEL MASK
-            for (i = 0; i < utils_t::get_power_of_two(this->get_channels_per_controller()); i++) {
-                this->channel_bits_mask |= 1 << (i + channel_bits_shift);
-            }
 
             /// BANK MASK
             for (i = 0; i < utils_t::get_power_of_two(this->get_bank_per_channel()); i++) {
@@ -236,6 +234,55 @@ void memory_controller_t::set_masks() {
             }
 
             this->not_column_bits_mask = ~(colbyte_bits_mask | colrow_bits_mask);
+
+            /// CHANNEL MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_channels_per_controller()); i++) {
+                this->channel_bits_mask |= 1 << (i + channel_bits_shift);
+            }
+
+            /// BANK MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_per_channel()); i++) {
+                this->bank_bits_mask |= 1 << (i + bank_bits_shift);
+            }
+
+            /// ROW MASK
+            for (i = row_bits_shift; i < utils_t::get_power_of_two((uint64_t)INT64_MAX+1); i++) {
+                this->row_bits_mask |= 1 << i;
+            }
+        break;
+
+
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE:
+            ERROR_ASSERT_PRINTF(this->get_total_controllers() > 1 &&
+                                utils_t::check_if_power_of_two(this->get_total_controllers()),
+                                "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
+            ERROR_ASSERT_PRINTF(this->get_channels_per_controller() > 1 &&
+                                utils_t::check_if_power_of_two(this->get_channels_per_controller()),
+                                "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
+
+            this->colbyte_bits_shift = 0;
+            this->colrow_bits_shift = utils_t::get_power_of_two(this->get_line_size());
+            this->controller_bits_shift = utils_t::get_power_of_two(this->get_bank_row_buffer_size());
+            this->channel_bits_shift = this->controller_bits_shift + utils_t::get_power_of_two(this->get_total_controllers());
+            this->bank_bits_shift = this->channel_bits_shift + utils_t::get_power_of_two(this->get_channels_per_controller());
+            this->row_bits_shift = this->bank_bits_shift + utils_t::get_power_of_two(this->get_bank_per_channel());
+
+            /// COLBYTE MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_line_size()); i++) {
+                this->colbyte_bits_mask |= 1 << (i + this->colbyte_bits_shift);
+            }
+
+            /// COLROW MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_row_buffer_size()) - this->colrow_bits_shift; i++) {
+                this->colrow_bits_mask |= 1 << (i + this->colrow_bits_shift);
+            }
+
+            this->not_column_bits_mask = ~(colbyte_bits_mask | colrow_bits_mask);
+
+            /// CONTROLLER MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_total_controllers()); i++) {
+                this->controller_bits_mask |= 1 << (i + controller_bits_shift);
+            }
 
             /// CHANNEL MASK
             for (i = 0; i < utils_t::get_power_of_two(this->get_channels_per_controller()); i++) {
@@ -296,6 +343,101 @@ void memory_controller_t::set_masks() {
             }
         break;
 
+
+        case MEMORY_CONTROLLER_MASK_ROW_CTRL_BANK_COLROW_COLBYTE:
+            ERROR_ASSERT_PRINTF(this->get_channels_per_controller() == 1,
+                                "Wrong number of channels_per_controller (%u).\n", this->get_channels_per_controller());
+            ERROR_ASSERT_PRINTF(this->get_total_controllers() > 1 &&
+                                utils_t::check_if_power_of_two(this->get_total_controllers()),
+                                "Wrong number of memory_channels (%u).\n", this->get_total_controllers());
+
+            this->channel_bits_shift = 0;
+            this->colbyte_bits_shift = 0;
+            this->colrow_bits_shift = utils_t::get_power_of_two(this->get_line_size());
+            this->bank_bits_shift =  this->colrow_bits_shift + utils_t::get_power_of_two(this->get_bank_row_buffer_size() / this->get_line_size());
+            this->controller_bits_shift = this->bank_bits_shift + utils_t::get_power_of_two(this->get_bank_per_channel());
+            this->row_bits_shift = this->controller_bits_shift + utils_t::get_power_of_two(this->get_total_controllers());
+
+            /// COLBYTE MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_line_size()); i++) {
+                this->colbyte_bits_mask |= 1 << (i + this->colbyte_bits_shift);
+            }
+
+            /// COLROW MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_row_buffer_size() / this->get_line_size()); i++) {
+                this->colrow_bits_mask |= 1 << (i + this->colrow_bits_shift);
+            }
+            this->not_column_bits_mask = ~(colbyte_bits_mask | colrow_bits_mask);
+
+            /// BANK MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_per_channel()); i++) {
+                this->bank_bits_mask |= 1 << (i + bank_bits_shift);
+            }
+
+            /// CONTROLLER MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_total_controllers()); i++) {
+                this->controller_bits_mask |= 1 << (i + controller_bits_shift);
+            }
+
+            /// ROW MASK
+            for (i = row_bits_shift; i < utils_t::get_power_of_two((uint64_t)INT64_MAX+1); i++) {
+                this->row_bits_mask |= 1 << i;
+            }
+        break;
+
+
+
+        case MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CTRL_CHANNEL_COLBYTE:
+            ERROR_ASSERT_PRINTF(this->get_total_controllers() > 1 &&
+                                utils_t::check_if_power_of_two(this->get_total_controllers()),
+                                "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
+            ERROR_ASSERT_PRINTF(this->get_channels_per_controller() > 1 &&
+                                utils_t::check_if_power_of_two(this->get_channels_per_controller()),
+                                "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
+
+            this->colbyte_bits_shift = 0;
+            this->channel_bits_shift = utils_t::get_power_of_two(this->get_line_size());
+            this->controller_bits_shift = this->channel_bits_shift + utils_t::get_power_of_two(this->get_channels_per_controller());
+            this->colrow_bits_shift = this->controller_bits_shift + utils_t::get_power_of_two(this->get_total_controllers());
+            this->bank_bits_shift = this->colrow_bits_shift + utils_t::get_power_of_two(this->get_bank_row_buffer_size() / this->get_line_size());
+            this->row_bits_shift = this->bank_bits_shift + utils_t::get_power_of_two(this->get_bank_per_channel());
+
+            /// COLBYTE MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_line_size()); i++) {
+                this->colbyte_bits_mask |= 1 << (i + this->colbyte_bits_shift);
+            }
+
+            /// CHANNEL MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_channels_per_controller()); i++) {
+                this->channel_bits_mask |= 1 << (i + channel_bits_shift);
+            }
+
+            /// CONTROLLER MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_total_controllers()); i++) {
+                this->controller_bits_mask |= 1 << (i + controller_bits_shift);
+            }
+
+
+            /// COLROW MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_row_buffer_size() / this->get_line_size()); i++) {
+                this->colrow_bits_mask |= 1 << (i + this->colrow_bits_shift);
+            }
+
+            this->not_column_bits_mask = ~(colbyte_bits_mask | colrow_bits_mask);
+
+
+            /// BANK MASK
+            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_per_channel()); i++) {
+                this->bank_bits_mask |= 1 << (i + bank_bits_shift);
+            }
+
+            /// ROW MASK
+            for (i = row_bits_shift; i < utils_t::get_power_of_two((uint64_t)INT64_MAX+1); i++) {
+                this->row_bits_mask |= 1 << i;
+            }
+        break;
+
+
         case MEMORY_CONTROLLER_MASK_ROW_COLROW_BANK_CHANNEL_COLBYTE:
             ERROR_ASSERT_PRINTF(this->get_total_controllers() == 1,
                                 "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
@@ -332,42 +474,6 @@ void memory_controller_t::set_masks() {
 
             this->not_column_bits_mask = ~(colbyte_bits_mask | colrow_bits_mask);
 
-
-            /// ROW MASK
-            for (i = row_bits_shift; i < utils_t::get_power_of_two((uint64_t)INT64_MAX+1); i++) {
-                this->row_bits_mask |= 1 << i;
-            }
-        break;
-
-
-        case MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_COLBYTE:
-            ERROR_ASSERT_PRINTF(this->get_total_controllers() == 1, "Wrong number of memory_controllers (%u).\n", this->get_total_controllers());
-            ERROR_ASSERT_PRINTF(this->get_channels_per_controller() == 1, "Wrong number of memory_channels (%u).\n", this->get_channels_per_controller());
-
-            this->controller_bits_shift = 0;
-            this->channel_bits_shift = 0;
-
-            this->colbyte_bits_shift = 0;
-            this->colrow_bits_shift = utils_t::get_power_of_two(this->get_line_size());
-            this->bank_bits_shift = utils_t::get_power_of_two(this->get_bank_row_buffer_size());
-            this->row_bits_shift = bank_bits_shift + utils_t::get_power_of_two(this->get_bank_per_channel());
-
-            /// COLBYTE MASK
-            for (i = 0; i < utils_t::get_power_of_two(this->get_line_size()); i++) {
-                this->colbyte_bits_mask |= 1 << (i + this->colbyte_bits_shift);
-            }
-
-            /// COLROW MASK
-            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_row_buffer_size()) - this->colrow_bits_shift; i++) {
-                this->colrow_bits_mask |= 1 << (i + this->colrow_bits_shift);
-            }
-
-            this->not_column_bits_mask = ~(colbyte_bits_mask | colrow_bits_mask);
-
-            /// BANK MASK
-            for (i = 0; i < utils_t::get_power_of_two(this->get_bank_per_channel()); i++) {
-                this->bank_bits_mask |= 1 << (i + bank_bits_shift);
-            }
 
             /// ROW MASK
             for (i = row_bits_shift; i < utils_t::get_power_of_two((uint64_t)INT64_MAX+1); i++) {
@@ -419,6 +525,15 @@ void memory_controller_t::clock(uint32_t subcycle) {
                 case MEMORY_OPERATION_WRITE:
                     this->add_stat_write_completed(this->mshr_born_ordered[i]->born_cycle);
                 break;
+
+                // HMC
+                case MEMORY_OPERATION_HMC_ALU:
+                    this->add_stat_hmc_alu_completed(this->mshr_born_ordered[i]->born_cycle);
+                break;
+
+                case MEMORY_OPERATION_HMC_ALUR:
+                    this->add_stat_hmc_alur_completed(this->mshr_born_ordered[i]->born_cycle);
+                break;
             }
 
             this->add_stat_accesses();
@@ -443,7 +558,6 @@ void memory_controller_t::clock(uint32_t subcycle) {
             break;
         }
     }
-
 
     // =================================================================
     /// MSHR_BUFFER - UNTREATED
@@ -555,6 +669,7 @@ int32_t memory_controller_t::send_package(memory_package_t *package) {
     ERROR_ASSERT_PRINTF(package->memory_operation != MEMORY_OPERATION_WRITEBACK && package->memory_operation != MEMORY_OPERATION_WRITE, "Main memory must never send answer for WRITE.\n");
 
     if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
+
         sinuca_engine.interconnection_controller->find_package_route(package);
         ERROR_ASSERT_PRINTF(package->hop_count != POSITION_FAIL, "Achieved the end of the route\n");
         uint32_t output_port = package->hops[package->hop_count];  /// Where to send the package ?
@@ -564,7 +679,7 @@ int32_t memory_controller_t::send_package(memory_package_t *package) {
         uint32_t transmission_latency = sinuca_engine.interconnection_controller->find_package_route_latency(package, this, this->get_interface_output_component(output_port));
         bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port), transmission_latency);
         if (sent) {
-            MEMORY_CONTROLLER_DEBUG_PRINTF("\tSEND OK\n");
+            MEMORY_CONTROLLER_DEBUG_PRINTF("\tSEND OK (latency:%u)\n", transmission_latency);
             this->send_ready_cycle = sinuca_engine.get_global_cycle() + transmission_latency;
             return transmission_latency;
         }
@@ -582,14 +697,21 @@ int32_t memory_controller_t::send_package(memory_package_t *package) {
 bool memory_controller_t::receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) {
     MEMORY_CONTROLLER_DEBUG_PRINTF("receive_package() port:%u, package:%s\n", input_port, package->content_to_string().c_str());
 
-    ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
+    // ~ ERROR_ASSERT_PRINTF(package->memory_address != 0, "Wrong memory address.\n%s\n", package->content_to_string().c_str());
     ERROR_ASSERT_PRINTF(package->id_dst == this->get_id() && package->hop_count == POSITION_FAIL, "Received some package for a different id_dst.\n");
     ERROR_ASSERT_PRINTF(input_port < this->get_max_ports(), "Received a wrong input_port\n");
-    ERROR_ASSERT_PRINTF(package->is_answer == false, "Only requests are expected.\n");
+    // ~ ERROR_ASSERT_PRINTF(package->is_answer == false, "Only requests are expected.\n");
 
     int32_t slot = POSITION_FAIL;
     if (this->recv_ready_cycle <= sinuca_engine.get_global_cycle()) {
+
+
         switch (package->memory_operation) {
+
+            // HMC -> READ buffer
+            case MEMORY_OPERATION_HMC_ALU:
+            case MEMORY_OPERATION_HMC_ALUR:
+
             case MEMORY_OPERATION_READ:
             case MEMORY_OPERATION_INST:
                 slot = this->allocate_request(package);
@@ -693,6 +815,9 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
         switch (this->token_list[slot].memory_operation) {
             case MEMORY_OPERATION_READ:
             case MEMORY_OPERATION_INST:
+            // HMC -> READ buffer
+            case MEMORY_OPERATION_HMC_ALU:
+            case MEMORY_OPERATION_HMC_ALUR:
                 request_number++;
             break;
 
@@ -710,8 +835,13 @@ bool memory_controller_t::check_token_list(memory_package_t *package) {
     /// 3. Check if the guest can come now, Or it needs to wait for free space.
     /// Hold on !
     switch (package->memory_operation) {
+
         case MEMORY_OPERATION_READ:
         case MEMORY_OPERATION_INST:
+        // HMC -> READ buffer
+        case MEMORY_OPERATION_HMC_ALU:
+        case MEMORY_OPERATION_HMC_ALUR:
+
             if (request_number < memory_package_t::count_free(this->mshr_buffer, this->mshr_buffer_request_reserved_size)) {
                 this->token_list[token_pos].is_coming = true;
 
@@ -782,6 +912,7 @@ void memory_controller_t::print_structures() {
     for (uint32_t i = 0; i < this->channels_per_controller; i++) {
         this->channels[i].print_structures();
     }
+
 };
 
 // =============================================================================
@@ -794,6 +925,18 @@ void memory_controller_t::periodic_check(){
     #ifdef MEMORY_CONTROLLER_DEBUG
         this->print_structures();
     #endif
+    /// Check Requests
+    ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->mshr_buffer,
+                                                    this->mshr_buffer_request_reserved_size) == OK, "Check_age failed.\n");
+    /// Check WriteBacks
+    // ~ ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->mshr_buffer +
+                                                    // ~ this->mshr_buffer_request_reserved_size ,
+                                                    // ~ this->mshr_buffer_writeback_reserved_size) == OK, "Check_age failed.\n");
+    /// Check Prefetchs
+    ERROR_ASSERT_PRINTF(memory_package_t::check_age(this->mshr_buffer +
+                                                    this->mshr_buffer_request_reserved_size +
+                                                    this->mshr_buffer_writeback_reserved_size,
+                                                    this->mshr_buffer_prefetch_reserved_size) == OK, "Check_age failed.\n");
 
     switch (this->write_priority_policy) {
         case WRITE_PRIORITY_DRAIN_WHEN_FULL:
@@ -841,6 +984,18 @@ void memory_controller_t::reset_statistics() {
     this->stat_max_writeback_wait_time = 0;
     this->stat_accumulated_writeback_wait_time = 0;
 
+    // HMC
+    this->set_stat_hmc_alu_completed(0);
+    this->set_stat_hmc_alur_completed(0);
+
+    this->stat_min_hmc_alu_wait_time = MAX_ALIVE_TIME;
+    this->stat_max_hmc_alu_wait_time = 0;
+    this->stat_accumulated_hmc_alu_wait_time = 0;
+
+    this->stat_min_hmc_alur_wait_time = MAX_ALIVE_TIME;
+    this->stat_max_hmc_alur_wait_time = 0;
+    this->stat_accumulated_hmc_alur_wait_time = 0;
+
     this->stat_full_mshr_buffer_request = 0;
     this->stat_full_mshr_buffer_writeback = 0;
     this->stat_full_mshr_buffer_prefetch = 0;
@@ -868,8 +1023,14 @@ void memory_controller_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_writeback_completed", stat_writeback_completed);
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_read", stat_instruction_completed + stat_read_completed + stat_prefetch_completed);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write", stat_write_completed + stat_writeback_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_read",
+                                                                                    stat_instruction_completed +
+                                                                                    stat_read_completed +
+                                                                                    stat_prefetch_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_sum_write",
+                                                                                    stat_write_completed +
+                                                                                    stat_writeback_completed);
+
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_instruction_wait_time", stat_min_instruction_wait_time);
@@ -891,6 +1052,23 @@ void memory_controller_t::print_statistics() {
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_prefetch_wait_time", stat_accumulated_prefetch_wait_time, stat_prefetch_completed);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_write_wait_time", stat_accumulated_write_wait_time, stat_write_completed);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_writeback_wait_time", stat_accumulated_writeback_wait_time, stat_writeback_completed);
+
+    // HMC
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_hmc_alu_completed", stat_hmc_alu_completed);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_hmc_alur_completed", stat_hmc_alur_completed);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_hmc_alu_wait_time", stat_min_hmc_alu_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_hmc_alu_wait_time", stat_max_hmc_alu_wait_time);
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_hmc_alur_wait_time", stat_min_hmc_alur_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_hmc_alur_wait_time", stat_max_hmc_alur_wait_time);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_hmc_alu_wait_time", stat_accumulated_hmc_alu_wait_time, stat_hmc_alu_completed);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_hmc_alur_wait_time", stat_accumulated_hmc_alur_wait_time, stat_hmc_alur_completed);
+
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_buffer_request", stat_full_mshr_buffer_request);
@@ -937,7 +1115,6 @@ void memory_controller_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_buffer_size", mshr_buffer_size);
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "bus_frequency", bus_frequency);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "burst_length", burst_length);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "core_to_bus_clock_ratio", core_to_bus_clock_ratio);
 
@@ -954,8 +1131,13 @@ void memory_controller_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_rp", timing_rp);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_rrd", timing_rrd);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_rtp", timing_rtp);
+
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_wr", timing_wr);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "timing_wtr", timing_wtr);
+
+    // HMC
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "hmc_latency_alu", hmc_latency_alu);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "hmc_latency_alur", hmc_latency_alur);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "row_bits_mask", utils_t::address_to_binary(this->row_bits_mask).c_str());

@@ -180,54 +180,54 @@ void opcode_package_t::package_wait(uint32_t stall_time) {
 // =============================================================================
 /// Convert Instruction variables into String
 std::string opcode_package_t::content_to_string() {
-    std::string PackageString;
-    PackageString = "";
+    std::string content_string;
+    content_string = "";
 
     #ifndef SHOW_FREE_PACKAGE
         if (this->state == PACKAGE_STATE_FREE) {
-            return PackageString;
+            return content_string;
         }
     #endif
-    PackageString = PackageString + " OpCode#" + utils_t::uint64_to_string(this->opcode_number);
-    PackageString = PackageString + " " + get_enum_instruction_operation_char(this->opcode_operation);
-    PackageString = PackageString + " $" + utils_t::big_uint64_to_string(this->opcode_address);
-    PackageString = PackageString + " Size:" + utils_t::uint32_to_string(this->opcode_size);
+    content_string = content_string + " OpCode#" + utils_t::uint64_to_string(this->opcode_number);
+    content_string = content_string + " " + get_enum_instruction_operation_char(this->opcode_operation);
+    content_string = content_string + " $" + utils_t::big_uint64_to_string(this->opcode_address);
+    content_string = content_string + " Size:" + utils_t::uint32_to_string(this->opcode_size);
 
-    PackageString = PackageString + " | R1 $" + utils_t::big_uint64_to_string(this->read_address);
-    PackageString = PackageString + " Size:" + utils_t::uint32_to_string(this->read_size);
+    content_string = content_string + " | R1 $" + utils_t::big_uint64_to_string(this->read_address);
+    content_string = content_string + " Size:" + utils_t::uint32_to_string(this->read_size);
 
-    PackageString = PackageString + " | R2 $" + utils_t::big_uint64_to_string(this->read2_address);
-    PackageString = PackageString + " Size:" + utils_t::uint32_to_string(this->read2_size);
+    content_string = content_string + " | R2 $" + utils_t::big_uint64_to_string(this->read2_address);
+    content_string = content_string + " Size:" + utils_t::uint32_to_string(this->read2_size);
 
-    PackageString = PackageString + " | W $" + utils_t::big_uint64_to_string(this->write_address);
-    PackageString = PackageString + " Size:" + utils_t::uint32_to_string(this->write_size);
+    content_string = content_string + " | W $" + utils_t::big_uint64_to_string(this->write_address);
+    content_string = content_string + " Size:" + utils_t::uint32_to_string(this->write_size);
 
-    PackageString = PackageString + " | " + get_enum_package_state_char(this->state);
-    PackageString = PackageString + " Ready:" + utils_t::uint64_to_string(this->ready_cycle);
-    PackageString = PackageString + " Born:" + utils_t::uint64_to_string(this->born_cycle);
+    content_string = content_string + " | " + get_enum_package_state_char(this->state);
+    content_string = content_string + " Ready:" + utils_t::uint64_to_string(this->ready_cycle);
+    content_string = content_string + " Born:" + utils_t::uint64_to_string(this->born_cycle);
 
 
-    PackageString = PackageString + " | RRegs[";
+    content_string = content_string + " | RRegs[";
     for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
         if (this->read_regs[i] >= 0) {
-            PackageString = PackageString + " " + utils_t::uint32_to_string(this->read_regs[i]);
+            content_string = content_string + " " + utils_t::uint32_to_string(this->read_regs[i]);
         }
     }
 
-    PackageString = PackageString + " ] | WRegs[";
+    content_string = content_string + " ] | WRegs[";
     for (uint32_t i = 0; i < MAX_REGISTERS; i++) {
         if (this->write_regs[i] >= 0) {
-            PackageString = PackageString + " " + utils_t::uint32_to_string(this->write_regs[i]);
+            content_string = content_string + " " + utils_t::uint32_to_string(this->write_regs[i]);
         }
     }
-    PackageString = PackageString + " ]";
+    content_string = content_string + " ]";
 
     if (this->is_conditional == true)
-        PackageString = PackageString + " | is_condt";
+        content_string = content_string + " | is_condt";
     else
-        PackageString = PackageString + " | not_cond";
+        content_string = content_string + " | not_cond";
 
-    return PackageString;
+    return content_string;
 };
 
 
@@ -308,18 +308,20 @@ void opcode_package_t::opcode_to_trace_string(char *trace_string) {
 };
 
 
-// ============================================================================= NEW
+// =============================================================================
 /// Convert Dynamic Memory Trace line into Instruction Memory Operands
-/// Field N.:   1|2|      3        |4
-///     Ex:     W 8 140735291283448 1238
-///             W 8 140735291283440 1238
-///             W 8 140735291283432 1238
+/// Field #:    1  |  2   |    3    |  4
+/// Type:      R/W | R/W  | Memory  | BBL
+///            Op. | Size | Address | Number
 ///
-/// 1 = Read or Write operation
-/// 2 = Memory operation size
-/// 3 = Memory address
-/// 4 = Basic block number
+/// Memory File Example:
 ///
+/// #
+/// # Compressed Trace Generated By Pin to SiNUCA
+/// #
+/// W 8 140735291283448 1238
+/// W 8 140735291283440 1238
+/// W 8 140735291283432 1238
 void opcode_package_t::trace_string_to_read(char *input_string, uint32_t actual_bbl) {
     char *sub_string = NULL;
     char *tmp_ptr = NULL;
@@ -348,7 +350,7 @@ void opcode_package_t::trace_string_to_read(char *input_string, uint32_t actual_
 };
 
 
-// ============================================================================= NEW
+// =============================================================================
 void opcode_package_t::trace_string_to_read2(char * input_string, uint32_t actual_bbl) {
     char *sub_string = NULL;
     char *tmp_ptr = NULL;
@@ -377,7 +379,7 @@ void opcode_package_t::trace_string_to_read2(char * input_string, uint32_t actua
 };
 
 
-// ============================================================================= NEW
+// =============================================================================
 void opcode_package_t::trace_string_to_write(char *input_string, uint32_t actual_bbl) {
     char *sub_string = NULL;
     char *tmp_ptr = NULL;
@@ -406,23 +408,24 @@ void opcode_package_t::trace_string_to_write(char *input_string, uint32_t actual
 };
 
 
-// ============================================================================= NEW
+// =============================================================================
 /// Convert Static Trace line into Instruction
-/// Field N.:   01            |   02                | 03           | 04        |   05      |    06   |   07        |     08        |     09
-/// Type:    opcode_operation | instruction_address | Inst. Size   | N.Rregs   | read_regs | N.Wregs | write_regs  | IsPredicated  | IsPrefetch
+/// Field #:  01 |   02   |   03    |  04   |   05   |  06  |   07    |  08   |  09  |  10   |  11  |  12   |  13   |  14   |   15       | 16
+/// Type:    Asm | Opcode | Inst.   | Inst. | # Read | Read | # Write | Write | Base | Index | Is   | Is    | Is    | Is    | Is         | Is
+/// Type:    Cmd | Op. #  | Address | Size  | Regs   | Regs | Regs    | Regs  | Reg. | Reg.  | Read | Read2 | Write | Cond. | Predicated | Pfetch
+///
 /// Static File Example:
+///
 /// #
 /// # Compressed Trace Generated By Pin to SiNUCA
 /// #
 /// @1
-/// 1 140647360289520 3 1 15 1 12 0 0
-/// 9 140647360289523 5 2 35 15 2 35 15 0 0
+/// MOV 8 4345024 3 1 12 1 19 12 0 1 0 0 0 0 0
+/// ADD 1 4345027 4 1 12 2 12 34 0 0 0 0 0 0 0 0
+/// TEST 1 4345031 3 2 19 19 1 34 0 0 0 0 0 0 0 0
+/// JNZ 7 4345034 2 2 35 34 1 35 0 0 0 0 0 1 0 0
 /// @2
-/// 9 140647360305456 1 2 14 15 1 15 0 0
-/// 1 140647360305457 3 1 15 1 14 0 0
-/// 9 140647360305460 2 2 27 15 1 15 0 0
-/// 9 140647360305462 2 2 26 15 1 15 0 0
-/// 9 140647360305464 2 2 25 15 1 15 0 0
+/// CALL_NEAR 9 4345036 5 2 35 15 2 35 15 15 0 0 0 1 0 0 0
 ///
 void opcode_package_t::trace_string_to_opcode(char *input_string) {
     char *sub_string = NULL;
@@ -489,7 +492,6 @@ void opcode_package_t::trace_string_to_opcode(char *input_string) {
 
     sub_string = strtok_r(NULL, " ", &tmp_ptr);
     this->is_prefetch = (sub_string[0] == '1');
-
 };
 
 
@@ -583,15 +585,15 @@ bool opcode_package_t::check_age(opcode_package_t **input_matrix, uint32_t size_
 
 // =============================================================================
 std::string opcode_package_t::print_all(circular_buffer_t<opcode_package_t> *input_array, uint32_t size_array) {
-    std::string PackageString;
+    std::string content_string;
     std::string FinalString;
-    PackageString = "";
+    content_string = "";
     FinalString = "";
 
     for (uint32_t i = 0; i < size_array ; i++) {
-        PackageString = input_array[0][i].content_to_string();
-        if (PackageString.size() > 1) {
-            FinalString = FinalString + "[" + utils_t::uint32_to_string(i) + "] " + PackageString + "\n";
+        content_string = input_array[0][i].content_to_string();
+        if (content_string.size() > 1) {
+            FinalString = FinalString + "[" + utils_t::uint32_to_string(i) + "] " + content_string + "\n";
         }
     }
     return FinalString;
@@ -599,15 +601,15 @@ std::string opcode_package_t::print_all(circular_buffer_t<opcode_package_t> *inp
 
 // =============================================================================
 std::string opcode_package_t::print_all(opcode_package_t *input_array, uint32_t size_array) {
-    std::string PackageString;
+    std::string content_string;
     std::string FinalString;
-    PackageString = "";
+    content_string = "";
     FinalString = "";
 
     for (uint32_t i = 0; i < size_array ; i++) {
-        PackageString = input_array[i].content_to_string();
-        if (PackageString.size() > 1) {
-            FinalString = FinalString + "[" + utils_t::uint32_to_string(i) + "] " + PackageString + "\n";
+        content_string = input_array[i].content_to_string();
+        if (content_string.size() > 1) {
+            FinalString = FinalString + "[" + utils_t::uint32_to_string(i) + "] " + content_string + "\n";
         }
     }
     return FinalString;
@@ -615,18 +617,18 @@ std::string opcode_package_t::print_all(opcode_package_t *input_array, uint32_t 
 
 // =============================================================================
 std::string opcode_package_t::print_all(opcode_package_t **input_matrix, uint32_t size_x_matrix, uint32_t size_y_matrix) {
-    std::string PackageString;
+    std::string content_string;
     std::string FinalString;
-    PackageString = "";
+    content_string = "";
     FinalString = "";
 
     for (uint32_t i = 0; i < size_x_matrix ; i++) {
         for (uint32_t j = 0; j < size_y_matrix ; j++) {
-            PackageString = input_matrix[i][j].content_to_string();
-            if (PackageString.size() > 1) {
+            content_string = input_matrix[i][j].content_to_string();
+            if (content_string.size() > 1) {
                 FinalString = FinalString +
                                 "[" + utils_t::uint32_to_string(i) + "] " +
-                                "[" + utils_t::uint32_to_string(j) + "] " + PackageString;
+                                "[" + utils_t::uint32_to_string(j) + "] " + content_string;
             }
         }
         if (FinalString.size() > 1) {

@@ -131,6 +131,11 @@ class cache_memory_t : public interconnection_interface_t {
         uint64_t stat_max_writeback_wait_time;
         uint64_t stat_accumulated_writeback_wait_time;
 
+        // HMC
+        uint64_t stat_min_hmc_wait_time;
+        uint64_t stat_max_hmc_wait_time;
+        uint64_t stat_accumulated_hmc_wait_time;
+
         uint64_t stat_full_mshr_buffer_request;
         uint64_t stat_full_mshr_buffer_writeback;
         uint64_t stat_full_mshr_buffer_prefetch;
@@ -304,4 +309,14 @@ class cache_memory_t : public interconnection_interface_t {
             if (this->stat_min_writeback_wait_time > new_time) this->stat_min_writeback_wait_time = new_time;
             if (this->stat_max_writeback_wait_time < new_time) this->stat_max_writeback_wait_time = new_time;
         };
+
+        // HMC
+        inline void add_stat_hmc_wait(uint64_t born_cycle) {
+            uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
+            this->stat_accumulated_hmc_wait_time += new_time;
+            if (this->stat_min_hmc_wait_time > new_time) this->stat_min_hmc_wait_time = new_time;
+            if (this->stat_max_hmc_wait_time < new_time) this->stat_max_hmc_wait_time = new_time;
+        };
+
+
 };

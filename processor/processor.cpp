@@ -262,12 +262,6 @@ void processor_t::allocate() {
     this->register_alias_table_size = 260; /// Number of registers on the trace (258 is used for SiNUCA only maintain the dependency between uops)
     this->register_alias_table = utils_t::template_allocate_initialize_array<reorder_buffer_line_t*>(this->register_alias_table_size, NULL);
 
-    /// Propagate the allocate()
-    this->branch_predictor->allocate();
-
-
-    ERROR_ASSERT_PRINTF(this->branch_per_fetch > 0, "Maximum number of branches per fetch must be greater than 0.\n")
-
     /// Functional Units
     uint32_t total_dispatched = this->number_fu_int_alu + this->number_fu_int_mul + this->number_fu_int_div
                             + this->number_fu_fp_alu + this->number_fu_fp_mul + this->number_fu_fp_div
@@ -312,6 +306,7 @@ void processor_t::allocate() {
     }
     this->not_disambiguation_offset_bits_mask = ~disambiguation_offset_bits_mask;
 
+    ERROR_ASSERT_PRINTF(this->branch_per_fetch > 0, "Maximum number of branches per fetch must be greater than 0.\n")
     char label[50] = "";
     sprintf(label, "%s_BRANCH_PREDICTOR", this->get_label());
     this->branch_predictor->set_label(label);
@@ -716,6 +711,29 @@ void processor_t::stage_decode() {
         ERROR_ASSERT_PRINTF(this->decode_opcode_counter == this->fetch_buffer.front()->opcode_number, "Renaming out-of-order.\n")
         this->decode_opcode_counter++;
 
+
+        // DECODE HMC ====================================================
+        if (this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_HMC_ALU    ||
+            this->fetch_buffer.front()->opcode_operation == INSTRUCTION_OPERATION_HMC_ALUR   ){
+
+            new_uop.package_clean();
+            new_uop.opcode_to_uop(this->decode_uop_counter++,
+                                    this->fetch_buffer.front()->opcode_operation,
+                                    this->fetch_buffer.front()->read_address,
+                                    this->fetch_buffer.front()->read_size,
+                                    *this->fetch_buffer.front());
+
+            new_uop.package_ready(this->stage_decode_cycles);
+            PROCESSOR_DEBUG_PRINTF("\t Decode[%d] %s\n", pos_buffer, new_uop.content_to_string().c_str());
+
+            pos_buffer = this->decode_buffer.push_back(new_uop);
+            ERROR_ASSERT_PRINTF(pos_buffer != POSITION_FAIL, "Decoding more uops than MAX_UOP_DECODED (%d)", MAX_UOP_DECODED)
+
+            /// Remove the oldest OPCODE (just decoded) from the fetch buffer
+            this->fetch_buffer.pop_front();
+            continue;
+        }
+
         /// DECODE READ ====================================================
         if (this->fetch_buffer.front()->is_read) {
             new_uop.package_clean();
@@ -1052,7 +1070,8 @@ void processor_t::stage_rename() {
         ERROR_ASSERT_PRINTF(this->rename_uop_counter == this->decode_buffer.front()->uop_number, "Renaming out-of-order.\n")
 
         /// If READ => Check free space on the MOB-READ
-        if (this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MEM_LOAD) {
+        if (this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MEM_LOAD ||
+        this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_HMC_ALUR) {
             position_mob = memory_order_buffer_line_t::find_free(this->memory_order_buffer_read, this->memory_order_buffer_read_size);
             if (position_mob == POSITION_FAIL) {
                 this->add_stat_full_memory_order_buffer_read();
@@ -1061,7 +1080,8 @@ void processor_t::stage_rename() {
             mob_line = &this->memory_order_buffer_read[position_mob];
         }
         /// If WRITE => Check free space on the MOB-WRITE
-        else if (this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MEM_STORE) {
+        else if (this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_MEM_STORE ||
+        this->decode_buffer.front()->uop_operation == INSTRUCTION_OPERATION_HMC_ALU) {
             position_mob = memory_order_buffer_line_t::find_free(this->memory_order_buffer_write, this->memory_order_buffer_write_size);
             if (position_mob == POSITION_FAIL) {
                 this->add_stat_full_memory_order_buffer_write();
@@ -1069,7 +1089,6 @@ void processor_t::stage_rename() {
             }
             mob_line = &this->memory_order_buffer_write[position_mob];
         }
-
 
         /// Check free space on the ROB
         position_rob = this->rob_insert();
@@ -1102,7 +1121,8 @@ void processor_t::stage_rename() {
         // =====================================================================
         /// Insert into MOB
         // =====================================================================
-        if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MEM_LOAD) {
+        if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MEM_LOAD ||
+        this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_HMC_ALUR) {
             ERROR_ASSERT_PRINTF(this->reorder_buffer[position_rob].mob_ptr->memory_request.state == PACKAGE_STATE_FREE, "ROB has a pointer to a non free package.")
             /// Fix the request size to fit inside the cache line
             uint64_t offset = this->reorder_buffer[position_rob].uop.memory_address & this->offset_bits_mask;
@@ -1122,15 +1142,16 @@ void processor_t::stage_rename() {
                 PACKAGE_STATE_TRANSMIT,                                 /// Pack. State
                 this->stage_rename_cycles + this->stage_dispatch_cycles + this->stage_execution_cycles,  /// Stall Cycles
 
-                MEMORY_OPERATION_READ,                                  /// Mem. Operation
+                this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_HMC_ALUR ? MEMORY_OPERATION_HMC_ALUR : MEMORY_OPERATION_READ,                                  /// Mem. Operation
                 false,                                                  /// Is Answer
 
                 this->get_id(),                                                                 /// Src ID
                 this->get_interface_output_component(PROCESSOR_PORT_DATA_CACHE)->get_id(),      /// Dst ID
                 NULL,                                                   /// *Hops
-                POSITION_FAIL);                                         /// Hop Counter
+                POSITION_FAIL);  /// Hop Counter
         }
-        else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MEM_STORE) {
+        else if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MEM_STORE ||
+        this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_HMC_ALU) {
             ERROR_ASSERT_PRINTF(this->reorder_buffer[position_rob].mob_ptr->memory_request.state == PACKAGE_STATE_FREE, "ROB has a pointer to a non free package.")
             /// Fix the request size to fit inside the cache line
             uint64_t offset = this->reorder_buffer[position_rob].uop.memory_address & this->offset_bits_mask;
@@ -1150,20 +1171,22 @@ void processor_t::stage_rename() {
                 PACKAGE_STATE_TRANSMIT,                                 /// Pack. State
                 this->stage_rename_cycles + this->stage_dispatch_cycles + this->stage_execution_cycles,  /// Stall Cycles
 
-                MEMORY_OPERATION_WRITE,                                 /// Mem. Operation
+                this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_HMC_ALU ? MEMORY_OPERATION_HMC_ALU : MEMORY_OPERATION_WRITE,                                  /// Mem. Operation
                 false,                                                  /// Is Answer
 
                 this->get_id(),                                                                 /// Src ID
                 this->get_interface_output_component(PROCESSOR_PORT_DATA_CACHE)->get_id(),      /// Dst ID
                 NULL,                                                   /// *Hops
-                POSITION_FAIL);                                         /// Hop Counter
+                POSITION_FAIL);  /// Hop Counter
         }
 
         // =====================================================================
         /// MEMORY DISAMBIGUATION
         /// Control the Memory Dependency - Memory READ/WRITE
         if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MEM_LOAD ||
-        this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MEM_STORE) {
+        this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_MEM_STORE ||
+        this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_HMC_ALU ||
+        this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_HMC_ALUR) {
             /// Make connections between ROB and MOB
             mob_line->rob_ptr = &this->reorder_buffer[position_rob];
 
@@ -1362,6 +1385,7 @@ void processor_t::stage_dispatch() {
                 // =============================================================
                 // MEMORY OPERATIONS ==========================================
                 case INSTRUCTION_OPERATION_MEM_LOAD:
+                case INSTRUCTION_OPERATION_HMC_ALUR:
                     if (fu_mem_load < this->number_fu_mem_load) {
                         for (uint32_t i = 0; i < this->number_fu_mem_load; i++) {
                             if (this->ready_cycle_fu_mem_load[i] <= sinuca_engine.get_global_cycle()) {
@@ -1377,7 +1401,9 @@ void processor_t::stage_dispatch() {
                         }
                     }
                 break;
+
                 case INSTRUCTION_OPERATION_MEM_STORE:
+                case INSTRUCTION_OPERATION_HMC_ALU:
                     if (fu_mem_store < this->number_fu_mem_store) {
                         for (uint32_t i = 0; i < this->number_fu_mem_store; i++) {
                             if (this->ready_cycle_fu_mem_store[i] <= sinuca_engine.get_global_cycle()) {
@@ -1491,7 +1517,9 @@ void processor_t::stage_execution() {
 
                 // MEMORY LOAD/STORE ==========================================
                 /// FUNC_UNIT_MEM_LOAD => READ_BUFFER
-                case INSTRUCTION_OPERATION_MEM_LOAD: {
+                case INSTRUCTION_OPERATION_MEM_LOAD:
+                case INSTRUCTION_OPERATION_HMC_ALUR:
+                {
                     ERROR_ASSERT_PRINTF(reorder_buffer_line->mob_ptr != NULL, "Read with a NULL pointer to MOB")
                     this->memory_order_buffer_read_executed++;
                     reorder_buffer_line->mob_ptr->uop_executed = true;
@@ -1507,7 +1535,9 @@ void processor_t::stage_execution() {
 
 
                 /// FUNC_UNIT_MEM_STORE => WRITE_BUFFER
-                case INSTRUCTION_OPERATION_MEM_STORE: {
+                case INSTRUCTION_OPERATION_MEM_STORE:
+                case INSTRUCTION_OPERATION_HMC_ALU:
+                {
                     ERROR_ASSERT_PRINTF(reorder_buffer_line->mob_ptr != NULL, "Write with a NULL pointer to MOB")
                     this->memory_order_buffer_write_executed++;
                     reorder_buffer_line->mob_ptr->uop_executed = true;
@@ -1534,7 +1564,7 @@ void processor_t::stage_execution() {
                 break;
 
                 case INSTRUCTION_OPERATION_BARRIER:
-                    ERROR_PRINTF("Invalid instruction BARRIER being dispatched.\n");
+                    ERROR_PRINTF("Invalid instruction BARRIER being executed.\n");
                 break;
             }
         }
@@ -1741,6 +1771,12 @@ void processor_t::stage_commit() {
                     this->add_stat_memory_write_completed(this->reorder_buffer[pos_buffer].uop.born_cycle);
                 break;
 
+                // HMC OPERATIONS
+                case INSTRUCTION_OPERATION_HMC_ALU:
+                case INSTRUCTION_OPERATION_HMC_ALUR:
+                    this->add_stat_hmc_completed(this->reorder_buffer[pos_buffer].uop.born_cycle);
+                break;
+
                 // BRANCHES
                 case INSTRUCTION_OPERATION_BRANCH:
                     this->add_stat_branch_completed();
@@ -1907,7 +1943,12 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
         }
         break;
 
+
+        // Receiving a HMC
+        case MEMORY_OPERATION_HMC_ALUR:
+
         case MEMORY_OPERATION_READ:
+
             ERROR_ASSERT_PRINTF(input_port == PROCESSOR_PORT_DATA_CACHE, "Receiving read package from a wrong port.\n");
             /// Control Parallel Requests
 
@@ -1925,6 +1966,9 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
                 return OK;
             }
         break;
+
+        // Receiving a wrong HMC
+        case MEMORY_OPERATION_HMC_ALU:
 
         case MEMORY_OPERATION_WRITE:
         case MEMORY_OPERATION_WRITEBACK:
@@ -2029,6 +2073,9 @@ void processor_t::reset_statistics() {
     this->set_stat_memory_write_completed(0);
     this->set_stat_address_to_address(0);
 
+    // HMC Executed Instructions
+    this->set_stat_hmc_completed(0);
+
     /// Dispatch Cycles Stall
     this->set_stat_dispatch_cycles_fu_int_alu(0);
     this->set_stat_dispatch_cycles_fu_int_mul(0);
@@ -2053,6 +2100,12 @@ void processor_t::reset_statistics() {
     this->stat_min_memory_write_wait_time = MAX_ALIVE_TIME;
     this->stat_max_memory_write_wait_time = 0;
     this->stat_accumulated_memory_write_wait_time = 0;
+
+    // HMC Cycles Stall
+    this->stat_min_hmc_wait_time = MAX_ALIVE_TIME;
+    this->stat_max_hmc_wait_time = 0;
+    this->stat_accumulated_hmc_wait_time = 0;
+
 
     this->branch_predictor->reset_statistics();
     return;
@@ -2133,6 +2186,8 @@ void processor_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_memory_write_completed", stat_memory_write_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_address_to_address", stat_address_to_address);
 
+    // HMC
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_hmc_completed", stat_hmc_completed);
 
     /// Dispatch Cycles Stall
     sinuca_engine.write_statistics_small_separator();
@@ -2179,6 +2234,15 @@ void processor_t::print_statistics() {
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_instruction_read_wait_time_ratio", stat_accumulated_instruction_read_wait_time, stat_instruction_read_completed);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_memory_read_wait_time_ratio", stat_accumulated_memory_read_wait_time, stat_memory_read_completed);
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_memory_write_wait_time_ratio", stat_accumulated_memory_write_wait_time, stat_memory_write_completed);
+
+
+    // HMC Cycles Stall
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_min_hmc_wait_time", stat_min_hmc_wait_time);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_max_hmc_wait_time", stat_max_hmc_wait_time);
+    sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_hmc_wait_time_ratio", stat_accumulated_hmc_wait_time, stat_memory_read_completed);
+
+
 
     this->branch_predictor->print_statistics();
 };

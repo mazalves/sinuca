@@ -180,6 +180,90 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     DIRECTORY_CTRL_DEBUG_PRINTF("new_cache_request() cache_id:%u, package:%s\n", cache_id, package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(cache_id < sinuca_engine.get_cache_memory_array_size(), "Wrong cache_id.\n")
 
+
+    if (package->memory_operation == MEMORY_OPERATION_HMC_ALU  ||
+        package->memory_operation == MEMORY_OPERATION_HMC_ALUR ) {
+
+        /// Get CACHE pointer
+        cache_memory_t *cache = sinuca_engine.cache_memory_array[cache_id];
+        directory_line_t *directory_line = NULL;
+        int32_t directory_line_number = POSITION_FAIL;
+
+        if (cache->get_hierarchy_level() != 1) {
+            directory_line_number = find_directory_line(package);
+            ERROR_ASSERT_PRINTF(directory_line_number != POSITION_FAIL,
+                                "High level RQST must have a directory_line.\n. cache_id:%u, package:%s\n",
+                                cache->get_id(), package->content_to_string().c_str())
+            directory_line = this->directory_lines[directory_line_number];
+        }
+        /// Check for LOCK
+        else {
+            for (uint32_t i = 0; i < this->directory_lines.size(); i++) {
+                /// Transaction on the same address was found
+                if (this->cmp_index_tag(this->directory_lines[i]->initial_memory_address, package->memory_address)) {
+
+                    // HMC lock
+                    if (this->directory_lines[i]->initial_memory_operation == MEMORY_OPERATION_HMC_ALU ||
+                    this->directory_lines[i]->initial_memory_operation == MEMORY_OPERATION_HMC_ALUR){
+                        break;
+                    }
+
+                    ERROR_ASSERT_PRINTF(directory_lines[i]->lock_type != LOCK_FREE, "Found directory with LOCK_FREE\n");
+
+                    /// Cannot continue right now
+                    DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED (Found incompatible LOCK)\n")
+                    SINUCA_PRINTF("\t RETURN UNTREATED (Found incompatible LOCK)\n")
+                    return PACKAGE_STATE_UNTREATED;
+                }
+            }
+            ERROR_ASSERT_PRINTF(directory_line == NULL,
+                                "This level RQST must not have a directory_line.\n cache_id:%u, package:%s\n",
+                                cache->get_id(), package->content_to_string().c_str())
+        }
+
+
+        /// Get CACHE_LINE, INDEX, WAY
+        uint32_t index, way;
+        cache_line_t *cache_line = cache->find_line(package->memory_address, index, way);
+        if (cache_line != NULL) {
+            // =====================================================
+            /// Takes care about INCLUSIVENESS / WRITEBACK
+            // =====================================================
+            if (this->inclusiveness_new_eviction(cache, cache_line, index, way, package) == FAIL) {
+                /// Cannot continue right now
+                DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN UNTREATED (Cache_line == NULL)\n")
+                SINUCA_PRINTF("\t RETURN UNTREATED (Cache_line == NULL) could not evict-inclusiveness\n")
+                return PACKAGE_STATE_UNTREATED;
+            }
+            /// Coherence Invalidate
+            cache->change_status(cache_line, PROTOCOL_STATUS_I);
+        }
+
+        /// The request can be treated now !
+        /// New Directory_Line + LOCK
+        if (directory_line == NULL) {
+            this->directory_lines.push_back(new directory_line_t());
+            directory_line = this->directory_lines.back();
+
+            directory_line->packager(package->id_owner, package->opcode_number, package->opcode_address, package->uop_number,
+                                        LOCK_WRITE,
+                                        package->memory_operation, package->memory_address, package->memory_size);
+            DIRECTORY_CTRL_DEBUG_PRINTF("\t New Directory Line:%s\n", directory_line->directory_line_to_string().c_str())
+        }
+        /// Update existing Directory_Line
+        directory_line->cache_request_order[cache_id] = ++directory_line->cache_requested;
+
+        /// LATENCY = NONE
+        package->ready_cycle = sinuca_engine.get_global_cycle();
+
+        package->package_set_src_dst(cache->get_id(), this->find_next_obj_id(cache, package->memory_address));
+
+        DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT RQST (Miss)\n")
+        return PACKAGE_STATE_TRANSMIT;
+    }
+
+
+    // NORMAL DIRECTORY OPERATION ==============================================
     /// Get CACHE pointer
     cache_memory_t *cache = sinuca_engine.cache_memory_array[cache_id];
 
@@ -281,6 +365,16 @@ package_state_t directory_controller_t::treat_cache_request(uint32_t cache_id, m
     /// Takes care about the CACHE HIT/MISS
     // ================================================================================
     switch (package->memory_operation) {
+        // =====================================================================
+        // Receiving a wrong HMC
+        case MEMORY_OPERATION_HMC_ALU:
+        case MEMORY_OPERATION_HMC_ALUR:
+        {
+            /// Send the message to the next level without latency
+            ERROR_PRINTF("Found a HMC in a wrong part of directory_controller_t::treat_cache_request()\n");
+        }
+
+
         // =====================================================================
         /// READ and WRITE
         case MEMORY_OPERATION_READ:
@@ -599,6 +693,72 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
     DIRECTORY_CTRL_DEBUG_PRINTF("new_cache_request() cache_id:%u, package:%s\n", cache_id, package->content_to_string().c_str())
     ERROR_ASSERT_PRINTF(cache_id < sinuca_engine.get_cache_memory_array_size(), "Wrong cache_id.\n")
 
+
+    // HMC =====================================================================
+    if (package->memory_operation == MEMORY_OPERATION_HMC_ALU) {
+            /// Send the message to the next level without latency
+            ERROR_PRINTF("Found a HMC_ALU in a wrong part of directory_controller_t::treat_cache_answer()\n");
+    }
+    else if (package->memory_operation == MEMORY_OPERATION_HMC_ALUR) {
+
+        /// Get CACHE pointer
+        cache_memory_t *cache = sinuca_engine.cache_memory_array[cache_id];
+
+        /// Find the existing directory line.
+        directory_line_t *directory_line = NULL;
+        int32_t directory_line_number = find_directory_line(package);
+        if (directory_line_number != POSITION_FAIL) {
+            directory_line = this->directory_lines[directory_line_number];
+        }
+        ERROR_ASSERT_PRINTF(directory_line != NULL, "Higher level REQUEST must have a directory_line\n")
+
+        /// Update existing Directory_Line
+        ERROR_ASSERT_PRINTF(directory_line->cache_request_order[cache_id] == directory_line->cache_requested, "Wrong Cache Request Order\n")
+        directory_line->cache_requested--;
+        directory_line->cache_request_order[cache_id] = 0;
+        DIRECTORY_CTRL_DEBUG_PRINTF("\t Update Directory Line:%s\n", directory_line->directory_line_to_string().c_str())
+
+        // ============================================================================
+        /// This is the FIRST cache to receive the request
+        if (directory_line->cache_requested == 0) {
+            /// Get the DST ID
+            package->package_set_src_dst(cache->get_id(), directory_line->id_owner);
+
+            package->memory_operation = directory_line->initial_memory_operation;
+            package->memory_address = directory_line->initial_memory_address;
+            package->memory_size = directory_line->initial_memory_size;
+
+            /// Erase the directory_entry
+            DIRECTORY_CTRL_DEBUG_PRINTF("\t Erasing Directory Line:%s\n", directory_line->directory_line_to_string().c_str())
+            utils_t::template_delete_variable<directory_line_t>(directory_line);
+            directory_line = NULL;
+            this->directory_lines.erase(this->directory_lines.begin() + directory_line_number);
+
+            /// Send the package answer
+            DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT ANS (First Cache Requested)\n")
+
+            return PACKAGE_STATE_TRANSMIT;
+        }
+        // ============================================================================
+        /// This is NOT the FIRST cache to receive the request
+        else {
+            for (uint32_t i = 0; i < sinuca_engine.cache_memory_array_size; i++) {
+                /// Found the previous requester
+                if (directory_line->cache_request_order[i] == directory_line->cache_requested) {
+                    /// Get the DST ID
+                    package->package_set_src_dst(cache->get_id(), sinuca_engine.cache_memory_array[i]->get_id());
+
+                    /// Send the package answer
+                    DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN TRANSMIT ANS (NOT First Cache Requested)\n")
+
+                    return PACKAGE_STATE_TRANSMIT;
+                }
+            }
+            ERROR_PRINTF("Could not find the processor that requested a HMC.\n")
+        }
+    }
+
+
     /// Get CACHE pointer
     cache_memory_t *cache = sinuca_engine.cache_memory_array[cache_id];
 
@@ -724,9 +884,12 @@ package_state_t directory_controller_t::treat_cache_request_sent(uint32_t cache_
     ERROR_ASSERT_PRINTF(cache_id < sinuca_engine.get_cache_memory_array_size(), "Wrong cache_id.\n")
 
     switch (package->memory_operation) {
+
         // =============================================================
+        // HMC
+        case MEMORY_OPERATION_HMC_ALUR:
+
         /// READ and WRITE
-        // =============================================================
         case MEMORY_OPERATION_READ:
         case MEMORY_OPERATION_INST:
         case MEMORY_OPERATION_PREFETCH:
@@ -735,9 +898,11 @@ package_state_t directory_controller_t::treat_cache_request_sent(uint32_t cache_
         break;
 
         // =============================================================
+        // HMC
+        case MEMORY_OPERATION_HMC_ALU:
         /// WRITEBACK
-        // =============================================================
         case MEMORY_OPERATION_WRITEBACK:
+        {
             /// Get CACHE pointer
             cache_memory_t *cache = sinuca_engine.cache_memory_array[cache_id];
 
@@ -761,7 +926,9 @@ package_state_t directory_controller_t::treat_cache_request_sent(uint32_t cache_
             /// Erase the package
             DIRECTORY_CTRL_DEBUG_PRINTF("\t RETURN FREE (Requester = This)\n")
             return PACKAGE_STATE_READY;
+        }
         break;
+
     }
 
     ERROR_PRINTF("Could not treat the cache answer\n")
@@ -814,8 +981,7 @@ memory_package_t* directory_controller_t::create_cache_writeback(cache_memory_t 
                 cache->get_id(),                        /// Src ID
                 cache->get_id(),                        /// Dst ID
                 NULL,                                   /// *Hops
-                POSITION_FAIL                           /// Hop Counter
-                );
+                POSITION_FAIL);                         /// Hop Counter
 
     // =========================================================================
     /// Allocate CopyBack at the MSHR
@@ -1149,6 +1315,12 @@ void directory_controller_t::coherence_new_operation(cache_memory_t *cache, cach
                         cache_line->status = PROTOCOL_STATUS_S;
                     }
                 break;
+
+                // Receiving a wrong HMC
+                case MEMORY_OPERATION_HMC_ALU:
+                case MEMORY_OPERATION_HMC_ALUR:
+                    ERROR_PRINTF("Entering at coherence_new_operation() for a HMC instruction");
+                break;
             }
         break;
     }
@@ -1250,6 +1422,12 @@ bool directory_controller_t::coherence_is_read(memory_operation_t memory_operati
         case MEMORY_OPERATION_WRITEBACK:
             return FAIL;
         break;
+
+        // Receiving a wrong HMC
+        case MEMORY_OPERATION_HMC_ALU:
+        case MEMORY_OPERATION_HMC_ALUR:
+            ERROR_PRINTF("Entering at coherence_is_read() for a HMC instruction\n");
+        break;
     }
     ERROR_PRINTF("Wrong memory_operation_t\n")
     return FAIL;
@@ -1270,6 +1448,7 @@ bool directory_controller_t::coherence_is_dirty(protocol_status_t line_status) {
                 case PROTOCOL_STATUS_I:
                     return FAIL;
                 break;
+
             }
         break;
     }
@@ -1334,6 +1513,7 @@ uint32_t directory_controller_t::find_next_obj_id(cache_memory_t *cache_memory, 
         }
     }
     ERROR_ASSERT_PRINTF(lower_level_cache->empty(), "Could not find a valid lower_level_cache but size != 0.\n")
+
     /// Find Next Main Memory
 
     // =====================================
@@ -1364,6 +1544,8 @@ uint32_t directory_controller_t::find_next_obj_id(cache_memory_t *cache_memory, 
             }
         }
     }
+
+
     ERROR_PRINTF("Could not find a next_level for the memory address\n")
     return FAIL;
 };
@@ -1410,6 +1592,13 @@ void directory_controller_t::new_statistics(cache_memory_t *cache, memory_operat
             case MEMORY_OPERATION_WRITEBACK:
                 this->add_stat_writeback_recv();
             break;
+
+            // HMC
+            case MEMORY_OPERATION_HMC_ALU:
+            case MEMORY_OPERATION_HMC_ALUR:
+                ERROR_PRINTF("Entering at new_statistics() for a HMC instruction\n");
+            break;
+
         }
     }
 
@@ -1435,6 +1624,14 @@ void directory_controller_t::new_statistics(cache_memory_t *cache, memory_operat
             case MEMORY_OPERATION_WRITEBACK:
                 this->add_stat_writeback_send();
             break;
+
+            // HMC
+            case MEMORY_OPERATION_HMC_ALU:
+            case MEMORY_OPERATION_HMC_ALUR:
+                ERROR_PRINTF("Entering at new_statistics() for a HMC instruction");
+            break;
+
+
         }
     }
 

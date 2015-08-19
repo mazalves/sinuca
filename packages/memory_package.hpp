@@ -41,6 +41,7 @@ class memory_package_t {
         memory_operation_t memory_operation;    /// memory operation
         bool is_answer;                         /// is answer or request
 
+
         /// Router Control
         uint32_t id_src;                        /// id src component
         uint32_t id_dst;                        /// id dst component

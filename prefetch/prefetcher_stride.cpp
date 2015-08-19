@@ -138,6 +138,7 @@ void prefetch_stride_t::treat_prefetch(memory_package_t *package) {
                         this->stride_table[slot].cycle_last_activation = sinuca_engine.get_global_cycle();
                         this->stride_table[slot].stride_state = PREFETCHER_STRIDE_STATE_STEADY;
                         this->add_stat_steady_state();
+                        this->add_stat_request_matches();
 
                         /// Generate the prefetches
                         for (uint32_t index = 1; index <= this->prefetch_degree; index++) {

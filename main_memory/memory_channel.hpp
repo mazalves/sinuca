@@ -21,10 +21,12 @@
 class memory_channel_t : public interconnection_interface_t {
     public:
         /// Comes from memory controller
+        uint32_t memory_controller_id;
         uint32_t bank_per_channel;
         uint32_t bank_buffer_size;
         selection_t bank_selection_policy;
         uint32_t bank_row_buffer_size;
+        page_policy_t page_policy;
 
         request_priority_t request_priority_policy;
         write_priority_t write_priority_policy;
@@ -50,6 +52,10 @@ class memory_channel_t : public interconnection_interface_t {
         uint32_t timing_wr;     // write recovery time
         uint32_t timing_wtr;    // write to read delay time
         uint32_t timing_burst;
+
+        // HMC
+        uint32_t hmc_latency_alu;
+        uint32_t hmc_latency_alur;
 
         /// Set by allocate
         container_ptr_memory_package_t *bank_buffer;
@@ -112,12 +118,11 @@ class memory_channel_t : public interconnection_interface_t {
             return (memory_addressA & this->not_column_bits_mask) == (memory_addressB & this->not_column_bits_mask);
         }
 
-
         int32_t find_next_read_operation(uint32_t bank);
         int32_t find_next_write_operation(uint32_t bank);
         int32_t find_next_package(uint32_t bank);
 
-        bool check_if_minimum_latency(uint32_t bank, memory_controller_command_t next_command);
+        uint64_t get_minimum_latency(uint32_t bank, memory_controller_command_t next_command);
 
         package_state_t treat_memory_request(memory_package_t *package);
 
@@ -126,10 +131,11 @@ class memory_channel_t : public interconnection_interface_t {
         uint32_t selection_bank_random();
         uint32_t selection_bank_round_robin();
 
+        INSTANTIATE_GET_SET(uint32_t, memory_controller_id)
         INSTANTIATE_GET_SET(uint32_t, bank_per_channel)
         INSTANTIATE_GET_SET(uint32_t, bank_buffer_size)
         INSTANTIATE_GET_SET(selection_t, bank_selection_policy)
-        INSTANTIATE_GET_SET(uint32_t, bank_row_buffer_size)
+        INSTANTIATE_GET_SET(page_policy_t, page_policy)
         INSTANTIATE_GET_SET(request_priority_t, request_priority_policy)
         INSTANTIATE_GET_SET(write_priority_t, write_priority_policy)
 
@@ -149,6 +155,9 @@ class memory_channel_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, timing_rtp)
         INSTANTIATE_GET_SET(uint32_t, timing_wr)
         INSTANTIATE_GET_SET(uint32_t, timing_wtr)
+
+        INSTANTIATE_GET_SET(uint32_t, hmc_latency_alu)
+        INSTANTIATE_GET_SET(uint32_t, hmc_latency_alur)
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_row_buffer_hit);
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_row_buffer_miss);

@@ -49,7 +49,10 @@ enum instruction_operation_t {
     /// NOT IDENTIFIED
     INSTRUCTION_OPERATION_OTHER,
     /// SYNCHRONIZATION
-    INSTRUCTION_OPERATION_BARRIER
+    INSTRUCTION_OPERATION_BARRIER,
+    /// HMC
+    INSTRUCTION_OPERATION_HMC_ALU,     //#12 No Answer is sent back
+    INSTRUCTION_OPERATION_HMC_ALUR     //#13 Request Pay-Load
 };
 const char* get_enum_instruction_operation_char(instruction_operation_t type);
 
@@ -60,7 +63,10 @@ enum memory_operation_t {
     MEMORY_OPERATION_READ,
     MEMORY_OPERATION_WRITE,
     MEMORY_OPERATION_PREFETCH,
-    MEMORY_OPERATION_WRITEBACK
+    MEMORY_OPERATION_WRITEBACK,
+    /// HMC
+    MEMORY_OPERATION_HMC_ALU,
+    MEMORY_OPERATION_HMC_ALUR
 };
 const char *get_enum_memory_operation_char(memory_operation_t type);
 
@@ -272,9 +278,11 @@ const char *get_enum_cache_mask_char(cache_mask_t type);
 enum memory_controller_mask_t {
     MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_COLBYTE,
     MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_COLROW_COLBYTE,
+    MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE,
     MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CHANNEL_COLBYTE,
-    MEMORY_CONTROLLER_MASK_ROW_COLROW_BANK_CHANNEL_COLBYTE,
-    MEMORY_CONTROLLER_MASK_ROW_BANK_CHANNEL_CTRL_COLROW_COLBYTE
+    MEMORY_CONTROLLER_MASK_ROW_BANK_COLROW_CTRL_CHANNEL_COLBYTE,
+    MEMORY_CONTROLLER_MASK_ROW_CTRL_BANK_COLROW_COLBYTE,
+    MEMORY_CONTROLLER_MASK_ROW_COLROW_BANK_CHANNEL_COLBYTE
 };
 const char *get_enum_memory_controller_mask_char(memory_controller_mask_t type);
 
@@ -296,6 +304,14 @@ enum request_priority_t {
     REQUEST_PRIORITY_FIRST_COME_FIRST_SERVE
 };
 const char *get_enum_request_priority_char(request_priority_t type);
+
+// ============================================================================
+/// Enumerates the policies to control the page (row buffer) inside the memory controller
+enum page_policy_t {
+    PAGE_POLICY_OPEN_ROW,
+    PAGE_POLICY_CLOSE_ROW
+};
+const char *get_enum_page_policy_char(page_policy_t type);
 
 // ============================================================================
 /// Enumerates the policies to give privilege of some operations over others
@@ -325,8 +341,6 @@ enum line_prediction_t {
     LINE_PREDICTION_WRITEBACK
 };
 const char *get_enum_line_prediction_t_char(line_prediction_t type);
-
-
 
 
 #endif  // _SINUCA_ENUMERATOR_HPP_

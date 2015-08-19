@@ -232,6 +232,9 @@ class processor_t : public interconnection_interface_t {
         uint64_t stat_memory_write_completed;
         uint64_t stat_address_to_address;
 
+        // Executed HMC
+        uint64_t stat_hmc_completed;
+
         /// Dispatch Cycles Stall
         uint64_t stat_dispatch_cycles_fu_int_alu;
         uint64_t stat_dispatch_cycles_fu_int_mul;
@@ -256,6 +259,12 @@ class processor_t : public interconnection_interface_t {
         uint64_t stat_min_memory_write_wait_time;
         uint64_t stat_max_memory_write_wait_time;
         uint64_t stat_accumulated_memory_write_wait_time;
+
+        // HMC Cycles Stall
+        uint64_t stat_min_hmc_wait_time;
+        uint64_t stat_max_hmc_wait_time;
+        uint64_t stat_accumulated_hmc_wait_time;
+
 
 
     public:
@@ -464,24 +473,36 @@ class processor_t : public interconnection_interface_t {
             this->stat_instruction_read_completed++;
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
             stat_accumulated_instruction_read_wait_time += new_time;
-            if (stat_min_instruction_read_wait_time > new_time) stat_min_instruction_read_wait_time = new_time;
-            if (stat_max_instruction_read_wait_time < new_time) stat_max_instruction_read_wait_time = new_time;
+            if (this->stat_min_instruction_read_wait_time > new_time) this->stat_min_instruction_read_wait_time = new_time;
+            if (this->stat_max_instruction_read_wait_time < new_time) this->stat_max_instruction_read_wait_time = new_time;
         };
 
         inline void add_stat_memory_read_completed(uint64_t born_cycle) {
             this->stat_memory_read_completed++;
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
             this->stat_accumulated_memory_read_wait_time += new_time;
-            if (stat_min_memory_read_wait_time > new_time) stat_min_memory_read_wait_time = new_time;
-            if (stat_max_memory_read_wait_time < new_time) stat_max_memory_read_wait_time = new_time;
+            if (this->stat_min_memory_read_wait_time > new_time) this->stat_min_memory_read_wait_time = new_time;
+            if (this->stat_max_memory_read_wait_time < new_time) this->stat_max_memory_read_wait_time = new_time;
         };
 
         inline void add_stat_memory_write_completed(uint64_t born_cycle) {
             this->stat_memory_write_completed++;
             uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
             this->stat_accumulated_memory_write_wait_time += new_time;
-            if (stat_min_memory_write_wait_time > new_time) stat_min_memory_write_wait_time = new_time;
-            if (stat_max_memory_write_wait_time < new_time) stat_max_memory_write_wait_time = new_time;
+            if (this->stat_min_memory_write_wait_time > new_time) this->stat_min_memory_write_wait_time = new_time;
+            if (this->stat_max_memory_write_wait_time < new_time) this->stat_max_memory_write_wait_time = new_time;
         };
+
+        // HMC
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_hmc_completed)
+        inline void add_stat_hmc_completed(uint64_t born_cycle) {
+            this->stat_hmc_completed++;
+            uint64_t new_time = (sinuca_engine.get_global_cycle() - born_cycle);
+            this->stat_accumulated_hmc_wait_time += new_time;
+            if (this->stat_min_hmc_wait_time > new_time) this->stat_min_hmc_wait_time = new_time;
+            if (this->stat_max_hmc_wait_time < new_time) this->stat_max_hmc_wait_time = new_time;
+        };
+
+
 };
 #endif  // _PROCESSOR_PROCESSOR_HPP_

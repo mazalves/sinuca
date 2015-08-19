@@ -16,7 +16,7 @@ RM = rm -f
 ################################################################################
 
 ## DEBUG DEEP
-# ~ FLAGS =  -Wall -O0 -ggdb  -Werror -lefence
+# ~ FLAGS =  -Wall -O1 -ggdb  -Werror -lefence
 # ~ LDFLAGS = -ggdb  -lefence
 
 ## DEBUG PROFILE
@@ -32,8 +32,8 @@ RM = rm -f
 # ~ LDFLAGS = -ggdb
 
 # ~ ## EXECUTION
-FLAGS =   -O3 -ggdb -Wall -Wextra -Werror -std=c++0x
-LDFLAGS = -ggdb
+FLAGS =   -O3 -ggdb -Wall -Wextra -Werror -rdynamic -std=c++0x
+LDFLAGS = -ggdb -rdynamic
 
 ########################################################
 # ~ MACHINE=$(shell uname -m)

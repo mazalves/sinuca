@@ -36,6 +36,8 @@
 #include <inttypes.h>
 #include <stdint.h>
 #include <signal.h>
+#include <execinfo.h>
+#include <cxxabi.h>
 
 /// C++ Includes
 #include <ctime>
@@ -131,8 +133,9 @@ extern sinuca_engine_t sinuca_engine;
 #define HEART_BEAT      10000000  /// Period to inform the Progress
 #define MAX_ALIVE_TIME   1000000  /// Max Time for a request to be solved
 #define PERIODIC_CHECK  10000000  /// Period between the Periodic Check
+// ~ #define PERIODIC_CHECK  1  /// Period between the Periodic Check
 
-// ~ #define INITIALIZE_DEBUG 8800000    /// Cycle to start the DEBUG_PRINTF (0 to disable)
+// ~ #define INITIALIZE_DEBUG 6800000    /// Cycle to start the DEBUG_PRINTF (0 to disable)
 #define INITIALIZE_DEBUG 0    /// Cycle to start the DEBUG_PRINTF (0 to disable)
 #define FINALIZE_DEBUG 0      /// Cycle to stop the DEBUG_PRINTF (0 to disable)
 
@@ -155,12 +158,12 @@ extern sinuca_engine_t sinuca_engine;
 /// It will DEACTIVATE all the other messages below
 #define SINUCA_PRINTF(...) printf(__VA_ARGS__);
 
-/// DEBUG DESCRIPTION: Lots of details to help during the debug phase.
+/// DEBUG DESCRIPTION: Lots of details do help during the debug phase.
 
 // ~ #define SINUCA_DEBUG
 #ifdef SINUCA_DEBUG
     // ~ #define CONFIGURATOR_DEBUG
-    #define TRACE_READER_DEBUG
+    // ~ #define TRACE_READER_DEBUG
     // ~ #define TRACE_GENERATOR_DEBUG
     // ~ #define PROCESSOR_DEBUG
     // ~ #define SYNC_DEBUG
@@ -172,7 +175,7 @@ extern sinuca_engine_t sinuca_engine;
     // ~ #define ROUTER_DEBUG
     // ~ #define INTERCONNECTION_CTRL_DEBUG
     // ~ #define DIRECTORY_CTRL_DEBUG
-    #define SHOW_FREE_PACKAGE
+    // ~ #define SHOW_FREE_PACKAGE
     #define DEBUG_PRINTF(...)   {\
                                     if (sinuca_engine.get_is_runtime_debug()) {\
                                         SINUCA_PRINTF("DEBUG %s: ", get_label());\
@@ -204,7 +207,32 @@ extern sinuca_engine_t sinuca_engine;
                                             SINUCA_PRINTF("ERROR: File: %s at Line: %u\n", __FILE__, __LINE__);\
                                             SINUCA_PRINTF("ERROR: Function: %s\n", __PRETTY_FUNCTION__);\
                                             SINUCA_PRINTF("ERROR: Cycle: %" PRIu64 "\n", sinuca_engine.get_global_cycle());\
+                                            void* stack_ptrs[20]; \
+                                            int stack_count = backtrace(stack_ptrs, 20); \
+                                            SINUCA_PRINTF("\n");\
+                                            SINUCA_PRINTF("ERROR: Stack size:%d\n", stack_count); \
+                                            char** stack_funcNames = backtrace_symbols(stack_ptrs, stack_count);\
+                                            for( int stack_it = 0; stack_it < stack_count; stack_it++ ) { \
+                                                char *mangled_name = 0, *offset_begin = 0, *offset_end = 0;\
+                                                for (char *p = stack_funcNames[stack_it]; *p; ++p) {\
+                                                    if (*p == '(') {        mangled_name = p;       }\
+                                                    else if (*p == '+'){    offset_begin = p;       }\
+                                                    else if (*p == ')'){    offset_end = p; break;  }\
+                                                }\
+                                                if (mangled_name && offset_begin && offset_end && mangled_name < offset_begin) {\
+                                                    *mangled_name++ = '\0';\
+                                                    *offset_begin++ = '\0';\
+                                                    *offset_end++ = '\0';\
+                                                }\
+                                                int status;\
+                                                char * real_name = abi::__cxa_demangle(mangled_name, 0, 0, &status);\
+                                                if (status == 0) {SINUCA_PRINTF("ERROR: Call(%d):%s\n", stack_it, real_name); }\
+                                                else { SINUCA_PRINTF("ERROR: Call(%d):%s\n", stack_it, mangled_name); }\
+                                            }\
+                                            SINUCA_PRINTF("\n");\
+                                            free(stack_funcNames); \
                                         }
+
 
     #define ERROR_ASSERT_PRINTF(v, ...) if (!(v)) {\
                                             ERROR_INFORMATION();\
