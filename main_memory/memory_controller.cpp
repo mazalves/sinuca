@@ -51,7 +51,6 @@ memory_controller_t::memory_controller_t() {
     this->channels = NULL;
     this->mshr_buffer = NULL;
 
-    this->bus_frequency = 0;
     this->burst_length = 0;
     this->core_to_bus_clock_ratio = 0;
 
@@ -1116,7 +1115,6 @@ void memory_controller_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_buffer_size", mshr_buffer_size);
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "bus_frequency", bus_frequency);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "burst_length", burst_length);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "core_to_bus_clock_ratio", core_to_bus_clock_ratio);
 

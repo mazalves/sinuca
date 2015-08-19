@@ -1317,10 +1317,6 @@ void sinuca_engine_t::initialize_memory_controller() {
             }
 
             /// DRAM configuration
-
-            memory_controller_parameters.push_back("BUS_FREQUENCY");
-            this->memory_controller_array[i]->set_bus_frequency(cfg_memory_controller[ memory_controller_parameters.back() ]);
-
             memory_controller_parameters.push_back("BURST_LENGTH");
             this->memory_controller_array[i]->set_burst_length(cfg_memory_controller[ memory_controller_parameters.back() ]);
 

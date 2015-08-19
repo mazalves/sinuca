@@ -45,7 +45,6 @@ class memory_controller_t : public interconnection_interface_t {
         write_priority_t write_priority_policy;
 
         /// DRAM configuration
-        uint32_t bus_frequency; // DRAM to core bus frequency
         uint32_t burst_length;  // DDR1 has a BL=2, DDR2 has a BL=4, DDR3 has a BL=8
         float core_to_bus_clock_ratio;  // Ratio between PROCESSOR and BUS frequency
 
@@ -220,7 +219,6 @@ class memory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(write_priority_t, write_priority_policy)
 
         /// DRAM configuration
-        INSTANTIATE_GET_SET(uint32_t, bus_frequency)
         INSTANTIATE_GET_SET(uint32_t, burst_length)
         INSTANTIATE_GET_SET(float, core_to_bus_clock_ratio)
 
