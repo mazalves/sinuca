@@ -705,9 +705,7 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
     int32_t slot = POSITION_FAIL;
     if (this->recv_ready_cycle <= sinuca_engine.get_global_cycle()) {
 
-
         switch (package->memory_operation) {
-
             // HMC -> READ buffer
             case MEMORY_OPERATION_HMC_ALU:
             case MEMORY_OPERATION_HMC_ALUR:
@@ -715,47 +713,30 @@ bool memory_controller_t::receive_package(memory_package_t *package, uint32_t in
             case MEMORY_OPERATION_READ:
             case MEMORY_OPERATION_INST:
                 slot = this->allocate_request(package);
-                if (slot != POSITION_FAIL) {
-                    MEMORY_CONTROLLER_DEBUG_PRINTF("\t RECEIVED READ REQUEST\n");
-                    this->mshr_buffer[slot].package_untreated(1);
-                    /// Prepare for answer later
-                    this->mshr_buffer[slot].package_set_src_dst(this->get_id(), package->id_src);
-                    this->recv_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
-                    this->remove_token_list(package);
-                    return OK;
-                }
-                return FAIL;
             break;
 
             case MEMORY_OPERATION_PREFETCH:
                 slot = this->allocate_prefetch(package);
-                if (slot != POSITION_FAIL) {
-                    MEMORY_CONTROLLER_DEBUG_PRINTF("\t RECEIVED PREFETCH REQUEST\n");
-                    this->mshr_buffer[slot].package_untreated(1);
-                    /// Prepare for answer later
-                    this->mshr_buffer[slot].package_set_src_dst(this->get_id(), package->id_src);
-                    this->recv_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
-                    this->remove_token_list(package);
-                    return OK;
-                }
-                return FAIL;
             break;
 
             case MEMORY_OPERATION_WRITEBACK:
             case MEMORY_OPERATION_WRITE:
                 slot = this->allocate_writeback(package);
-                if (slot != POSITION_FAIL) {
-                    MEMORY_CONTROLLER_DEBUG_PRINTF("\t RECEIVED WRITE/WRITEBACK REQUEST\n");
-                    this->mshr_buffer[slot].package_untreated(1);
-                    /// Prepare for answer later
-                    this->mshr_buffer[slot].package_set_src_dst(this->get_id(), package->id_src);
-                    this->recv_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
-                    this->remove_token_list(package);
-                    return OK;
-                }
-                return FAIL;
             break;
         }
+
+        if (slot == POSITION_FAIL) {
+            return FAIL;
+        }
+        MEMORY_CONTROLLER_DEBUG_PRINTF("\t RECEIVED REQUEST\n");
+
+        this->mshr_buffer[slot].package_untreated(1);
+        /// Prepare for answer later
+        this->mshr_buffer[slot].package_set_src_dst(this->get_id(), package->id_src);
+        this->recv_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
+        this->remove_token_list(package);
+        return OK;
+
     }
     else {
         MEMORY_CONTROLLER_DEBUG_PRINTF("\tRECV FAIL (BUSY)\n");

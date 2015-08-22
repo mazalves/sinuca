@@ -17,19 +17,19 @@ RM = rm -f
 
 ## DEBUG DEEP
 # ~ FLAGS =  -Wall -O1 -ggdb  -Werror -lefence
-# ~ LDFLAGS = -ggdb  -lefence
+# ~ LDFLAGS = -ggdb  -lefence -rdynamic
 
 ## DEBUG PROFILE
-# ~ FLAGS =  -Wall -O2 -ggdb  -Werror -pg
-# ~ LDFLAGS = -ggdb  -pg
+# ~ FLAGS =  -Wall -O2 -ggdb  -Werror -pg  -rdynamic -std=c++0x
+# ~ LDFLAGS = -ggdb  -pg -rdynamic
 
 ## DEBUG DEEP FAST
 # ~ FLAGS = -O2 -ggdb -Wall -Wextra -Werror -lefence
-# ~ LDFLAGS = -ggdb  -lefence
+# ~ LDFLAGS = -ggdb  -lefence -rdynamic
 
 ## DEBUG NORMAL
 # ~ FLAGS =  -Wall -O2 -ggdb -Werror
-# ~ LDFLAGS = -ggdb
+# ~ LDFLAGS = -ggdb -rdynamic
 
 # ~ ## EXECUTION
 FLAGS =   -O3 -ggdb -Wall -Wextra -Werror -rdynamic -std=c++0x

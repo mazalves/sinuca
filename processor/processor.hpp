@@ -165,6 +165,7 @@ class processor_t : public interconnection_interface_t {
         memory_order_buffer_line_t *oldest_read_to_send;
         memory_order_buffer_line_t *oldest_write_to_send;
 
+
         /// Containers to fast the execution, with pointers of UOPs ready.
         container_ptr_reorder_buffer_line_t unified_reservation_station;    /// dispatch->execute
         container_ptr_reorder_buffer_line_t unified_functional_units;       /// execute->commit

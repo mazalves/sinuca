@@ -476,7 +476,7 @@ void processor_t::solve_branch(uint64_t opcode_number, processor_stage_t process
     ERROR_ASSERT_PRINTF(operation == INSTRUCTION_OPERATION_BRANCH, "Asking to solve branch with non branch instruction")
 
     /// Control the total of inflight instructions
-    if (processor_stage == PROCESSOR_STAGE_EXECUTION) {
+    if (processor_stage == PROCESSOR_STAGE_COMMIT) {
         ERROR_ASSERT_PRINTF(this->inflight_branches > 0, "Decreasing inflight branches to -1")
         this->inflight_branches--;
     }
@@ -970,24 +970,23 @@ bool processor_t::is_busy() {
 bool processor_t::check_if_memory_overlaps(uint64_t memory_address1, uint32_t size1, uint64_t memory_address2, uint32_t size2) {
     PROCESSOR_DEBUG_PRINTF("check_if_memory_overlaps()");
 
-    /// Address of the new load
+    /// No overlap - situation A
+    /// | XX        | Last Write
+    /// |     XX    | New Read
     uint64_t new_read_start = memory_address1 & not_disambiguation_offset_bits_mask;
-    uint64_t new_read_end = (new_read_start + size1 -1) & not_disambiguation_offset_bits_mask;
-
-    /// No overlap
-    /// | XX        | New Read
-    /// |     XX    | Last Write
-    uint64_t last_write_start = memory_address2 & not_disambiguation_offset_bits_mask;
-    if (new_read_end < last_write_start) {
+    uint64_t last_write_end = (memory_address2 + size2 - 1) & not_disambiguation_offset_bits_mask;
+    if (last_write_end < new_read_start) {
         PROCESSOR_DEBUG_PRINTF("\t FALSE\n");
         return false;
     }
 
-    /// No overlap
-    /// |     XX    | New Read
-    /// | XX        | Last Write
-    uint64_t last_write_end = (last_write_start + size2 - 1) & not_disambiguation_offset_bits_mask;
-    if (last_write_end < new_read_start) {
+    /// No overlap - situation B
+    /// |     XX    | Last Write
+    /// | XX        | New Read
+    uint64_t last_write_start = memory_address2 & not_disambiguation_offset_bits_mask;
+    uint64_t new_read_end = (memory_address1 + size1 - 1) & not_disambiguation_offset_bits_mask;
+
+    if (new_read_end < last_write_start) {
         PROCESSOR_DEBUG_PRINTF("\t FALSE\n");
         return false;
     }
@@ -1779,6 +1778,8 @@ void processor_t::stage_commit() {
 
                 // BRANCHES
                 case INSTRUCTION_OPERATION_BRANCH:
+                    /// Solve the Branch Prediction
+                    this->solve_branch(this->reorder_buffer[pos_buffer].uop.opcode_number, PROCESSOR_STAGE_COMMIT, this->reorder_buffer[pos_buffer].uop.uop_operation);
                     this->add_stat_branch_completed();
                 break;
 
