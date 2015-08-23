@@ -51,13 +51,19 @@ uint64_t utils_t::get_power_of_two(uint64_t n) {
     }
 
     ERROR_ASSERT_PRINTF(check_if_power_of_two(n), "Trying to get a log2 of a non power of two number %" PRIu64 ".\n", n);
-    return log(n) / log(2);
+    int64_t log2 = -1;
+    while (n != 0) {
+        n >>= 1;
+        log2++;
+    }
+    return log2;
 };
 
 // =============================================================================
 uint32_t utils_t::check_if_power_of_two(uint64_t n) {
     uint32_t i, count = 0;
     uint64_t pow;
+    /// Count the number of 1 bits in the number
     for (i = 0; i < 64 && n != 0 ; i++) {
         pow = n & (1 << i);
         count += (pow != 0);

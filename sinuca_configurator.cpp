@@ -311,30 +311,38 @@ void sinuca_engine_t::initialize_processor() {
             this->processor_array[i]->set_memory_order_buffer_write_size(cfg_processor[ processor_parameters.back() ]);
 
             processor_parameters.push_back("DISAMBIGUATION_TYPE");
-            if (strcasecmp(cfg_processor[ processor_parameters.back() ], "PERFECT") ==  0) {
-                this->processor_array[i]->set_disambiguation_type(DISAMBIGUATION_PERFECT);
+            if (strcasecmp(cfg_processor[ processor_parameters.back() ], "HASHED") ==  0) {
+                this->processor_array[i]->set_disambiguation_type(DISAMBIGUATION_HASHED);
+
+                processor_parameters.push_back("DISAMBIGUATION_LOAD_HASH_SIZE");
+                this->processor_array[i]->set_disambiguation_load_hash_size(cfg_processor[ processor_parameters.back() ]);
+
+                processor_parameters.push_back("DISAMBIGUATION_STORE_HASH_SIZE");
+                this->processor_array[i]->set_disambiguation_store_hash_size(cfg_processor[ processor_parameters.back() ]);
+
+                processor_parameters.push_back("DISAMBIGUATION_BLOCK_SIZE");
+                this->processor_array[i]->set_disambiguation_block_size(cfg_processor[ processor_parameters.back() ]);
             }
             else if (strcasecmp(cfg_processor[ processor_parameters.back() ], "DISABLE") ==  0) {
                 this->processor_array[i]->set_disambiguation_type(DISAMBIGUATION_DISABLE);
+                this->processor_array[i]->set_disambiguation_load_hash_size(1);
+                this->processor_array[i]->set_disambiguation_store_hash_size(1);
+                this->processor_array[i]->set_disambiguation_block_size(0);
             }
             else {
                 ERROR_PRINTF("PROCESSOR %d found a strange VALUE %s for PARAMETER %s\n", i, cfg_processor[ processor_parameters.back() ].c_str(), processor_parameters.back());
             }
 
-            processor_parameters.push_back("DISAMBIGUATION_BLOCK_SIZE");
-            this->processor_array[i]->set_disambiguation_block_size(cfg_processor[ processor_parameters.back() ]);
-
-            processor_parameters.push_back("REGISTER_FORWARD_LATENCY");
-            this->processor_array[i]->set_register_forward_latency(cfg_processor[ processor_parameters.back() ]);
 
             processor_parameters.push_back("SOLVE_ADDRESS_TO_ADDRESS");
             this->processor_array[i]->set_solve_address_to_address(cfg_processor[ processor_parameters.back() ]);
 
+
             processor_parameters.push_back("FETCH_BLOCK_SIZE");
             this->processor_array[i]->set_fetch_block_size(cfg_processor[ processor_parameters.back() ]);
 
-            processor_parameters.push_back("WAIT_WRITE_COMPLETE");
-            this->processor_array[i]->set_wait_write_complete(cfg_processor[ processor_parameters.back() ]);
+            processor_parameters.push_back("REGISTER_FORWARD_LATENCY");
+            this->processor_array[i]->set_register_forward_latency(cfg_processor[ processor_parameters.back() ]);
 
 
             processor_parameters.push_back("BRANCH_PER_FETCH");

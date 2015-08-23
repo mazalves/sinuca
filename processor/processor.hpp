@@ -98,13 +98,16 @@ class processor_t : public interconnection_interface_t {
         uint32_t memory_order_buffer_read_size;
         uint32_t memory_order_buffer_write_size;
 
-        uint32_t disambiguation_block_size;
         disambiguation_t disambiguation_type;
-        uint32_t register_forward_latency;
         bool solve_address_to_address;
 
+        /// Load/Store Bloom Filter Hash Table for Memory Dependencies
+        uint32_t disambiguation_load_hash_size;
+        uint32_t disambiguation_store_hash_size;
+        uint32_t disambiguation_block_size;
+
         uint32_t fetch_block_size;
-        bool wait_write_complete;
+        uint32_t register_forward_latency;
 
         /// Branch Latency to flush on wrong prediction
         uint32_t branch_per_fetch;
@@ -123,9 +126,6 @@ class processor_t : public interconnection_interface_t {
 
         uint64_t fetch_offset_bits_mask;      /// Offset mask
         uint64_t not_fetch_offset_bits_mask;  /// Offset mask
-
-        uint64_t disambiguation_offset_bits_mask;      /// Offset mask
-        uint64_t not_disambiguation_offset_bits_mask;  /// Offset mask
 
         uint64_t *recv_ready_cycle;
 
@@ -165,6 +165,14 @@ class processor_t : public interconnection_interface_t {
         memory_order_buffer_line_t *oldest_read_to_send;
         memory_order_buffer_line_t *oldest_write_to_send;
 
+        memory_order_buffer_line_t* *disambiguation_load_hash;
+        memory_order_buffer_line_t* *disambiguation_store_hash;
+
+        uint64_t disambiguation_load_hash_bits_mask;
+        uint64_t disambiguation_store_hash_bits_mask;
+
+        uint64_t disambiguation_load_hash_bits_shift;
+        uint64_t disambiguation_store_hash_bits_shift;
 
         /// Containers to fast the execution, with pointers of UOPs ready.
         container_ptr_reorder_buffer_line_t unified_reservation_station;    /// dispatch->execute
@@ -232,6 +240,10 @@ class processor_t : public interconnection_interface_t {
         uint64_t stat_memory_read_completed;
         uint64_t stat_memory_write_completed;
         uint64_t stat_address_to_address;
+
+        uint64_t stat_disambiguation_read_false_positive;
+        uint64_t stat_disambiguation_write_false_positive;
+
 
         // Executed HMC
         uint64_t stat_hmc_completed;
@@ -317,8 +329,8 @@ class processor_t : public interconnection_interface_t {
 
         bool is_busy();
 
-        bool check_if_memory_overlaps(uint64_t memory_address1, uint32_t size1, uint64_t memory_address2, uint32_t size2);
-        void make_memory_dependencies(memory_order_buffer_line_t *new_mob_line, memory_order_buffer_line_t *input_array, uint32_t size_array);
+        void make_register_dependencies(reorder_buffer_line_t *new_rob_line);
+        void make_memory_dependencies(memory_order_buffer_line_t *new_mob_line);
         void solve_register_dependency(reorder_buffer_line_t *rob_line);
         void solve_memory_dependency(memory_order_buffer_line_t *mob_line);
 
@@ -402,14 +414,16 @@ class processor_t : public interconnection_interface_t {
 
         INSTANTIATE_GET_SET(disambiguation_t, disambiguation_type)
         INSTANTIATE_GET_SET(uint32_t, disambiguation_block_size)
-        INSTANTIATE_GET_SET(uint32_t, register_forward_latency)
+        INSTANTIATE_GET_SET(uint32_t, disambiguation_load_hash_size)
+        INSTANTIATE_GET_SET(uint32_t, disambiguation_store_hash_size)
         INSTANTIATE_GET_SET(bool, solve_address_to_address)
 
         INSTANTIATE_GET_SET(cache_memory_t*, data_cache)
         INSTANTIATE_GET_SET(cache_memory_t*, inst_cache)
 
         INSTANTIATE_GET_SET(uint32_t, fetch_block_size)
-        INSTANTIATE_GET_SET(bool, wait_write_complete)
+        INSTANTIATE_GET_SET(uint32_t, register_forward_latency)
+
         INSTANTIATE_GET_SET(uint32_t, unified_reservation_station_window_size)
         INSTANTIATE_GET_SET(uint32_t, branch_per_fetch)
 
@@ -456,6 +470,9 @@ class processor_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_instruction_read_completed)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_memory_read_completed)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_memory_write_completed)
+
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_disambiguation_read_false_positive)
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_disambiguation_write_false_positive)
 
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_dispatch_cycles_fu_int_alu)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_dispatch_cycles_fu_int_mul)

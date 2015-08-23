@@ -167,7 +167,7 @@ const char *get_enum_sync_char(sync_t type);
 // ============================================================================
 /// Enumerates the way to treat memory dependencies.
 enum disambiguation_t {
-    DISAMBIGUATION_PERFECT,
+    DISAMBIGUATION_HASHED,
     DISAMBIGUATION_DISABLE
 };
 const char *get_enum_disambiguation_char(disambiguation_t type);

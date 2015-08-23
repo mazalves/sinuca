@@ -79,9 +79,9 @@ int32_t memory_order_buffer_line_t::find_old_request_state_ready(memory_order_bu
     /// Find the oldest UOP inside the MOB.... and it have 0 deps.
     for (uint32_t i = 0; i < size_array ; i++) {
         if (input_array[i].memory_request.state == state &&
-        input_array[i].uop_executed == true &&
-        input_array[i].wait_mem_deps_number == 0 &&
         input_array[i].memory_request.uop_number < old_uop_number &&
+        input_array[i].wait_mem_deps_number == 0 &&
+        input_array[i].uop_executed == true &&
         input_array[i].memory_request.ready_cycle <= sinuca_engine.get_global_cycle()) {
             ERROR_ASSERT_PRINTF(input_array[i].memory_request.is_answer == false, "Selecting a package with ANSWER.\n")
             old_uop_number = input_array[i].memory_request.uop_number;

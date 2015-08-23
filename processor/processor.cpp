@@ -152,17 +152,29 @@ processor_t::processor_t() {
     this->memory_order_buffer_read_executed = 0;
     this->memory_order_buffer_write_executed = 0;
 
-
-    this->disambiguation_block_size = 0;
     this->disambiguation_type = DISAMBIGUATION_DISABLE;
-    this->register_forward_latency = 0;
     this->solve_address_to_address = false;
-    this->wait_write_complete = true;
+    this->disambiguation_block_size = 0;
+    this->disambiguation_load_hash = NULL;
+    this->disambiguation_store_hash = NULL;
+
+    this->disambiguation_load_hash_size = 0;
+    this->disambiguation_store_hash_size = 0;
+
+    this->disambiguation_load_hash_bits_mask = 0;
+    this->disambiguation_store_hash_bits_mask = 0;
+
+    this->disambiguation_load_hash_bits_shift = 0;
+    this->disambiguation_store_hash_bits_shift = 0;
+
+    this->fetch_block_size = 0;
+    this->register_forward_latency = 0;
 
     this->register_alias_table_size = 0;
     this->register_alias_table = NULL;
 
     this->branch_per_fetch = 0;
+
     this->unified_reservation_station_window_size = 0;
 
     this->data_cache = NULL;
@@ -180,6 +192,8 @@ processor_t::~processor_t() {
     utils_t::template_delete_array<memory_order_buffer_line_t>(memory_order_buffer_read);
     utils_t::template_delete_array<memory_order_buffer_line_t>(memory_order_buffer_write);
 
+    utils_t::template_delete_array<memory_order_buffer_line_t*>(disambiguation_load_hash);
+    utils_t::template_delete_array<memory_order_buffer_line_t*>(disambiguation_store_hash);
     // ====================================================================
     /// Integer Functional Units
     utils_t::template_delete_array<uint64_t>(ready_cycle_fu_int_alu);
@@ -210,16 +224,16 @@ void processor_t::allocate() {
 
     this->recv_ready_cycle = utils_t::template_allocate_initialize_array<uint64_t>(this->get_max_ports(), 0);
 
-    ERROR_ASSERT_PRINTF(this->number_fu_int_alu > 0 && this->wait_between_fu_int_alu > 0, "Functional units / Wait betweeen requests should be bigger than zero.\n");
-    ERROR_ASSERT_PRINTF(this->number_fu_int_mul > 0 && this->wait_between_fu_int_mul > 0, "Functional units / Wait betweeen requests should be bigger than zero.\n");
-    ERROR_ASSERT_PRINTF(this->number_fu_int_div > 0 && this->wait_between_fu_int_div > 0, "Functional units / Wait betweeen requests should be bigger than zero.\n");
+    ERROR_ASSERT_PRINTF(this->number_fu_int_alu > 0 && this->wait_between_fu_int_alu > 0, "Number of FU's & Wait betweeen FU's should be > 0.\n");
+    ERROR_ASSERT_PRINTF(this->number_fu_int_mul > 0 && this->wait_between_fu_int_mul > 0, "Number of FU's & Wait betweeen FU's should be > 0.\n");
+    ERROR_ASSERT_PRINTF(this->number_fu_int_div > 0 && this->wait_between_fu_int_div > 0, "Number of FU's & Wait betweeen FU's should be > 0.\n");
 
-    ERROR_ASSERT_PRINTF(this->number_fu_fp_alu > 0 && this->wait_between_fu_fp_alu > 0, "Functional units / Wait betweeen requests should be bigger than zero.\n");
-    ERROR_ASSERT_PRINTF(this->number_fu_fp_mul > 0 && this->wait_between_fu_fp_mul > 0, "Functional units / Wait betweeen requests should be bigger than zero.\n");
-    ERROR_ASSERT_PRINTF(this->number_fu_fp_div > 0 && this->wait_between_fu_fp_div > 0, "Functional units / Wait betweeen requests should be bigger than zero.\n");
+    ERROR_ASSERT_PRINTF(this->number_fu_fp_alu > 0 && this->wait_between_fu_fp_alu > 0, "Number of FU's & Wait betweeen FU's should be > 0.\n");
+    ERROR_ASSERT_PRINTF(this->number_fu_fp_mul > 0 && this->wait_between_fu_fp_mul > 0, "Number of FU's & Wait betweeen FU's should be > 0.\n");
+    ERROR_ASSERT_PRINTF(this->number_fu_fp_div > 0 && this->wait_between_fu_fp_div > 0, "Number of FU's & Wait betweeen FU's should be > 0.\n");
 
-    ERROR_ASSERT_PRINTF(this->number_fu_mem_load > 0 && this->wait_between_fu_mem_load > 0, "Functional units / Wait betweeen requests should be bigger than zero.\n");
-    ERROR_ASSERT_PRINTF(this->number_fu_mem_store > 0 && this->wait_between_fu_mem_store > 0, "Functional units / Wait betweeen requests should be bigger than zero.\n");
+    ERROR_ASSERT_PRINTF(this->number_fu_mem_load > 0 && this->wait_between_fu_mem_load > 0, "Number of FU's & Wait betweeen FU's should be > 0.\n");
+    ERROR_ASSERT_PRINTF(this->number_fu_mem_store > 0 && this->wait_between_fu_mem_store > 0, "Number of FU's & Wait betweeen FU's should be > 0.\n");
 
     // ====================================================================
     /// Integer Functional Units
@@ -279,6 +293,27 @@ void processor_t::allocate() {
         this->memory_order_buffer_write[i].mem_deps_ptr_array = utils_t::template_allocate_initialize_array<memory_order_buffer_line_t*>(this->reorder_buffer_size, NULL);
     }
 
+    /// DISAMBIGUATION OFFSET MASK
+    ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->disambiguation_load_hash_size), "Wrong disambiguation_load_hash_size.\n")
+    this->disambiguation_load_hash_bits_mask = 0;
+    for (uint32_t i = 0; i < utils_t::get_power_of_two(this->disambiguation_load_hash_size); i++) {
+        this->disambiguation_load_hash_bits_mask |= 1 << i;
+    }
+    this->disambiguation_load_hash_bits_shift = utils_t::get_power_of_two(this->disambiguation_block_size);
+    this->disambiguation_load_hash_bits_mask <<= this->disambiguation_load_hash_bits_shift;
+    this->disambiguation_load_hash = utils_t::template_allocate_initialize_array<memory_order_buffer_line_t*>(this->disambiguation_load_hash_size, NULL);
+
+
+    /// DISAMBIGUATION OFFSET MASK
+    ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->disambiguation_store_hash_size), "Wrong disambiguation_store_hash_size.\n")
+    this->disambiguation_store_hash_bits_mask = 0;
+    for (uint32_t i = 0; i < utils_t::get_power_of_two(this->disambiguation_store_hash_size); i++) {
+        this->disambiguation_store_hash_bits_mask |= 1 << i;
+    }
+    this->disambiguation_store_hash_bits_shift <<= utils_t::get_power_of_two(this->disambiguation_block_size);
+    this->disambiguation_store_hash_bits_mask <<= this->disambiguation_store_hash_bits_shift;
+    this->disambiguation_store_hash = utils_t::template_allocate_initialize_array<memory_order_buffer_line_t*>(this->disambiguation_store_hash_size, NULL);
+
     /// OFFSET MASK
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(sinuca_engine.get_global_line_size()), "Wrong line_size.\n")
     this->offset_bits_mask = 0;
@@ -296,15 +331,6 @@ void processor_t::allocate() {
         this->fetch_offset_bits_mask |= 1 << i;
     }
     this->not_fetch_offset_bits_mask = ~fetch_offset_bits_mask;
-
-    /// DISAMBIGUATION OFFSET MASK
-    ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(this->disambiguation_block_size), "Wrong disambiguation_block_size.\n")
-    this->disambiguation_offset_bits_mask = 0;
-    this->not_disambiguation_offset_bits_mask = 0;
-    for (uint32_t i = 0; i < utils_t::get_power_of_two(this->disambiguation_block_size); i++) {
-        this->disambiguation_offset_bits_mask |= 1 << i;
-    }
-    this->not_disambiguation_offset_bits_mask = ~disambiguation_offset_bits_mask;
 
     ERROR_ASSERT_PRINTF(this->branch_per_fetch > 0, "Maximum number of branches per fetch must be greater than 0.\n")
     char label[50] = "";
@@ -471,23 +497,18 @@ void processor_t::synchronize(sync_t new_sync) {
     }
 };
 
+
+
 // ============================================================================
-void processor_t::solve_branch(uint64_t opcode_number, processor_stage_t processor_stage, instruction_operation_t operation) {
-    ERROR_ASSERT_PRINTF(operation == INSTRUCTION_OPERATION_BRANCH, "Asking to solve branch with non branch instruction")
+bool processor_t::is_busy() {
+    return (trace_over == false ||
+            !this->fetch_buffer.is_empty() ||
+            !this->decode_buffer.is_empty() ||
+            memory_order_buffer_read_executed != 0 ||
+            memory_order_buffer_write_executed != 0 ||
+            reorder_buffer_position_used != 0);
+}
 
-    /// Control the total of inflight instructions
-    if (processor_stage == PROCESSOR_STAGE_COMMIT) {
-        ERROR_ASSERT_PRINTF(this->inflight_branches > 0, "Decreasing inflight branches to -1")
-        this->inflight_branches--;
-    }
-
-    if (this->branch_solve_stage != PROCESSOR_STAGE_FETCH &&
-        this->branch_solve_stage == processor_stage &&
-        this->branch_opcode_number == opcode_number) {
-            this->branch_solve_stage = PROCESSOR_STAGE_FETCH;
-            this->branch_flush_cycle_ready = sinuca_engine.get_global_cycle() + this->branch_flush_latency;
-    }
-};
 
 // ============================================================================
 void processor_t::stage_fetch() {
@@ -956,98 +977,85 @@ void processor_t::stage_decode() {
     }
 };
 
-// ============================================================================
-bool processor_t::is_busy() {
-    return (trace_over == false ||
-            !this->fetch_buffer.is_empty() ||
-            !this->decode_buffer.is_empty() ||
-            memory_order_buffer_read_executed != 0 ||
-            memory_order_buffer_write_executed != 0 ||
-            reorder_buffer_position_used != 0);
-}
 
 // ============================================================================
-bool processor_t::check_if_memory_overlaps(uint64_t memory_address1, uint32_t size1, uint64_t memory_address2, uint32_t size2) {
-    PROCESSOR_DEBUG_PRINTF("check_if_memory_overlaps()");
-
-    /// No overlap - situation A
-    /// | XX        | Last Write
-    /// |     XX    | New Read
-    uint64_t new_read_start = memory_address1 & not_disambiguation_offset_bits_mask;
-    uint64_t last_write_end = (memory_address2 + size2 - 1) & not_disambiguation_offset_bits_mask;
-    if (last_write_end < new_read_start) {
-        PROCESSOR_DEBUG_PRINTF("\t FALSE\n");
-        return false;
+void processor_t::make_register_dependencies(reorder_buffer_line_t *new_rob_line){
+    /// Control the Register Dependency - Register READ
+    for (uint32_t k = 0; k < MAX_REGISTERS; k++) {
+        if (new_rob_line->uop.read_regs[k] < 0) {
+            break;
+        }
+        uint32_t read_register = new_rob_line->uop.read_regs[k];
+        ERROR_ASSERT_PRINTF(read_register < this->register_alias_table_size, "Read Register (%d) > Register Alias Table Size (%d)\n", read_register, this->register_alias_table_size);
+        /// If there is a dependency
+        if (this->register_alias_table[read_register] != NULL) {
+            for (uint32_t j = 0; j < this->reorder_buffer_size; j++) {
+                if (this->register_alias_table[read_register]->reg_deps_ptr_array[j] == NULL) {
+                    this->register_alias_table[read_register]->reg_deps_ptr_array[j] = new_rob_line;
+                    new_rob_line->wait_reg_deps_number++;
+                    break;
+                }
+            }
+        }
     }
 
-    /// No overlap - situation B
-    /// |     XX    | Last Write
-    /// | XX        | New Read
-    uint64_t last_write_start = memory_address2 & not_disambiguation_offset_bits_mask;
-    uint64_t new_read_end = (memory_address1 + size1 - 1) & not_disambiguation_offset_bits_mask;
+    /// Control the Register Dependency - Register WRITE
+    for (uint32_t k = 0; k < MAX_REGISTERS; k++) {
+        if (new_rob_line->uop.write_regs[k] < 0) {
+            break;
+        }
+        uint32_t write_register = new_rob_line->uop.write_regs[k];
+        ERROR_ASSERT_PRINTF(write_register < this->register_alias_table_size, "Write Register (%d) > Register Alias Table Size (%d)\n", write_register, this->register_alias_table_size);
 
-    if (new_read_end < last_write_start) {
-        PROCESSOR_DEBUG_PRINTF("\t FALSE\n");
-        return false;
+        this->register_alias_table[write_register] = new_rob_line;
     }
-
-    PROCESSOR_DEBUG_PRINTF("\t TRUE\n");
-    return true;
 };
 
 // ============================================================================
-void processor_t::make_memory_dependencies(memory_order_buffer_line_t *new_mob_line, memory_order_buffer_line_t *input_array, uint32_t size_array){
-        /// Find all the old READs/WRITEs into the MOB
-    for (uint32_t j = 0; j < size_array; j++) {
-        memory_order_buffer_line_t *old_mob_line = &input_array[j];
+void processor_t::make_memory_dependencies(memory_order_buffer_line_t *new_mob_line){
 
-        /// Skip if (FREE) or (SAME MOB_LINE) or  ?!(ALREADY EXECUTED)
-        if (old_mob_line->memory_request.state == PACKAGE_STATE_FREE ||
-        old_mob_line->memory_request.uop_number == new_mob_line->memory_request.uop_number) {
-            continue;
-        }
+    uint64_t load_hash = new_mob_line->memory_request.memory_address & this->disambiguation_load_hash_bits_mask;
+    uint64_t store_hash = new_mob_line->memory_request.memory_address & this->disambiguation_store_hash_bits_mask;
 
-        switch (this->disambiguation_type) {
-            case DISAMBIGUATION_PERFECT: {
+    load_hash >>= this->disambiguation_load_hash_bits_shift;
+    store_hash >>= this->disambiguation_store_hash_bits_shift;
 
-                /// If Store-Store or If memory overlaps
-                if ((new_mob_line->memory_request.memory_operation == MEMORY_OPERATION_WRITE &&
-                    old_mob_line->memory_request.memory_operation == MEMORY_OPERATION_WRITE) ||
+    memory_order_buffer_line_t *old_mob_line = NULL;
 
-                this->check_if_memory_overlaps(new_mob_line->memory_request.memory_address, new_mob_line->memory_request.memory_size,
-                                                old_mob_line->memory_request.memory_address, old_mob_line->memory_request.memory_size)) {
-                    /// Make dependencies to be solved
-                    for (uint32_t k = 0; k < this->reorder_buffer_size; k++) {
-                        if (old_mob_line->mem_deps_ptr_array[k] == NULL) {
-                            old_mob_line->mem_deps_ptr_array[k] = new_mob_line;
-                            new_mob_line->wait_mem_deps_number++;
-                            break;
-                        }
-                    }
-                }
+    /// Check if LOAD_HASH matches
+    ERROR_ASSERT_PRINTF(load_hash < this->disambiguation_load_hash_size, "load_hash (%" PRIu64 ") > disambiguation_load_hash_size (%d)\n",
+                                                                    load_hash, this->disambiguation_load_hash_size);
+    if (this->disambiguation_load_hash[load_hash] != NULL){
+        old_mob_line = disambiguation_load_hash[load_hash];
+        for (uint32_t k = 0; k < this->reorder_buffer_size; k++) {
+            if (old_mob_line->mem_deps_ptr_array[k] == NULL) {
+                old_mob_line->mem_deps_ptr_array[k] = new_mob_line;
+                new_mob_line->wait_mem_deps_number++;
+                break;
             }
-            break;
-
-            case DISAMBIGUATION_DISABLE: {
-                /// For every old memory write
-                /// Make dependencies to be solved
-                /// However, read to read will never generate deps nor suffer READ-TO-READ solutions
-                if (new_mob_line->memory_request.memory_operation == MEMORY_OPERATION_READ &&
-                old_mob_line->memory_request.memory_operation == MEMORY_OPERATION_READ){
-                    break;
-                }
-                else {
-                    for (uint32_t k = 0; k < this->reorder_buffer_size; k++) {
-                        if (old_mob_line->mem_deps_ptr_array[k] == NULL) {
-                            old_mob_line->mem_deps_ptr_array[k] = new_mob_line;
-                            new_mob_line->wait_mem_deps_number++;
-                            break;
-                        }
-                    }
-                }
-            }
-            break;
         }
+    }
+
+    /// Check if STORE_HASH matches
+    ERROR_ASSERT_PRINTF(store_hash < this->disambiguation_store_hash_size, "store_hash (%" PRIu64 ") > disambiguation_store_hash_size (%d)\n",
+                                                                        store_hash, this->disambiguation_store_hash_size);
+    if (this->disambiguation_store_hash[store_hash] != NULL){
+        old_mob_line = disambiguation_store_hash[store_hash];
+        for (uint32_t k = 0; k < this->reorder_buffer_size; k++) {
+            if (old_mob_line->mem_deps_ptr_array[k] == NULL) {
+                old_mob_line->mem_deps_ptr_array[k] = new_mob_line;
+                new_mob_line->wait_mem_deps_number++;
+                break;
+            }
+        }
+    }
+
+    /// Add the new entry into LOAD or STORE hash
+    if (new_mob_line->memory_request.memory_operation == MEMORY_OPERATION_READ){
+        this->disambiguation_load_hash[load_hash] = new_mob_line;
+    }
+    else {
+        this->disambiguation_store_hash[store_hash] = new_mob_line;
     }
 };
 
@@ -1115,6 +1123,9 @@ void processor_t::stage_rename() {
         if (this->reorder_buffer[position_rob].uop.uop_operation == INSTRUCTION_OPERATION_BRANCH) {
             this->solve_branch(this->reorder_buffer[position_rob].uop.opcode_number, PROCESSOR_STAGE_RENAME, this->reorder_buffer[position_rob].uop.uop_operation);
         }
+
+        /// Make Reg. Deps
+        this->make_register_dependencies(&this->reorder_buffer[position_rob]);
 
 
         // =====================================================================
@@ -1189,41 +1200,10 @@ void processor_t::stage_rename() {
             /// Make connections between ROB and MOB
             mob_line->rob_ptr = &this->reorder_buffer[position_rob];
 
-            this->make_memory_dependencies(this->reorder_buffer[position_rob].mob_ptr, this->memory_order_buffer_write, this->memory_order_buffer_write_size);
-            this->make_memory_dependencies(this->reorder_buffer[position_rob].mob_ptr, this->memory_order_buffer_read, this->memory_order_buffer_read_size);
+            /// Make Mem. Deps
+            this->make_memory_dependencies(this->reorder_buffer[position_rob].mob_ptr);
         }
 
-        // =====================================================================
-        /// REGISTER RENAME
-        /// Control the Register Dependency - Register READ
-        for (uint32_t k = 0; k < MAX_REGISTERS; k++) {
-            if (this->reorder_buffer[position_rob].uop.read_regs[k] < 0) {
-                break;
-            }
-            uint32_t read_register = this->reorder_buffer[position_rob].uop.read_regs[k];
-            ERROR_ASSERT_PRINTF(read_register < this->register_alias_table_size, "Read Register (%d) > Register Alias Table Size (%d)\n", read_register, this->register_alias_table_size);
-            /// If there is a dependency
-            if (this->register_alias_table[read_register] != NULL) {
-                for (uint32_t j = 0; j < this->reorder_buffer_size; j++) {
-                    if (this->register_alias_table[read_register]->reg_deps_ptr_array[j] == NULL) {
-                        this->register_alias_table[read_register]->reg_deps_ptr_array[j] = &this->reorder_buffer[position_rob];
-                        this->reorder_buffer[position_rob].wait_reg_deps_number++;
-                        break;
-                    }
-                }
-            }
-        }
-
-        /// Control the Register Dependency - Register WRITE
-        for (uint32_t k = 0; k < MAX_REGISTERS; k++) {
-            if (this->reorder_buffer[position_rob].uop.write_regs[k] < 0) {
-                break;
-            }
-            uint32_t write_register = this->reorder_buffer[position_rob].uop.write_regs[k];
-            ERROR_ASSERT_PRINTF(write_register < this->register_alias_table_size, "Write Register (%d) > Register Alias Table Size (%d)\n", write_register, this->register_alias_table_size);
-
-            this->register_alias_table[write_register] = &this->reorder_buffer[position_rob];
-        }
     }
 };
 
@@ -1541,19 +1521,9 @@ void processor_t::stage_execution() {
                     this->memory_order_buffer_write_executed++;
                     reorder_buffer_line->mob_ptr->uop_executed = true;
 
-                    if (this->wait_write_complete) {
-                        /// Waits for the cache to receive the package
-                        reorder_buffer_line->uop.state = PACKAGE_STATE_TRANSMIT;
-                        reorder_buffer_line->uop.package_ready(this->stage_execution_cycles);
-                    }
-                    else {
-                        reorder_buffer_line->mob_ptr->rob_ptr = NULL;
-                        reorder_buffer_line->mob_ptr = NULL;
-                        /// Never waits for the cache
-                        reorder_buffer_line->stage = PROCESSOR_STAGE_COMMIT;
-                        reorder_buffer_line->uop.package_ready(this->stage_execution_cycles + this->stage_commit_cycles);
-                        this->solve_register_dependency(reorder_buffer_line);
-                    }
+                    /// Waits for the cache to receive the package
+                    reorder_buffer_line->uop.state = PACKAGE_STATE_TRANSMIT;
+                    reorder_buffer_line->uop.package_ready(this->stage_execution_cycles);
 
                     total_executed++;
                     /// Remove from the Functional Units
@@ -1612,15 +1582,17 @@ void processor_t::stage_execution() {
         if (oldest_write_to_send != NULL) {
             int32_t transmission_latency = this->send_package(&oldest_write_to_send->memory_request);
             if (transmission_latency != POSITION_FAIL) {  /// Try to send to the DC.
-                if (this->wait_write_complete) {
-                    oldest_write_to_send->rob_ptr->stage = PROCESSOR_STAGE_COMMIT;
-                    oldest_write_to_send->rob_ptr->uop.package_ready(this->stage_execution_cycles + this->stage_commit_cycles);
-                    oldest_write_to_send->rob_ptr->mob_ptr = NULL;
-                    /// Solve dependencies(forwarding data) before the store be removed from the MOB
-                    this->solve_register_dependency(oldest_write_to_send->rob_ptr);
-                }
+
+                oldest_write_to_send->rob_ptr->stage = PROCESSOR_STAGE_COMMIT;
+                oldest_write_to_send->rob_ptr->uop.package_ready(this->stage_execution_cycles + this->stage_commit_cycles);
+                oldest_write_to_send->rob_ptr->mob_ptr = NULL;
+
+                /// Solve dependencies(forwarding data) before the store be removed from the MOB
+                this->solve_register_dependency(oldest_write_to_send->rob_ptr);
+
                 /// Solve dependencies(forwarding data) before the store be removed from the MOB
                 this->solve_memory_dependency(oldest_write_to_send);
+
                 /// Clean MOB line.
                 oldest_write_to_send->package_clean();
                 this->memory_order_buffer_write_executed--;
@@ -1669,8 +1641,35 @@ void processor_t::solve_register_dependency(reorder_buffer_line_t *rob_line) {
     }
 }
 
+
 // ============================================================================
 void processor_t::solve_memory_dependency(memory_order_buffer_line_t *mob_line) {
+
+    /// Remove pointers from disambiguation_hash
+    /// Add the new entry into LOAD or STORE hash
+    if (mob_line->memory_request.memory_operation == MEMORY_OPERATION_READ){
+        uint64_t load_hash = mob_line->memory_request.memory_address & this->disambiguation_load_hash_bits_mask;
+        load_hash >>= this->disambiguation_load_hash_bits_shift;
+
+        ERROR_ASSERT_PRINTF(load_hash < this->disambiguation_load_hash_size, "load_hash (%" PRIu64 ") > disambiguation_load_hash_size (%d)\n",
+                                                                            load_hash, this->disambiguation_load_hash_size);
+        if (this->disambiguation_load_hash[load_hash] == mob_line){
+            this->disambiguation_load_hash[load_hash] = NULL;
+        }
+    }
+    else {
+        uint64_t store_hash = mob_line->memory_request.memory_address & this->disambiguation_store_hash_bits_mask;
+        store_hash >>= this->disambiguation_store_hash_bits_shift;
+
+        ERROR_ASSERT_PRINTF(store_hash < this->disambiguation_store_hash_size, "store_hash (%" PRIu64 ") > disambiguation_store_hash_size (%d)\n",
+                                                                            store_hash, this->disambiguation_store_hash_size);
+
+        if (this->disambiguation_store_hash[store_hash] == mob_line){
+            this->disambiguation_store_hash[store_hash] = NULL;
+        }
+    }
+
+
     // =========================================================================
     /// SOLVE MEMORY DEPENDENCIES - MOB
     // =========================================================================
@@ -1680,36 +1679,63 @@ void processor_t::solve_memory_dependency(memory_order_buffer_line_t *mob_line) 
         if (mob_line->mem_deps_ptr_array[j] == NULL) {
             break;
         }
-        /// There is an unsolved dependency
-        else {
-            mob_line->mem_deps_ptr_array[j]->wait_mem_deps_number--;
 
-            if (this->solve_address_to_address) {
-                if (mob_line->mem_deps_ptr_array[j]->uop_executed == true &&
-                mob_line->mem_deps_ptr_array[j]->wait_mem_deps_number == 0 &&
-                mob_line->mem_deps_ptr_array[j]->memory_request.memory_operation == MEMORY_OPERATION_READ &&
-                mob_line->mem_deps_ptr_array[j]->memory_request.memory_address == mob_line->memory_request.memory_address &&
-                mob_line->mem_deps_ptr_array[j]->memory_request.memory_size == mob_line->memory_request.memory_size) {
-                    /// Solve the LOAD->LOAD and STORE->LOAD
-
-                    PROCESSOR_DEBUG_PRINTF("THIS: %s %" PRIu64 " \t",
-                                            mob_line->memory_request.memory_operation == MEMORY_OPERATION_READ ? "READ" : "WRITE",
-                                            mob_line->memory_request.memory_address);
-
-                    PROCESSOR_DEBUG_PRINTF("SOLVES: %s %" PRIu64 "\n",
-                                            mob_line->mem_deps_ptr_array[j]->memory_request.memory_operation == MEMORY_OPERATION_READ ? "READ" : "WRITE",
-                                            mob_line->mem_deps_ptr_array[j]->memory_request.memory_address);
-
-                    this->add_stat_address_to_address();
-                    mob_line->mem_deps_ptr_array[j]->memory_request.state = PACKAGE_STATE_READY;
-                    mob_line->mem_deps_ptr_array[j]->memory_request.ready_cycle =  sinuca_engine.get_global_cycle() + this->register_forward_latency;
-                    mob_line->mem_deps_ptr_array[j]->memory_request.is_answer = true;
-                }
+        /// Keep track of false positives
+        if (mob_line->mem_deps_ptr_array[j]->memory_request.memory_address != mob_line->memory_request.memory_address) {
+            if (mob_line->memory_request.memory_operation == MEMORY_OPERATION_READ) {
+                add_stat_disambiguation_read_false_positive();
             }
-
-            /// This update the ready cycle, and it is usefull to compute the time each instruction waits for the functional unit
-            mob_line->mem_deps_ptr_array[j] = NULL;
+            else {
+                add_stat_disambiguation_write_false_positive();
+            }
         }
+
+        /// There is an unsolved dependency
+        mob_line->mem_deps_ptr_array[j]->wait_mem_deps_number--;
+
+        if (this->solve_address_to_address) {
+            if (mob_line->mem_deps_ptr_array[j]->uop_executed == true &&
+            mob_line->mem_deps_ptr_array[j]->wait_mem_deps_number == 0 &&
+            mob_line->mem_deps_ptr_array[j]->memory_request.memory_operation == MEMORY_OPERATION_READ &&
+            mob_line->mem_deps_ptr_array[j]->memory_request.memory_address == mob_line->memory_request.memory_address &&
+            mob_line->mem_deps_ptr_array[j]->memory_request.memory_size == mob_line->memory_request.memory_size) {
+                /// Solve the LOAD->LOAD and STORE->LOAD
+
+                PROCESSOR_DEBUG_PRINTF("THIS: %s %" PRIu64 " \t",
+                                        mob_line->memory_request.memory_operation == MEMORY_OPERATION_READ ? "READ" : "WRITE",
+                                        mob_line->memory_request.memory_address);
+
+                PROCESSOR_DEBUG_PRINTF("SOLVES: %s %" PRIu64 "\n",
+                                        mob_line->mem_deps_ptr_array[j]->memory_request.memory_operation == MEMORY_OPERATION_READ ? "READ" : "WRITE",
+                                        mob_line->mem_deps_ptr_array[j]->memory_request.memory_address);
+
+                this->add_stat_address_to_address();
+                mob_line->mem_deps_ptr_array[j]->memory_request.state = PACKAGE_STATE_READY;
+                mob_line->mem_deps_ptr_array[j]->memory_request.ready_cycle =  sinuca_engine.get_global_cycle() + this->register_forward_latency;
+                mob_line->mem_deps_ptr_array[j]->memory_request.is_answer = true;
+            }
+        }
+
+        /// This update the ready cycle, and it is usefull to compute the time each instruction waits for the functional unit
+        mob_line->mem_deps_ptr_array[j] = NULL;
+    }
+};
+
+// ============================================================================
+void processor_t::solve_branch(uint64_t opcode_number, processor_stage_t processor_stage, instruction_operation_t operation) {
+    ERROR_ASSERT_PRINTF(operation == INSTRUCTION_OPERATION_BRANCH, "Asking to solve branch with non branch instruction")
+
+    /// Control the total of inflight instructions
+    if (processor_stage == PROCESSOR_STAGE_COMMIT) {
+        ERROR_ASSERT_PRINTF(this->inflight_branches > 0, "Decreasing inflight branches to -1")
+        this->inflight_branches--;
+    }
+
+    if (this->branch_solve_stage != PROCESSOR_STAGE_FETCH &&
+        this->branch_solve_stage == processor_stage &&
+        this->branch_opcode_number == opcode_number) {
+            this->branch_solve_stage = PROCESSOR_STAGE_FETCH;
+            this->branch_flush_cycle_ready = sinuca_engine.get_global_cycle() + this->branch_flush_latency;
     }
 };
 
@@ -1728,7 +1754,6 @@ void processor_t::stage_commit() {
 
             this->commit_uop_counter++;
             PROCESSOR_DEBUG_PRINTF("\t Commiting package:%s\n",  this->reorder_buffer[pos_buffer].content_to_string().c_str());
-            // ~ this->add_stat_instruction_read_completed(this->reorder_buffer[pos_buffer].uop.born_cycle);
 
             switch (this->reorder_buffer[pos_buffer].uop.uop_operation) {
                 // INTEGERS ALU
@@ -2072,7 +2097,10 @@ void processor_t::reset_statistics() {
     this->set_stat_memory_read_completed(0);
     this->set_stat_instruction_read_completed(0);
     this->set_stat_memory_write_completed(0);
+
     this->set_stat_address_to_address(0);
+    this->set_stat_disambiguation_read_false_positive(0);
+    this->set_stat_disambiguation_write_false_positive(0);
 
     // HMC Executed Instructions
     this->set_stat_hmc_completed(0);
@@ -2185,7 +2213,10 @@ void processor_t::print_statistics() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_instruction_read_completed", stat_instruction_read_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_memory_read_completed", stat_memory_read_completed);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_memory_write_completed", stat_memory_write_completed);
+
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_address_to_address", stat_address_to_address);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_disambiguation_read_false_positive", stat_disambiguation_read_false_positive);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_disambiguation_write_false_positive", stat_disambiguation_write_false_positive);
 
     // HMC
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_hmc_completed", stat_hmc_completed);
@@ -2334,6 +2365,8 @@ void processor_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "fetch_offset_bits_mask", utils_t::address_to_binary(this->fetch_offset_bits_mask).c_str());
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "not_fetch_offset_bits_mask", utils_t::address_to_binary(this->not_fetch_offset_bits_mask).c_str());
 
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "register_forward_latency", register_forward_latency);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "offset_bits_mask", utils_t::address_to_binary(this->offset_bits_mask).c_str());
@@ -2345,13 +2378,15 @@ void processor_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "inflight_branches_size", inflight_branches_size);
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "disambiguation_block_size", disambiguation_block_size);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "disambiguation_type", get_enum_disambiguation_char(disambiguation_type));
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "disambiguation_offset_bits_mask", utils_t::address_to_binary(this->disambiguation_offset_bits_mask).c_str());
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "not_disambiguation_offset_bits_mask", utils_t::address_to_binary(this->not_disambiguation_offset_bits_mask).c_str());
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "disambiguation_block_size", disambiguation_block_size);
 
-    sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "register_forward_latency", register_forward_latency);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "disambiguation_load_hash_size", disambiguation_load_hash_size);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "disambiguation_store_hash_size", disambiguation_store_hash_size);
+
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "disambiguation_load_hash_bits_mask", utils_t::address_to_binary(disambiguation_load_hash_bits_mask).c_str());
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "disambiguation_store_hash_bits_mask", utils_t::address_to_binary(disambiguation_store_hash_bits_mask).c_str());
+
 
 
     this->branch_predictor->print_configuration();

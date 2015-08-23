@@ -28,6 +28,8 @@ class memory_channel_t : public interconnection_interface_t {
         uint32_t bank_row_buffer_size;
         page_policy_t page_policy;
 
+        uint32_t packages_inside_channel;
+
         request_priority_t request_priority_policy;
         write_priority_t write_priority_policy;
 

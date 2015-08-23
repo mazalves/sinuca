@@ -34,6 +34,8 @@ memory_channel_t::memory_channel_t() {
     this->request_priority_policy = REQUEST_PRIORITY_ROW_BUFFER_HITS_FIRST;
     this->write_priority_policy = WRITE_PRIORITY_DRAIN_WHEN_FULL;
 
+    this->packages_inside_channel = 0;
+
     this->not_column_bits_mask = 0;
 
     this->bank_bits_mask = 0;
@@ -305,6 +307,7 @@ package_state_t memory_channel_t::treat_memory_request(memory_package_t *package
     /// Try to insert into bank buffer
     if (this->bank_buffer[bank].size() < this->bank_buffer_size) {
         this->bank_buffer[bank].push_back(package);
+        this->packages_inside_channel++;
         return PACKAGE_STATE_WAIT;
     }
     return PACKAGE_STATE_UNTREATED;
@@ -316,6 +319,10 @@ void memory_channel_t::clock(uint32_t subcycle) {
     MEMORY_CONTROLLER_DEBUG_PRINTF("==================== ID(%u) ", this->get_id());
     MEMORY_CONTROLLER_DEBUG_PRINTF("====================\n");
     MEMORY_CONTROLLER_DEBUG_PRINTF("cycle() \n");
+
+    /// Nothing to be done this cycle. -- Improve the performance
+    if (this->packages_inside_channel == 0) return;
+
 
     uint32_t bank = 0;
     switch (this->get_bank_selection_policy()) {
@@ -444,6 +451,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
 
             this->add_stat_row_buffer_hit();
             this->bank_buffer[bank].erase(this->bank_buffer[bank].begin() + this->bank_buffer_actual_position[bank]);
+            this->packages_inside_channel--;
             this->bank_buffer_actual_position[bank] = POSITION_FAIL;
 
             //==================================================================
@@ -561,6 +569,7 @@ void memory_channel_t::clock(uint32_t subcycle) {
 
                 this->add_stat_row_buffer_hit();
                 this->bank_buffer[bank].erase(this->bank_buffer[bank].begin() + this->bank_buffer_actual_position[bank]);
+                this->packages_inside_channel--;
                 this->bank_buffer_actual_position[bank] = -1;
 
                 //==================================================================
@@ -622,12 +631,6 @@ void memory_channel_t::clock(uint32_t subcycle) {
 // ============================================================================
 /// Bank Selection Strategies
 // ============================================================================
-/// Selection strategy: Random
-uint32_t memory_channel_t::selection_bank_random() {
-    unsigned int seed = sinuca_engine.get_global_cycle() % 1000;
-    uint32_t selected = (rand_r(&seed) % this->get_bank_per_channel());
-    return selected;
-};
 
 // ============================================================================
 /// Selection strategy: Round Robin
@@ -643,6 +646,14 @@ uint32_t memory_channel_t::selection_bank_round_robin() {
         }
     }
     return this->last_bank_selected;
+};
+
+// ============================================================================
+/// Selection strategy: Random
+uint32_t memory_channel_t::selection_bank_random() {
+    unsigned int seed = sinuca_engine.get_global_cycle() % 1000;
+    uint32_t selected = (rand_r(&seed) % this->get_bank_per_channel());
+    return selected;
 };
 
 

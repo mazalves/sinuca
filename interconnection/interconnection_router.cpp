@@ -76,20 +76,18 @@ void interconnection_router_t::clock(uint32_t subcycle) {
     /// Nothing to be done this cycle. -- Improve the performance
     if (this->packages_inside_router == 0) return;
 
-// ~ print_structures();
-
     /// Stalls the Router / Select Package / Send Package
     /// Makes the router stalls after a package send.
     if (this->send_ready_cycle <= sinuca_engine.get_global_cycle()) {
         uint32_t port = 0;
         /// Select a port to be activated.
         switch (this->get_selection_policy()) {
-            case SELECTION_RANDOM:
-                port = this->selection_random();
-            break;
-
             case SELECTION_ROUND_ROBIN:
                 port = this->selection_round_robin();
+            break;
+
+            case SELECTION_RANDOM:
+                port = this->selection_random();
             break;
 
             case SELECTION_BUFFER_LEVEL:
@@ -199,24 +197,28 @@ void interconnection_router_t::remove_token_list(memory_package_t *package) {
 // ============================================================================
 // Selection Strategies
 // ============================================================================
-/// Selection strategy: Random
-uint32_t interconnection_router_t::selection_random() {
-    this->last_selected = sinuca_engine.get_global_cycle() % this->get_max_ports();
-    return this->last_selected;
-};
 
 // ============================================================================
 /// Selection strategy: Round Robin
 uint32_t interconnection_router_t::selection_round_robin() {
-    this->last_selected = (this->last_selected + 1) % this->get_max_ports();
+
     for (uint32_t i = 0; i < this->get_max_ports(); i++) {
-        uint32_t index = (this->last_selected + i) % this->get_max_ports();
-        if (!this->input_buffer[index].is_empty()) {
-            this->last_selected = index;
+        this->last_selected++;
+        if (this->last_selected >= this->get_max_ports()) {
+            this->last_selected = 0;
+        }
+        if (!this->input_buffer[last_selected].is_empty()) {
             break;
         }
     }
 
+    return this->last_selected;
+};
+
+// ============================================================================
+/// Selection strategy: Random
+uint32_t interconnection_router_t::selection_random() {
+    this->last_selected = sinuca_engine.get_global_cycle() % this->get_max_ports();
     return this->last_selected;
 };
 

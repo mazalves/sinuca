@@ -203,7 +203,7 @@ const char *get_enum_sync_char(sync_t type) {
 /// Enumerates the way to treat memory dependencies.
 const char *get_enum_disambiguation_char(disambiguation_t type) {
     switch (type) {
-        case DISAMBIGUATION_PERFECT:     return "PERFECT"; break;
+        case DISAMBIGUATION_HASHED:     return "HASHED"; break;
         case DISAMBIGUATION_DISABLE:     return "DISABLE"; break;
     };
     ERROR_PRINTF("Wrong SELECTION\n");
