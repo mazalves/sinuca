@@ -199,6 +199,7 @@ class processor_t : public interconnection_interface_t {
         memory_order_buffer_line_t *memory_order_buffer_write;
         /// Number of positions used inside MOB
         uint32_t memory_order_buffer_read_executed;
+        uint32_t memory_order_buffer_read_received;
         uint32_t memory_order_buffer_write_executed;
 
         cache_memory_t *data_cache;
@@ -410,6 +411,7 @@ class processor_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, memory_order_buffer_write_size)
 
         INSTANTIATE_GET_SET(uint32_t, memory_order_buffer_read_executed)
+        INSTANTIATE_GET_SET(uint32_t, memory_order_buffer_read_received)
         INSTANTIATE_GET_SET(uint32_t, memory_order_buffer_write_executed)
 
         INSTANTIATE_GET_SET(disambiguation_t, disambiguation_type)

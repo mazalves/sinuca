@@ -407,10 +407,10 @@ void sinuca_engine_t::write_statistics_value(const char *obj_type, const char *o
 void sinuca_engine_t::write_statistics_value_percentage(const char *obj_type, const char *obj_label, const char *variable_name, uint64_t value, uint64_t total) {
     char buffer[TRACE_LINE_SIZE * 4] = "\0";
     if (value != 0 || total != 0) {
-        snprintf(buffer, sizeof(buffer), "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (100.0 *value/total));
+        snprintf(buffer, sizeof(buffer), "%s.%s.%s:%f%%\n", obj_type, obj_label, variable_name, static_cast<double> (100.0 *value/total));
     }
     else {
-        snprintf(buffer, sizeof(buffer), "%s.%s.%s:%f\n", obj_type, obj_label, variable_name, static_cast<double> (0));
+        snprintf(buffer, sizeof(buffer), "%s.%s.%s:%f%%\n", obj_type, obj_label, variable_name, static_cast<double> (0));
     }
     this->write_statistics(buffer);
 };

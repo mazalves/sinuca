@@ -758,7 +758,6 @@ package_state_t directory_controller_t::treat_cache_answer(uint32_t cache_id, me
         }
     }
 
-
     /// Get CACHE pointer
     cache_memory_t *cache = sinuca_engine.cache_memory_array[cache_id];
 
