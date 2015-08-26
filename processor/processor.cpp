@@ -505,8 +505,6 @@ bool processor_t::is_busy() {
     return (trace_over == false ||
             !this->fetch_buffer.is_empty() ||
             !this->decode_buffer.is_empty() ||
-            // ~ memory_order_buffer_read_executed != 0 ||
-            // ~ memory_order_buffer_write_executed != 0 ||
             reorder_buffer_position_used != 0);
 }
 
@@ -1717,8 +1715,11 @@ void processor_t::solve_memory_dependency(memory_order_buffer_line_t *mob_line) 
                 mob_line->mem_deps_ptr_array[j]->memory_request.ready_cycle =  sinuca_engine.get_global_cycle() + this->register_forward_latency;
                 mob_line->mem_deps_ptr_array[j]->memory_request.is_answer = true;
 
-                this->memory_order_buffer_read_received++;
+                /// Remove from the executed "list"
                 this->memory_order_buffer_read_executed--;
+                /// Add to the received "list"
+                this->memory_order_buffer_read_received++;
+
             }
         }
 
@@ -1858,9 +1859,6 @@ void processor_t::clock(uint32_t subcycle) {
 
     /// Something to be done this cycle. -- Improve the performance
     if (
-    // ~ this->memory_order_buffer_read_executed != 0 ||
-    // ~ this->memory_order_buffer_read_received != 0 ||
-    // ~ this->memory_order_buffer_write_executed != 0 ||
     this->reorder_buffer_position_used != 0){
         /// Read each FU pipeline
         /// Creates latency for each instruction
