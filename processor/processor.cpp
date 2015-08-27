@@ -185,6 +185,8 @@ processor_t::processor_t() {
 // ============================================================================
 processor_t::~processor_t() {
     // De-Allocate memory to prevent memory leak
+    utils_t::template_delete_variable<branch_predictor_t>(branch_predictor);
+
     utils_t::template_delete_array<uint64_t>(recv_ready_cycle);
 
     utils_t::template_delete_array<reorder_buffer_line_t>(reorder_buffer);

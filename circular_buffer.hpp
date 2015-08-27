@@ -103,7 +103,6 @@ inline CB_TYPE& circular_buffer_t<CB_TYPE>::operator[](uint32_t index) {
     uint32_t position = this->beg_index + index;
     if (position >= this->capacity)
         position -= this->capacity;
-    // ~ uint32_t position = (this->beg_index + index) % this->capacity;
 
     return this->data[position];
 };
@@ -148,7 +147,6 @@ int32_t circular_buffer_t<CB_TYPE>::push_back(const CB_TYPE& new_element) {
         this->end_index++;
         if (this->end_index >= this->capacity)
             this->end_index = 0;
-        // ~ this->end_index = (this->end_index + 1) % this->capacity;
     }
 
     return virtual_position;
@@ -180,7 +178,6 @@ inline CB_TYPE* circular_buffer_t<CB_TYPE>::back() {
         if (position >= this->capacity)
             position -= this->capacity;
 
-        // ~ uint32_t position = (this->beg_index + this->size - 1) % this->capacity;
         return &this->data[position];
     }
 };
@@ -196,7 +193,6 @@ void circular_buffer_t<CB_TYPE>::pop_front() {
         this->beg_index++;
         if (this->beg_index >= this->capacity)
             this->beg_index = 0;
-        // ~ this->beg_index = (this->beg_index + 1) % this->capacity;
     }
 };
 
@@ -210,14 +206,12 @@ void circular_buffer_t<CB_TYPE>::pop_push() {
     this->beg_index++;
     if (this->beg_index >= this->capacity)
         this->beg_index = 0;
-    // ~ this->beg_index = (this->beg_index + 1) % this->capacity;
 
     this->data[end_index] = older;
 
     this->end_index++;
     if (this->end_index >= this->capacity)
         this->end_index = 0;
-    // ~ this->end_index = (this->end_index + 1) % this->capacity;
 };
 
 #endif  // _CIRCULAR_BUFFER_HPP_

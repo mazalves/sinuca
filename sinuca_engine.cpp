@@ -92,6 +92,8 @@ sinuca_engine_t::~sinuca_engine_t() {
     // ~ utils_t::template_delete_variable<char>(this->arg_configuration_file_name);
     // ~ utils_t::template_delete_variable<char>(this->arg_trace_file_name);
 
+    utils_t::template_delete_array<char>(this->arg_configuration_path);
+
     /// De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<interconnection_interface_t*>(this->interconnection_interface_array);
 
@@ -129,6 +131,9 @@ sinuca_engine_t::~sinuca_engine_t() {
     utils_t::template_delete_variable<directory_controller_t>(directory_controller);
     utils_t::template_delete_variable<interconnection_controller_t>(interconnection_controller);
 };
+
+
+
 
 // =============================================================================
 void sinuca_engine_t::set_global_line_size(uint32_t new_size) {

@@ -30,6 +30,5 @@ class branch_target_buffer_set_t {
         };
         ~branch_target_buffer_set_t() {
             if (this->ways) delete [] ways;
-            // ~ utils_t::template_delete_array<branch_target_buffer_line_t>(ways);
         };
 };

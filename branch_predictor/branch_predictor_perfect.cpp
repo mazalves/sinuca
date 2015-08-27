@@ -169,24 +169,6 @@ processor_stage_t branch_predictor_perfect_t::predict_branch(const opcode_packag
     (void) actual_opcode;
     (void) next_opcode;
 
-    // ~ return solve_stage;
-// ~
-    // ~ if (actual_opcode.opcode_operation != INSTRUCTION_OPERATION_BRANCH) {
-        // ~ solve_stage = PROCESSOR_STAGE_FETCH;
-    // ~ }
-    // ~ else {
-        // ~ bool is_btb_hit = this->btb_find_update_address(actual_opcode.opcode_address);
-// ~
-        // ~ if (is_btb_hit == FAIL) {
-            // ~ BRANCH_PREDICTOR_DEBUG_PRINTF("BTB NOT FOUND => PROCESSOR_STAGE_EXECUTION\n");
-            // ~ solve_stage = PROCESSOR_STAGE_EXECUTION;
-        // ~ }
-        // ~ else {
-            // ~ BRANCH_PREDICTOR_DEBUG_PRINTF("BTB FOUND => PROCESSOR_STAGE_FETCH\n");
-            // ~ solve_stage = PROCESSOR_STAGE_FETCH;
-        // ~ }
-    // ~ }
-
     /// Increment the statistics
     this->add_stat_branch_predictor_operation();
     this->add_stat_branch_predictor_hit();

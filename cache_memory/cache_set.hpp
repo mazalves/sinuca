@@ -31,6 +31,5 @@ class cache_set_t {
         ~cache_set_t() {
             /// De-Allocate memory to prevent memory leak
             if (this->ways) delete [] ways;
-            // ~ utils_t::template_delete_array<cache_line_t>(ways);
         };
 };

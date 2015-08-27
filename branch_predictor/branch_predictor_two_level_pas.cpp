@@ -39,12 +39,6 @@ branch_predictor_two_level_pas_t::branch_predictor_two_level_pas_t() {
     this->btb_tag_bits_shift = 0;
     this->btb_tag_bits_mask = 0;
 
-    this->btb = NULL;
-    this->btb_line_number = 0;
-    this->btb_associativity = 0;
-    this->btb_total_sets = 0;
-    this->btb_replacement_policy = REPLACEMENT_LRU;
-
     this->pbht = NULL;
     this->pbht_line_number = 0;           /// Number of signature lines
     this->pbht_index_bits_mask = 0;       /// Index mask
@@ -68,7 +62,7 @@ branch_predictor_two_level_pas_t::~branch_predictor_two_level_pas_t() {
     /// De-Allocate memory to prevent memory leak
     utils_t::template_delete_array<branch_target_buffer_set_t>(btb);
     utils_t::template_delete_array<uint64_t>(pbht);
-    utils_t::template_delete_matrix<uint32_t>(spht, this->get_spht_line_number());
+    utils_t::template_delete_matrix<uint32_t>(spht, this->get_spht_set_number());
 };
 
 // ============================================================================

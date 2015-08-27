@@ -71,6 +71,9 @@ cache_memory_t::cache_memory_t() {
 // ============================================================================
 cache_memory_t::~cache_memory_t() {
     /// De-Allocate memory to prevent memory leak
+    utils_t::template_delete_variable<prefetch_t>(prefetcher);
+    utils_t::template_delete_variable<line_usage_predictor_t>(line_usage_predictor);
+
     utils_t::template_delete_array<cache_set_t>(sets);
     utils_t::template_delete_array<memory_package_t>(mshr_buffer);
     utils_t::template_delete_array<mshr_diff_line_t>(mshr_request_different_lines);
@@ -141,46 +144,24 @@ void cache_memory_t::allocate() {
 
 // ============================================================================
 uint64_t cache_memory_t::get_fake_address(uint32_t index, uint32_t way){
-    // ~ CACHE_DEBUG_PRINTF("index:%d way:%d\n", index, way);
-    // ~ CACHE_DEBUG_PRINTF("tag:%" PRIu64 " index:%" PRIu64 " bank:%" PRIu64 " offset:%" PRIu64 "\n", tag_bits_shift, index_bits_shift, bank_bits_shift, offset_bits_shift );
-
 
     uint64_t final_address = 0;
     switch (this->get_address_mask_type()) {
         case CACHE_MASK_TAG_INDEX_BANK_OFFSET:
-            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 " ->", final_address);
-
             final_address = (way << this->tag_bits_shift);
-            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 " ->", final_address);
-
             final_address += (index << this->index_bits_shift);
-            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 " ->", final_address);
-
             final_address += (this->get_bank_number() << this->bank_bits_shift);
-            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 "\n", final_address);
         break;
 
         case CACHE_MASK_TAG_BANK_INDEX_OFFSET:
-            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 " ->", final_address);
-
             final_address = (way << this->tag_bits_shift);
-            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 " ->", final_address);
-
             final_address += (this->get_bank_number() << this->bank_bits_shift);
-            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 "\n", final_address);
-
             final_address += (index << this->index_bits_shift);
-            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 " ->", final_address);
         break;
 
         case CACHE_MASK_TAG_INDEX_OFFSET:
-            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 " ->", final_address);
-
             final_address = (way << this->tag_bits_shift);
-            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 " ->", final_address);
-
             final_address += (index << this->index_bits_shift);
-            // ~ CACHE_DEBUG_PRINTF("%" PRIu64 "\n", final_address);
         break;
     }
     ERROR_ASSERT_PRINTF(index == get_index(final_address), "Wrong Index into the Fake Address.\n")

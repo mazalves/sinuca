@@ -73,6 +73,15 @@ trace_reader_t::~trace_reader_t() {
     utils_t::template_delete_array<gzFile>(gzDynamicTraceFile);
     utils_t::template_delete_array<gzFile>(gzMemoryTraceFile);
 
+    utils_t::template_delete_array<uint32_t>(bbl_size);
+
+    if (this->total_bbls != 0 && static_dict != NULL ) {
+        for (uint32_t i = 1; i < this->total_bbls; i++) {
+            utils_t::template_delete_array<opcode_package_t>(this->static_dict[i]);
+        }
+    }
+    utils_t::template_delete_array<opcode_package_t*>(static_dict);
+
     utils_t::template_delete_array<bool>(insideBBL);
     utils_t::template_delete_array<uint64_t>(trace_opcode_counter);
     utils_t::template_delete_array<uint64_t>(trace_opcode_max);
@@ -178,7 +187,7 @@ void trace_reader_t::allocate(char *in_file, uint32_t number_cores) {
     this->define_total_bbl_size();
 
     /// Allocate only the required space for the static file packages
-    this->static_dict = utils_t::template_allocate_array<opcode_package_t*>(this->total_bbls);
+    this->static_dict = utils_t::template_allocate_initialize_array<opcode_package_t*>(this->total_bbls, NULL);
     for (i = 1; i < this->total_bbls; i++) {
         this->static_dict[i] = utils_t::template_allocate_array<opcode_package_t>(this->bbl_size[i]);
     }

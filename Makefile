@@ -24,7 +24,7 @@ RM = rm -f
 # ~ LDFLAGS = -ggdb  -pg -rdynamic
 
 ## DEBUG DEEP FAST
-# ~ FLAGS = -O2 -ggdb -Wall -Wextra -Werror -lefence
+# ~ FLAGS = -O2 -ggdb -Wall -Wextra -Werror -std=c++0x -lefence
 # ~ LDFLAGS = -ggdb  -lefence -rdynamic
 
 ## DEBUG NORMAL
