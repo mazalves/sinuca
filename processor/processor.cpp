@@ -1855,19 +1855,13 @@ void processor_t::clock(uint32_t subcycle) {
         /// Mark ROB instructions as DONE
         /// Remove ISSUE WIDE oldest instructions
         this->stage_commit();
-    }
 
-    /// Something to be done this cycle. -- Improve the performance
-    if (
-    this->reorder_buffer_position_used != 0){
         /// Read each FU pipeline
         /// Creates latency for each instruction
         /// LOAD/STORES ready, are send to READ/WRITE buffer
         /// After allocate to READ/WRITE buffer, wait only for LOADS
         this->stage_execution();
-    }
 
-    if (this->reorder_buffer_position_used != 0) {
         /// Read Ready instructions from ROB
         /// Send to free Functional Units
         this->stage_dispatch();
