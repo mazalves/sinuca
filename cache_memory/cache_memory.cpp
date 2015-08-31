@@ -700,7 +700,7 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
     uint32_t token_pos = 0;//, number_tokens_coming = 0;
 
 
-    /// 1. Check if the name is already in the guest (token) list.
+    /// 1. Check the token list. If this is the first attempt to transmit a package .
     for (token_pos = 0; token_pos < this->token_list.size(); token_pos++) {
         /// Requested Address Found
         if (this->token_list[token_pos].opcode_number == package->opcode_number &&
@@ -713,7 +713,7 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
         }
     }
 
-    /// 2. Name is not in the guest (token) list, lets add it.
+    /// 2. Not in the token list (first attempt), lets add it.
     if (token_pos == this->token_list.size()) {
         CACHE_DEBUG_PRINTF("Allocating a new token\n");
         /// Allocate the new token
@@ -762,7 +762,7 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
         }
 
         /// Not found the same address - Check if can create a new entry
-        if (this->mshr_request_different_lines_used < this->mshr_request_different_lines_size) {
+        if (token_pos < (this->mshr_request_different_lines_size - this->mshr_request_different_lines_used)) {
             /// Check for an empty MSHR diff line.
             for (uint32_t slot = 0; slot < this->mshr_request_different_lines_size; slot++) {
                 /// Find an empty entry for different_line
@@ -788,7 +788,7 @@ bool cache_memory_t::check_token_list(memory_package_t *package) {
         }
     }
 
-    CACHE_DEBUG_PRINTF("Cannot receive, too many requests\n");
+    CACHE_DEBUG_PRINTF("Cannot receive, request out of the window\n");
     /// Hold on, wait in the line!
     add_stat_full_mshr_buffer_request();
     return FAIL;
