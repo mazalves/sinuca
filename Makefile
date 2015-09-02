@@ -49,6 +49,10 @@ SRC_PACKAGE = 		packages/opcode_package.cpp \
 
 SRC_TRACE_READER = 	trace_reader/trace_reader.cpp
 
+SRC_PROCESSOR =	 	processor/processor.cpp \
+					processor/reorder_buffer_line.cpp \
+					processor/memory_order_buffer_line.cpp
+
 SRC_BRANCH_PREDICTOR =	 	branch_predictor/branch_predictor.cpp \
 							branch_predictor/branch_predictor_two_level_gag.cpp \
 							branch_predictor/branch_predictor_two_level_gas.cpp \
@@ -59,17 +63,7 @@ SRC_BRANCH_PREDICTOR =	 	branch_predictor/branch_predictor.cpp \
 							branch_predictor/branch_predictor_perfect.cpp \
 							branch_predictor/branch_predictor_disable.cpp
 
-SRC_PROCESSOR =	 	processor/processor.cpp \
-					processor/reorder_buffer_line.cpp \
-					processor/memory_order_buffer_line.cpp
-
-SRC_INTERCONNECTION =	interconnection/token.cpp \
-						interconnection/interconnection_router.cpp \
-						interconnection/interconnection_controller.cpp \
-						interconnection/interconnection_interface.cpp
-
-SRC_DIRECTORY =		directory/directory_line.cpp\
-					directory/directory_controller.cpp
+SRC_CACHE_MEMORY =	cache_memory/cache_memory.cpp
 
 SRC_PREFETCH =		prefetch/prefetcher.cpp \
 					prefetch/stride_table_line.cpp \
@@ -77,6 +71,12 @@ SRC_PREFETCH =		prefetch/prefetcher.cpp \
 					prefetch/stream_table_line.cpp \
 					prefetch/prefetcher_stream.cpp \
 					prefetch/prefetcher_disable.cpp
+
+SRC_MAIN_MEMORY =   main_memory/memory_channel.cpp \
+					main_memory/memory_controller.cpp
+
+SRC_DIRECTORY =		directory/directory_line.cpp\
+					directory/directory_controller.cpp
 
 SRC_LINE_USAGE_PREDICTOR =	line_usage_predictor/line_usage_predictor.cpp \
 							line_usage_predictor/line_usage_predictor_disable.cpp \
@@ -87,12 +87,10 @@ SRC_LINE_USAGE_PREDICTOR =	line_usage_predictor/line_usage_predictor.cpp \
 							line_usage_predictor/skewed_metadata_line.cpp \
 							line_usage_predictor/line_usage_predictor_skewed.cpp
 
-
-SRC_CACHE_MEMORY =	cache_memory/mshr_diff_line.cpp \
-					cache_memory/cache_memory.cpp
-
-SRC_MAIN_MEMORY =   main_memory/memory_channel.cpp \
-					main_memory/memory_controller.cpp
+SRC_INTERCONNECTION =	interconnection/token.cpp \
+						interconnection/interconnection_router.cpp \
+						interconnection/interconnection_controller.cpp \
+						interconnection/interconnection_interface.cpp
 
 SRC_CORE =  sinuca.cpp sinuca_engine.cpp sinuca_configurator.cpp \
 			$(SRC_BASIC) $(SRC_PACKAGE) $(SRC_TRACE_READER) \

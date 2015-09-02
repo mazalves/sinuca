@@ -205,6 +205,10 @@ class processor_t : public interconnection_interface_t {
         cache_memory_t *data_cache;
         cache_memory_t *inst_cache;
 
+        bool got_instruction_token;
+        bool got_request_token;
+        bool got_write_token;
+
         // ====================================================================
         /// Statistics related
         // ====================================================================
@@ -299,8 +303,7 @@ class processor_t : public interconnection_interface_t {
         int32_t send_package(memory_package_t *package);
         bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
         /// Token Controller Methods
-        bool check_token_list(memory_package_t *package);
-        void remove_token_list(memory_package_t *package);
+        bool pop_token_credit(uint32_t src_id, memory_operation_t memory_operation);
         /// Debug Methods
         void periodic_check();
         void print_structures();

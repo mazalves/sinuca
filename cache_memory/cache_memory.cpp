@@ -47,9 +47,18 @@ cache_memory_t::cache_memory_t() {
     this->penalty_read = 0;
     this->penalty_write = 0;
 
-    this->mshr_buffer_request_reserved_size = 0;
-    this->mshr_buffer_writeback_reserved_size = 0;
-    this->mshr_buffer_prefetch_reserved_size = 0;
+    this->mshr_request_buffer_size = 0;
+    this->mshr_prefetch_buffer_size = 0;
+    this->mshr_write_buffer_size = 0;
+    this->mshr_eviction_buffer_size = 0;
+
+    this->mshr_tokens_request = NULL;
+    this->mshr_tokens_write = NULL;
+    this->mshr_tokens_prefetch = NULL;
+
+    this->got_request_token = false;
+    this->got_prefetch_token = false;
+    this->got_write_token = false;
 
     this->total_sets = 0;
     this->sets = NULL;
@@ -76,7 +85,10 @@ cache_memory_t::~cache_memory_t() {
 
     utils_t::template_delete_array<cache_set_t>(sets);
     utils_t::template_delete_array<memory_package_t>(mshr_buffer);
-    utils_t::template_delete_array<mshr_diff_line_t>(mshr_request_different_lines);
+
+    utils_t::template_delete_array<int32_t>(mshr_tokens_request);
+    utils_t::template_delete_array<int32_t>(mshr_tokens_prefetch);
+    utils_t::template_delete_array<int32_t>(mshr_tokens_write);
 
     utils_t::template_delete_variable<container_ptr_cache_memory_t>(lower_level_cache);
     utils_t::template_delete_variable<container_ptr_cache_memory_t>(higher_level_cache);
@@ -100,25 +112,23 @@ void cache_memory_t::allocate() {
         }
     }
 
-    ERROR_ASSERT_PRINTF(mshr_buffer_request_reserved_size >= this->mshr_request_different_lines_size, "mshr_buffer_request_reserved_size should >= mshr_request_different_lines_size.\n");
-    ERROR_ASSERT_PRINTF(mshr_buffer_request_reserved_size % this->mshr_request_different_lines_size == 0, "mshr_buffer_request_reserved_size should divisible by mshr_request_different_lines_size.\n");
-    ERROR_ASSERT_PRINTF(mshr_buffer_request_reserved_size > 0, "mshr_buffer_request_reserved_size should be bigger than zero.\n");
-    ERROR_ASSERT_PRINTF(mshr_buffer_writeback_reserved_size > 0, "mshr_buffer_writeback_reserved_size should be bigger than zero.\n");
-    ERROR_ASSERT_PRINTF(mshr_buffer_prefetch_reserved_size > 0, "mshr_buffer_prefetch_reserved_size should be bigger than zero.\n");
+    ERROR_ASSERT_PRINTF(mshr_request_buffer_size > 0, "mshr_request_buffer_size should be bigger than zero.\n");
+    ERROR_ASSERT_PRINTF(mshr_prefetch_buffer_size > 0, "mshr_prefetch_buffer_size should be bigger than zero.\n");
+    ERROR_ASSERT_PRINTF(mshr_write_buffer_size > 0, "mshr_write_buffer_size should be bigger than zero.\n");
+    ERROR_ASSERT_PRINTF(mshr_eviction_buffer_size > 0, "mshr_eviction_buffer_size should be bigger than zero.\n");
 
-
-    /// MSHR = [    REQUEST    | WRITEBACK | PREFETCH ]
-    this->mshr_buffer_size = this->mshr_buffer_request_reserved_size +
-                                this->mshr_buffer_writeback_reserved_size +
-                                this->mshr_buffer_prefetch_reserved_size;
+    /// MSHR = [    REQUEST    | PREFETCH | WRITE | EVICT ]
+    this->mshr_buffer_size = this->mshr_request_buffer_size +
+                                this->mshr_prefetch_buffer_size +
+                                this->mshr_write_buffer_size +
+                                this->mshr_eviction_buffer_size;
     this->mshr_buffer = utils_t::template_allocate_array<memory_package_t>(this->get_mshr_buffer_size());
     this->mshr_born_ordered.reserve(this->mshr_buffer_size);
-    this->token_list.reserve(this->mshr_buffer_size);
 
-    this->mshr_request_different_lines_used = 0;
-    this->mshr_request_different_lines = utils_t::template_allocate_array<mshr_diff_line_t>(this->mshr_request_different_lines_size);
+    this->mshr_tokens_request = utils_t::template_allocate_initialize_array<int32_t>(sinuca_engine.get_interconnection_interface_array_size(), -1);
+    this->mshr_tokens_prefetch = utils_t::template_allocate_initialize_array<int32_t>(sinuca_engine.get_interconnection_interface_array_size(), -1);
+    this->mshr_tokens_write = utils_t::template_allocate_initialize_array<int32_t>(sinuca_engine.get_interconnection_interface_array_size(), -1);
 
-    this->mshr_buffer_request_per_different_line_size = this->mshr_buffer_request_reserved_size / this->mshr_request_different_lines_size;
 
     ERROR_ASSERT_PRINTF(this->get_total_banks() == 1 || this->prefetcher->get_prefetcher_type() == PREFETCHER_DISABLE, "Cannot use a multibanked cache with prefetch. (Some requests may be generated in the wrong bank)\n");
 
@@ -140,6 +150,51 @@ void cache_memory_t::allocate() {
     #ifdef CACHE_DEBUG
         this->print_configuration();
     #endif
+};
+
+// ============================================================================
+void cache_memory_t::set_tokens() {
+
+    uint32_t higher_components = 0;
+
+    /// If L1, create tokens for the Processors
+    if (this->higher_level_cache[0].empty()) {
+
+
+        for (uint32_t i = 0; i < sinuca_engine.get_processor_array_size(); i++) {
+            if (sinuca_engine.processor_array[i]->get_data_cache()->get_id() == this->get_id() ||
+            sinuca_engine.processor_array[i]->get_inst_cache()->get_id() == this->get_id() ) {
+
+                higher_components++;
+                uint32_t id = sinuca_engine.processor_array[i]->get_id();
+
+                this->mshr_tokens_request[id]   = this->higher_level_request_tokens;
+                this->mshr_tokens_prefetch[id]  = this->higher_level_prefetch_tokens;
+                this->mshr_tokens_write[id]     = this->higher_level_write_tokens;
+            }
+        }
+    }
+    /// Other cache levels
+    else {
+        higher_components = this->higher_level_cache[0].size();
+        for (uint32_t i = 0; i < this->higher_level_cache[0].size(); i++) {
+            uint32_t id = this->higher_level_cache[0][i]->get_id();
+
+            this->mshr_tokens_request[id]   = this->higher_level_request_tokens;
+            this->mshr_tokens_prefetch[id]  = this->higher_level_prefetch_tokens;
+            this->mshr_tokens_write[id]     = this->higher_level_write_tokens;
+        }
+    }
+
+    ERROR_ASSERT_PRINTF(this->higher_level_request_tokens * higher_components <= this->mshr_request_buffer_size,
+                        "%s Allocating more REQUEST tokens than MSHR positions.\n", this->get_label())
+
+    ERROR_ASSERT_PRINTF(this->higher_level_prefetch_tokens * higher_components <= this->mshr_prefetch_buffer_size,
+                        "%s Allocating more PREFETCH tokens than MSHR positions.\n", this->get_label())
+
+    ERROR_ASSERT_PRINTF(this->higher_level_write_tokens * higher_components <= this->mshr_write_buffer_size,
+                        "%s Allocating more WRITE tokens than MSHR positions.\n", this->get_label())
+
 };
 
 // ============================================================================
@@ -282,40 +337,9 @@ void cache_memory_t::clock(uint32_t subcycle) {
     this->prefetcher->request_buffer.is_empty()) return;
 
     // =================================================================
-    /// MSHR_BUFFER - REMOVE THE READY PACKAGES
-    // =================================================================
-    for (uint32_t i = 0; i < this->mshr_born_ordered.size(); i++){
-        if (mshr_born_ordered[i]->state == PACKAGE_STATE_READY &&
-        this->mshr_born_ordered[i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
-            /// Check if inside MSHR_BUFFER_REQUEST
-            if (this->mshr_born_ordered[i] < this->mshr_buffer + this->mshr_buffer_request_reserved_size ) {
-                /// Decrement the usage_counter of diff_lines
-                for (uint32_t same_line = 0; same_line < this->mshr_request_different_lines_size; same_line++) {
-                    /// Check for same_address
-                    if (this->mshr_request_different_lines[same_line].valid &&
-                    this->cmp_tag_index_bank(this->mshr_request_different_lines[same_line].memory_address, mshr_born_ordered[i]->memory_address)) {
-                        // ~ SINUCA_PRINTF("%d - REMOVING from DIFF - 0x%" PRIu64 "  #%" PRIu64 "\n", this->get_id(), mshr_born_ordered[i]->memory_address, mshr_request_different_lines[same_line].usage_counter)
-                        ERROR_ASSERT_PRINTF(this->mshr_request_different_lines[same_line].usage_counter > 0, "Usage counter will become negative\n")
-                        this->mshr_request_different_lines[same_line].usage_counter--;
-                        if (this->mshr_request_different_lines[same_line].usage_counter == 0) {
-                            this->mshr_request_different_lines[same_line].clean();
-                            this->mshr_request_different_lines_used--;
-                        }
-                        break;
-                    }
-                }
-            }
-            this->cache_wait(this->mshr_born_ordered[i]);
-            this->mshr_born_ordered[i]->package_clean();
-            this->mshr_born_ordered.erase(this->mshr_born_ordered.begin() + i);
-        }
-    }
-
-
-    // =================================================================
     /// MSHR_BUFFER - TRANSMISSION
     // =================================================================
-    /// Control Parallel Requests
+    /// ANSWERS
     for (uint32_t i = 0; i < this->mshr_born_ordered.size(); i++){
         if (mshr_born_ordered[i]->state == PACKAGE_STATE_TRANSMIT &&
         this->mshr_born_ordered[i]->is_answer == true &&
@@ -324,13 +348,18 @@ void cache_memory_t::clock(uint32_t subcycle) {
             CACHE_DEBUG_PRINTF("\t Send ANSWER this->mshr_born_ordered[%d] %s\n", i, this->mshr_born_ordered[i]->content_to_string().c_str());
             int32_t transmission_latency = send_package(mshr_born_ordered[i]);
             if (transmission_latency != POSITION_FAIL) {
-                this->mshr_born_ordered[i]->package_ready(transmission_latency);
+                /// PACKAGE READY !
+                this->push_token_credit(this->mshr_born_ordered[i]->id_dst, this->mshr_born_ordered[i]->memory_operation);
+                this->cache_wait(this->mshr_born_ordered[i]);
+                this->mshr_born_ordered[i]->package_clean();
+                this->mshr_born_ordered.erase(this->mshr_born_ordered.begin() + i);
             }
+
             break;
         }
     }
 
-
+    /// REQUESTS
     for (uint32_t i = 0; i < this->mshr_born_ordered.size(); i++){
         if (mshr_born_ordered[i]->state == PACKAGE_STATE_TRANSMIT &&
         this->mshr_born_ordered[i]->is_answer == false &&
@@ -340,13 +369,17 @@ void cache_memory_t::clock(uint32_t subcycle) {
             int32_t transmission_latency = send_package(mshr_born_ordered[i]);
             if (transmission_latency != POSITION_FAIL) {
                 this->mshr_born_ordered[i]->state = sinuca_engine.directory_controller->treat_cache_request_sent(this->get_cache_id(), this->mshr_born_ordered[i]);
+                ERROR_ASSERT_PRINTF(this->mshr_born_ordered[i]->state != PACKAGE_STATE_FREE, "Must not receive back a FREE, should receive READY")
                 /// Normal READ/INST/PREFETCH Request
                 if (this->mshr_born_ordered[i]->state == PACKAGE_STATE_WAIT) {
                     this->mshr_born_ordered[i]->package_wait(transmission_latency);
                 }
                 /// Normal WRITE-BACK Request (Will free the position)
-                else if (this->mshr_born_ordered[i]->state == PACKAGE_STATE_FREE) {
-                    this->mshr_born_ordered[i]->package_ready(transmission_latency);
+                else if (this->mshr_born_ordered[i]->state == PACKAGE_STATE_READY) {
+                    /// PACKAGE READY !
+                    this->cache_wait(this->mshr_born_ordered[i]);
+                    this->mshr_born_ordered[i]->package_clean();
+                    this->mshr_born_ordered.erase(this->mshr_born_ordered.begin() + i);
                 }
             }
             break;
@@ -357,14 +390,14 @@ void cache_memory_t::clock(uint32_t subcycle) {
     // =================================================================
     /// MSHR_BUFFER - UNTREATED
     // =================================================================
-    /// Control Parallel Requests
+    /// ANSWERS
     for (uint32_t i = 0; i < this->mshr_born_ordered.size(); i++){
         if (mshr_born_ordered[i]->state == PACKAGE_STATE_UNTREATED &&
         this->mshr_born_ordered[i]->is_answer == true &&
         this->mshr_born_ordered[i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
 
             this->mshr_born_ordered[i]->state = sinuca_engine.directory_controller->treat_cache_answer(this->get_cache_id(), this->mshr_born_ordered[i]);
-            ERROR_ASSERT_PRINTF(this->mshr_born_ordered[i]->state != PACKAGE_STATE_FREE, "Must not receive back a FREE, should receive READY + Latency")
+            ERROR_ASSERT_PRINTF(this->mshr_born_ordered[i]->state != PACKAGE_STATE_FREE, "Must not receive back a FREE, should receive READY")
             /// Could not treat, then restart born_cycle (change priority)
             if (this->mshr_born_ordered[i]->state == PACKAGE_STATE_UNTREATED) {
                 this->mshr_born_ordered[i]->born_cycle = sinuca_engine.get_global_cycle();
@@ -372,18 +405,27 @@ void cache_memory_t::clock(uint32_t subcycle) {
                 this->mshr_born_ordered.erase(this->mshr_born_ordered.begin() + i);
                 this->insert_mshr_born_ordered(package);
             }
+            else if (this->mshr_born_ordered[i]->state == PACKAGE_STATE_READY) {
+                /// PACKAGE READY !
+                if (this->mshr_born_ordered[i]->id_owner != this->get_id()) {
+                    this->push_token_credit(this->mshr_born_ordered[i]->id_dst, this->mshr_born_ordered[i]->memory_operation);
+                }
+                this->cache_wait(this->mshr_born_ordered[i]);
+                this->mshr_born_ordered[i]->package_clean();
+                this->mshr_born_ordered.erase(this->mshr_born_ordered.begin() + i);
+            }
             break;
         }
     }
 
-    /// Control Parallel Requests
+    /// REQUESTS
     for (uint32_t i = 0; i < this->mshr_born_ordered.size(); i++){
         if (mshr_born_ordered[i]->state == PACKAGE_STATE_UNTREATED &&
         this->mshr_born_ordered[i]->is_answer == false &&
         this->mshr_born_ordered[i]->ready_cycle <= sinuca_engine.get_global_cycle()) {
 
             this->mshr_born_ordered[i]->state = sinuca_engine.directory_controller->treat_cache_request(this->get_cache_id(), this->mshr_born_ordered[i]);
-            ERROR_ASSERT_PRINTF(this->mshr_born_ordered[i]->state != PACKAGE_STATE_FREE, "Must not receive back a FREE, should receive READY + Latency")
+            ERROR_ASSERT_PRINTF(this->mshr_born_ordered[i]->state != PACKAGE_STATE_FREE, "Must not receive back a FREE, should receive READY")
             /// Could not treat, then restart born_cycle (change priority)
             /// If (is_answer == true) means that higher level had the cache line.
             if (this->mshr_born_ordered[i]->state == PACKAGE_STATE_UNTREATED &&
@@ -393,6 +435,16 @@ void cache_memory_t::clock(uint32_t subcycle) {
                 this->mshr_born_ordered.erase(this->mshr_born_ordered.begin() + i);
                 this->insert_mshr_born_ordered(package);
             }
+            else if (this->mshr_born_ordered[i]->state == PACKAGE_STATE_READY) {
+                /// PACKAGE READY !
+                if (this->mshr_born_ordered[i]->id_owner != this->get_id()) {
+                    this->push_token_credit(this->mshr_born_ordered[i]->id_src, this->mshr_born_ordered[i]->memory_operation);
+                }
+                this->cache_wait(this->mshr_born_ordered[i]);
+                this->mshr_born_ordered[i]->package_clean();
+                this->mshr_born_ordered.erase(this->mshr_born_ordered.begin() + i);
+            }
+
             break;
         }
     }
@@ -406,6 +458,13 @@ void cache_memory_t::clock(uint32_t subcycle) {
         int32_t slot = this->allocate_prefetch(this->prefetcher->request_buffer.front());
         if (slot != POSITION_FAIL) {
             CACHE_DEBUG_PRINTF("\t\t Allocating PREFETCH into MSHR\n");
+
+            /// Add Identity information
+            this->mshr_buffer[slot].id_owner = this->get_id();
+            this->mshr_buffer[slot].id_src = this->get_id();
+            this->mshr_buffer[slot].id_dst = this->get_id();
+            this->mshr_buffer[slot].package_untreated(0);
+
             this->prefetcher->request_buffer.pop_front();
         }
     }
@@ -447,56 +506,73 @@ void cache_memory_t::insert_mshr_born_ordered(memory_package_t* package){
 // ============================================================================
 int32_t cache_memory_t::allocate_request(memory_package_t* package){
 
-    int32_t slot = memory_package_t::find_free(this->mshr_buffer, this->mshr_buffer_request_reserved_size);
+    int32_t slot = memory_package_t::find_free(this->mshr_buffer, this->mshr_request_buffer_size);
     if (slot != POSITION_FAIL) {
         CACHE_DEBUG_PRINTF("\t NEW REQUEST\n");
         this->mshr_buffer[slot] = *package;
         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
     }
     else {
-        add_stat_full_mshr_buffer_request();
+        add_stat_full_mshr_request_buffer();
     }
     return slot;
 };
 
 
 // ============================================================================
-int32_t cache_memory_t::allocate_writeback(memory_package_t* package){
+int32_t cache_memory_t::allocate_prefetch(memory_package_t* package){
 
-    int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size, this->mshr_buffer_writeback_reserved_size);
+    int32_t slot = memory_package_t::find_free(this->mshr_buffer +
+                                                this->mshr_request_buffer_size,
+                                                this->mshr_prefetch_buffer_size);
     if (slot != POSITION_FAIL) {
-        slot += this->mshr_buffer_request_reserved_size;
+        slot += this->mshr_request_buffer_size;
+        CACHE_DEBUG_PRINTF("\t NEW PREFETCH\n");
+        this->mshr_buffer[slot] = *package;
+        this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
+    }
+    else {
+        add_stat_full_mshr_prefetch_buffer();
+    }
+    return slot;
+};
+
+
+// ============================================================================
+int32_t cache_memory_t::allocate_write(memory_package_t* package){
+
+    int32_t slot = memory_package_t::find_free(this->mshr_buffer +
+                                                this->mshr_request_buffer_size +
+                                                this->mshr_prefetch_buffer_size,
+                                                this->mshr_write_buffer_size);
+    if (slot != POSITION_FAIL) {
+        slot += this->mshr_request_buffer_size + this->mshr_prefetch_buffer_size;
         CACHE_DEBUG_PRINTF("\t NEW WRITEBACK\n");
         this->mshr_buffer[slot] = *package;
         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
     }
     else {
-        add_stat_full_mshr_buffer_writeback();
+        add_stat_full_mshr_write_buffer();
     }
     return slot;
 };
 
 // ============================================================================
-int32_t cache_memory_t::allocate_prefetch(memory_package_t* package){
+int32_t cache_memory_t::allocate_eviction(memory_package_t* package){
 
-    int32_t slot = memory_package_t::find_free(this->mshr_buffer + this->mshr_buffer_request_reserved_size + this->mshr_buffer_writeback_reserved_size,
-                                                this->mshr_buffer_prefetch_reserved_size);
+    int32_t slot = memory_package_t::find_free(this->mshr_buffer +
+                                                this->mshr_request_buffer_size +
+                                                this->mshr_prefetch_buffer_size +
+                                                this->mshr_write_buffer_size,
+                                                this->mshr_eviction_buffer_size);
     if (slot != POSITION_FAIL) {
-        slot += this->mshr_buffer_request_reserved_size + this->mshr_buffer_writeback_reserved_size;
-
-        CACHE_DEBUG_PRINTF("\t NEW PREFETCH\n");
-
+        slot += this->mshr_request_buffer_size + this->mshr_prefetch_buffer_size + this->mshr_write_buffer_size;
+        CACHE_DEBUG_PRINTF("\t NEW WRITEBACK\n");
         this->mshr_buffer[slot] = *package;
-        /// Add Identity information
-        this->mshr_buffer[slot].id_owner = this->get_id();
-        this->mshr_buffer[slot].id_src = this->get_id();
-        this->mshr_buffer[slot].id_dst = this->get_id();
-        this->mshr_buffer[slot].package_untreated(0);
-
         this->insert_mshr_born_ordered(&this->mshr_buffer[slot]);    /// Insert into a parallel and well organized MSHR structure
     }
     else {
-        add_stat_full_mshr_buffer_prefetch();
+        add_stat_full_mshr_write_buffer();
     }
     return slot;
 };
@@ -537,10 +613,41 @@ int32_t cache_memory_t::send_package(memory_package_t *package) {
     else {
         /// Control Parallel Requests
         if (this->send_rqst_ready_cycle <= sinuca_engine.get_global_cycle()) {
-            /// Check if DESTINATION has FREE SPACE available.
-            if (sinuca_engine.interconnection_interface_array[package->id_dst]->check_token_list(package) == false) {
-                CACHE_DEBUG_PRINTF("\tSEND FAIL (NO TOKENS)\n");
-                return POSITION_FAIL;
+
+            switch (package->memory_operation) {
+                // HMC -> READ buffer
+                case MEMORY_OPERATION_HMC_ALU:
+                case MEMORY_OPERATION_HMC_ALUR:
+
+                case MEMORY_OPERATION_READ:
+                case MEMORY_OPERATION_INST:
+                    if (!this->got_request_token)
+                        this->got_request_token = sinuca_engine.interconnection_interface_array[package->id_dst]->pop_token_credit(this->get_id(), package->memory_operation);
+                    if (!this->got_request_token) {
+                        CACHE_DEBUG_PRINTF("\tSEND FAIL (NO TOKENS)\n");
+                        return POSITION_FAIL;
+                    }
+                break;
+
+                case MEMORY_OPERATION_PREFETCH:
+                    if (!this->got_prefetch_token)
+                        this->got_prefetch_token = sinuca_engine.interconnection_interface_array[package->id_dst]->pop_token_credit(this->get_id(), package->memory_operation);
+                    if (!this->got_prefetch_token) {
+                        CACHE_DEBUG_PRINTF("\tSEND FAIL (NO TOKENS)\n");
+                        return POSITION_FAIL;
+                    }
+
+                break;
+
+                case MEMORY_OPERATION_WRITEBACK:
+                case MEMORY_OPERATION_WRITE:
+                    if (!this->got_write_token)
+                        this->got_write_token = sinuca_engine.interconnection_interface_array[package->id_dst]->pop_token_credit(this->get_id(), package->memory_operation);
+                    if (!this->got_write_token) {
+                        CACHE_DEBUG_PRINTF("\tSEND FAIL (NO TOKENS)\n");
+                        return POSITION_FAIL;
+                    }
+                break;
             }
 
             sinuca_engine.interconnection_controller->find_package_route(package);
@@ -553,6 +660,26 @@ int32_t cache_memory_t::send_package(memory_package_t *package) {
             bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port), transmission_latency);
             if (sent) {
                 CACHE_DEBUG_PRINTF("\tSEND OK\n");
+                switch (package->memory_operation) {
+                    // HMC -> READ buffer
+                    case MEMORY_OPERATION_HMC_ALU:
+                    case MEMORY_OPERATION_HMC_ALUR:
+
+                    case MEMORY_OPERATION_READ:
+                    case MEMORY_OPERATION_INST:
+                        this->got_request_token = false;
+                    break;
+
+                    case MEMORY_OPERATION_PREFETCH:
+                        this->got_prefetch_token = false;
+                    break;
+
+                    case MEMORY_OPERATION_WRITEBACK:
+                    case MEMORY_OPERATION_WRITE:
+                        this->got_write_token = false;
+                    break;
+                }
+
                 this->send_rqst_ready_cycle = sinuca_engine.get_global_cycle() + transmission_latency;
                 return transmission_latency;
             }
@@ -613,22 +740,71 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
 
             case MEMORY_OPERATION_READ:
             case MEMORY_OPERATION_INST:
-            case MEMORY_OPERATION_PREFETCH:
             {
                 /// Control Parallel Requests
                 if (this->recv_rqst_read_ready_cycle <= sinuca_engine.get_global_cycle()) {
                     slot = this->allocate_request(package);
                     if (slot != POSITION_FAIL) {
-                        CACHE_DEBUG_PRINTF("\t RECEIVED READ REQUEST\n");
+                        CACHE_DEBUG_PRINTF("\t RECEIVED READ/INST REQUEST\n");
                         this->mshr_buffer[slot].package_untreated(0);
                         this->recv_rqst_read_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
-                        this->remove_token_list(package);
 
                         // =============================================================
                         /// SEND TO PREFETCH
                         // =============================================================
                         CACHE_DEBUG_PRINTF("\t Treat REQUEST this->mshr_born_ordered[%d] %s\n", slot, this->mshr_buffer[slot].content_to_string().c_str());
                         this->prefetcher->treat_prefetch(this->mshr_buffer + slot);
+
+                        return OK;
+                    }
+                }
+                CACHE_DEBUG_PRINTF("\tRECV DATA FAIL (BUSY)\n");
+                return FAIL;
+            }
+            break;
+
+            case MEMORY_OPERATION_PREFETCH:
+            {
+                /// Control Parallel Requests
+                if (this->recv_rqst_read_ready_cycle <= sinuca_engine.get_global_cycle()) {
+                    slot = this->allocate_prefetch(package);
+                    if (slot != POSITION_FAIL) {
+                        CACHE_DEBUG_PRINTF("\t RECEIVED PFTCH REQUEST\n");
+                        this->mshr_buffer[slot].package_untreated(0);
+                        this->recv_rqst_read_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
+
+                        // =============================================================
+                        /// SEND TO PREFETCH
+                        // =============================================================
+                        CACHE_DEBUG_PRINTF("\t Treat REQUEST this->mshr_born_ordered[%d] %s\n", slot, this->mshr_buffer[slot].content_to_string().c_str());
+                        this->prefetcher->treat_prefetch(this->mshr_buffer + slot);
+
+                        return OK;
+                    }
+                }
+                CACHE_DEBUG_PRINTF("\tRECV DATA FAIL (BUSY)\n");
+                return FAIL;
+            }
+            break;
+
+            case MEMORY_OPERATION_WRITE:
+            case MEMORY_OPERATION_WRITEBACK:
+            {
+                /// Control Parallel Requests
+                if (this->recv_rqst_write_ready_cycle <= sinuca_engine.get_global_cycle()) {
+                    slot = this->allocate_write(package);
+                    if (slot != POSITION_FAIL) {
+                        CACHE_DEBUG_PRINTF("\t RECEIVED WRITE REQUEST\n");
+                        this->mshr_buffer[slot].package_untreated(0);
+                        this->recv_rqst_write_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
+
+                        // =============================================================
+                        /// SEND TO PREFETCH
+                        // =============================================================
+                        CACHE_DEBUG_PRINTF("\t Treat REQUEST this->mshr_born_ordered[%d] %s\n", slot, this->mshr_buffer[slot].content_to_string().c_str());
+                        if (this->mshr_buffer[slot].memory_operation != MEMORY_OPERATION_WRITEBACK) {
+                            this->prefetcher->treat_prefetch(this->mshr_buffer + slot);
+                        }
 
                         return OK;
                     }
@@ -646,42 +822,12 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
                 if (this->recv_rqst_read_ready_cycle <= sinuca_engine.get_global_cycle()) {
                     slot = this->allocate_request(package);
                     if (slot != POSITION_FAIL) {
-                        CACHE_DEBUG_PRINTF("\t RECEIVED READ REQUEST\n");
+                        CACHE_DEBUG_PRINTF("\t RECEIVED HMC REQUEST\n");
                         this->mshr_buffer[slot].package_untreated(0);
                         this->recv_rqst_read_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
-                        this->remove_token_list(package);
 
                         return OK;
                     }
-                }
-                CACHE_DEBUG_PRINTF("\tRECV DATA FAIL (BUSY)\n");
-                return FAIL;
-            }
-            break;
-
-
-            case MEMORY_OPERATION_WRITE:
-            case MEMORY_OPERATION_WRITEBACK:
-            {
-                /// Control Parallel Requests
-                if (this->recv_rqst_write_ready_cycle <= sinuca_engine.get_global_cycle()) {
-                    slot = this->allocate_request(package);
-                    if (slot != POSITION_FAIL) {
-                        CACHE_DEBUG_PRINTF("\t RECEIVED WRITE REQUEST\n");
-                        this->mshr_buffer[slot].package_untreated(0);
-                        this->recv_rqst_write_ready_cycle = transmission_latency + sinuca_engine.get_global_cycle();  /// Ready to receive from HIGHER_PORT
-                        this->remove_token_list(package);
-
-                        // =============================================================
-                        /// SEND TO PREFETCH
-                        // =============================================================
-                        CACHE_DEBUG_PRINTF("\t Treat REQUEST this->mshr_born_ordered[%d] %s\n", slot, this->mshr_buffer[slot].content_to_string().c_str());
-                        if (this->mshr_buffer[slot].memory_operation != MEMORY_OPERATION_WRITEBACK) {
-                            this->prefetcher->treat_prefetch(this->mshr_buffer + slot);
-                        }
-
-                        return OK;
-                        }
                 }
                 CACHE_DEBUG_PRINTF("\tRECV DATA FAIL (BUSY)\n");
                 return FAIL;
@@ -695,119 +841,95 @@ bool cache_memory_t::receive_package(memory_package_t *package, uint32_t input_p
 // ============================================================================
 /// Token Controller Methods
 // ============================================================================
-bool cache_memory_t::check_token_list(memory_package_t *package) {
-    ERROR_ASSERT_PRINTF(package->is_answer == false, "check_token_list received a Answer.\n")
-    uint32_t token_pos = 0;//, number_tokens_coming = 0;
+bool cache_memory_t::pop_token_credit(uint32_t src_id, memory_operation_t memory_operation) {
 
+    CACHE_DEBUG_PRINTF("Popping a token to id (%" PRIu32 ")\n", src_id)
 
-    /// 1. Check the token list. If this is the first attempt to transmit a package .
-    for (token_pos = 0; token_pos < this->token_list.size(); token_pos++) {
-        /// Requested Address Found
-        if (this->token_list[token_pos].opcode_number == package->opcode_number &&
-        this->token_list[token_pos].uop_number == package->uop_number &&
-        this->token_list[token_pos].memory_address == package->memory_address &&
-        this->token_list[token_pos].memory_operation == package->memory_operation &&
-        this->token_list[token_pos].id_owner == package->id_owner) {
-            CACHE_DEBUG_PRINTF("Found a token\n");
-            break;
-        }
-    }
-
-    /// 2. Not in the token list (first attempt), lets add it.
-    if (token_pos == this->token_list.size()) {
-        CACHE_DEBUG_PRINTF("Allocating a new token\n");
-        /// Allocate the new token
-        token_t new_token;
-        new_token.id_owner = package->id_owner;
-        new_token.opcode_number = package->opcode_number;
-        new_token.uop_number = package->uop_number;
-        new_token.memory_address = package->memory_address;
-        new_token.memory_operation = package->memory_operation;
-
-        this->token_list.push_back(new_token);
-    }
-
-    /// 3. If received already the ticket
-    if (this->token_list[token_pos].is_coming) {
-        CACHE_DEBUG_PRINTF("Is coming = true\n");
-        /// Come on in! Lets Party !
-        return OK;
-    }
-
-    /// 4. Check if the guest can come now, or it needs to wait for free space.
-    if (token_pos < this->mshr_request_token_window_size) {
-
-        /// Check if MSHR is already working on the same line.
-        for (uint32_t same_line = 0; same_line < this->mshr_request_different_lines_size; same_line++) {
-            /// Check for same_address
-            if (this->mshr_request_different_lines[same_line].valid &&
-            cmp_tag_index_bank(this->mshr_request_different_lines[same_line].memory_address, package->memory_address)) {
-
-                if (this->mshr_request_different_lines[same_line].usage_counter < mshr_buffer_request_per_different_line_size) {
-                    /// Avoid increment the usage_counter twice
-                    this->mshr_request_different_lines[same_line].usage_counter++;
-                    this->token_list[token_pos].is_coming = true;
-
-                    /// Come on in! Lets Party !
-                    CACHE_DEBUG_PRINTF("Can come (same address)\n");
-                    return OK;
-                }
-                else {
-                    /// Hold on, wait in the line!
-                    add_stat_full_mshr_buffer_request();
-                    CACHE_DEBUG_PRINTF("Can not come (same address)\n");
-                    return FAIL;
-                }
+    switch (memory_operation) {
+        case MEMORY_OPERATION_READ:
+        case MEMORY_OPERATION_INST:
+        // HMC -> READ buffer
+        case MEMORY_OPERATION_HMC_ALU:
+        case MEMORY_OPERATION_HMC_ALUR:
+            if (this->mshr_tokens_request[src_id] > 0) {
+                this->mshr_tokens_request[src_id]--;
+                CACHE_DEBUG_PRINTF("Found a REQUEST token. (%" PRIu32 " left)\n", this->mshr_tokens_request[src_id]);
+                return OK;
             }
-        }
-
-        /// Not found the same address - Check if can create a new entry
-        if (token_pos < (this->mshr_request_different_lines_size - this->mshr_request_different_lines_used)) {
-            /// Check for an empty MSHR diff line.
-            for (uint32_t slot = 0; slot < this->mshr_request_different_lines_size; slot++) {
-                /// Find an empty entry for different_line
-                if (this->mshr_request_different_lines[slot].valid == false) {
-                    this->mshr_request_different_lines[slot].valid = true;
-                    this->mshr_request_different_lines[slot].memory_address = package->memory_address;
-                    this->mshr_request_different_lines[slot].usage_counter = 1;
-
-                    this->mshr_request_different_lines_used++;
-                    this->token_list[token_pos].is_coming = true;
-
-                    /// Come on in! Lets Party !
-                    CACHE_DEBUG_PRINTF("Can come (different address)\n");
-                    return OK;
-                }
+            else {
+                CACHE_DEBUG_PRINTF("Must wait, no REQUEST tokens left\n");
+                this->add_stat_full_mshr_request_buffer();
+                return FAIL;
             }
-        }
-        else {
-            /// Hold on, wait in the line!
-            add_stat_full_mshr_buffer_request();
-            CACHE_DEBUG_PRINTF("Can not come (different address)\n");
-            return FAIL;
-        }
+        break;
+
+        case MEMORY_OPERATION_PREFETCH:
+            if (this->mshr_tokens_prefetch[src_id] > 0) {
+                this->mshr_tokens_prefetch[src_id]--;
+                CACHE_DEBUG_PRINTF("Found a PREFETCH token. (%" PRIu32 " left)\n", this->mshr_tokens_prefetch[src_id]);
+                return OK;
+            }
+            else {
+                CACHE_DEBUG_PRINTF("Must wait, no PREFETCH tokens left\n");
+                this->add_stat_full_mshr_prefetch_buffer();
+                return FAIL;
+            }
+        break;
+
+        case MEMORY_OPERATION_WRITE:
+        case MEMORY_OPERATION_WRITEBACK:
+            if (this->mshr_tokens_write[src_id] > 0) {
+                this->mshr_tokens_write[src_id]--;
+                CACHE_DEBUG_PRINTF("Found a WRITE token. (%" PRIu32 " left)\n", this->mshr_tokens_write[src_id]);
+                return OK;
+            }
+            else {
+                CACHE_DEBUG_PRINTF("Must wait, no WRITE tokens left\n");
+                this->add_stat_full_mshr_write_buffer();
+                return FAIL;
+            }
+        break;
     }
 
-    CACHE_DEBUG_PRINTF("Cannot receive, request out of the window\n");
-    /// Hold on, wait in the line!
-    add_stat_full_mshr_buffer_request();
+    ERROR_PRINTF("Could not treat the token\n")
     return FAIL;
 };
 
 // ============================================================================
-void cache_memory_t::remove_token_list(memory_package_t *package) {
-    for (uint32_t token = 0; token < this->token_list.size(); token++) {
-        /// Requested Address Found
-        if (this->token_list[token].opcode_number == package->opcode_number &&
-        this->token_list[token].uop_number == package->uop_number &&
-        this->token_list[token].memory_address == package->memory_address &&
-        this->token_list[token].memory_operation == package->memory_operation &&
-        this->token_list[token].id_owner == package->id_owner) {
-            this->token_list.erase(this->token_list.begin() + token);
-            return;
-        }
+void cache_memory_t::push_token_credit(uint32_t src_id, memory_operation_t memory_operation) {
+
+    CACHE_DEBUG_PRINTF("Pushing a token to id %" PRIu32 "\n", src_id)
+    ERROR_ASSERT_PRINTF(this->get_id() != src_id, "Should not be pushing a token to this.\n")
+
+    switch (memory_operation) {
+        case MEMORY_OPERATION_READ:
+        case MEMORY_OPERATION_INST:
+        // HMC -> READ buffer
+        case MEMORY_OPERATION_HMC_ALU:
+        case MEMORY_OPERATION_HMC_ALUR:
+            ERROR_ASSERT_PRINTF(this->mshr_tokens_request[src_id] <= (int32_t)this->higher_level_request_tokens &&
+                                this->mshr_tokens_request[src_id] >= 0,
+                                "Found an component with more tokens than permitted\n");
+            this->mshr_tokens_request[src_id]++;
+        break;
+
+        case MEMORY_OPERATION_PREFETCH:
+            ERROR_ASSERT_PRINTF(this->mshr_tokens_prefetch[src_id] <= (int32_t)this->higher_level_prefetch_tokens &&
+                                this->mshr_tokens_prefetch[src_id] >= 0,
+                                "Found an component with more tokens than permitted\n");
+            this->mshr_tokens_prefetch[src_id]++;
+        break;
+
+        case MEMORY_OPERATION_WRITE:
+        case MEMORY_OPERATION_WRITEBACK:
+            ERROR_ASSERT_PRINTF(this->mshr_tokens_write[src_id] <= (int32_t)this->higher_level_write_tokens &&
+                                this->mshr_tokens_write[src_id] >= 0,
+                                "Found an component with more tokens than permitted\n");
+            this->mshr_tokens_write[src_id]++;
+        break;
     }
-    ERROR_PRINTF("Could not find the previous allocated token.\n%s\n", package->content_to_string().c_str())
+
+    return;
 };
 
 // ============================================================================
@@ -880,6 +1002,7 @@ void cache_memory_t::cache_stats(memory_operation_t memory_operation, bool is_hi
         }
     }
 };
+
 // ============================================================================
 void cache_memory_t::cache_wait(memory_package_t *package) {
 
@@ -1080,14 +1203,29 @@ void cache_memory_t::update_last_access(cache_line_t *line) {
 void cache_memory_t::print_structures() {
     SINUCA_PRINTF("%s MSHR_BUFFER:\n%s", this->get_label(), memory_package_t::print_all(this->mshr_buffer, this->mshr_buffer_size).c_str())
 
-    SINUCA_PRINTF("%s TOKEN_LIST:\n", this->get_label())
-    for (uint32_t i = 0; i < this->token_list.size(); i++) {
-        SINUCA_PRINTF("%s\n", this->token_list[i].content_to_string().c_str())
+    SINUCA_PRINTF("%s MSHR_TOKENS_REQUEST:\n", this->get_label())
+    for (uint32_t i = 0; i < sinuca_engine.get_interconnection_interface_array_size(); i++) {
+        uint32_t src_id = sinuca_engine.interconnection_interface_array[i]->get_id();
+        if (this->mshr_tokens_request[src_id] != -1) {
+            SINUCA_PRINTF("%s => %d tokens\n", sinuca_engine.interconnection_interface_array[i]->get_label(), this->mshr_tokens_request[src_id])
+        }
     }
 
-    SINUCA_PRINTF("%s MSHR_REQUEST_DIFFERENT_LINES:\n%s", this->get_label(),
-                                                mshr_diff_line_t::print_all(this->mshr_request_different_lines, this->mshr_request_different_lines_size).c_str())
+    SINUCA_PRINTF("%s MSHR_TOKENS_PREFETCH:\n", this->get_label())
+    for (uint32_t i = 0; i < sinuca_engine.get_interconnection_interface_array_size(); i++) {
+        uint32_t src_id = sinuca_engine.interconnection_interface_array[i]->get_id();
+        if (this->mshr_tokens_prefetch[src_id] != -1) {
+            SINUCA_PRINTF("%s => %d tokens\n", sinuca_engine.interconnection_interface_array[i]->get_label(), this->mshr_tokens_prefetch[src_id])
+        }
+    }
 
+    SINUCA_PRINTF("%s MSHR_TOKENS_WRITE:\n", this->get_label())
+    for (uint32_t i = 0; i < sinuca_engine.get_interconnection_interface_array_size(); i++) {
+        uint32_t src_id = sinuca_engine.interconnection_interface_array[i]->get_id();
+        if (this->mshr_tokens_write[src_id] != -1) {
+            SINUCA_PRINTF("%s => %d tokens\n", sinuca_engine.interconnection_interface_array[i]->get_label(), this->mshr_tokens_write[src_id])
+        }
+    }
 };
 
 // ============================================================================
@@ -1153,9 +1291,10 @@ void cache_memory_t::reset_statistics() {
     this->stat_max_writeback_wait_time = 0;
     this->stat_accumulated_writeback_wait_time = 0;
 
-    this->stat_full_mshr_buffer_request = 0;
-    this->stat_full_mshr_buffer_writeback = 0;
-    this->stat_full_mshr_buffer_prefetch = 0;
+    this->stat_full_mshr_request_buffer = 0;
+    this->stat_full_mshr_prefetch_buffer = 0;
+    this->stat_full_mshr_write_buffer = 0;
+    this->stat_full_mshr_eviction_buffer = 0;
 
     this->prefetcher->reset_statistics();
     this->line_usage_predictor->reset_statistics();
@@ -1230,9 +1369,9 @@ void cache_memory_t::print_statistics() {
     sinuca_engine.write_statistics_value_ratio(get_type_component_label(), get_label(), "stat_accumulated_writeback_wait_time_ratio", stat_accumulated_writeback_wait_time, stat_writeback_send);
 
     sinuca_engine.write_statistics_small_separator();
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_buffer_request", stat_full_mshr_buffer_request);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_buffer_writeback", stat_full_mshr_buffer_writeback);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_buffer_prefetch", stat_full_mshr_buffer_prefetch);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_request_buffer", stat_full_mshr_request_buffer);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_write_buffer", stat_full_mshr_write_buffer);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "stat_full_mshr_prefetch_buffer", stat_full_mshr_prefetch_buffer);
 
 
     this->prefetcher->print_statistics();
@@ -1267,10 +1406,16 @@ void cache_memory_t::print_configuration() {
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "penalty_read", penalty_read);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "penalty_write", penalty_write);
 
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_buffer_request_reserved_size", mshr_buffer_request_reserved_size);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_buffer_writeback_reserved_size", mshr_buffer_writeback_reserved_size);
-    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_buffer_prefetch_reserved_size", mshr_buffer_prefetch_reserved_size);
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_buffer_size", mshr_buffer_size);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_request_buffer_size", mshr_request_buffer_size);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_prefetch_buffer_size", mshr_prefetch_buffer_size);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_write_buffer_size", mshr_write_buffer_size);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "mshr_eviction_buffer_size", mshr_eviction_buffer_size);
+
+    sinuca_engine.write_statistics_small_separator();
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "higher_level_request_tokens", higher_level_request_tokens);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "higher_level_prefetch_tokens", higher_level_prefetch_tokens);
+    sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "higher_level_write_tokens", higher_level_write_tokens);
 
     sinuca_engine.write_statistics_small_separator();
     sinuca_engine.write_statistics_value(get_type_component_label(), get_label(), "address_mask_type", get_enum_cache_mask_char(address_mask_type));

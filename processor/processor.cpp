@@ -180,6 +180,10 @@ processor_t::processor_t() {
 
     this->data_cache = NULL;
     this->inst_cache = NULL;
+
+    this->got_instruction_token = false;
+    this->got_request_token = false;
+
 };
 
 // ============================================================================
@@ -1026,6 +1030,13 @@ void processor_t::make_memory_dependencies(memory_order_buffer_line_t *new_mob_l
     /// Check if LOAD_HASH matches
     ERROR_ASSERT_PRINTF(load_hash < this->disambiguation_load_hash_size, "load_hash (%" PRIu64 ") > disambiguation_load_hash_size (%d)\n",
                                                                     load_hash, this->disambiguation_load_hash_size);
+    /// Check if STORE_HASH matches
+    ERROR_ASSERT_PRINTF(store_hash < this->disambiguation_store_hash_size, "store_hash (%" PRIu64 ") > disambiguation_store_hash_size (%d)\n",
+                                                                        store_hash, this->disambiguation_store_hash_size);
+
+
+
+    /// Create R -> W,  R -> R
     if (this->disambiguation_load_hash[load_hash] != NULL){
         old_mob_line = disambiguation_load_hash[load_hash];
         for (uint32_t k = 0; k < this->reorder_buffer_size; k++) {
@@ -1037,9 +1048,8 @@ void processor_t::make_memory_dependencies(memory_order_buffer_line_t *new_mob_l
         }
     }
 
-    /// Check if STORE_HASH matches
-    ERROR_ASSERT_PRINTF(store_hash < this->disambiguation_store_hash_size, "store_hash (%" PRIu64 ") > disambiguation_store_hash_size (%d)\n",
-                                                                        store_hash, this->disambiguation_store_hash_size);
+
+    /// Create W -> R, W -> W deps.
     if (this->disambiguation_store_hash[store_hash] != NULL){
         old_mob_line = disambiguation_store_hash[store_hash];
         for (uint32_t k = 0; k < this->reorder_buffer_size; k++) {
@@ -1907,10 +1917,38 @@ void processor_t::clock(uint32_t subcycle) {
 int32_t processor_t::send_package(memory_package_t *package) {
     ERROR_ASSERT_PRINTF(!package->is_answer, "Processor is trying to send an answer.\n")
 
-    /// Check if DESTINATION has FREE SPACE available.
-    if (sinuca_engine.interconnection_interface_array[package->id_dst]->check_token_list(package) == false) {
-        PROCESSOR_DEBUG_PRINTF("\tSEND FAIL (NO TOKENS)\n");
-        return POSITION_FAIL;
+    switch (package->memory_operation) {
+        // HMC -> READ buffer
+        case MEMORY_OPERATION_HMC_ALU:
+        case MEMORY_OPERATION_HMC_ALUR:
+        case MEMORY_OPERATION_READ:
+        case MEMORY_OPERATION_PREFETCH:
+            if (!this->got_request_token)
+                this->got_request_token = sinuca_engine.interconnection_interface_array[package->id_dst]->pop_token_credit(this->id, package->memory_operation);
+            if (!this->got_request_token) {
+                PROCESSOR_DEBUG_PRINTF("\tSEND FAIL (NO TOKENS)\n");
+                return POSITION_FAIL;
+            }
+        break;
+
+        case MEMORY_OPERATION_INST:
+            if (!this->got_instruction_token)
+                this->got_instruction_token = sinuca_engine.interconnection_interface_array[package->id_dst]->pop_token_credit(this->id, package->memory_operation);
+            if (!this->got_instruction_token) {
+                PROCESSOR_DEBUG_PRINTF("\tSEND FAIL (NO TOKENS)\n");
+                return POSITION_FAIL;
+            }
+        break;
+
+        case MEMORY_OPERATION_WRITEBACK:
+        case MEMORY_OPERATION_WRITE:
+            if (!this->got_write_token)
+                this->got_write_token = sinuca_engine.interconnection_interface_array[package->id_dst]->pop_token_credit(this->id, package->memory_operation);
+            if (!this->got_write_token) {
+                PROCESSOR_DEBUG_PRINTF("\tSEND FAIL (NO TOKENS)\n");
+                return POSITION_FAIL;
+            }
+        break;
     }
 
     sinuca_engine.interconnection_controller->find_package_route(package);
@@ -1923,6 +1961,25 @@ int32_t processor_t::send_package(memory_package_t *package) {
     bool sent = this->get_interface_output_component(output_port)->receive_package(package, this->get_ports_output_component(output_port), transmission_latency);
     if (sent) {
         PROCESSOR_DEBUG_PRINTF("\tSEND OK\n");
+        switch (package->memory_operation) {
+            // HMC -> READ buffer
+            case MEMORY_OPERATION_HMC_ALU:
+            case MEMORY_OPERATION_HMC_ALUR:
+            case MEMORY_OPERATION_READ:
+            case MEMORY_OPERATION_PREFETCH:
+                this->got_request_token = false;
+            break;
+
+            case MEMORY_OPERATION_INST:
+                this->got_instruction_token = false;
+            break;
+
+            case MEMORY_OPERATION_WRITEBACK:
+            case MEMORY_OPERATION_WRITE:
+                this->got_write_token = false;
+            break;
+        }
+
         return transmission_latency;
     }
     else {
@@ -2010,16 +2067,10 @@ bool processor_t::receive_package(memory_package_t *package, uint32_t input_port
 // ============================================================================
 /// Token Controller Methods
 // ============================================================================
-bool processor_t::check_token_list(memory_package_t *package) {
-    ERROR_PRINTF("check_token_list %s.\n", package->content_to_string().c_str())
+bool processor_t::pop_token_credit(uint32_t src_id, memory_operation_t memory_operation) {
+    ERROR_PRINTF("pop_token_credit %" PRIu32 " %s.\n", src_id, get_enum_memory_operation_char(memory_operation))
     return FAIL;
 };
-
-// ============================================================================
-void processor_t::remove_token_list(memory_package_t *package) {
-    ERROR_PRINTF("remove_token_list %s.\n", package->content_to_string().c_str())
-};
-
 
 // ============================================================================
 void processor_t::print_structures() {

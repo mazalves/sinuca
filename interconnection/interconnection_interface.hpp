@@ -94,8 +94,7 @@ class interconnection_interface_t {
         virtual bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency) = 0; /// Only Sender calculate the latency and pass to the receiver.
 
         /// Token Controller Methods
-        virtual bool check_token_list(memory_package_t *package) = 0;       /// Check for available position to receive a package and allocate a token
-        virtual void remove_token_list(memory_package_t *package) = 0;      /// After arrive the package remove from token list
+        virtual bool pop_token_credit(uint32_t src_id, memory_operation_t memory_operation) = 0;       /// Check for available position to receive a package and allocate a token
 
         /// Debug Methods
         virtual void periodic_check() = 0;    /// Check all the internal structures

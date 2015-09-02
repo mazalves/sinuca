@@ -43,12 +43,14 @@ class cache_memory_t : public interconnection_interface_t {
         uint32_t penalty_read;
         uint32_t penalty_write;
 
-        uint32_t mshr_buffer_request_reserved_size;
-        uint32_t mshr_buffer_writeback_reserved_size;
-        uint32_t mshr_buffer_prefetch_reserved_size;
+        uint32_t mshr_request_buffer_size;
+        uint32_t mshr_prefetch_buffer_size;
+        uint32_t mshr_write_buffer_size;
+        uint32_t mshr_eviction_buffer_size;
 
-        uint32_t mshr_request_different_lines_size;
-        uint32_t mshr_request_token_window_size;
+        uint32_t higher_level_request_tokens;
+        uint32_t higher_level_prefetch_tokens;
+        uint32_t higher_level_write_tokens;
 
         // ====================================================================
         /// Set by this->allocate()
@@ -74,16 +76,20 @@ class cache_memory_t : public interconnection_interface_t {
 
         container_ptr_memory_package_t mshr_born_ordered;
 
-        mshr_diff_line_t *mshr_request_different_lines;
-        uint32_t mshr_buffer_request_per_different_line_size;
-        uint32_t mshr_request_different_lines_used;
+        int32_t *mshr_tokens_request;
+        int32_t *mshr_tokens_write;
+        int32_t *mshr_tokens_prefetch;
+
+        bool got_request_token;
+        bool got_prefetch_token;
+        bool got_write_token;
 
         uint64_t send_ans_ready_cycle;
         uint64_t send_rqst_ready_cycle;
 
-        uint64_t recv_ans_ready_cycle;            /// Ready to receive new READ
-        uint64_t recv_rqst_read_ready_cycle;            /// Ready to receive new READ
-        uint64_t recv_rqst_write_ready_cycle;           /// Ready to receive new WRITE
+        uint64_t recv_ans_ready_cycle;                  /// Ready to receive new READ ANS
+        uint64_t recv_rqst_read_ready_cycle;            /// Ready to receive new READ RQST
+        uint64_t recv_rqst_write_ready_cycle;           /// Ready to receive new WRITE RQST
 
         container_ptr_cache_memory_t *higher_level_cache;    /// Higher Level Caches
         container_ptr_cache_memory_t *lower_level_cache;     /// Lower Level Caches
@@ -136,9 +142,10 @@ class cache_memory_t : public interconnection_interface_t {
         uint64_t stat_max_hmc_wait_time;
         uint64_t stat_accumulated_hmc_wait_time;
 
-        uint64_t stat_full_mshr_buffer_request;
-        uint64_t stat_full_mshr_buffer_writeback;
-        uint64_t stat_full_mshr_buffer_prefetch;
+        uint64_t stat_full_mshr_request_buffer;
+        uint64_t stat_full_mshr_prefetch_buffer;
+        uint64_t stat_full_mshr_write_buffer;
+        uint64_t stat_full_mshr_eviction_buffer;
 
     public:
         // ====================================================================
@@ -156,8 +163,8 @@ class cache_memory_t : public interconnection_interface_t {
         int32_t send_package(memory_package_t *package);
         bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
         /// Token Controller Methods
-        bool check_token_list(memory_package_t *package);
-        void remove_token_list(memory_package_t *package);
+        bool pop_token_credit(uint32_t src_id, memory_operation_t memory_operation);
+        void push_token_credit(uint32_t src_id, memory_operation_t memory_operation);
         /// Debug Methods
         void periodic_check();
         void print_structures();
@@ -171,8 +178,9 @@ class cache_memory_t : public interconnection_interface_t {
         /// MASKS
         void set_masks();
         uint64_t get_fake_address(uint32_t index, uint32_t way);
-        /// Check if MSHR supports the higher levels MSHR
-        // ~ void check_mshr_size();
+
+        /// Create the tokens for higher level components
+        void set_tokens();
 
         inline uint64_t get_tag(uint64_t addr) {
             return (addr & this->tag_bits_mask) >> this->tag_bits_shift;
@@ -208,8 +216,9 @@ class cache_memory_t : public interconnection_interface_t {
 
         void insert_mshr_born_ordered(memory_package_t* package);
         int32_t allocate_request(memory_package_t* package);
-        int32_t allocate_writeback(memory_package_t* package);
         int32_t allocate_prefetch(memory_package_t* package);
+        int32_t allocate_write(memory_package_t* package);
+        int32_t allocate_eviction(memory_package_t* package);
 
         cache_line_t* get_line(uint32_t index, uint32_t way);
         cache_line_t* find_line(uint64_t memory_address, uint32_t& index, uint32_t& way);
@@ -238,14 +247,15 @@ class cache_memory_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(memory_package_t*, mshr_buffer)
 
         INSTANTIATE_GET_SET(uint32_t, mshr_buffer_size)
-        INSTANTIATE_GET_SET(uint32_t, mshr_buffer_request_reserved_size)
-        INSTANTIATE_GET_SET(uint32_t, mshr_buffer_writeback_reserved_size)
-        INSTANTIATE_GET_SET(uint32_t, mshr_buffer_prefetch_reserved_size)
 
-        INSTANTIATE_GET_SET(uint32_t, mshr_request_different_lines_size)
-        INSTANTIATE_GET_SET(uint32_t, mshr_request_token_window_size)
+        INSTANTIATE_GET_SET(uint32_t, mshr_request_buffer_size)
+        INSTANTIATE_GET_SET(uint32_t, mshr_prefetch_buffer_size)
+        INSTANTIATE_GET_SET(uint32_t, mshr_write_buffer_size)
+        INSTANTIATE_GET_SET(uint32_t, mshr_eviction_buffer_size)
 
-        INSTANTIATE_GET_SET(uint32_t, mshr_buffer_request_per_different_line_size)
+        INSTANTIATE_GET_SET(uint32_t, higher_level_request_tokens)
+        INSTANTIATE_GET_SET(uint32_t, higher_level_prefetch_tokens)
+        INSTANTIATE_GET_SET(uint32_t, higher_level_write_tokens)
 
         // ====================================================================
         /// Statistics related
@@ -270,9 +280,11 @@ class cache_memory_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_write_miss)
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_writeback_send)
 
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_buffer_request);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_buffer_writeback);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_buffer_prefetch);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_request_buffer);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_prefetch_buffer);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_write_buffer);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_eviction_buffer);
+
 
 
         inline void add_stat_instruction_wait(uint64_t born_cycle) {

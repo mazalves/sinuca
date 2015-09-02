@@ -137,6 +137,17 @@ void sinuca_engine_t::initialize() {
     #endif
     CONFIGURATOR_DEBUG_PRINTF("CONNECTIONS:\n%s\n", tree.c_str())
 
+    /// Create tokens only for higher level components connected to the caches
+    for (uint32_t i = 0; i < this->get_cache_memory_array_size(); i++) {
+        this->cache_memory_array[i]->set_tokens();
+    }
+
+    /// Create tokens only for higher level components connected to the caches
+    for (uint32_t i = 0; i < this->get_memory_controller_array_size(); i++) {
+        this->memory_controller_array[i]->set_tokens();
+    }
+
+
     this->directory_controller->allocate();
     this->interconnection_controller->allocate();
 };
@@ -841,21 +852,30 @@ void sinuca_engine_t::initialize_cache_memory() {
             cache_memory_parameters.push_back("ASSOCIATIVITY");
             this->cache_memory_array[i]->set_associativity(cfg_cache_memory[ cache_memory_parameters.back() ]);
 
-            cache_memory_parameters.push_back("MSHR_BUFFER_REQUEST_RESERVED_SIZE");
-            this->cache_memory_array[i]->set_mshr_buffer_request_reserved_size(cfg_cache_memory[ cache_memory_parameters.back() ]);
 
-            cache_memory_parameters.push_back("MSHR_BUFFER_WRITEBACK_RESERVED_SIZE");
-            this->cache_memory_array[i]->set_mshr_buffer_writeback_reserved_size(cfg_cache_memory[ cache_memory_parameters.back() ]);
+            cache_memory_parameters.push_back("MSHR_REQUEST_BUFFER_SIZE");
+            this->cache_memory_array[i]->set_mshr_request_buffer_size(cfg_cache_memory[ cache_memory_parameters.back() ]);
 
-            cache_memory_parameters.push_back("MSHR_BUFFER_PREFETCH_RESERVED_SIZE");
-            this->cache_memory_array[i]->set_mshr_buffer_prefetch_reserved_size(cfg_cache_memory[ cache_memory_parameters.back() ]);
+            cache_memory_parameters.push_back("MSHR_PREFETCH_BUFFER_SIZE");
+            this->cache_memory_array[i]->set_mshr_prefetch_buffer_size(cfg_cache_memory[ cache_memory_parameters.back() ]);
+
+            cache_memory_parameters.push_back("MSHR_WRITE_BUFFER_SIZE");
+            this->cache_memory_array[i]->set_mshr_write_buffer_size(cfg_cache_memory[ cache_memory_parameters.back() ]);
+
+            cache_memory_parameters.push_back("MSHR_EVICTION_BUFFER_SIZE");
+            this->cache_memory_array[i]->set_mshr_eviction_buffer_size(cfg_cache_memory[ cache_memory_parameters.back() ]);
 
 
-            cache_memory_parameters.push_back("MSHR_REQUEST_DIFFERENT_LINES_SIZE");
-            this->cache_memory_array[i]->set_mshr_request_different_lines_size(cfg_cache_memory[ cache_memory_parameters.back() ]);
 
-            cache_memory_parameters.push_back("MSHR_REQUEST_TOKEN_WINDOW_SIZE");
-            this->cache_memory_array[i]->set_mshr_request_token_window_size(cfg_cache_memory[ cache_memory_parameters.back() ]);
+            cache_memory_parameters.push_back("HIGHER_LEVEL_REQUEST_TOKENS");
+            this->cache_memory_array[i]->set_higher_level_request_tokens(cfg_cache_memory[ cache_memory_parameters.back() ]);
+
+            cache_memory_parameters.push_back("HIGHER_LEVEL_PREFETCH_TOKENS");
+            this->cache_memory_array[i]->set_higher_level_prefetch_tokens(cfg_cache_memory[ cache_memory_parameters.back() ]);
+
+            cache_memory_parameters.push_back("HIGHER_LEVEL_WRITE_TOKENS");
+            this->cache_memory_array[i]->set_higher_level_write_tokens(cfg_cache_memory[ cache_memory_parameters.back() ]);
+
 
 
             cache_memory_parameters.push_back("REPLACEMENT_POLICY");
@@ -1255,14 +1275,26 @@ void sinuca_engine_t::initialize_memory_controller() {
             this->memory_controller_array[i]->set_total_controllers(cfg_memory_controller[ memory_controller_parameters.back() ]);
 
 
-            memory_controller_parameters.push_back("MSHR_BUFFER_REQUEST_RESERVED_SIZE");
-            this->memory_controller_array[i]->set_mshr_buffer_request_reserved_size(cfg_memory_controller[ memory_controller_parameters.back() ]);
 
-            memory_controller_parameters.push_back("MSHR_BUFFER_WRITEBACK_RESERVED_SIZE");
-            this->memory_controller_array[i]->set_mshr_buffer_writeback_reserved_size(cfg_memory_controller[ memory_controller_parameters.back() ]);
+            memory_controller_parameters.push_back("MSHR_REQUEST_BUFFER_SIZE");
+            this->memory_controller_array[i]->set_mshr_request_buffer_size(cfg_memory_controller[ memory_controller_parameters.back() ]);
 
-            memory_controller_parameters.push_back("MSHR_BUFFER_PREFETCH_RESERVED_SIZE");
-            this->memory_controller_array[i]->set_mshr_buffer_prefetch_reserved_size(cfg_memory_controller[ memory_controller_parameters.back() ]);
+            memory_controller_parameters.push_back("MSHR_PREFETCH_BUFFER_SIZE");
+            this->memory_controller_array[i]->set_mshr_prefetch_buffer_size(cfg_memory_controller[ memory_controller_parameters.back() ]);
+
+            memory_controller_parameters.push_back("MSHR_WRITE_BUFFER_SIZE");
+            this->memory_controller_array[i]->set_mshr_write_buffer_size(cfg_memory_controller[ memory_controller_parameters.back() ]);
+
+
+
+            memory_controller_parameters.push_back("HIGHER_LEVEL_REQUEST_TOKENS");
+            this->memory_controller_array[i]->set_higher_level_request_tokens(cfg_memory_controller[ memory_controller_parameters.back() ]);
+
+            memory_controller_parameters.push_back("HIGHER_LEVEL_PREFETCH_TOKENS");
+            this->memory_controller_array[i]->set_higher_level_prefetch_tokens(cfg_memory_controller[ memory_controller_parameters.back() ]);
+
+            memory_controller_parameters.push_back("HIGHER_LEVEL_WRITE_TOKENS");
+            this->memory_controller_array[i]->set_higher_level_write_tokens(cfg_memory_controller[ memory_controller_parameters.back() ]);
 
 
             memory_controller_parameters.push_back("CHANNELS_PER_CONTROLLER");

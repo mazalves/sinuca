@@ -35,9 +35,12 @@ directory_controller_t::directory_controller_t() {
 
     ERROR_ASSERT_PRINTF(utils_t::check_if_power_of_two(sinuca_engine.get_global_line_size()), "Wrong line_size.\n");
     this->not_offset_bits_mask = ~utils_t::fill_bit(0, utils_t::get_power_of_two(sinuca_engine.get_global_line_size()) - 1);
+
     this->generate_llc_writeback = true;
     this->generate_non_llc_writeback = true;
     this->final_writeback_all = true;
+
+    this->max_cache_level = 0;
 };
 
 // ============================================================================
@@ -59,15 +62,18 @@ void directory_controller_t::allocate() {
 
     uint32_t sum_mshr_buffer_size = 0;
     this->max_cache_level = 0;
+
     /// Find all LLC
     for (uint32_t i = 0; i < sinuca_engine.get_cache_memory_array_size(); i++) {
         cache_memory_t *cache_memory = sinuca_engine.cache_memory_array[i];
         container_ptr_cache_memory_t *lower_level_cache = cache_memory->get_lower_level_cache();
+
         /// Found LLC
         if (lower_level_cache->empty()) {
             sum_mshr_buffer_size += cache_memory->get_mshr_buffer_size();
             this->llc_caches.push_back(cache_memory);
         }
+
         /// Find Max Cache Level
         if (this->max_cache_level < cache_memory->get_hierarchy_level()) {
             this->max_cache_level = cache_memory->get_hierarchy_level();
@@ -161,16 +167,10 @@ bool directory_controller_t::receive_package(memory_package_t *package, uint32_t
 // ============================================================================
 /// Token Controller Methods
 // ============================================================================
-bool directory_controller_t::check_token_list(memory_package_t *package) {
-    ERROR_PRINTF("check_token_list %s.\n", package->content_to_string().c_str())
+bool directory_controller_t::pop_token_credit(uint32_t src_id, memory_operation_t memory_operation) {
+    ERROR_PRINTF("pop_token_credit %" PRIu32 " %s.\n", src_id, get_enum_memory_operation_char(memory_operation))
     return FAIL;
 };
-
-// ============================================================================
-void directory_controller_t::remove_token_list(memory_package_t *package) {
-    ERROR_PRINTF("remove_token_list %s.\n", package->content_to_string().c_str())
-};
-
 
 // ====================================================================================
 /*! This method will take care about the inclusiveness and the cache coherence for all
@@ -986,7 +986,7 @@ memory_package_t* directory_controller_t::create_cache_writeback(cache_memory_t 
     /// Allocate CopyBack at the MSHR
     // =========================================================================
 
-    int32_t slot = cache->allocate_writeback(&writeback_package);
+    int32_t slot = cache->allocate_eviction(&writeback_package);
     if (slot == POSITION_FAIL) {
         return NULL;
     }

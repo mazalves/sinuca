@@ -62,14 +62,9 @@ bool line_usage_predictor_t::receive_package(memory_package_t *package, uint32_t
 // ============================================================================
 /// Token Controller Methods
 // ============================================================================
-bool line_usage_predictor_t::check_token_list(memory_package_t *package) {
-    ERROR_PRINTF("check_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
+bool line_usage_predictor_t::pop_token_credit(uint32_t src_id, memory_operation_t memory_operation) {
+    ERROR_PRINTF("pop_token_credit %" PRIu32 " %s.\n", src_id, get_enum_memory_operation_char(memory_operation))
     return FAIL;
-};
-
-// ============================================================================
-void line_usage_predictor_t::remove_token_list(memory_package_t *package) {
-    ERROR_PRINTF("remove_token_list %s.\n", get_enum_memory_operation_char(package->memory_operation))
 };
 
 // ============================================================================

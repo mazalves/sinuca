@@ -29,9 +29,13 @@ class memory_controller_t : public interconnection_interface_t {
         uint32_t controller_number;
         uint32_t total_controllers;
 
-        uint32_t mshr_buffer_request_reserved_size;
-        uint32_t mshr_buffer_writeback_reserved_size;
-        uint32_t mshr_buffer_prefetch_reserved_size;
+        uint32_t mshr_request_buffer_size;
+        uint32_t mshr_write_buffer_size;
+        uint32_t mshr_prefetch_buffer_size;
+
+        uint32_t higher_level_request_tokens;
+        uint32_t higher_level_prefetch_tokens;
+        uint32_t higher_level_write_tokens;
 
         uint32_t channels_per_controller;
         uint32_t bank_per_channel;
@@ -98,6 +102,11 @@ class memory_controller_t : public interconnection_interface_t {
         uint32_t mshr_buffer_size;
         memory_package_t *mshr_buffer;
         container_ptr_memory_package_t mshr_born_ordered;
+
+        int32_t *mshr_tokens_request;
+        int32_t *mshr_tokens_write;
+        int32_t *mshr_tokens_prefetch;
+
         uint32_t timing_burst;
         memory_channel_t *channels;
 
@@ -144,9 +153,10 @@ class memory_controller_t : public interconnection_interface_t {
         uint64_t stat_max_hmc_alur_wait_time;
         uint64_t stat_accumulated_hmc_alur_wait_time;
 
-        uint64_t stat_full_mshr_buffer_request;
-        uint64_t stat_full_mshr_buffer_writeback;
-        uint64_t stat_full_mshr_buffer_prefetch;
+        uint64_t stat_full_mshr_request_buffer;
+        uint64_t stat_full_mshr_prefetch_buffer;
+        uint64_t stat_full_mshr_write_buffer;
+
 
     public:
         // ====================================================================
@@ -164,8 +174,8 @@ class memory_controller_t : public interconnection_interface_t {
         int32_t send_package(memory_package_t *package);
         bool receive_package(memory_package_t *package, uint32_t input_port, uint32_t transmission_latency);
         /// Token Controller Methods
-        bool check_token_list(memory_package_t *package);
-        void remove_token_list(memory_package_t *package);
+        bool pop_token_credit(uint32_t src_id, memory_operation_t memory_operation);
+        void push_token_credit(uint32_t src_id, memory_operation_t memory_operation);
         /// Debug Methods
         void periodic_check();
         void print_structures();
@@ -178,6 +188,8 @@ class memory_controller_t : public interconnection_interface_t {
 
         /// MASKS
         void set_masks();
+        /// Create the tokens for higher level components
+        void set_tokens();
 
         inline uint64_t get_controller(uint64_t addr) {
             return (addr & this->controller_bits_mask) >> this->controller_bits_shift;
@@ -192,8 +204,9 @@ class memory_controller_t : public interconnection_interface_t {
         }
 
         void insert_mshr_born_ordered(memory_package_t* package);
+
         int32_t allocate_request(memory_package_t* package);
-        int32_t allocate_writeback(memory_package_t* package);
+        int32_t allocate_write(memory_package_t* package);
         int32_t allocate_prefetch(memory_package_t* package);
 
         INSTANTIATE_GET_SET(memory_controller_mask_t, address_mask_type)
@@ -202,10 +215,14 @@ class memory_controller_t : public interconnection_interface_t {
         INSTANTIATE_GET_SET(uint32_t, controller_number)
         INSTANTIATE_GET_SET(uint32_t, total_controllers)
 
-        INSTANTIATE_GET_SET(uint32_t, mshr_buffer_request_reserved_size)
-        INSTANTIATE_GET_SET(uint32_t, mshr_buffer_writeback_reserved_size)
-        INSTANTIATE_GET_SET(uint32_t, mshr_buffer_prefetch_reserved_size)
         INSTANTIATE_GET_SET(uint32_t, mshr_buffer_size)
+        INSTANTIATE_GET_SET(uint32_t, mshr_request_buffer_size)
+        INSTANTIATE_GET_SET(uint32_t, mshr_write_buffer_size)
+        INSTANTIATE_GET_SET(uint32_t, mshr_prefetch_buffer_size)
+
+        INSTANTIATE_GET_SET(uint32_t, higher_level_request_tokens)
+        INSTANTIATE_GET_SET(uint32_t, higher_level_prefetch_tokens)
+        INSTANTIATE_GET_SET(uint32_t, higher_level_write_tokens)
 
         INSTANTIATE_GET_SET(uint32_t, channels_per_controller)
         INSTANTIATE_GET_SET(uint32_t, bank_per_channel)
@@ -246,11 +263,13 @@ class memory_controller_t : public interconnection_interface_t {
         // ====================================================================
         /// Statistics related
         // ====================================================================
+        void memory_stats(memory_package_t *package);
+
         INSTANTIATE_GET_SET_ADD(uint64_t, stat_accesses)
 
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_buffer_request);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_buffer_writeback);
-        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_buffer_prefetch);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_request_buffer);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_prefetch_buffer);
+        INSTANTIATE_GET_SET_ADD(uint64_t, stat_full_mshr_write_buffer);
 
         INSTANTIATE_GET_SET(uint64_t, stat_instruction_completed)
         INSTANTIATE_GET_SET(uint64_t, stat_read_completed)
