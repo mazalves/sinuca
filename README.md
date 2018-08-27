@@ -2,14 +2,16 @@
 Simulator or Non-Uniform Cache Architectures
 
 ======================================================
-Readme Authors: 	
-Alves, Marco A. Z. 		- PhD at Federal University of Paraná
-Nguyen, Hoang Anh Du    - PhD student at TU Delft
-Cordeiro, Aline S. 		- Master student at Federal University of Paraná
-Moreira, Francis B. 	- PhD student at Federal University of Rio Grande do Sul	
+This readme author's: 	
+
+- Alves, Marco A. Z. 		- PhD at Federal University of Paraná
+- Nguyen, Hoang Anh Du    - PhD student at TU Delft
+- Cordeiro, Aline S. 		- Master student at Federal University of Paraná
+- Moreira, Francis B. 	- PhD student at Federal University of Rio Grande do Sul	
 
 ======================================================
 Sections
+
     1. SiNUCA Pin requirements
     2. Compiling SiNUCA trace generator
     3. Generating traces
@@ -147,8 +149,9 @@ Sections
 
 
 ======================================================
-Please refer to the following documents for a general introduction of the tool:
+Extra information
 
+Please refer to the following documents for a general introduction of the tool:
 
 Alves, Marco Antonio Zanata. "Increasing energy efficiency of processor caches via line usage predictors." (2014).
 
