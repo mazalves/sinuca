@@ -4,9 +4,9 @@ Simulator or Non-Uniform Cache Architectures
 ======================================================
 This readme author's: 	
 
-- Alves, Marco A. Z. 		- PhD at Federal University of Paraná
-- Nguyen, Hoang Anh Du    - PhD student at TU Delft
-- Cordeiro, Aline S. 		- Master student at Federal University of Paraná
+- Alves, Marco A. Z. 	- PhD at Federal University of Paraná
+- Nguyen, Hoang Anh Du  - PhD student at TU Delft
+- Cordeiro, Aline S. 	- Master student at Federal University of Paraná
 - Moreira, Francis B. 	- PhD student at Federal University of Rio Grande do Sul	
 
 ======================================================
